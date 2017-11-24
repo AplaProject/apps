@@ -1,0 +1,40 @@
+{
+    "pages": [
+        {
+            "Name": "ecosystem_new",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Menu": "admin_menu",
+            "Value": "Div(Class: content-wrapper){\r\n    Div(Class: content-heading, Body: NewEcosystem)\r\n\r\n    Div(row df f-valign){\r\n        Div(col-md-3)\r\n        Div(col-md-6){\r\n            Div(panel panel-primary){\r\n                Div(panel-heading, NewEcosystem)\r\n                Form(){ \r\n\r\n\t\t\t\t\tDiv(list-group-item){\r\n\t\t\t\t\t\tDiv(row df f-valign){\r\n\t\t\t\t\t\t\tDiv(col-md-3 mt-sm  text-right){\r\n\t\t\t\t\t\t\t\tLabel(For: Name){\r\n\t\t\t\t\t\t\t\t\tSpan(Name)\r\n\t\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\tDiv(col-md-9 mc-sm text-left){\r\n\t\t\t\t\t\t\t\tInput(Class:form-control, Placeholder:text, Type:text, Name:Name)\r\n\t\t\t\t\t\t\t} \r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t}\r\n                    \r\n\t\t\t\t\tDiv(panel-footer clearfix){\r\n\t\t\t\t\t\tDiv(pull-right){\r\n\t\t\t\t\t\t\tButton(Body: LangRes(save), Class: btn btn-primary, Contract: NewEcosystem)\r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t}\r\n                }\r\n            }\r\n        }\r\n        Div(col-md-3)\r\n    }\r\n}"
+        },
+        {
+            "Name": "money_transfer",
+            "Conditions": "ContractConditions(`MainCondition`)",
+            "Menu": "admin_menu",
+            "Value": "Div(Class: content-wrapper){\r\n    Div(Class: content-heading, Body: Money transfer)\r\n    Div(Class: row df f-valign){\r\n        Div(Class: col-md-3)\r\n        Div(Class: col-md-6){\r\n\r\n            Div(Class: panel panel-primary){\r\n                Div(Class: panel-heading, Body: Money transfer)\r\n                Form(){\r\n                    Div(list-group-item){\r\n                        Div(Class: row df f-valign){\r\n                            Div(Class: col-md-3 mt-sm text-right){\r\n                                Label(\"Address\")\r\n                            }\r\n                            Div(Class: col-md-9 mc-sm text-left){\r\n                                Input(Name: \"Address\", Type: \"text\", Placeholder: \"xxxx-xxxx-xxxx-xxxx\")\r\n                            } \r\n                        } \r\n                    }\r\n                    Div(list-group-item){\r\n                        Div(Class: row df f-valign){\r\n                            Div(Class: col-md-3 mt-sm text-right){\r\n                                Label(\"Amount\")\r\n                            }\r\n                            Div(Class: col-md-9 mc-sm text-left){\r\n                                Input(Name: \"Amount\", Type: \"text\", Placeholder: \"0\", Value: \"100000000000000000000000000\")\r\n                            } \r\n                        }  \r\n                    }\r\n                    Div(panel-footer text-right){\r\n                        Button(Contract: \"MoneyTransfer\", Body: \"Send\", Class: \"btn btn-primary\")\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n}"
+        }
+    ],
+    "blocks": [],
+    "menus": [
+        {
+            "Name": "admin_menu",
+            "Conditions": "ContractAccess(\"@1EditMenu\")",
+            "Value": "MenuItem(Title:Money transfer, Page:money_transfer, Icon:\"icon-energy\")\r\nMenuItem(Title:New ecosystem, Page:ecosystem_new, Icon:\"icon-globe\")"
+        }
+    ],
+    "parameters": [],
+    "languages": [],
+    "contracts": [
+        {
+            "Name": "NewEcosystem",
+            "Value": "contract NewEcosystem {\n\t\tdata {\n\t\t\tName  string \"optional\"\n\t\t}\n\t\tconditions {\n\t\t\tif $Name && FindEcosystem($Name) {\n\t\t\t\terror Sprintf(\"Ecosystem %s is already existed\", $Name)\n\t\t\t}\n\t\t}\n\t\taction {\n\t\t\tvar id int\n\t\t\tid = CreateEcosystem($key_id, $Name)\n\t\t\tDBInsert(Str(id) + \"_pages\", \"name,value,menu,conditions\", \"default_page\", \n\t\t\t\t  SysParamString(\"default_ecosystem_page\"), \"default_menu\", \"ContractConditions(\\\"MainCondition\\\")\")\n\t\t\tDBInsert(Str(id) + \"_menu\", \"name,value,title,conditions\", \"default_menu\", \n\t\t\t\t  SysParamString(\"default_ecosystem_menu\"), \"default\", \"ContractConditions(\\\"MainCondition\\\")\")\n\t\t\tDBInsert(Str(id) + \"_keys\", \"id,pub\", $key_id, DBString(\"1_keys\", \"pub\", $key_id))\n\t\t\t$result = id\n\t\t}\n\t\tfunc price() int {\n\t\t\treturn  SysParamInt(\"ecosystem_price\")\n\t\t}\n\t\tfunc rollback() {\n\t\t\tRollbackEcosystem()\n\t\t}\n\t}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "MoneyTransfer",
+            "Value": "contract MoneyTransfer {\n    data {\n        Address string\n        Amount    string\n    }\n    conditions {\n        $recipient = AddressToId($Address)\n        if $recipient == 0 {\n            error Sprintf(\"Address %s is invalid\", $Address)\n        }\n        $amount = Money($Amount)\n    }\n    action {\n        DBUpdate(`keys`, $recipient,`amount`, $amount)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        }
+    ],
+    "tables": [],
+    "data": []
+}
