@@ -1271,6 +1271,11 @@
             "Name": "Profile_Edit",
             "Value": "contract Profile_Edit {\n    data {\n\t    member_name string\n        avatar string \"image\"\n    }\n\n    conditions {\n\t\t$row_id = 0\n\n\t\t$ret_member = DBFind(\"member\").Columns(\"id\").Where(\"member_id = $\", $key_id).Order(\"id\")\n\t\tif (Len($ret_member) > 0){\n\t\t\t$vals_member = $ret_member[0]\n\n            if(Int($vals_member[\"id\"]) > 0){\n\t\t\t    $row_id = Int($vals_member[\"id\"])\n            }\n\t\t}\n    }\n\n    action {\n        if ($row_id > 0){\n            DBUpdate(`member`, $row_id, `member_name,avatar`, $member_name, $avatar)\n        } \n        else{\n            DBInsert(`member`, `member_id,member_name,avatar`, $key_id, $member_name, $avatar)\n        }\n    }\n}",
             "Conditions": "ContractConditions(`MainCondition`)"
+        },
+        {
+            "Name": "RoleCondition",
+            "Value": "contract RoleCondition {\n    data{\n        role string\n    }\n    conditions {\n        $assignedFind = DBFind(\"roles_assign\").Where(\"role_name=? and member_id=? and delete=0\", $role, $key_id)\n        if Len($assignedFind) == 0{\n            warning Sprintf(\"This action allowed only for role: %v\",$role)\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
         }
     ],
     "tables": [
