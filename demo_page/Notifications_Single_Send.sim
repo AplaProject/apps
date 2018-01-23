@@ -1,36 +1,30 @@
 contract Notifications_Single_Send {
-    data {
-        member_id int
-        icon_name string "optional"
-        text_header string
-        text_body string "optional"
-        page_name string
-        params_val string
+  data {
+    member_id int
+    icon_name string "optional"
+    text_header string
+    text_body string "optional"
+    page_name string
+    val_str string
+  }
+  
+  conditions {
+    if $icon_name == ""{
+      $icon_name = "fa-bell"
     }
+    $member = DBFind("member").WhereId($member_id).Row()
     
-    conditions {
-        $id = 0
-        if Size($icon_name) == 0{
-            $icon_name = "fa fa-bell"
-        }
-        $memberFind = DBFind("member").WhereId($member_id)
-        if Len($memberFind) > 0{
-            $member = $memberFind[0]
-            $id = Int($member["id"])
-        }
+    if !$member {
+      warning "Member not found"
     }
+  }
+  
+  action {
+    $notification_id = DBInsert(`notifications`, `icon,header_text,body_text,page_name,notification_type,recipient_id,recipient_name,recipient_avatar,timestamp date_create`, $icon_name, $text_header, $text_body, $page_name, 1, $member_id, $member["member_name"], $member["avatar"], $block_time)
     
-    action {
-        if $id != 0 {
-            $notification_id = DBInsert(`notifications`, `icon,header_text,body_text,page_name,notification_type,recipient_id,recipient_name,recipient_avatar,timestamp date_create`,$icon_name, $text_header, $text_body, $page_name, 1, $member_id, $member["username"], $member["avatar"], $block_time)
-            
-            var params string
-            params = "notific_id=" + Str($notification_id) + ","
-            params = params + "notific_type=1,"
-            params = params + "notific_header=" + $text_header + ","
-            params = params + $params_val
-            
-            DBUpdate(`notifications`, $notification_id, `page_params`, params)
-        }
-    }
+    var params string
+    params = Sprintf("notific_id=%v,notific_header=%v,val_str=%v,notific_type=1", $notification_id, $text_header, $val_str)
+    
+    DBUpdate(`notifications`, $notification_id, `page_params`, params)
+  }
 }
