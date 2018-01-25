@@ -14,20 +14,15 @@ contract sysparams_DelegateRefresh{
     func conditions{
         $roleName = "Delegate"
         $delegateParam = "delegate_account"
-        $paramTbl = "parameters"
-        $lastEcoNum = 3
+        $ecosParamTbl = "parameters"
         
-        $keysTbl = "keys"
         $raTbl = "roles_assign"
         $rolesTbl = "roles_list"
-        $memberTbl = "member"
-        
-        $appointer = DBFind($memberTbl).WhereId($key_id).Row()
         
         // get role Id and Type
         $role = DBFind($rolesTbl).Where("role_name=?", $roleName).Order("id").Row()
         if !$role{
-            return
+            return "Role not found"
         }
         $roleId = $role["id"]
         $roleType = $role["role_type"]
@@ -39,10 +34,10 @@ contract sysparams_DelegateRefresh{
         var delegateIds array
         var dIndex int
         $i = 1
-        while $i <= $lastEcoNum {
-            $delegate = DBFind($paramTbl).Where("name=?",$delegateParam).Ecosystem($i).Row()
+        while $i <= $ecosystem_id {
+            $delegate = DBFind($ecosParamTbl).Where("name=?",$delegateParam).Ecosystem($i).Row()
             if !$delegate{
-                $delegate = DBFind($paramTbl).Where("name='founder_account'").Ecosystem($i).Row()
+                $delegate = DBFind($ecosParamTbl).Where("name='founder_account'").Ecosystem($i).Row()
             }
             $delegateValue = $delegate["value"]
             if NotInArray($delegateValue, delegateIds){
@@ -68,7 +63,7 @@ contract sysparams_DelegateRefresh{
         $i = 0
         while $i < Len(delegateIds) {
             $delegateId = Int(delegateIds[$i])
-            $memberId = DBFind($memberTbl).WhereId($delegateId).One("id")
+            $memberId = DBFind("member").WhereId($delegateId).One("id")
             if $memberId{
                 // check role dup
                 $assigned = DBFind($raTbl).Where("member_id=? and role_id=? and delete=0", $delegateId, $roleId).Row()
