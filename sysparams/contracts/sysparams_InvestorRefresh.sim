@@ -1,0 +1,47 @@
+contract sysparams_InvestorRefresh{
+    func conditions{
+        $founder = EcosysParam("founder_account")
+        if Str($key_id) != $founder{
+            info "You can not start to voting"
+        }
+    }
+    
+    func action{
+        $roleName = "Investor with voting rights"
+        $limitInvestors = 3
+        
+        $raTbl = "roles_assign"
+        $rolesTbl = "roles_list"
+        $memberTbl = "member"
+        
+        // get roleId
+        $roleFind = DBFind($rolesTbl).Where("role_name=?", $roleName).Order("id")
+        if Len($roleFind) > 0{
+            $role = $roleFind[0]
+            $roleId = $role["id"]
+            $roleType = $role["role_type"]
+        }else{
+            warning "Role not found"
+        }
+        
+        // remove old investors
+        DBUpdateExt($raTbl, "role_id", $roleId, "delete", 1)
+        
+        // assign new investors
+        $appointer = DBFind($memberTbl).WhereId($key_id).Row()
+        $investors = DBFind($keysTbl).Order("amount desc, id").Limit($limitInvestors)
+        $lenInvestors = Len($investors)
+        $i = 0
+        while $i < $lenInvestors{
+            $inv = $investors[$i]
+            $member = DBFind($memberTbl).Where("id=?", $inv["id"]).Row()
+            if $member {
+                sysparams_RoleAssign("RoleName,KeyId", $roleName, Int($inv["id"]))
+                // DBInsert($raTbl, `role_id,role_type,role_name,member_id,member_name,member_avatar,appointed_by_id,appointed_by_name,timestamp date_start,delete`, $roleId, $roleType, $roleName, $inv["id"], $member["username"], $member["avatar"], $key_id, $appointer["username"], $block_time, 0)
+            }
+            $i =$i+1
+        }
+        
+    }
+    
+}
