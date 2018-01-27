@@ -31,12 +31,24 @@ contract sysparams_StartVotingTemplate{
         $typeDecision = Int($vParams["type_decision"])
         $vacancies = Int($vParams["vacancies"])
         $desc = Sprintf("%v [%v]", $votingName, IdToAddress($KeyId))
+        $contractAccept = $vParams["contract_accept"]
+        $acceptParams = $vParams["contract_accept_params"]
+        $contractReject = $vParams["contract_reject"]
+        $rejectParams = $vParams["contract_reject_params"]
         
         $isCreated = DBFind("voting_instances").Where("name=? and description=? and delete=0", $votingName, $desc).Row()
         if $isCreated{
             // info "Voting already created"
         }
-        $contractAccept = Sprintf("sysparams_AcceptRole(`ParamId,KeyId`, %v, %v)",$vParams["id"], $KeyId)
+        
+        // if not special then use default
+        $defaultParams = Sprintf("ParamId->%v;KeyId->%v", $vParams["id"], $KeyId)
+        if Size($acceptParams) == 0{
+            $acceptParams = $defaultParams
+        }
+        if Size($rejectParams) == 0{
+            $rejectParams = $defaultParams
+        }
     }
     
     func action{
@@ -51,7 +63,7 @@ contract sysparams_StartVotingTemplate{
         }
         // after success voting set Validator Role to Candidate
         voting_SubjectCandidates("votingID,memberID", $voting_id, $KeyId)
-        voting_SubjectSettings("votingID,roleID,vacancies,contract_reject,contract_accept", $voting_id, roleId, $vacancies, "", $contractAccept)
+        voting_SubjectSettings("votingID,roleID,vacancies,contract_reject,contract_accept,accept_params,reject_params", $voting_id, roleId, $vacancies, "", $contractAccept, $acceptParams, $rejectParams)
         voting_Invite("votingID,var_id", $voting_id, roleId)
         
     }

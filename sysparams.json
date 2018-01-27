@@ -1,134 +1,239 @@
 {
     "blocks": [],
-    "contracts": [{
-        "Name": "sysparams_RoleAssign",
-        "Value": "contract sysparams_RoleAssign {\n    data{\n        RoleName string\n        KeyId int\n    }\n    \n    conditions {\n        $role = DBFind(\"roles_list\").Where(\"role_name=? and delete=0\", $RoleName).Row()\n        if !$role {\n            warning \"Role not found\"\n        }\n        \n        $member = DBFind(\"member\").WhereId($KeyId).Row()\n        if !$member {\n            // warning \"Member not found\"\n            return\n        }\n        \n        $role_assign = DBFind(`roles_assign`).Where(`role_id=? and member_id=? and delete=0`, $role[\"id\"], $KeyId).Row()\n        if $role_assign {\n            // warning \"This member has already been added\"\n            return\n        }\n    }\n    \n    action {\n        DBInsert(`roles_assign`, `role_id,role_type,role_name,member_id,member_name,member_avatar,appointed_by_id,appointed_by_name,timestamp date_start,delete`, $role[\"id\"], $role[\"role_type\"], $role[\"role_name\"], $KeyId, $member[\"member_name\"], $member[\"avatar\"], $KeyId, $member[\"member_name\"], $block_time, 0)\n    }\n}",
-        "Conditions": "ContractConditions(\"MainCondition\")"
-    }, {
-        "Name": "sysparams_InvestorRefresh",
-        "Value": "contract sysparams_InvestorRefresh{\n    func conditions{\n        $founder = EcosysParam(\"founder_account\")\n        if Str($key_id) != $founder{\n            info \"You can not start to voting\"\n        }\n    }\n    \n    func action{\n        $roleName = \"Investor with voting rights\"\n        $limitInvestors = 3\n        \n        $raTbl = \"roles_assign\"\n        $rolesTbl = \"roles_list\"\n        $memberTbl = \"member\"\n        \n        // get roleId\n        $roleFind = DBFind($rolesTbl).Where(\"role_name=?\", $roleName).Order(\"id\")\n        if Len($roleFind) \u003e 0{\n            $role = $roleFind[0]\n            $roleId = $role[\"id\"]\n            $roleType = $role[\"role_type\"]\n        }else{\n            warning \"Role not found\"\n        }\n        \n        // remove old investors\n        DBUpdateExt($raTbl, \"role_id\", $roleId, \"delete\", 1)\n        \n        // assign new investors\n        $appointer = DBFind($memberTbl).WhereId($key_id).Row()\n        $investors = DBFind($keysTbl).Order(\"amount desc, id\").Limit($limitInvestors)\n        $lenInvestors = Len($investors)\n        $i = 0\n        while $i \u003c $lenInvestors{\n            $inv = $investors[$i]\n            $member = DBFind($memberTbl).Where(\"id=?\", $inv[\"id\"]).Row()\n            if $member {\n                sysparams_RoleAssign(\"RoleName,KeyId\", $roleName, Int($inv[\"id\"]))\n                // DBInsert($raTbl, `role_id,role_type,role_name,member_id,member_name,member_avatar,appointed_by_id,appointed_by_name,timestamp date_start,delete`, $roleId, $roleType, $roleName, $inv[\"id\"], $member[\"username\"], $member[\"avatar\"], $key_id, $appointer[\"username\"], $block_time, 0)\n            }\n            $i =$i+1\n        }\n        \n    }\n    \n}",
-        "Conditions": "ContractConditions(\"MainCondition\")"
-    }, {
-        "Name": "sysparams_CandidateValidator_Delete",
-        "Value": "contract sysparams_CandidateValidator_Delete{\n    data{\n        Id int\n    }\n    conditions{\n        $roleName = \"Candidate for validators\"\n        // RoleConditions(\"role\",\"deleter\")\n        \n        $candidateId = DBFind(\"sysparams_candidate\").WhereId($Id).One(\"candidate_key_id\")\n        \n        $raId = DBFind(\"roles_assign\").Where(\"role_name=? and delete=0 and member_id=?\",$roleName, $candidateId).One(\"id\")\n    }\n    action{\n        DBUpdate(\"sysparams_candidate\", $Id, \"deleted\", 1)\n        DBUpdate(\"roles_assign\", $raId, \"delete\", 1)\n    }\n}",
-        "Conditions": "ContractConditions(\"MainCondition\")"
-    }, {
-        "Name": "sysparams_DelegateRefresh",
-        "Value": "contract sysparams_DelegateRefresh{\n    func NotInArray(val string, arr array) bool{\n        var i int\n        // info arr\n        while i\u003c Len(arr){\n            if val == arr[i]{\n                return false\n            }\n            i=i+1\n        }\n        return true\n    }\n    \n    func conditions{\n        $roleName = \"Delegate\"\n        $delegateParam = \"delegate_account\"\n        $ecosParamTbl = \"parameters\"\n        \n        $raTbl = \"roles_assign\"\n        $rolesTbl = \"roles_list\"\n        \n        // get role Id and Type\n        $role = DBFind($rolesTbl).Where(\"role_name=?\", $roleName).Order(\"id\").Row()\n        if !$role{\n            return \"Role not found\"\n        }\n        $roleId = $role[\"id\"]\n        $roleType = $role[\"role_type\"]\n        \n    }\n    \n    func action{\n        // get delegates ids\n        var delegateIds array\n        var dIndex int\n        $i = 1\n        while $i \u003c= $ecosystem_id {\n            $delegate = DBFind($ecosParamTbl).Where(\"name=?\",$delegateParam).Ecosystem($i).Row()\n            if !$delegate{\n                $delegate = DBFind($ecosParamTbl).Where(\"name='founder_account'\").Ecosystem($i).Row()\n            }\n            $delegateValue = $delegate[\"value\"]\n            if NotInArray($delegateValue, delegateIds){\n                delegateIds[dIndex] = $delegateValue\n                dIndex = dIndex + 1\n            }\n            $i = $i + 1\n        }\n        \n        // remove old role assigns\n        $currentDelegatesFind = DBFind($raTbl).Where(\"role_id=? and delete=0\", $roleId)\n        $i = 0\n        while $i \u003c Len($currentDelegatesFind){\n            $currentDelegate = $currentDelegatesFind[$i]\n            if NotInArray($currentDelegate[\"member_id\"], delegateIds){\n                $Id = $currentDelegate[\"id\"]\n                DBUpdate($raTbl, Int($Id), \"delete\", 1)\n            }\n            $i = $i + 1\n        }\n        \n        // assign new roles\n        $i = 0\n        while $i \u003c Len(delegateIds) {\n            $delegateId = Int(delegateIds[$i])\n            $memberId = DBFind(\"member\").WhereId($delegateId).One(\"id\")\n            if $memberId{\n                // check role dup\n                $assigned = DBFind($raTbl).Where(\"member_id=? and role_id=? and delete=0\", $delegateId, $roleId).Row()\n                if !$assigned{\n                    sysparams_RoleAssign(\"RoleName,KeyId\", $roleName, Int($memberId))\n                }\n            }\n            $i =$i+1\n        }\n    }\n}\n",
-        "Conditions": "ContractConditions(\"MainCondition\")"
-    }, {
-        "Name": "sysparams_CandidateValidatorRequest",
-        "Value": "contract sysparams_CandidateValidatorRequest{\n    data{\n        HostIp string\n        CommissionPub string\n        CommissionAddress string\n        Description string \"optional\"\n        Comment string \"optional\"\n    }\n    \n    func IsNotValidIp(ip string)bool{\n        var parts array\n        var i, lenParts, part int\n        parts = Split(ip, \".\")\n        \n        lenParts = Len(parts)\n        if lenParts != 4{\n            return true\n        }\n        while i\u003c lenParts {\n            part = Int(parts[i])\n            if part \u003c 0{\n                return true\n            }\n            if part \u003e 255{\n                return true\n            }\n            i = i+1\n        }\n        \n        return false\n    }\n    \n    conditions{\n        $candidateTbl = \"sysparams_candidate\"\n        $roleName = \"Candidate for validators\"\n        \n        $CommissionAddress = AddressToId($CommissionAddress)\n        if $CommissionAddress != PubToID($CommissionPub) {\n            info \"Address or Public key are invalide\"\n        }\n        \n        if IsNotValidIp($HostIp){\n            warning \"Please enter a valid ip address\"\n        }\n        \n        sysparams_RoleAssign(\"RoleName,KeyId\", $roleName, $key_id)\n    }\n    \n    action{\n        \n        DBInsert($candidateTbl, \"host_ip,commission_pub,commission_address,description,comment,candidate_key_id,timestamp date_created,deleted\", $HostIp, $CommissionPub, $CommissionAddress, $Description, $Comment, $key_id, $block_time, 0)\n        \n    }\n    \n}",
-        "Conditions": "ContractConditions(\"MainCondition\")"
-    }, {
-        "Name": "sysparams_RefreshInvestors",
-        "Value": "contract sysparams_RefreshInvestors {\n    data {\n        role_id int\n    }\n    \n    conditions{\n        $limitInvestors = 3\n        \n        $founder = EcosysParam(\"founder_account\")\n        if Str($key_id) != $founder{\n            info \"You can not start to voting\"\n        }\n        \n        $role = DBFind(\"roles_list\").Where(\"id=?\", $role_id).Row()\n        if !$role{\n            warning \"Role not found\"\n        }\n        \n        $role_name = $role[\"role_name\"]\n        $role_type = Int($role[\"role_type\"])\n        \n    }\n    \n    action{\n        // remove old investors\n        DBUpdateExt(\"roles_assign\", \"role_id\", $role_id, \"delete\", 1)\n        \n        // get appointer\n        $appointerFind = DBFind(\"member\").Where(\"member_id=?\",$key_id)\n        $appointer = $appointerFind[0]\n        \n        // assign new investors\n        $investorsFind = DBFind(\"keys\").Order(\"amount desc, id\").Limit($limitInvestors)\n        $lenInvestors = Len($investorsFind)\n        \n        $i = 0\n        while($i \u003c $lenInvestors){\n            $investor = $investorsFind[$i]\n            $memberFind = DBFind(\"member\").Where(\"member_id=?\", $investor[\"id\"])\n            if Len($memberFind) \u003e 0{\n                $member = $memberFind[0]\n                DBInsert(\"roles_assign\", `role_id,role_type,role_name,member_id,member_name,member_avatar,appointed_by_id,appointed_by_name,timestamp date_start,delete`, $role_id, $role_type, $role_name, $investor[\"id\"], $member[\"member_name\"], $member[\"avatar\"], $key_id, $appointer[\"member_name\"], $block_time, 0)\n            }\n            $i =$i+1\n        }\n    }\n}",
-        "Conditions": "ContractConditions(\"MainCondition\")"
-    }, {
-        "Name": "sysparams_NewVoting",
-        "Value": "contract sysparams_NewVoting {\n    data {\n        v_name string\n        new_val string\n        \n        now_date string \"date\"\n        start_date string \"date\"\n        end_date string \"date\"\n    }\n    \n    conditions {\n        $voting_name = \"New system parameter\"\n        $description = \"Voting for the system parameter\"\n        $volume = 75\n        $quorum = 50\n        \n        $role_name = \"Investor with voting rights\"\n        $type_participants = 3 // role\n        $type_decision = 4 // formal decision\n        $table_to_written = \"system_parameters\"\n        $column_name = \"value\"\n    }\n    \n    action {\n        // create new voting\n        voting_CreateNew(\"voting_name,type_voting,description,type_participants,type_decision,now_date,start_time,start_date,end_date,end_time,volume,quorum\",\n            $voting_name, 2, $description, $type_participants, $type_decision, $now_date, \"00:00\", $start_date, $end_date, \"00:00\", $volume, $quorum)\n            \n            // get voting id\n            $ret_instance = DBFind(\"voting_instances\").Order(\"id DESC\")\n            if(Len($ret_instance) \u003e 0){\n                $vals_instance = $ret_instance[0]\n                $votingID = Int($vals_instance[\"id\"])\n                \n                // set subject of voting\n                voting_SubjectFormal(\"votingID,description,table_to_written,row_id,column_name,written_value\",\n                    $votingID, $description, \"system_parameters\", 0, $v_name, $new_val)\n                    \n                    // search role\n                    $ret_role = DBFind(\"roles_list\").Where(\"role_name=$ and role_type=$ and delete=0\", $role_name, 3).Order(\"id\")\n                    if(Len($ret_role) \u003e 0){\n                        $vals_role = $ret_role[0]\n                        $role_id = Int($vals_role[\"id\"])\n                        \n                        // refresh list of the investors in the role\n                        sysparams_RefreshInvestors(\"role_id\", $role_id)\n                        \n                        // add all participants from the role\n                        voting_Invite(\"votingID,var_id\", $votingID, $role_id)\n                    }\n                }\n            }\n        }",
-        "Conditions": "ContractConditions(`MainCondition`)"
-    }, {
-        "Name": "sysparams_AcceptRole",
-        "Value": "contract sysparams_AcceptRole{\n    data{\n        ParamId int\n        KeyId int\n    }\n    func conditions{\n        $raTbl = \"roles_assign\"\n        $paramsTbl = \"sysparams_voting_templates\"\n        $votingParams = DBFind($paramsTbl).WhereId($VotingParamId).Row()\n        if !$votingParams{\n            warning \"Voting params not found\"\n        }\n        \n        $oldRoleName = $votingParams[\"precondition\"]\n        $roleName = $votingParams[\"subject\"]\n        \n        $oldRoleId = DBFind(\"roles_list\").Where(\"role_name=? and delete=0\", $oldRoleName).One(\"id\")\n        $roleId = DBFind(\"roles_list\").Where(\"role_name=? and delete=0\", $roleName).One(\"id\")\n    }\n    \n    func action{\n        // resign old role\n        $raId = DBFind($raTbl).Where(\"delete=0 and role_id=? and member_id=?\", $oldRoleId, $KeyId).One(\"id\")\n        if $raId !=nil {\n            DBUpdate($raTbl, $raId, \"delete\", 1)\n        }\n        // assign new role\n        sysparams_RoleAssign(\"RoleId,KeyId\", $roleId, $KeyId)\n    }\n}",
-        "Conditions": "ContractConditions(\"MainCondition\")"
-    }, {
-        "Name": "sysparams_StartVotingTemplate",
-        "Value": "contract sysparams_StartVotingTemplate{\n    data{\n        KeyId int\n        VotingParamId int\n        Start string \"date\"\n        StartTime string \"date\"\n        End string \"date\"\n        EndTime string \"date\"\n    }\n    \n    func conditions{\n        $vParams = DBFind(\"sysparams_voting_templates\").WhereId($VotingParamId).Row()\n        if !$vParams{\n            warning \"Voting params not found\"\n        }\n        $isKeyOk = DBFind(\"keys\").Where(\"id=?\", $KeyId).Row()\n        if !$isKeyOk{\n            warning \"Keyid not found\"\n        }\n        \n        $condition = $votingParams[\"init_conditions\"]\n        ContractConditions($condition)\n        \n        $candidateRoleName = $vParams[\"precondition\"]\n        $votersRoleName = $vParams[\"voters\"]\n        $votingName = $vParams[\"title\"]\n        $volume = Int($vParams[\"volume\"])\n        $quorum = Int($vParams[\"quorum\"])\n        $typeVoting = Int($vParams[\"type_voting\"])\n        $typeParticipants = Int($vParams[\"type_participants\"])\n        $typeDecision = Int($vParams[\"type_decision\"])\n        $vacancies = Int($vParams[\"vacancies\"])\n        $desc = Sprintf(\"%v [%v]\", $votingName, IdToAddress($KeyId))\n        \n        $isCreated = DBFind(\"voting_instances\").Where(\"name=? and description=? and delete=0\", $votingName, $desc).Row()\n        if $isCreated{\n            // info \"Voting already created\"\n        }\n        $contractAccept = Sprintf(\"sysparams_AcceptRole(`ParamId,KeyId`, %v, %v)\",$vParams[\"id\"], $KeyId)\n    }\n    \n    func action{\n        var roleId int\n        roleId = DBFind(\"roles_list\").Where(\"role_name=? and delete=0\", $votersRoleName).One(\"id\")\n        \n        $voting_id = 0 // will be set in voting_CreateNew\n        voting_CreateNew(\"voting_name,type_voting,description,type_participants,type_decision,now_date,start_time,start_date,end_date,end_time,volume,quorum\", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $Start, $StartTime, $Start, $End, $EndTime, $volume, $quorum)\n        if $voting_id == 0 {\n            $voting_id = DBFind(\"voting_instances\").Where(\"voting_name=? and start_date=?\", $votingName, $Start).One(\"id\")\n            $voting_id = Int($voting_id)\n        }\n        // after success voting set Validator Role to Candidate\n        voting_SubjectCandidates(\"votingID,memberID\", $voting_id, $KeyId)\n        voting_SubjectSettings(\"votingID,roleID,vacancies,contract_reject,contract_accept\", $voting_id, roleId, $vacancies, \"\", $contractAccept)\n        voting_Invite(\"votingID,var_id\", $voting_id, roleId)\n        \n    }\n}",
-        "Conditions": "ContractConditions(\"MainCondition\")"
-    }, {
-        "Name": "sysparams_StartVotingValidator",
-        "Value": "contract sysparams_StartVotingValidator{\n    data{\n        Id int\n        VotingParamId int\n        Start string \"date\"\n        StartTime string \"date\"\n        End string \"date\"\n        EndTime string \"date\"\n    }\n    \n    func conditions{\n        $votingParams = DBFind(\"sysparams_voting_templates\").WhereId($VotingParamId).Row()\n        if $votingParams == nil{\n            warning \"Voting params not found\"\n        }\n        \n        $condition = $votingParams[\"init_conditions\"]\n        ContractConditions($condition)\n        \n        // Delegate to Validators voting : Голосование экосистем за валидаторов\n        if $votingParams[\"title\"] == \"Voting for Validator\"{\n            // renew Delegates\n            $candidate = DBFind(\"sysparams_candidate\").Where(\"id=?\",$Id).Row()\n            if !$candidate{\n                warning \"Candidate not found\"\n            }\n            $KeyId = Int($candidate[\"candidate_key_id\"])\n            \n            sysparams_DelegateRefresh()\n        }\n    }\n    \n    func action{\n        sysparams_StartVotingTemplate(\"KeyId,VotingParamId,Start,StartTime,End,EndTime\",$KeyId,$VotingParamId,$Start,$StartTime,$End,$EndTime)\n    }\n}",
-        "Conditions": "ContractConditions(\"MainCondition\")"
-    }],
-    "data": [{
-        "Table": "roles_list",
-        "Columns": ["creator_avatar", "delete", "role_name", "role_type", "creator_id", "date_create", "date_delete", "creator_name"],
-        "Data": [
-            ["", "0", "Candidate for validators", "2", "0", "2018-01-01T00:00:00Z", "NULL", "founder"],
-            ["", "0", "Validators", "2", "0", "2018-01-01T00:00:00Z", "NULL", "founder"],
-            ["", "0", "Investor with voting rights", "2", "0", "2018-01-01T00:00:00Z", "NULL", "founder"],
-            ["", "0", "Delegate", "2", "0", "2018-01-01T00:00:00Z", "NULL", "founder"]
-        ]
-    }, {
-        "Table": "sysparams_voting_templates",
-        "Columns": ["title", "precondition", "subject", "voters", "init_conditions", "volume", "quorum", "type_voting", "type_participants", "type_decision", "vacancies"],
-        "Data": [
-            ["Voting for Validator", "Candidate for validators", "Validator", "Delegate", "MainCondition", "50", "50", "2 ", "3 ", "2 ", "1"]
-        ]
-    }],
-    "languages": [{
-        "Name": "comment",
-        "Conditions": "",
-        "Trans": "{\n    \"en\": \"Comment\",\n    \"ru\": \"Комментарий\"\n}"
-    }, {
-        "Name": "commission_address",
-        "Conditions": "",
-        "Trans": "{\"en\":\"Account address\",\"ru\":\"Адрес аккаунта\"}"
-    }, {
-        "Name": "commission_pub",
-        "Conditions": "",
-        "Trans": "{\"en\":\"Account public key\",\"ru\":\"Публичный ключ аккаунта\"}"
-    }, {
-        "Name": "date_created",
-        "Conditions": "",
-        "Trans": "{\n    \"en\": \"Date created\",\n    \"ru\": \"Дата создания\"\n}"
-    }, {
-        "Name": "description_equipment",
-        "Conditions": "",
-        "Trans": "{\"en\":\"Description equipment\",\"ru\":\"Описание оборудования\"}"
-    }, {
-        "Name": "host_ip",
-        "Conditions": "",
-        "Trans": "{\"en\":\"IP\",\"ru\":\"IP\"}"
-    }, {
-        "Name": "sysparams_candidate_validators_form",
-        "Conditions": "",
-        "Trans": "{\"en\":\"Request form of candidate for validators\",\"ru\":\"Форма запроса кандидата в валидаторы\"}"
-    }, {
-        "Name": "sysparams_candidates_list",
-        "Conditions": "",
-        "Trans": "{\"en\":\"Candidate for validators list\",\"ru\":\"Список кандидатов в валидаторы\"}"
-    }],
-    "menus": [{
-        "Name": "sysparams_menu",
-        "Value": "MenuItem(Title: $sysparams_candidates_list$, Page: sysparams_candidates_list)\nMenuItem(Title: $sysparams_candidate_validators_form$, Page: sysparams_candidate_validators_form)\n\nMenuItem(Title: test investors check, Page: test_investors_check)\nMenuItem(Title: $voting$,Page: voting_list)\nMenuItem(Title: $sysparams_list$,Page:sysparams_list)",
-        "Conditions": "ContractConditions(\"MainCondition\")"
-    }],
-    "pages": [{
-        "Name": "sysparams_candidate_validators_form",
-        "Value": "SetTitle($voting_candidate_validators_form$)\nDiv(content-wrapper){\n    Div(row){\n        Div(col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2){\n            Form(panel panel-primary){\n                Div(panel-body){\n                    Div(form-group) {\n                        Label(LangRes(host_ip)*)\n                        Input(Name: HostIp, Type: text, Placeholder: xxx.xxx.xxx.xxx).Validate(minLength:7, maxLength:15)\n                        InputErr(Name: HostIp, minLength: Value is too short, maxLength: Value is too long)\n                    }\n                    Div(form-group) {\n                        Label(LangRes(commission_pub)*)\n                        Input(Name: CommissionPub, Type: text).Validate(minLength:128, maxLength:130)\n                        InputErr(Name: CommissionPub, minLength: Invalid pub-key, maxLength: Invalid pub-key)\n                    }\n                    Div(form-group) {\n                        Label(LangRes(commission_address)*)\n                        Input(Name: CommissionAddress, Type: text,Placeholder:xxxx-xxxx-xxxx-xxxx-xxxx).Validate(minLength:24, maxLength:24)\n                        InputErr(Name: CommissionAddress, minLength: Invalid address, maxLength: Invalid address)\n                    }\n                    Div(form-group) {\n                        Label(LangRes(description_equipment))\n                        Input(Name: Description, Type: textarea)\n                    }\n                    Div(form-group) {\n                        Label(LangRes(comment))\n                        Input(Name: Comment, Type: textarea)\n                    }\n                }\n                Div(panel-footer){\n                    Button(Contract: sysparams_CandidateValidatorRequest, Class: btn btn-primary, Page: sysparams_candidate_validators_form, Body: $send$)\n                }\n            }\n        }\n    }\n}",
-        "Conditions": "ContractConditions(\"MainCondition\")",
-        "Menu": "sysparams_menu"
-    }, {
-        "Name": "sysparams_candidates_list",
-        "Value": "SetTitle($sysparams_candidates_list$)\nDBFind(Name: roles_assign, Source: src_ra).Where(\"member_id=#key_id# and delete=0 and role_name='deleter'\").Vars(deleter)\nSetVar(this, sysparams_candidates_list)\nDBFind(Name:sysparams_candidate, Source: src_candidates).Where(\"deleted=0\").Custom(buttons){\n    Form(btn-group){\n        \n        Input(Name:Id, Type: hidden, Value: #id#)\n        Input(Name:Start, Type: hidden, Value: Now(\"YYYY-MM-DD\"))\n        Input(Name:StartTime, Type: hidden, Value: Now(\"HH:MI\", +2 minute))\n        Input(Name:End, Type: hidden, Value: Now(\"YYYY-MM-DD\", +14 days))\n        Input(Name:EndTime, Type: hidden, Value: Now(\"HH:MI\", +5 minute))\n        Button(Body: voting start, Contract: sysparams_StartVotingValidator, Page: #this#, Params: \"VotingParamId=1\", Class: btn btn-primary)\n        \n        If(#deleter_id#\u003e0){\n            Button(Contract: sysparams_CandidateValidator_Delete, Page: #this#, Class: btn btn-danger fa fa-trash)\n        }\n    }\n}.Custom(_date){\n    DateTime(DateTime: #date_created#, Format: YYYY-MM-DD HH:MI)\n}\nDiv(content-wrapper){\n    Div(row){\n        Div(col-md-12){\n            Div(panel panel-primary){\n                Div(table-responsive){\n                    Table(Source: src_candidates, Columns: \"$host_ip$=host_ip,$commission_address$=commission_address,$description_equipment$=description,$comment$=comment,$date_created$=_date,=buttons\")\n                    \n                }\n            }\n        }\n    }\n}\n",
-        "Conditions": "ContractConditions(\"MainCondition\")",
-        "Menu": "sysparams_menu"
-    }, {
-        "Name": "sysparams_list",
-        "Value": "Div(Class: content-wrapper){\r\n\r\n\tSetTitle($system_params$)\r\n\tDiv(breadcrumb){\r\n\t\tSpan(Class: text-muted, Body: $system_params$)\r\n\t}\r\n\r\n    Data(src_parameters,\"id,name\"){\r\n        1,\"gap_between_blocks\"\r\n        2,\"default_ecosystem_page\"\r\n        3,\"full_nodes\"\r\n        4,\"count_of_nodes\"\r\n        5,\"ecosystem_price\"\r\n        6,\"blockchain_url\"\r\n        7,\"max_block_size\"\r\n    }.Custom(custom_value){\r\n        SysParam(#name#)\r\n    }.Custom(actions){\r\n        Button(Body: $edit$, Class: btn btn-primary, Page: sysparams_voting, PageParams: \"params_id=#id#,params_name=#name#\")\r\n    }\r\n\r\n    Div(Class: panel panel-primary){\r\n        Form(){\r\n            Div(Class: list-group-item){\r\n                Table(src_parameters, \"$id$=id,$name$=name,$value$=custom_value,$actions$=actions\")\r\n            }\r\n        }           \r\n    }\r\n}",
-        "Conditions": "ContractAccess(\"@1EditPage\")",
-        "Menu": "sysparams_menu"
-    }, {
-        "Name": "sysparams_voting",
-        "Value": "Div(Class: content-wrapper){\r\n\r\n    SetTitle($voting$)\r\n    Div(Class: breadcrumb){\r\n        LinkPage($system_params$, sysparams_list)\r\n        Span(/).Style(margin-right: 10px; margin-left: 10px;)\r\n        Span(Class: text-muted, Body: $voting$)\r\n    }\r\n\r\n    If(#params_id# \u003e 0){\r\n        Div(Class: row df f-valign){\r\n            Div(Class: col-md-3)\r\n            Div(Class: col-md-6){\r\n                Div(Class: panel panel-default){\r\n                    Form(){ \r\n                        Input(Name: now_date, Class: form-control hidden, Type: text, Value: Now(\"YYYY-MM-DD\"))\r\n                        Input(Name: start_date, Class: form-control hidden, Type: text, Value: Now(\"YYYY-MM-DD\", 3 days))\r\n                        Input(Name: end_date, Class: form-control hidden, Type: text, Value: Now(\"YYYY-MM-DD\", 21 days))\r\n\r\n                        Div(Class: list-group-item text-center){\r\n                            P(Class: h3 text-bold m0, Body: #params_name#)\r\n                        }\r\n                        Div(Class: list-group-item){\r\n                            Div(Class: row df f-valign){\r\n                                Div(Class: col-md-3 mt-lg text-right){\r\n                                    Label(For: voting_name){\r\n                                        Span(Body: LangRes(value))\r\n                                    }\r\n                                }\r\n                                Div(Class: col-md-9 mc-sm text-left){\r\n                                    Input(Name: description, Class: form-control, Type: textarea, Value: SysParam(#params_name#))\r\n                                }\r\n                            }                   \r\n                        }\r\n                        Div(Class: list-group-item){\r\n                            Div(Class: row df f-valign){\r\n                                Div(Class: col-md-3 mt-sm text-right){\r\n                                    Label(For: voting_name){\r\n                                        Span(Body: LangRes(new_value))\r\n                                    }\r\n                                }\r\n                                Div(Class: col-md-9 mc-sm text-left){\r\n                                    Input(Class: form-control, Type: text, Name: new_val)\r\n                                }\r\n                            }                   \r\n                        }\r\n                        Div(Class: panel-footer clearfix){\r\n                            Div(Class: pull-right){\r\n                                Button(Body: LangRes(back), Class: btn btn-default, Page: sysparams_list)\r\n                                Button(Body: LangRes(voting), Class: btn btn-primary, Contract: sysparams_NewVoting, Params: \"v_name=#params_name#,new_val=Val(new_val)\", Page: voting_list)\r\n                            }\r\n                        }\r\n\r\n                    }\r\n                }\r\n            }\r\n            Div(Class: col-md-3)\r\n        }\r\n    }.Else{\r\n        Div(Class: md-12 alert alert-danger text-center){\r\n            Span(Body: LangRes(attention))\r\n        }\r\n    }\r\n}",
-        "Conditions": "ContractAccess(\"@1EditPage\")",
-        "Menu": "sysparams_menu"
-    }, {
-        "Name": "test_investors_check",
-        "Value": "SetTitle(Voting test)\nDiv(content-wrapper){\n    Div(row){\n        Div(col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2){\n            Div(panel panel-primary){\n                Div(panel-body){\n                    DBFind(Name: roles_assign, Source: src_roles_assign).Where(\"delete=0\").Custom(amount){\n                        DBFind(Name: keys, Source: src_keys).Where(\"id=#member_id#\").Vars(key)\n                        Span(#key_amount#)\n                    }.Custom(address){\n                        Span(Address(#member_id#))\n                    }\n                    Table(Source: src_roles_assign, Columns: \"member_id=member_id,address=address,amount=amount,role_name=role_name\")\n                }\n                Div(panel-footer){\n                    Button(Contract: sysparams_InvestorRefresh, Class: btn btn-primary, Page: voting_investors_check, Body: $check$)\n                }\n                Div(panel-body){\n                    DBFind(Name: keys, Source: src_keys).Order(\"amount desc\").Custom(buttons){\n                        If(#id#!=#key_id#){\n                            Button(Contract: temp_MoneyTransfer, Params: \"Id=#id#\", Class: btn btn-primary, Page: voting_investors_check, Body: +10)\n                        }\n                    }\n                    Table(Source: src_keys, Columns: \"member_id=id,amount=amount,=buttons\")\n                }\n            }\n        }\n    }\n}",
-        "Conditions": "ContractConditions(\"MainCondition\")",
-        "Menu": "sysparams_menu"
-    }],
+    "contracts": [
+        {
+            "Name": "sysparams_RoleUnassign",
+            "Value": "contract sysparams_RoleUnassign {\n    data {\n        RId int\n    }\n    \n    conditions {\n        $raId = DBFind(`roles_assign`).Where(`id=$`, $RId).One(\"id\")\n        if $raId == nil {\n            warning \"Role not found for the specified member\"\n        }\n    }\n    \n    action {\n        DBUpdate(`roles_assign`, Int($raId), `delete,timestamp date_end`, 1, $block_time)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "sysparams_RoleAssign",
+            "Value": "contract sysparams_RoleAssign {\n    data{\n        RoleName string\n        KeyId int\n    }\n    \n    conditions {\n        $role = DBFind(\"roles_list\").Where(\"role_name=? and delete=0\", $RoleName).Row()\n        if !$role {\n            warning Sprintf(\"Role not found(%v)\", $RoleName)\n        }\n        \n        $member = DBFind(\"member\").WhereId($KeyId).Row()\n        if !$member {\n            // warning \"Member not found\"\n            return\n        }\n        \n        $role_assign = DBFind(`roles_assign`).Where(`role_id=? and member_id=? and delete=0`, $role[\"id\"], $KeyId).Row()\n        if $role_assign {\n            // warning \"This member has already been added\"\n            return\n        }\n    }\n    \n    action {\n        DBInsert(`roles_assign`, `role_id,role_type,role_name,member_id,member_name,member_avatar,appointed_by_id,appointed_by_name,timestamp date_start,delete`, $role[\"id\"], $role[\"role_type\"], $role[\"role_name\"], $KeyId, $member[\"member_name\"], $member[\"avatar\"], $KeyId, $member[\"member_name\"], $block_time, 0)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "sysparams_CandidateValidator_Delete",
+            "Value": "contract sysparams_CandidateValidator_Delete{\n    data{\n        Id int\n    }\n    conditions{\n        $roleName = \"Candidate for validators\"\n        // RoleConditions(\"role\",\"deleter\")\n        \n        $candidateId = DBFind(\"sysparams_candidate\").WhereId($Id).One(\"candidate_key_id\")\n        \n        $raId = DBFind(\"roles_assign\").Where(\"role_name=? and delete=0 and member_id=?\",$roleName, $candidateId).One(\"id\")\n    }\n    action{\n        DBUpdate(\"sysparams_candidate\", $Id, \"deleted\", 1)\n        DBUpdate(\"roles_assign\", $raId, \"delete\", 1)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "sysparams_DelegateRefresh",
+            "Value": "contract sysparams_DelegateRefresh{\n    func NotInArray(val string, arr array) bool{\n        var i int\n        // info arr\n        while i\u003c Len(arr){\n            if val == arr[i]{\n                return false\n            }\n            i=i+1\n        }\n        return true\n    }\n    \n    func conditions{\n        $roleName = \"Delegate\"\n        $delegateParam = \"delegate_account\"\n        $ecosParamTbl = \"parameters\"\n        \n        $raTbl = \"roles_assign\"\n        $rolesTbl = \"roles_list\"\n        \n        // get role Id and Type\n        $role = DBFind($rolesTbl).Where(\"role_name=?\", $roleName).Order(\"id\").Row()\n        if !$role{\n            return \"Role not found\"\n        }\n        $roleId = $role[\"id\"]\n        $roleType = $role[\"role_type\"]\n        \n    }\n    \n    func action{\n        // get delegates ids\n        var delegateIds array\n        var dIndex int\n        $i = 1\n        while $i \u003c= $ecosystem_id {\n            $delegate = DBFind($ecosParamTbl).Where(\"name=?\",$delegateParam).Ecosystem($i).Row()\n            if !$delegate{\n                $delegate = DBFind($ecosParamTbl).Where(\"name='founder_account'\").Ecosystem($i).Row()\n            }\n            $delegateValue = $delegate[\"value\"]\n            if NotInArray($delegateValue, delegateIds){\n                delegateIds[dIndex] = $delegateValue\n                dIndex = dIndex + 1\n            }\n            $i = $i + 1\n        }\n        \n        // remove old role assigns\n        $currentDelegatesFind = DBFind($raTbl).Where(\"role_id=? and delete=0\", $roleId)\n        $i = 0\n        while $i \u003c Len($currentDelegatesFind){\n            $currentDelegate = $currentDelegatesFind[$i]\n            if NotInArray($currentDelegate[\"member_id\"], delegateIds){\n                $Id = $currentDelegate[\"id\"]\n                DBUpdate($raTbl, Int($Id), \"delete\", 1)\n            }\n            $i = $i + 1\n        }\n        \n        // assign new roles\n        $i = 0\n        while $i \u003c Len(delegateIds) {\n            $delegateId = Int(delegateIds[$i])\n            $memberId = DBFind(\"member\").WhereId($delegateId).One(\"id\")\n            if $memberId{\n                // check role dup\n                $assigned = DBFind($raTbl).Where(\"member_id=? and role_id=? and delete=0\", $delegateId, $roleId).Row()\n                if !$assigned{\n                    sysparams_RoleAssign(\"RoleName,KeyId\", $roleName, Int($memberId))\n                }\n            }\n            $i =$i+1\n        }\n    }\n}\n",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "sysparams_RefreshInvestors",
+            "Value": "contract sysparams_RefreshInvestors {\n    data {\n        role_id int\n    }\n    \n    conditions{\n        $limitInvestors = 3\n        \n        $founder = EcosysParam(\"founder_account\")\n        if Str($key_id) != $founder{\n            info \"You can not start to voting\"\n        }\n        \n        $role = DBFind(\"roles_list\").Where(\"id=?\", $role_id).Row()\n        if !$role{\n            warning \"Role not found\"\n        }\n        \n        $role_name = $role[\"role_name\"]\n        $role_type = Int($role[\"role_type\"])\n        \n    }\n    \n    action{\n        // remove old investors\n        DBUpdateExt(\"roles_assign\", \"role_id\", $role_id, \"delete\", 1)\n        \n        // get appointer\n        $appointerFind = DBFind(\"member\").Where(\"member_id=?\",$key_id)\n        $appointer = $appointerFind[0]\n        \n        // assign new investors\n        $investorsFind = DBFind(\"keys\").Order(\"amount desc, id\").Limit($limitInvestors)\n        $lenInvestors = Len($investorsFind)\n        \n        $i = 0\n        while($i \u003c $lenInvestors){\n            $investor = $investorsFind[$i]\n            $memberFind = DBFind(\"member\").Where(\"member_id=?\", $investor[\"id\"])\n            if Len($memberFind) \u003e 0{\n                $member = $memberFind[0]\n                DBInsert(\"roles_assign\", `role_id,role_type,role_name,member_id,member_name,member_avatar,appointed_by_id,appointed_by_name,timestamp date_start,delete`, $role_id, $role_type, $role_name, $investor[\"id\"], $member[\"member_name\"], $member[\"avatar\"], $key_id, $appointer[\"member_name\"], $block_time, 0)\n            }\n            $i =$i+1\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "sysparams_NewVoting",
+            "Value": "contract sysparams_NewVoting {\n    data {\n        v_name string\n        new_val string\n        \n        now_date string \"date\"\n        start_date string \"date\"\n        end_date string \"date\"\n    }\n    \n    conditions {\n        $voting_name = \"New system parameter\"\n        $description = \"Voting for the system parameter\"\n        $volume = 75\n        $quorum = 50\n        \n        $role_name = \"Investor with voting rights\"\n        $type_participants = 3 // role\n        $type_decision = 4 // formal decision\n        $table_to_written = \"system_parameters\"\n        $column_name = \"value\"\n    }\n    \n    action {\n        // create new voting\n        voting_CreateNew(\"voting_name,type_voting,description,type_participants,type_decision,now_date,start_time,start_date,end_date,end_time,volume,quorum\",\n            $voting_name, 2, $description, $type_participants, $type_decision, $now_date, \"00:00\", $start_date, $end_date, \"00:00\", $volume, $quorum)\n            \n            // get voting id\n            $ret_instance = DBFind(\"voting_instances\").Order(\"id DESC\")\n            if(Len($ret_instance) \u003e 0){\n                $vals_instance = $ret_instance[0]\n                $votingID = Int($vals_instance[\"id\"])\n                \n                // set subject of voting\n                voting_SubjectFormal(\"votingID,description,table_to_written,row_id,column_name,written_value\",\n                    $votingID, $description, \"system_parameters\", 0, $v_name, $new_val)\n                    \n                    // search role\n                    $ret_role = DBFind(\"roles_list\").Where(\"role_name=$ and role_type=$ and delete=0\", $role_name, 3).Order(\"id\")\n                    if(Len($ret_role) \u003e 0){\n                        $vals_role = $ret_role[0]\n                        $role_id = Int($vals_role[\"id\"])\n                        \n                        // refresh list of the investors in the role\n                        sysparams_RefreshInvestors(\"role_id\", $role_id)\n                        \n                        // add all participants from the role\n                        voting_Invite(\"votingID,var_id\", $votingID, $role_id)\n                    }\n                }\n            }\n        }",
+            "Conditions": "ContractConditions(`MainCondition`)"
+        },
+        {
+            "Name": "sysparams_CandidateValidatorRequest",
+            "Value": "contract sysparams_CandidateValidatorRequest{\n    data{\n        HostIp string\n        CommissionPub string\n        CommissionAddress string\n        Description string \"optional\"\n        Comment string \"optional\"\n    }\n    \n    func IsNotValidIp(ip string)bool{\n        var parts array\n        var i, lenParts, part int\n        parts = Split(ip, \".\")\n        \n        lenParts = Len(parts)\n        if lenParts != 4{\n            return true\n        }\n        while i\u003c lenParts {\n            part = Int(parts[i])\n            if part \u003c 0{\n                return true\n            }\n            if part \u003e 255{\n                return true\n            }\n            i = i+1\n        }\n        \n        return false\n    }\n    \n    conditions{\n        $candidateTbl = \"sysparams_candidate\"\n        $roleName = \"Candidate for validators\"\n        \n        $CommissionAddress = AddressToId($CommissionAddress)\n        if $CommissionAddress != PubToID($CommissionPub) {\n            info \"Address or Public key are invalide\"\n        }\n        \n        if IsNotValidIp($HostIp){\n            warning \"Please enter a valid ip address\"\n        }\n        \n        sysparams_RoleAssign(\"RoleName,KeyId\", $roleName, $key_id)\n    }\n    \n    action{\n        \n        DBInsert($candidateTbl, \"host_ip,commission_pub,commission_address,description,comment,candidate_key_id,timestamp date_created,deleted\", $HostIp, $CommissionPub, $CommissionAddress, $Description, $Comment, $key_id, $block_time, 0)\n        \n    }\n    \n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "sysparams_AcceptRole",
+            "Value": "contract sysparams_AcceptRole{\n    data{\n        ParamId string\n        KeyId string\n    }\n    func conditions{\n        $Id = Int($KeyId)\n        \n        $raTbl = \"roles_assign\"\n        $paramsTbl = \"sysparams_voting_templates\"\n        $votingParams = DBFind($paramsTbl).Where(\"id=?\", $ParamId).Row()\n        if !$votingParams{\n            warning \"Voting params not found\"\n        }\n        \n        $oldRoleName = $votingParams[\"precondition\"]\n        $roleName = $votingParams[\"subject\"]\n        \n        $oldRoleId = DBFind(\"roles_list\").Where(\"role_name=? and delete=0\", $oldRoleName).One(\"id\")\n    }\n    \n    func action{\n        // resign old role\n        $raId = DBFind($raTbl).Where(\"delete=0 and role_id=? and member_id=?\", $oldRoleId, $Id).One(\"id\")\n        if $raId !=nil {\n            sysparams_RoleUnassign(\"RId\", Int($raId))\n        }\n        // assign new role\n        sysparams_RoleAssign(\"RoleName,KeyId\", $roleName, $Id)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "sysparams_StartVotingTemplate",
+            "Value": "contract sysparams_StartVotingTemplate{\n    data{\n        KeyId int\n        VotingParamId int\n        Start string \"date\"\n        StartTime string \"date\"\n        End string \"date\"\n        EndTime string \"date\"\n    }\n    \n    func conditions{\n        $vParams = DBFind(\"sysparams_voting_templates\").WhereId($VotingParamId).Row()\n        if !$vParams{\n            warning \"Voting params not found\"\n        }\n        $isKeyOk = DBFind(\"keys\").Where(\"id=?\", $KeyId).Row()\n        if !$isKeyOk{\n            warning \"Keyid not found\"\n        }\n        \n        $condition = $votingParams[\"init_conditions\"]\n        ContractConditions($condition)\n        \n        $candidateRoleName = $vParams[\"precondition\"]\n        $votersRoleName = $vParams[\"voters\"]\n        $votingName = $vParams[\"title\"]\n        $volume = Int($vParams[\"volume\"])\n        $quorum = Int($vParams[\"quorum\"])\n        $typeVoting = Int($vParams[\"type_voting\"])\n        $typeParticipants = Int($vParams[\"type_participants\"])\n        $typeDecision = Int($vParams[\"type_decision\"])\n        $vacancies = Int($vParams[\"vacancies\"])\n        $desc = Sprintf(\"%v [%v]\", $votingName, IdToAddress($KeyId))\n        $contractAccept = $vParams[\"contract_accept\"]\n        $acceptParams = $vParams[\"contract_accept_params\"]\n        $contractReject = $vParams[\"contract_reject\"]\n        $rejectParams = $vParams[\"contract_reject_params\"]\n        \n        $isCreated = DBFind(\"voting_instances\").Where(\"name=? and description=? and delete=0\", $votingName, $desc).Row()\n        if $isCreated{\n            // info \"Voting already created\"\n        }\n        \n        // if not special then use default\n        $defaultParams = Sprintf(\"ParamId-\u003e%v;KeyId-\u003e%v\", $vParams[\"id\"], $KeyId)\n        if Size($acceptParams) == 0{\n            $acceptParams = $defaultParams\n        }\n        if Size($rejectParams) == 0{\n            $rejectParams = $defaultParams\n        }\n    }\n    \n    func action{\n        var roleId int\n        roleId = DBFind(\"roles_list\").Where(\"role_name=? and delete=0\", $votersRoleName).One(\"id\")\n        \n        $voting_id = 0 // will be set in voting_CreateNew\n        voting_CreateNew(\"voting_name,type_voting,description,type_participants,type_decision,now_date,start_time,start_date,end_date,end_time,volume,quorum\", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $Start, $StartTime, $Start, $End, $EndTime, $volume, $quorum)\n        if $voting_id == 0 {\n            $voting_id = DBFind(\"voting_instances\").Where(\"voting_name=? and start_date=?\", $votingName, $Start).One(\"id\")\n            $voting_id = Int($voting_id)\n        }\n        // after success voting set Validator Role to Candidate\n        voting_SubjectCandidates(\"votingID,memberID\", $voting_id, $KeyId)\n        voting_SubjectSettings(\"votingID,roleID,vacancies,contract_reject,contract_accept,accept_params,reject_params\", $voting_id, roleId, $vacancies, \"\", $contractAccept, $acceptParams, $rejectParams)\n        voting_Invite(\"votingID,var_id\", $voting_id, roleId)\n        \n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "sysparams_StartVotingValidator",
+            "Value": "contract sysparams_StartVotingValidator{\n    data{\n        Id int\n        VotingParamId int\n        Start string \"date\"\n        StartTime string \"date\"\n        End string \"date\"\n        EndTime string \"date\"\n    }\n    \n    func conditions{\n        $votingParams = DBFind(\"sysparams_voting_templates\").WhereId($VotingParamId).Row()\n        if $votingParams == nil{\n            warning \"Voting params not found\"\n        }\n        \n        $condition = $votingParams[\"init_conditions\"]\n        ContractConditions($condition)\n        \n        // Delegate to Validators voting : Голосование экосистем за валидаторов\n        if $votingParams[\"title\"] == \"Voting for Validator\"{\n            // renew Delegates\n            $candidate = DBFind(\"sysparams_candidate\").Where(\"id=?\",$Id).Row()\n            if !$candidate{\n                warning \"Candidate not found\"\n            }\n            $KeyId = Int($candidate[\"candidate_key_id\"])\n            \n            sysparams_DelegateRefresh()\n        }\n    }\n    \n    func action{\n        sysparams_StartVotingTemplate(\"KeyId,VotingParamId,Start,StartTime,End,EndTime\",$KeyId,$VotingParamId,$Start,$StartTime,$End,$EndTime)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        }
+    ],
+    "data": [
+        {
+            "Table": "roles_list",
+            "Columns": [
+                "creator_avatar",
+                "delete",
+                "role_name",
+                "role_type",
+                "creator_id",
+                "date_create",
+                "date_delete",
+                "creator_name"
+            ],
+            "Data": [
+                [
+                    "",
+                    "0",
+                    "Candidate for validators",
+                    "2",
+                    "0",
+                    "2018-01-01T00:00:00Z",
+                    "NULL",
+                    "founder"
+                ],
+                [
+                    "",
+                    "0",
+                    "Validator",
+                    "2",
+                    "0",
+                    "2018-01-01T00:00:00Z",
+                    "NULL",
+                    "founder"
+                ],
+                [
+                    "",
+                    "0",
+                    "Investor with voting rights",
+                    "2",
+                    "0",
+                    "2018-01-01T00:00:00Z",
+                    "NULL",
+                    "founder"
+                ],
+                [
+                    "",
+                    "0",
+                    "Delegate",
+                    "2",
+                    "0",
+                    "2018-01-01T00:00:00Z",
+                    "NULL",
+                    "founder"
+                ]
+            ]
+        },
+        {
+            "Table": "sysparams_voting_templates",
+            "Columns": [
+                "title",
+                "precondition",
+                "subject",
+                "voters",
+                "init_conditions",
+                "volume",
+                "quorum",
+                "type_voting",
+                "type_participants",
+                "type_decision",
+                "vacancies",
+                "contract_accept",
+                "contract_accept_params",
+                "contract_reject",
+                "contract_reject_params"
+            ],
+            "Data": [
+                [
+                    "Voting for Validator",
+                    "Candidate for validators",
+                    "Validator",
+                    "Delegate",
+                    "MainCondition",
+                    "50",
+                    "50",
+                    "2 ",
+                    "3 ",
+                    "2 ",
+                    "1",
+                    "sysparams_AcceptRole",
+                    "",
+                    "",
+                    ""
+                ]
+            ]
+        }
+    ],
+    "languages": [
+        {
+            "Name": "comment",
+            "Conditions": "",
+            "Trans": "{\n    \"en\": \"Comment\",\n    \"ru\": \"Комментарий\"\n}"
+        },
+        {
+            "Name": "commission_address",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Account address\",\"ru\":\"Адрес аккаунта\"}"
+        },
+        {
+            "Name": "commission_pub",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Account public key\",\"ru\":\"Публичный ключ аккаунта\"}"
+        },
+        {
+            "Name": "date_created",
+            "Conditions": "",
+            "Trans": "{\n    \"en\": \"Date created\",\n    \"ru\": \"Дата создания\"\n}"
+        },
+        {
+            "Name": "description_equipment",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Description equipment\",\"ru\":\"Описание оборудования\"}"
+        },
+        {
+            "Name": "host_ip",
+            "Conditions": "",
+            "Trans": "{\"en\":\"IP\",\"ru\":\"IP\"}"
+        },
+        {
+            "Name": "sysparams_candidate_validators_form",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Request form of candidate for validators\",\"ru\":\"Форма запроса кандидата в валидаторы\"}"
+        },
+        {
+            "Name": "sysparams_candidates_list",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Candidate for validators list\",\"ru\":\"Список кандидатов в валидаторы\"}"
+        }
+    ],
+    "menus": [
+        {
+            "Name": "sysparams_menu",
+            "Value": "MenuItem(Title: $sysparams_candidates_list$, Page: sysparams_candidates_list)\nMenuItem(Title: $sysparams_candidate_validators_form$, Page: sysparams_candidate_validators_form)\nMenuItem(Title: $voting$,Page: voting_list)\nMenuItem(Title: $sysparams_list$,Page:sysparams_list)",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        }
+    ],
+    "pages": [
+        {
+            "Name": "sysparams_candidate_validators_form",
+            "Value": "SetTitle($sysparams_candidate_validators_form$)\nDiv(content-wrapper){\n    Div(row){\n        Div(col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2){\n            Form(panel panel-primary){\n                Div(panel-body){\n                    Div(form-group) {\n                        Label(LangRes(host_ip)*)\n                        Input(Name: HostIp, Type: text, Placeholder: xxx.xxx.xxx.xxx).Validate(minLength:7, maxLength:15)\n                        InputErr(Name: HostIp, minLength: Value is too short, maxLength: Value is too long)\n                    }\n                    Div(form-group) {\n                        Label(LangRes(commission_pub)*)\n                        Input(Name: CommissionPub, Type: text).Validate(minLength:128, maxLength:130)\n                        InputErr(Name: CommissionPub, minLength: Invalid pub-key, maxLength: Invalid pub-key)\n                    }\n                    Div(form-group) {\n                        Label(LangRes(commission_address)*)\n                        Input(Name: CommissionAddress, Type: text,Placeholder:xxxx-xxxx-xxxx-xxxx-xxxx).Validate(minLength:24, maxLength:24)\n                        InputErr(Name: CommissionAddress, minLength: Invalid address, maxLength: Invalid address)\n                    }\n                    Div(form-group) {\n                        Label(LangRes(description_equipment))\n                        Input(Name: Description, Type: textarea)\n                    }\n                    Div(form-group) {\n                        Label(LangRes(comment))\n                        Input(Name: Comment, Type: textarea)\n                    }\n                }\n                Div(panel-footer){\n                    Button(Contract: sysparams_CandidateValidatorRequest, Class: btn btn-primary, Page: sysparams_candidate_validators_form, Body: $send$)\n                }\n            }\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Menu": "sysparams_menu"
+        },
+        {
+            "Name": "sysparams_candidates_list",
+            "Value": "SetTitle($sysparams_candidates_list$)\nDBFind(Name: roles_assign, Source: src_ra).Where(\"member_id=#key_id# and delete=0 and role_name='deleter'\").Vars(deleter)\nSetVar(this, sysparams_candidates_list)\nDBFind(Name:sysparams_candidate, Source: src_candidates).Where(\"deleted=0\").Custom(buttons){\n    Form(btn-group){\n        \n        Input(Name:Id, Type: hidden, Value: #id#)\n        Input(Name:Start, Type: hidden, Value: Now(\"YYYY-MM-DD\"))\n        Input(Name:StartTime, Type: hidden, Value: Now(\"HH:MI\", +1 minute))\n        Input(Name:End, Type: hidden, Value: Now(\"YYYY-MM-DD\", +14 days))\n        Input(Name:EndTime, Type: hidden, Value: Now(\"HH:MI\", +3 minute))\n        Button(Body: voting start, Contract: sysparams_StartVotingValidator, Page: #this#, Params: \"VotingParamId=1\", Class: btn btn-primary)\n        \n        If(#deleter_id#\u003e0){\n            Button(Contract: sysparams_CandidateValidator_Delete, Page: #this#, Class: btn btn-danger fa fa-trash)\n        }\n    }\n}.Custom(_date){\n    DateTime(DateTime: #date_created#, Format: YYYY-MM-DD HH:MI)\n}\nDiv(content-wrapper){\n    Div(row){\n        Div(col-md-12){\n            Div(panel panel-primary){\n                Div(table-responsive){\n                    Table(Source: src_candidates, Columns: \"$host_ip$=host_ip,$commission_address$=commission_address,$description_equipment$=description,$comment$=comment,$date_created$=_date,=buttons\")\n                    \n                }\n            }\n        }\n    }\n}\n",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Menu": "sysparams_menu"
+        },
+        {
+            "Name": "sysparams_list",
+            "Value": "Div(Class: content-wrapper){\r\n\r\n\tSetTitle($system_params$)\r\n\tDiv(breadcrumb){\r\n\t\tSpan(Class: text-muted, Body: $system_params$)\r\n\t}\r\n\r\n    Data(src_parameters,\"id,name\"){\r\n        1,\"gap_between_blocks\"\r\n        2,\"default_ecosystem_page\"\r\n        3,\"full_nodes\"\r\n        4,\"count_of_nodes\"\r\n        5,\"ecosystem_price\"\r\n        6,\"blockchain_url\"\r\n        7,\"max_block_size\"\r\n    }.Custom(custom_value){\r\n        SysParam(#name#)\r\n    }.Custom(actions){\r\n        Button(Body: $edit$, Class: btn btn-primary, Page: sysparams_voting, PageParams: \"params_id=#id#,params_name=#name#\")\r\n    }\r\n\r\n    Div(Class: panel panel-primary){\r\n        Form(){\r\n            Div(Class: list-group-item){\r\n                Table(src_parameters, \"$id$=id,$name$=name,$value$=custom_value,$actions$=actions\")\r\n            }\r\n        }           \r\n    }\r\n}",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Menu": "sysparams_menu"
+        },
+        {
+            "Name": "sysparams_voting",
+            "Value": "Div(Class: content-wrapper){\r\n\r\n    SetTitle($voting$)\r\n    Div(Class: breadcrumb){\r\n        LinkPage($system_params$, sysparams_list)\r\n        Span(/).Style(margin-right: 10px; margin-left: 10px;)\r\n        Span(Class: text-muted, Body: $voting$)\r\n    }\r\n\r\n    If(#params_id# \u003e 0){\r\n        Div(Class: row df f-valign){\r\n            Div(Class: col-md-3)\r\n            Div(Class: col-md-6){\r\n                Div(Class: panel panel-default){\r\n                    Form(){ \r\n                        Input(Name: now_date, Class: form-control hidden, Type: text, Value: Now(\"YYYY-MM-DD\"))\r\n                        Input(Name: start_date, Class: form-control hidden, Type: text, Value: Now(\"YYYY-MM-DD\", 3 days))\r\n                        Input(Name: end_date, Class: form-control hidden, Type: text, Value: Now(\"YYYY-MM-DD\", 21 days))\r\n\r\n                        Div(Class: list-group-item text-center){\r\n                            P(Class: h3 text-bold m0, Body: #params_name#)\r\n                        }\r\n                        Div(Class: list-group-item){\r\n                            Div(Class: row df f-valign){\r\n                                Div(Class: col-md-3 mt-lg text-right){\r\n                                    Label(For: voting_name){\r\n                                        Span(Body: LangRes(value))\r\n                                    }\r\n                                }\r\n                                Div(Class: col-md-9 mc-sm text-left){\r\n                                    Input(Name: description, Class: form-control, Type: textarea, Value: SysParam(#params_name#))\r\n                                }\r\n                            }                   \r\n                        }\r\n                        Div(Class: list-group-item){\r\n                            Div(Class: row df f-valign){\r\n                                Div(Class: col-md-3 mt-sm text-right){\r\n                                    Label(For: voting_name){\r\n                                        Span(Body: LangRes(new_value))\r\n                                    }\r\n                                }\r\n                                Div(Class: col-md-9 mc-sm text-left){\r\n                                    Input(Class: form-control, Type: text, Name: new_val)\r\n                                }\r\n                            }                   \r\n                        }\r\n                        Div(Class: panel-footer clearfix){\r\n                            Div(Class: pull-right){\r\n                                Button(Body: LangRes(back), Class: btn btn-default, Page: sysparams_list)\r\n                                Button(Body: LangRes(voting), Class: btn btn-primary, Contract: sysparams_NewVoting, Params: \"v_name=#params_name#,new_val=Val(new_val)\", Page: voting_list)\r\n                            }\r\n                        }\r\n\r\n                    }\r\n                }\r\n            }\r\n            Div(Class: col-md-3)\r\n        }\r\n    }.Else{\r\n        Div(Class: md-12 alert alert-danger text-center){\r\n            Span(Body: LangRes(attention))\r\n        }\r\n    }\r\n}",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Menu": "sysparams_menu"
+        }
+    ],
     "parameters": [],
-    "tables": [{
-        "Name": "sysparams_candidate",
-        "Columns": "[{\n    \"name\": \"commission_pub\",\n    \"type\": \"bytea\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"candidate_key_id\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"commission_address\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"comment\",\n    \"type\": \"text\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"deleted\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"host_ip\",\n    \"type\": \"varchar\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"description\",\n    \"type\": \"text\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"date_created\",\n    \"type\": \"datetime\",\n    \"conditions\": \"true\"\n}]",
-        "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
-    }, {
-        "Name": "sysparams_voting_templates",
-        "Columns": "[{\n        \"name\": \"title\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"precondition\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    }, {\n        \"name\": \"subject\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    }, {\n        \"name\": \"voters\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"init_conditions\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"volume\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"quorum\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"type_voting\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"type_participants\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"type_decision\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"vacancies\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    }\n]",
-        "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
-    }]
+    "tables": [
+        {
+            "Name": "sysparams_candidate",
+            "Columns": "[{\n    \"name\": \"commission_pub\",\n    \"type\": \"bytea\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"candidate_key_id\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"commission_address\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"comment\",\n    \"type\": \"text\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"deleted\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"host_ip\",\n    \"type\": \"varchar\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"description\",\n    \"type\": \"text\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"date_created\",\n    \"type\": \"datetime\",\n    \"conditions\": \"true\"\n}]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
+        },
+        {
+            "Name": "sysparams_voting_templates",
+            "Columns": "[{\n        \"name\": \"title\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"precondition\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    }, {\n        \"name\": \"subject\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    }, {\n        \"name\": \"voters\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"init_conditions\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"volume\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"quorum\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"type_voting\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"type_participants\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"type_decision\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"vacancies\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"contract_accept\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"contract_accept_params\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"contract_reject\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"contract_reject_params\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    }\n]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
+        }
+    ]
 }
