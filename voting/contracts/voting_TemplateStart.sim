@@ -1,0 +1,70 @@
+contract voting_TemplateStart{
+    data{
+        KeyId int
+        TemplateId int
+        Start string "date"
+        StartTime string "date"
+        End string "date"
+        EndTime string "date"
+    }
+    
+    func conditions{
+        $vParams = DBFind("voting_templates").WhereId($VotingParamId).Row()
+        if !$vParams{
+            warning "Voting params not found"
+        }
+        $isKeyOk = DBFind("keys").Where("id=?", $KeyId).Row()
+        if !$isKeyOk{
+            warning "Keyid not found"
+        }
+        
+        $condition = $votingParams["init_conditions"]
+        ContractConditions($condition)
+        
+        $candidateRoleName = $vParams["precondition"]
+        $votersRoleName = $vParams["voters"]
+        $votingName = $vParams["title"]
+        $volume = Int($vParams["volume"])
+        $quorum = Int($vParams["quorum"])
+        $typeVoting = Int($vParams["type_voting"])
+        $typeParticipants = Int($vParams["type_participants"])
+        $typeDecision = Int($vParams["type_decision"])
+        $vacancies = Int($vParams["vacancies"])
+        $desc = Sprintf("%v [%v]", $votingName, IdToAddress($KeyId))
+        $contractAccept = $vParams["contract_accept"]
+        $acceptParams = $vParams["contract_accept_params"]
+        $contractReject = $vParams["contract_reject"]
+        $rejectParams = $vParams["contract_reject_params"]
+        
+        $isCreated = DBFind("voting_instances").Where("name=? and description=? and delete=0", $votingName, $desc).Row()
+        if $isCreated{
+            // info "Voting already created"
+        }
+        
+        // if not special then use default
+        $defaultParams = Sprintf("ParamId->%v;KeyId->%v", $vParams["id"], $KeyId)
+        if Size($acceptParams) == 0{
+            $acceptParams = $defaultParams
+        }
+        if Size($rejectParams) == 0{
+            $rejectParams = $defaultParams
+        }
+    }
+    
+    func action{
+        var roleId int
+        roleId = DBFind("roles_list").Where("role_name=? and delete=0", $votersRoleName).One("id")
+        
+        $voting_id = 0 // will be set in voting_CreateNew
+        voting_CreateNew("voting_name,type_voting,description,type_participants,type_decision,now_date,start_time,start_date,end_date,end_time,volume,quorum", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $Start, $StartTime, $Start, $End, $EndTime, $volume, $quorum)
+        if $voting_id == 0 {
+            $voting_id = DBFind("voting_instances").Where("voting_name=? and start_date=?", $votingName, $Start).One("id")
+            $voting_id = Int($voting_id)
+        }
+        // after success voting set Validator Role to Candidate
+        voting_SubjectCandidates("votingID,memberID", $voting_id, $KeyId)
+        voting_SubjectSettings("votingID,roleID,vacancies,contract_reject,contract_accept,accept_params,reject_params", $voting_id, roleId, $vacancies, "", $contractAccept, $acceptParams, $rejectParams)
+        voting_Invite("votingID,var_id", $voting_id, roleId)
+        
+    }
+}

@@ -38,17 +38,12 @@
         },
         {
             "Name": "sysparams_AcceptRole",
-            "Value": "contract sysparams_AcceptRole{\n    data{\n        ParamId string\n        KeyId string\n    }\n    func conditions{\n        $Id = Int($KeyId)\n        \n        $raTbl = \"roles_assign\"\n        $paramsTbl = \"sysparams_voting_templates\"\n        $votingParams = DBFind($paramsTbl).Where(\"id=?\", $ParamId).Row()\n        if !$votingParams{\n            warning \"Voting params not found\"\n        }\n        \n        $oldRoleName = $votingParams[\"precondition\"]\n        $roleName = $votingParams[\"subject\"]\n        \n        $oldRoleId = DBFind(\"roles_list\").Where(\"role_name=? and delete=0\", $oldRoleName).One(\"id\")\n    }\n    \n    func action{\n        // resign old role\n        $raId = DBFind($raTbl).Where(\"delete=0 and role_id=? and member_id=?\", $oldRoleId, $Id).One(\"id\")\n        if $raId !=nil {\n            sysparams_RoleUnassign(\"RId\", Int($raId))\n        }\n        // assign new role\n        sysparams_RoleAssign(\"RoleName,KeyId\", $roleName, $Id)\n    }\n}",
-            "Conditions": "ContractConditions(\"MainCondition\")"
-        },
-        {
-            "Name": "sysparams_StartVotingTemplate",
-            "Value": "contract sysparams_StartVotingTemplate{\n    data{\n        KeyId int\n        VotingParamId int\n        Start string \"date\"\n        StartTime string \"date\"\n        End string \"date\"\n        EndTime string \"date\"\n    }\n    \n    func conditions{\n        $vParams = DBFind(\"sysparams_voting_templates\").WhereId($VotingParamId).Row()\n        if !$vParams{\n            warning \"Voting params not found\"\n        }\n        $isKeyOk = DBFind(\"keys\").Where(\"id=?\", $KeyId).Row()\n        if !$isKeyOk{\n            warning \"Keyid not found\"\n        }\n        \n        $condition = $votingParams[\"init_conditions\"]\n        ContractConditions($condition)\n        \n        $candidateRoleName = $vParams[\"precondition\"]\n        $votersRoleName = $vParams[\"voters\"]\n        $votingName = $vParams[\"title\"]\n        $volume = Int($vParams[\"volume\"])\n        $quorum = Int($vParams[\"quorum\"])\n        $typeVoting = Int($vParams[\"type_voting\"])\n        $typeParticipants = Int($vParams[\"type_participants\"])\n        $typeDecision = Int($vParams[\"type_decision\"])\n        $vacancies = Int($vParams[\"vacancies\"])\n        $desc = Sprintf(\"%v [%v]\", $votingName, IdToAddress($KeyId))\n        $contractAccept = $vParams[\"contract_accept\"]\n        $acceptParams = $vParams[\"contract_accept_params\"]\n        $contractReject = $vParams[\"contract_reject\"]\n        $rejectParams = $vParams[\"contract_reject_params\"]\n        \n        $isCreated = DBFind(\"voting_instances\").Where(\"name=? and description=? and delete=0\", $votingName, $desc).Row()\n        if $isCreated{\n            // info \"Voting already created\"\n        }\n        \n        // if not special then use default\n        $defaultParams = Sprintf(\"ParamId-\u003e%v;KeyId-\u003e%v\", $vParams[\"id\"], $KeyId)\n        if Size($acceptParams) == 0{\n            $acceptParams = $defaultParams\n        }\n        if Size($rejectParams) == 0{\n            $rejectParams = $defaultParams\n        }\n    }\n    \n    func action{\n        var roleId int\n        roleId = DBFind(\"roles_list\").Where(\"role_name=? and delete=0\", $votersRoleName).One(\"id\")\n        \n        $voting_id = 0 // will be set in voting_CreateNew\n        voting_CreateNew(\"voting_name,type_voting,description,type_participants,type_decision,now_date,start_time,start_date,end_date,end_time,volume,quorum\", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $Start, $StartTime, $Start, $End, $EndTime, $volume, $quorum)\n        if $voting_id == 0 {\n            $voting_id = DBFind(\"voting_instances\").Where(\"voting_name=? and start_date=?\", $votingName, $Start).One(\"id\")\n            $voting_id = Int($voting_id)\n        }\n        // after success voting set Validator Role to Candidate\n        voting_SubjectCandidates(\"votingID,memberID\", $voting_id, $KeyId)\n        voting_SubjectSettings(\"votingID,roleID,vacancies,contract_reject,contract_accept,accept_params,reject_params\", $voting_id, roleId, $vacancies, \"\", $contractAccept, $acceptParams, $rejectParams)\n        voting_Invite(\"votingID,var_id\", $voting_id, roleId)\n        \n    }\n}",
+            "Value": "contract sysparams_AcceptRole{\n    data{\n        ParamId string\n        KeyId string\n    }\n    func conditions{\n        $Id = Int($KeyId)\n        \n        $raTbl = \"roles_assign\"\n        $paramsTbl = \"voting_templates\"\n        $votingParams = DBFind($paramsTbl).Where(\"id=?\", $ParamId).Row()\n        if !$votingParams{\n            warning \"Voting params not found\"\n        }\n        \n        $oldRoleName = $votingParams[\"precondition\"]\n        $roleName = $votingParams[\"subject\"]\n        \n        $oldRoleId = DBFind(\"roles_list\").Where(\"role_name=? and delete=0\", $oldRoleName).One(\"id\")\n    }\n    \n    func action{\n        // resign old role\n        $raId = DBFind($raTbl).Where(\"delete=0 and role_id=? and member_id=?\", $oldRoleId, $Id).One(\"id\")\n        if $raId !=nil {\n            sysparams_RoleUnassign(\"RId\", Int($raId))\n        }\n        // assign new role\n        sysparams_RoleAssign(\"RoleName,KeyId\", $roleName, $Id)\n    }\n}",
             "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "sysparams_StartVotingValidator",
-            "Value": "contract sysparams_StartVotingValidator{\n    data{\n        Id int\n        VotingParamId int\n        Start string \"date\"\n        StartTime string \"date\"\n        End string \"date\"\n        EndTime string \"date\"\n    }\n    \n    func conditions{\n        $votingParams = DBFind(\"sysparams_voting_templates\").WhereId($VotingParamId).Row()\n        if $votingParams == nil{\n            warning \"Voting params not found\"\n        }\n        \n        $condition = $votingParams[\"init_conditions\"]\n        ContractConditions($condition)\n        \n        // Delegate to Validators voting : Голосование экосистем за валидаторов\n        if $votingParams[\"title\"] == \"Voting for Validator\"{\n            // renew Delegates\n            $candidate = DBFind(\"sysparams_candidate\").Where(\"id=?\",$Id).Row()\n            if !$candidate{\n                warning \"Candidate not found\"\n            }\n            $KeyId = Int($candidate[\"candidate_key_id\"])\n            \n            sysparams_DelegateRefresh()\n        }\n    }\n    \n    func action{\n        sysparams_StartVotingTemplate(\"KeyId,VotingParamId,Start,StartTime,End,EndTime\",$KeyId,$VotingParamId,$Start,$StartTime,$End,$EndTime)\n    }\n}",
+            "Value": "contract sysparams_StartVotingValidator{\n    data{\n        Id int\n        VotingParamId int\n        Start string \"date\"\n        StartTime string \"date\"\n        End string \"date\"\n        EndTime string \"date\"\n    }\n    \n    func conditions{\n        $votingParams = DBFind(\"voting_templates\").WhereId($VotingParamId).Row()\n        if $votingParams == nil{\n            warning \"Voting params not found\"\n        }\n        \n        $condition = $votingParams[\"init_conditions\"]\n        ContractConditions($condition)\n        \n        // Delegate to Validators voting : Голосование экосистем за валидаторов\n        if $votingParams[\"title\"] != \"Voting for Validator\"{\n            warning \"Invalid param\"\n        }\n        // renew Delegates\n        $candidate = DBFind(\"sysparams_candidate\").Where(\"id=?\",$Id).Row()\n        if !$candidate{\n            warning \"Candidate not found\"\n        }\n        $KeyId = Int($candidate[\"candidate_key_id\"])\n        \n        sysparams_DelegateRefresh()\n    }\n    \n    func action{\n        voting_TemplateStart(\"KeyId,TemplateId,Start,StartTime,End,EndTime\",$KeyId,$VotingParamId,$Start,$StartTime,$End,$EndTime)\n    }\n}",
             "Conditions": "ContractConditions(\"MainCondition\")"
         }
     ],
@@ -107,45 +102,6 @@
                     "founder"
                 ]
             ]
-        },
-        {
-            "Table": "sysparams_voting_templates",
-            "Columns": [
-                "title",
-                "precondition",
-                "subject",
-                "voters",
-                "init_conditions",
-                "volume",
-                "quorum",
-                "type_voting",
-                "type_participants",
-                "type_decision",
-                "vacancies",
-                "contract_accept",
-                "contract_accept_params",
-                "contract_reject",
-                "contract_reject_params"
-            ],
-            "Data": [
-                [
-                    "Voting for Validator",
-                    "Candidate for validators",
-                    "Validator",
-                    "Delegate",
-                    "MainCondition",
-                    "50",
-                    "50",
-                    "2 ",
-                    "3 ",
-                    "2 ",
-                    "1",
-                    "sysparams_AcceptRole",
-                    "",
-                    "",
-                    ""
-                ]
-            ]
         }
     ],
     "languages": [
@@ -188,6 +144,16 @@
             "Name": "sysparams_candidates_list",
             "Conditions": "",
             "Trans": "{\"en\":\"Candidate for validators list\",\"ru\":\"Список кандидатов в валидаторы\"}"
+        },
+        {
+            "Name": "system_params",
+            "Conditions": "",
+            "Trans": "{\"en\":\"System parameters\",\"ru\":\"Системные параметры\"}"
+        },
+        {
+            "Name": "sysparams_list",
+            "Conditions": "",
+            "Trans": "{\"en\":\"System parameters list\",\"ru\":\"Список системных параметров\"}"
         }
     ],
     "menus": [
@@ -206,7 +172,7 @@
         },
         {
             "Name": "sysparams_candidates_list",
-            "Value": "SetTitle($sysparams_candidates_list$)\nDBFind(Name: roles_assign, Source: src_ra).Where(\"member_id=#key_id# and delete=0 and role_name='deleter'\").Vars(deleter)\nSetVar(this, sysparams_candidates_list)\nDBFind(Name:sysparams_candidate, Source: src_candidates).Where(\"deleted=0\").Custom(buttons){\n    Form(btn-group){\n        \n        Input(Name:Id, Type: hidden, Value: #id#)\n        Input(Name:Start, Type: hidden, Value: Now(\"YYYY-MM-DD\"))\n        Input(Name:StartTime, Type: hidden, Value: Now(\"HH:MI\", +1 minute))\n        Input(Name:End, Type: hidden, Value: Now(\"YYYY-MM-DD\", +14 days))\n        Input(Name:EndTime, Type: hidden, Value: Now(\"HH:MI\", +3 minute))\n        Button(Body: voting start, Contract: sysparams_StartVotingValidator, Page: #this#, Params: \"VotingParamId=1\", Class: btn btn-primary)\n        \n        If(#deleter_id#\u003e0){\n            Button(Contract: sysparams_CandidateValidator_Delete, Page: #this#, Class: btn btn-danger fa fa-trash)\n        }\n    }\n}.Custom(_date){\n    DateTime(DateTime: #date_created#, Format: YYYY-MM-DD HH:MI)\n}\nDiv(content-wrapper){\n    Div(row){\n        Div(col-md-12){\n            Div(panel panel-primary){\n                Div(table-responsive){\n                    Table(Source: src_candidates, Columns: \"$host_ip$=host_ip,$commission_address$=commission_address,$description_equipment$=description,$comment$=comment,$date_created$=_date,=buttons\")\n                    \n                }\n            }\n        }\n    }\n}\n",
+            "Value": "SetTitle($sysparams_candidates_list$)\nSetVar(this, sysparams_candidates_list)\nDBFind(Name:sysparams_candidate, Source: src_candidates).Where(\"deleted=0\").Custom(buttons){\n    Form(btn-group){\n        \n        Input(Name:Id, Type: hidden, Value: #id#)\n        Input(Name:Start, Type: hidden, Value: Now(\"YYYY-MM-DD\"))\n        Input(Name:StartTime, Type: hidden, Value: Now(\"HH:MI\", +1 minute))\n        Input(Name:End, Type: hidden, Value: Now(\"YYYY-MM-DD\", +14 days))\n        Input(Name:EndTime, Type: hidden, Value: Now(\"HH:MI\", +3 minute))\n        Button(Body: $voting_start$, Contract: sysparams_StartVotingValidator, Page: #this#, Params: \"VotingParamId=1\", Class: btn btn-primary)\n    }\n}.Custom(_date){\n    DateTime(DateTime: #date_created#, Format: YYYY-MM-DD HH:MI)\n}\nDiv(content-wrapper){\n    Div(row){\n        Div(col-md-12){\n            Div(panel panel-primary){\n                Div(table-responsive){\n                    Table(Source: src_candidates, Columns: \"$host_ip$=host_ip,$commission_address$=commission_address,$description_equipment$=description,$comment$=comment,$date_created$=_date,=buttons\")\n                    \n                }\n            }\n        }\n    }\n}\n",
             "Conditions": "ContractConditions(\"MainCondition\")",
             "Menu": "sysparams_menu"
         },
@@ -228,11 +194,6 @@
         {
             "Name": "sysparams_candidate",
             "Columns": "[{\n    \"name\": \"commission_pub\",\n    \"type\": \"bytea\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"candidate_key_id\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"commission_address\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"comment\",\n    \"type\": \"text\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"deleted\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"host_ip\",\n    \"type\": \"varchar\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"description\",\n    \"type\": \"text\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"date_created\",\n    \"type\": \"datetime\",\n    \"conditions\": \"true\"\n}]",
-            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
-        },
-        {
-            "Name": "sysparams_voting_templates",
-            "Columns": "[{\n        \"name\": \"title\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"precondition\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    }, {\n        \"name\": \"subject\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    }, {\n        \"name\": \"voters\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"init_conditions\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"volume\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"quorum\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"type_voting\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"type_participants\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"type_decision\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"vacancies\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"contract_accept\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"contract_accept_params\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"contract_reject\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"contract_reject_params\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    }\n]",
             "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
         }
     ]

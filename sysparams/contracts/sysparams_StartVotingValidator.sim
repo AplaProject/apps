@@ -9,7 +9,7 @@ contract sysparams_StartVotingValidator{
     }
     
     func conditions{
-        $votingParams = DBFind("sysparams_voting_templates").WhereId($VotingParamId).Row()
+        $votingParams = DBFind("voting_templates").WhereId($VotingParamId).Row()
         if $votingParams == nil{
             warning "Voting params not found"
         }
@@ -18,19 +18,20 @@ contract sysparams_StartVotingValidator{
         ContractConditions($condition)
         
         // Delegate to Validators voting : Голосование экосистем за валидаторов
-        if $votingParams["title"] == "Voting for Validator"{
-            // renew Delegates
-            $candidate = DBFind("sysparams_candidate").Where("id=?",$Id).Row()
-            if !$candidate{
-                warning "Candidate not found"
-            }
-            $KeyId = Int($candidate["candidate_key_id"])
-            
-            sysparams_DelegateRefresh()
+        if $votingParams["title"] != "Voting for Validator"{
+            warning "Invalid param"
         }
+        // renew Delegates
+        $candidate = DBFind("sysparams_candidate").Where("id=?",$Id).Row()
+        if !$candidate{
+            warning "Candidate not found"
+        }
+        $KeyId = Int($candidate["candidate_key_id"])
+        
+        sysparams_DelegateRefresh()
     }
     
     func action{
-        sysparams_StartVotingTemplate("KeyId,VotingParamId,Start,StartTime,End,EndTime",$KeyId,$VotingParamId,$Start,$StartTime,$End,$EndTime)
+        voting_TemplateStart("KeyId,TemplateId,Start,StartTime,End,EndTime",$KeyId,$VotingParamId,$Start,$StartTime,$End,$EndTime)
     }
 }
