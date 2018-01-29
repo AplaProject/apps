@@ -1,58 +1,60 @@
 contract voting_TemplateStore{
     data{
-        KeyId int
-        VotingParamId int
-        Start string "date"
-        StartTime string "date"
-        End string "date"
-        EndTime string "date"
+        Title string
+        TypeParticipants int
+        TypeVoting int
+        TypeDecision int
+        Volume int
+        Quorum int
+        Precondition string "optional" //old subject, any propertion
+        Subject string
+        Voters string
+        InitCondition string "optional"
+        Vacancies int
+        ContractAccept string "optinal"
+        ParamsAccept string "optinal"
+        ContractReject string "optinal"
+        ParamsReject string "optinal"
     }
     
     func conditions{
-        $vParams = DBFind("voting_templates").WhereId($VotingParamId).Row()
-        if !$vParams{
-            warning "Voting params not found"
-        }
-        $isKeyOk = DBFind("keys").Where("id=?", $KeyId).Row()
-        if !$isKeyOk{
-            warning "Keyid not found"
+        if Size($InitCondition) > 0{
+            if !IsObject($InitCondition, $ecosystem_id){
+                warning "Init condition not found"
+            }
         }
         
-        $condition = $votingParams["init_conditions"]
-        ContractConditions($condition)
+        if Size($Title) <3{
+            warning "Please enter title"
+        }
+        if $Volume <0 || $Volume > 100{
+            warning "Wrong volume range"
+        }
+        if $Quorum <0 || $Quorum > 100{
+            warning "Wrong volume range"
+        }
         
-        $candidateRoleName = $vParams["precondition"]
-        $votersRoleName = $vParams["voters"]
-        $votingName = $vParams["title"]
-        $volume = Int($vParams["volume"])
-        $quorum = Int($vParams["quorum"])
         $typeVoting = Int($vParams["type_voting"])
         $typeParticipants = Int($vParams["type_participants"])
         $typeDecision = Int($vParams["type_decision"])
-        $vacancies = Int($vParams["vacancies"])
-        $desc = Sprintf("%v [%v]", $votingName, IdToAddress($KeyId))
-        $contractAccept = $vParams["contract_accept"]
-        $acceptParams = $vParams["contract_accept_params"]
-        $contractReject = $vParams["contract_reject"]
-        $rejectParams = $vParams["contract_reject_params"]
-        
-        $isCreated = DBFind("voting_instances").Where("name=? and description=? and delete=0", $votingName, $desc).Row()
-        if $isCreated{
-            // info "Voting already created"
+        if $Vacancies < 1 {
+            warning "wrong number vacancies"
         }
         
-        // if not special then use default
-        $defaultParams = Sprintf("ParamId->%v;KeyId->%v", $vParams["id"], $KeyId)
-        if Size($acceptParams) == 0{
-            $acceptParams = $defaultParams
+        if Size($ContractAccept) > 0{
+            if !IsObject($ContractAccept, $ecosystem_id){
+                warning "wrong contract on voting accept"
+            }
         }
-        if Size($rejectParams) == 0{
-            $rejectParams = $defaultParams
+        if Size($ContractReject) > 0{
+            if !IsObject($ContractReject, $ecosystem_id){
+                warning "wrong contract on voting accept"
+            }
         }
     }
     
     func action{
-        
+        DBInsert("voting_templates", "title,precondition,subject,voters,init_condition,volume,quorum,type_voting,type_participants,type_decision,vacancies,contract_accept,contract_accept_params,contract_reject,contract_reject_params", $Title,$Precondition,$Subject,$Voters,$InitCondition,$Volume,$Quorum,$TypeVoting,$TypeParticipants,$TypeDecision,$Vacancies,$ContractAccept,$ParamsAccept,$ContractReject,$ParamsReject)
         
     }
 }

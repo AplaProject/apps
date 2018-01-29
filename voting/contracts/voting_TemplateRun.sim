@@ -1,6 +1,6 @@
-contract voting_TemplateStart{
+contract voting_TemplateRun{
     data{
-        KeyId int
+        KeyId int "optional"
         TemplateId int
         Start string "date"
         StartTime string "date"
@@ -9,40 +9,44 @@ contract voting_TemplateStart{
     }
     
     func conditions{
-        $vParams = DBFind("voting_templates").WhereId($VotingParamId).Row()
-        if !$vParams{
-            warning "Voting params not found"
+        $template = DBFind("voting_templates").WhereId($TemplateId).Row()
+        if !$template{
+            warning "Voting template not found"
         }
-        $isKeyOk = DBFind("keys").Where("id=?", $KeyId).Row()
-        if !$isKeyOk{
-            warning "Keyid not found"
+        if $KeyId != 0{
+            $keyFind = DBFind("keys").Where("id=?", $KeyId).Row()
+            if !$keyFind{
+                warning "Keyid not found"
+            }
         }
         
-        $condition = $votingParams["init_conditions"]
+        $condition = $votingParams["init_condition"]
         ContractConditions($condition)
         
-        $candidateRoleName = $vParams["precondition"]
-        $votersRoleName = $vParams["voters"]
-        $votingName = $vParams["title"]
-        $volume = Int($vParams["volume"])
-        $quorum = Int($vParams["quorum"])
-        $typeVoting = Int($vParams["type_voting"])
-        $typeParticipants = Int($vParams["type_participants"])
-        $typeDecision = Int($vParams["type_decision"])
-        $vacancies = Int($vParams["vacancies"])
-        $desc = Sprintf("%v [%v]", $votingName, IdToAddress($KeyId))
-        $contractAccept = $vParams["contract_accept"]
-        $acceptParams = $vParams["contract_accept_params"]
-        $contractReject = $vParams["contract_reject"]
-        $rejectParams = $vParams["contract_reject_params"]
+        $candidateRoleName = $template["precondition"]
+        $votersRoleName = $template["voters"]
+        $votingName = $template["title"]
+        $volume = Int($template["volume"])
+        $quorum = Int($template["quorum"])
+        $typeVoting = Int($template["type_voting"])
+        $typeParticipants = Int($template["type_participants"])
+        $typeDecision = Int($template["type_decision"])
+        $vacancies = Int($template["vacancies"])
+        
+        $desc = Sprintf("%v [#%v]", $votingName, $TemplateId)
+
+        $contractAccept = $template["contract_accept"]
+        $acceptParams = $template["contract_accept_params"]
+        $contractReject = $template["contract_reject"]
+        $rejectParams = $template["contract_reject_params"]
         
         $isCreated = DBFind("voting_instances").Where("name=? and description=? and delete=0", $votingName, $desc).Row()
         if $isCreated{
-            // info "Voting already created"
+            // info "Voting already created" // must uncomment on prod
         }
         
         // if not special then use default
-        $defaultParams = Sprintf("ParamId->%v;KeyId->%v", $vParams["id"], $KeyId)
+        $defaultParams = Sprintf("VotingTemplateId->%v;KeyId->%v", $TemplateId, $KeyId)
         if Size($acceptParams) == 0{
             $acceptParams = $defaultParams
         }
