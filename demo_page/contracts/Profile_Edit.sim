@@ -2,20 +2,23 @@ contract Profile_Edit {
     data {
         Username string
         Avatar string "image"
+        Kid int "optional"
     }
     
     conditions {
         $id = 0
-        $memberFind = DBFind("member").WhereId($key_id)
-        if Len($memberFind) > 0 {
-            $member = $memberFind[0]
-            $id = Int($member["id"])
+        if $Kid == 0{
+            $Kid = $key_id
+        }
+        $member = DBFind("member").Where("id=?",$Kid).Row()
+        if $member {
+            $id = $member["id"]
         }
     }
     
     action {
         if $id == 0{
-            DBInsert("member", "id,member_name,avatar", $key_id, $Username, $Avatar)
+            DBInsert("member", "id,member_name,avatar", $Kid, $Username, $Avatar)
         }else{
             DBUpdate("member", $id, "member_name,avatar", $Username, $Avatar)
         }
