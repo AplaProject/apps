@@ -1,0 +1,65 @@
+Div(Class: content-wrapper){
+
+	SetTitle($companies$)
+	Div(breadcrumb){
+		Span(Class: text-muted, Body: $companies$)
+	}
+
+    If(GetVar(isSearch) == 1){
+        SetVar(Name: v_Where, Value: "company_name='#v_Search#'")
+    }.Else{
+        SetVar(Name: v_Where, Value: "id!=0")
+        SetVar(Name: v_Search, Value: "")
+    }
+
+    DBFind(Name: companies, Source: src_companies).Custom(custom_address){
+        Span(Body: Address(#id#))
+    }.Custom(custom_name){
+        LinkPage(Page: companies_view, PageParams: "company_id=#id#"){
+            Span(Class: h5 text-bold, Body: #company_name#)
+        }
+	}.Custom(custom_type){
+        Span(Body: EcosysParam(Name: company_type, Index: #company_type#))
+    }.Custom(actions){
+        Div(Class: text-center, Button(Body: Em(Class: fa fa-trash), Class: btn btn-danger, Contract: Companies_Del, Params: "company_id=#id#", Page: companies_list).Alert(Text: $want_delete_company$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question))
+    }.Where(#v_Where#).Order("company_name ASC")
+
+    Div(Class: panel panel-primary){
+        Form(){
+            Div(Class: list-group-item){
+                Div(Class: row df f-valign){
+                    Div(Class: col-md-1 mt-sm text-right){
+                        Label(For: Search){
+                            Span(Body: LangRes(name))
+                        }
+                    }
+                    Div(Class: col-md-11 mc-sm){
+                        Div(Class: input-group){
+                            Input(Class: form-control, Type: text, Name: Search, Value: #v_Search#)
+                            Div(Class: input-group-btn){
+                                Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: companies_list, PageParams: "isSearch=1,v_Search=Val(Search)")
+                            }
+                        }
+                    }
+                }  
+            }
+
+            Div(Class: list-group-item){ 
+                Table(Source: src_companies, Columns: "$name$=custom_name,$id$=id,$address$=custom_address,$type$=custom_type,$actions$=actions")
+                If(GetVar(isSearch) == 1){
+                    Div(Class: text-center){  
+                        Button(Body: $view_all$, Class: btn btn-primary, Page: companies_list, PageParams: "isSearch=0")
+                    }
+                }
+            }
+
+            Div(Class: panel-footer clearfix){
+                Div(Class: pull-right){
+                    Button(Body: LangRes(create), Class: btn btn-primary, Page: companies_add)
+                }
+            }
+            
+        }           
+    }
+
+}
