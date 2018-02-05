@@ -13,15 +13,43 @@ Div(Class: content-wrapper){
     }
 
     DBFind(Name: companies, Source: src_companies).Custom(custom_address){
-        Span(Body: Address(#id#))
+        If(#delete# == 0){
+            Span(Class: text-normal, Body: Address(#id#))
+        }.Else{
+            Span(Class: text-muted, Body: Address(#id#))
+        }
+    }.Custom(custom_id){
+        If(#delete# == 0){
+            Span(Class: text-normal, Body: #id#)
+        }.Else{
+            Span(Class: text-muted, Body: #id#)
+        }
     }.Custom(custom_name){
-        LinkPage(Page: companies_view, PageParams: "company_id=#id#"){
-            Span(Class: h5 text-bold, Body: #company_name#)
+        If(#delete# == 0){
+            LinkPage(Page: companies_view, PageParams: "company_id=#id#"){
+                Span(Class: h5 text-bold, Body: #company_name#)
+            }
+        }.Else{
+            Span(Class:text-bold text-muted, Body: #company_name#)
         }
 	}.Custom(custom_type){
-        Span(Body: EcosysParam(Name: company_type, Index: #company_type#))
+        If(#delete# == 0){
+            Span(Class: text-normal, Body: EcosysParam(Name: company_type, Index: #company_type#))
+        }.Else{
+            Span(Class: text-muted, Body: EcosysParam(Name: company_type, Index: #company_type#))
+        }
+    }.Custom(custom_date){
+        If(#delete# == 0){
+            Div(Class: h6 m0, Body: DateTime(DateTime: #date_start#, Format: "DD.MM.YYYY HH:MI"))
+            Div(Class: h6 m0, Body: DateTime(DateTime: #date_end#, Format: "DD.MM.YYYY HH:MI"))
+        }.Else{
+            Div(Class: h6 m0 text-muted, Body: DateTime(DateTime: #date_start#, Format: "DD.MM.YYYY HH:MI"))
+            Div(Class: h6 m0 text-muted, Body: DateTime(DateTime: #date_end#, Format: "DD.MM.YYYY HH:MI"))
+        }
     }.Custom(actions){
-        Div(Class: text-center, Button(Body: Em(Class: fa fa-trash), Class: btn btn-danger, Contract: Companies_Del, Params: "company_id=#id#", Page: companies_list).Alert(Text: $want_delete_company$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question))
+        If(#delete# == 0){
+            Div(Class: text-center, Button(Body: Em(Class: fa fa-trash), Class: btn btn-danger, Contract: Companies_Del, Params: "company_id=#id#", Page: companies_list))
+        }
     }.Where(#v_Where#).Order("company_name ASC")
 
     Div(Class: panel panel-primary){
@@ -45,7 +73,7 @@ Div(Class: content-wrapper){
             }
 
             Div(Class: list-group-item){ 
-                Table(Source: src_companies, Columns: "$name$=custom_name,$id$=id,$address$=custom_address,$type$=custom_type,$actions$=actions")
+                Table(Source: src_companies, Columns: "$name$=custom_name,$id$=custom_id,$address$=custom_address,$type$=custom_type,$created$ / $deleted$=custom_date,$actions$=actions")
                 If(GetVar(isSearch) == 1){
                     Div(Class: text-center){  
                         Button(Body: $view_all$, Class: btn btn-primary, Page: companies_list, PageParams: "isSearch=0")
