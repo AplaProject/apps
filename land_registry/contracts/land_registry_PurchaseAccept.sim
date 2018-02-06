@@ -1,0 +1,39 @@
+contract land_registry_PurchaseAccept{
+    data{
+        land_id int
+        notific_id int
+    }
+    
+    action{
+        $tblName = "land_registry_ownership"
+        
+        $rowQuery = DBFind($tblName).Where("lend_object_id=?", $land_id)
+        $landOwnership = $rowQuery[0]
+        $ownership_id = Int($landOwnership["id"])
+        
+        DBUpdate($tblName, $ownership_id, "step", 1)
+        
+        //уведомляем покупателя
+        $owner_new_id = Int($landOwnership["owner_new_id"])
+        $memberId = $owner_new_id
+        $iconName = "fa fa-bell-o"
+        $textHeader = "$purchase_approved$"
+        $textBody = "$waiting_bank$"
+        $pageName = "land_registry_view"
+        $valInt = $land_id
+        $valStr = ""
+        Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,val_int,val_str",$memberId,$iconName,$textHeader,$textBody,$pageName,$valInt,$valStr)
+        
+        //уведомляем банк
+        $roleId = 4
+        $closureType = 2
+        $textHeader = "$new_land$"
+        $textBody = "$need_your_processing$"
+        $pageName = "land_registry_bank"
+        Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,val_int,val_str",$roleId,$closureType,$iconName,$textHeader,$textBody,$pageName,$valInt,$valStr)
+        
+        
+        //закрываем оповещение для владельца
+        Notifications_Single_Close("notific_id", $notific_id)
+    }
+}
