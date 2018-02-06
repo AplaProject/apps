@@ -59,15 +59,15 @@ func ImportList(row array, type string) {
         if type == "contracts" {
             var newName string
             newName = Join(ContractsList(idata["Value"]), "")
-
-            var lim, limit, step int
+            
+            var lim, limit, step, cid int
             step = 50
             limit = Int(DBFind(type).Order("id desc").One("id"))
-            while lim < limit {
+            while lim <= limit {
                 var cts array
-                cts = DBFind(type).Where("id > ?",lim).Limit(step) // cause default is 25
+                cts = DBFind(type).Where("id > ?",lim).Order("id").Limit(step) // cause default is 25
                 
-                var c, cid int
+                var c int
                 while c < Len(cts) {
                     var name, contr string
                     contr = cts[c]
@@ -78,18 +78,21 @@ func ImportList(row array, type string) {
                     }
                     c = c + 1
                 }
-                if IsObject(idata["Name"], $ecosystem_id) {
-                    if cid > 0 {
-                        idata["Id"] = cid
-                        EditContract("Id,Value,Conditions,WalletId", idata["Id"], idata["Value"], idata["Conditions"], "")
-                        idata["WalletId"] = ""
-                        CallContract("EditContract", idata)
-                    }
-                } else {
-                    CallContract("NewContract", idata)
+                if cid > 0{
+                    break
                 }
                 lim = lim+step
             }
+            idata["WalletId"] = ""
+            if IsObject(idata["Name"], $ecosystem_id) {
+                if cid > 0 {
+                    idata["Id"] = cid
+                    CallContract("EditContract", idata)
+                }
+            } else {
+                CallContract("NewContract", idata)
+            }
+            
             
         }
         if type == "tables" {
@@ -127,7 +130,7 @@ func ImportData(row array) {
             ilist = list[j]
             var c int
             var whereArr array
-            var isJSON array
+            var isJSON bool
             while c < Len(cols) {
                 col = cols[c]
                 if ilist[c] != "" {
