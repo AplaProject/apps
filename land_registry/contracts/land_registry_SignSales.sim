@@ -6,38 +6,38 @@ contract land_registry_SignSales
     }
     
     func action{
-        $row_ownership = DBFind("land_registry_ownership").Where("lend_object_id=?", $LandId)
-        $ownership = $row_ownership[0]
-        $ownership_id = Int($ownership["id"])
+        var ownership map
+        ownership = DBFind("land_registry_ownership").Where("lend_object_id=?", $LandId).Row()
         
-        $owner_id = $ownership["owner_id"]
-        $buyer_id = Int($ownership["owner_new_id"])
+        var ownershipId, ownerId, buyerId int
+        ownershipId = Int(ownership["id"])
+        ownerId = ownership["owner_id"]
+        buyerId = Int(ownership["owner_new_id"])
         
-        $row_land = DBFind("land_registry").Where("id=?", $LandId)
-        $land = $row_land[0]
-        $amount = Int($land["price"])
-        // $bank_tax = $amount * 5 / 100
-        
-        
+        var land map
+        land = DBFind("land_registry").Where("id=?", $LandId).Row()
+        var amount int
+        amount = Int(land["price"])
+        // $bank_tax = amount * 5 / 100
+                
         // account_type=1 its a personal
+        var ownerAccount, buyerAccount map
+        ownerAccount = DBFind("accounts").Where("member_id=? and onhold=0 and account_type=1", ownerId).Row()
+        buyerAccount = DBFind("accounts").Where("member_id=? and onhold=0 and account_type=1", buyerId).Row()
         
-        $row_owner = DBFind("accounts").Where("member_id=? and onhold=0 and account_type=1", $owner_id)
-        $account_owner = $row_owner[0]
-        $owner_acc_id = Int($account_owner["id"])
-        
-        $row_buyer = DBFind("accounts").Where("member_id=? and onhold=0 and account_type=1", $buyer_id)
-        $account_buyer = $row_buyer[0]
-        $buyer_acc_id = Int($account_buyer["id"])
+        var ownerAccountId, buyerAccountId int
+        ownerAccountId = Int(ownerAccount["id"])
+        buyerAccountId = Int(buyerAccount["id"])
         
         // deal
-        $bank_acc_id = 1
-        Tokens_Transfer("sender_id,recipient_id,amount", $bank_acc_id, $owner_acc_id, $amount)
-        // Tokens_Transfer("sender_id,recipient_id,amount", $buyer_acc_id, $owner_acc_id, $amount)
-        // Tokens_Transfer("sender_id,recipient_id,amount", $buyer_acc_id, $bank_acc_id, $bank_tax)
+        bankAccountId = 1
+        Tokens_Transfer("sender_id,recipient_id,amount", bankAccountId, ownerAccountId, amount)
+        // Tokens_Transfer("sender_id,recipient_id,amount", buyerAccountId, ownerAccountId, amount)
+        // Tokens_Transfer("sender_id,recipient_id,amount", buyerAccountId, bankAccountId, $bank_tax)
         
         // registered new owner
-        DBUpdate("land_registry", $LandId, "owner_id", $buyer_id)
-        DBUpdate("land_registry_ownership", $ownership_id, "owner_id,owner_new_id,step", $buyer_id, $buyer_id, -1)
+        DBUpdate("land_registry", $LandId, "owner_id", buyerId)
+        DBUpdate("land_registry_ownership", ownershipId, "owner_id,owner_new_id,step", buyerId, buyerId, -1)
         
         if($notific_id > 0){
             Notifications_Single_Close("notific_id", $notific_id)
