@@ -1,0 +1,63 @@
+contract land_registry_InititiatePurchase
+{
+    data{
+        LandId int
+    }
+    
+    conditions{
+    }
+    
+    action{
+        
+        var notificationsSelect array
+        var i, len int
+        var notification map
+        
+        $tblName = "land_registry_ownership"
+        $landOwnershipSelect = DBFind($tblName).Where("lend_object_id=?", $LandId)
+        $landOwnership = $landOwnershipSelect[0]
+        $landOwnershipId = Int($landOwnership["id"])
+        $ownerId = Int($landOwnership["owner_id"])
+        
+        DBUpdate($tblName, $landOwnershipId, "owner_new_id,step", $key_id, 0)
+        
+        notificationsSelect = DBFind("notifications").Where("page_val_int=$", $LandId)
+        len = Len(notificationsSelect)
+        while i < len {
+            notification = notificationsSelect[i]
+            
+            Notifications_Single_Close("notific_id", Int(notification["id"]))
+            i = i + 1
+        }
+        
+        
+        
+        
+        $notifySingleParams = "member_id,icon_name,text_header,text_body,page_name,val_int,val_str"
+        
+        $memberId = $ownerId
+        $iconName = "fa fa-bell-o"
+        $textHeader = "$purchase_request$"
+        $textBody = "$need_your_processing$"
+        $valInt = $LandId
+        $valStr = "owner"
+        $pageName ="land_registry_view"
+        
+        
+        //уведомляем собственника земли
+        Notifications_Single_Send($notifySingleParams,$memberId,$iconName,$textHeader,$textBody,$pageName,$valInt,$valStr)
+        
+        
+        //DBUpdate($tblName, $landOwnershipId, "owner_new_id, step", $key_id, 1)
+        
+        //уведомляем самого себя
+        // $textHeader = "New purchase"
+        // $textBody = "Waiting for a response from the bank"
+        // $valInt = $LandId
+        // $valStr = ""
+        // Notifications_Single_Send($notifySingleParams,$memberId,$iconName,$textHeader,$textBody,$pageName,$valInt,$valStr)
+        
+        //уведомляем банк
+        //notification_Roles_Send("icon_number,text_header,text_body,page_name,val_int,val_str,role_id,closure_type", 5, "New land", "Need your processing", "page_bank", $LandId, "", 4, 2)
+    }
+}

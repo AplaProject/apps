@@ -1,0 +1,62 @@
+contract land_registry_TransferTokens{
+    
+    data{
+        LandId int
+    }
+    
+    action{
+        var notes array
+        var i, len int
+        var note map
+        
+        notes = DBFind("notifications").Where("page_val_int=$", $LandId)
+        len = Len(notes)
+        while i < len {
+            note = notes[i]
+            i = i + 1
+            
+            Notifications_Single_Close("notific_id", Int(note["id"]))
+        }
+        $tblName = "land_registry_ownership"
+        $row = DBFind($tblName).Where("lend_object_id=?", $LandId)
+        $ownership = $row[0]
+        $ownership_id = $ownership["id"]
+        $owner_id = $ownership["owner_id"]
+        $buyer_id = $ownership["owner_new_id"]
+        
+        $row_land = DBFind("land_registry").WhereId($LandId)
+        $land = $row_land[0]
+        $land_price = Int($land["price"])
+        $land_price = $land_price * 105 / 100
+        
+        //перевод денег с эмиссии покупателю(персональный счет)
+        $row_buyer_acc = DBFind("accounts").Where("member_id=? and onhold=0 and account_type=1", $buyer_id)
+        $len_buyer_acc = Len($row_buyer_acc)
+        if $len_buyer_acc == 0{
+            info "Personal account not found"
+        }
+        
+        $buyer_acc = $row_buyer_acc[0]
+        $buyer_acc_id = Int($buyer_acc["id"])
+        
+        
+        // land_registry_MoneyTransfer_NoSign("sender_acc_id,recipient_acc_id,Amount", 1, $buyer_acc_id, $land_price)
+        $bank_acc_id = 1
+        Tokens_Transfer("sender_id,recipient_id,amount", $buyer_acc_id, $bank_acc_id, $land_price)
+        // Tokens_Transfer("sender_id,recipient_id,amount", $bank_acc_id, $buyer_acc_id, $land_price)
+        
+        DBUpdate($tblName, Int($ownership_id), "step", 2)
+        
+        
+        //уведомляем продавца
+        $member_id = $owner_id
+        $icon_name = "fa-bell"
+        $text_header = "$new_purchase$"
+        $text_body = "$need_your_processing$"
+        $page_name = "land_registry_view"
+        $val_int = $LandId
+        $val_str = ""
+        
+        Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,val_int,val_str",$member_id,$icon_name,$text_header,$text_body,$page_name,$val_int,$val_str)
+    }
+}
