@@ -1,29 +1,17 @@
 If(GetVar(v_member_id)){
-    DBFind(Name: member, Source: src_member).Where(member_id=#v_member_id#).Vars(prefix)
+    DBFind(Name: members, Source: src_member).Where(id=#v_member_id#).Vars(profile)
 }.Else{
-    DBFind(Name: member, Source: src_member).Where(member_id=#key_id#).Vars(prefix)
-}
-If(#prefix_id# > 0){
-}.Else{
-    SetVar(Name: prefix_member_name, Value: "")
-    SetVar(Name: prefix_name_last, Value: "")
-    SetVar(Name: prefix_name_first, Value: "")
-    SetVar(Name: prefix_name_middle, Value: "")
-    SetVar(Name: prefix_birthdate, Value: "01.01.1990")
+    DBFind(Name: members, Source: src_member).Where(id=#key_id#).Vars(profile)
 }
 
 SetVar(this, land_registry_member)
-If(#v_amount#>0){
-    SetVar(v_amount, #v_amount#)
-}.Else{
-    SetVar(v_amount, "1000")
-}
-DBFind(Name:notifications, Source: src_notifications).Where("notification_type=1 AND recipient_id=#prefix_member_id# AND closed=0").Order("id desc").Custom(_id){
+
+DBFind(Name:notifications, Source: src_notifications).Where("notification_type=1 AND recipient_id=#profile_id# AND closed=0").Order("id desc").Custom(_id){
     Div(text-center h5){#id#}.Style(width:20px;)
 }.Custom(_page){
     Div(h5 text-left){
         Span(Class: fa fa-1x fa-bell-o).Style(width:20px;margin-right:10px;)
-        LinkPage(Page: #page_name#, Body: #header_text# : #body_text#, PageParams: "notific_id=#id#,notific_type=#notification_type#,notific_header=#header_text#,notific_val_int=#page_val_int#,notific_val_str=#page_val_str#").Style(cursor:pointer;)
+        LinkPage(Page: #page_name#, Body: #header_text# : #body_text#, PageParams: "notific_id=#id#,notific_type=#notification_type#,notific_header=#header_text#,#page_params# ").Style(cursor:pointer;)
     }
 }
 
@@ -38,83 +26,32 @@ Div(row df){
                     }
                 }
                 
-                Div(Class: list-group-item){
-                    Div(Class: row df f-valign){
-                        Div(Class: col-md-12 mt-sm text-center){
-                            
-                            If(#prefix_id# > 0){
-                                If(#prefix_member_id# == #key_id#){
-                                    Button(Class: btn btn-link, Page: profile_edit, PageParams: "v_member_id=#prefix_member_id#"){
-                                        Image(Src: "#prefix_avatar#", Class: img-circle).Style(width: 100px; border: 1px solid #5A5D63; margin-bottom: 15px;)
-                                        Div(Body: Span(Class: h3 text-bold, Body: #prefix_member_name#))
+                Div(list-group-item){
+                    Div(row df f-valign){
+                        Div(col-md-12 mt-sm text-center){
+                            If(#profile_id# != 0){
+                                If(#profile_id# == #key_id#){
+                                    Button(Class: btn btn-link, Page: profile_edit, PageParams: "v_member_id=#profile_id#"){
+                                        Image(Src: "#profile_avatar#", Class: img-circle).Style(width: 100px; border: 1px solid #5A5D63; margin-bottom: 15px;)
+                                        Div(Body: Span(Class: h3 text-bold, Body: #profile_member_name#))
                                     }
                                 }.Else{
-                                    Image(Src: "#prefix_avatar#", Class: img-circle).Style(width: 100px; border: 1px solid #5A5D63; margin-bottom: 15px;)
-                                    Div(Body: Span(Class: h3 text-bold, Body: #prefix_member_name#))
+                                    Image(Src: "#profile_avatar#", Class: img-circle).Style(width: 100px; border: 1px solid #5A5D63; margin-bottom: 15px;)
+                                    Div(Body: Span(Class: h3 text-bold, Body: #profile_member_name#))
                                 }
                             }.Else{
-                                Button(Class: btn btn-link, Page: profile_edit, , PageParams: "v_member_id=#prefix_member_id#"){
+                                Button(Class: btn btn-link, Page: profile_edit, , PageParams: "v_member_id=#profile_id#"){
                                     Span(Class: h3 text-bold, Body: LangRes(editing_profile))
                                 }
                             }
-                            
                         }
                     }
                 }
                 
-                Div(Class: list-group-item){
-                    Div(Class: row df f-valign){
-                        Div(Class: col-md-6 mt-sm text-right){
-                            Span(Class: h4, Body: LangRes(name_last))
-                        }
-                        Div(Class: col-md-6 mt-sm text-left){
-                            Span(Class: h4, Body: #prefix_name_last#)
-                        }
-                    }
-                    Div(Class: row df f-valign){
-                        Div(Class: col-md-6 mt-sm text-right){
-                            Span(Class: h4, Body: LangRes(name_first))
-                        }
-                        Div(Class: col-md-6 mt-sm text-left){
-                            Span(Class: h4, Body: #prefix_name_first#)
-                        }
-                    }
-                    Div(Class: row df f-valign){
-                        Div(Class: col-md-6 mt-sm text-right){
-                            Span(Class: h4, Body: LangRes(name_middle))
-                        }
-                        Div(Class: col-md-6 mt-sm text-left){
-                            Span(Class: h4, Body: #prefix_name_middle#)
-                        }
-                    }
-                }
-                
-                Div(Class: list-group-item){
-                    Div(Class: row df f-valign){
-                        Div(Class: col-md-6 mt-sm text-right){
-                            Span(Class: h4, Body: LangRes(gender))
-                        }
-                        Div(Class: col-md-6 mt-sm text-left){
-                            Span(Class: h4, Body: EcosysParam(Name: gender_list, Index: #prefix_gender#))
-                        }
-                    }
-                }
-                
-                Div(Class: list-group-item){
-                    Div(Class: row df f-valign){
-                        Div(Class: col-md-6 mt-sm text-right){
-                            Span(Class: h4, Body: LangRes(birthdate))
-                        }
-                        Div(Class: col-md-6 mt-sm text-left){
-                            Span(Class: h4, Body: DateTime(DateTime: #prefix_birthdate#, Format: "DD.MM.YYYY"))
-                        }
-                    }
-                }
-                
-                Div(Class: list-group-item){
-                    Div(Class: row df f-valign){
-                        Div(Class: col-md-12 mt-sm text-center){
-                            Span(Class: h4 text-bold, Body: Address(#prefix_member_id#))
+                Div(list-group-item){
+                    Div(row df f-valign){
+                        Div(col-md-12 mt-sm text-center){
+                            Span(Class: h4 text-bold, Body: Address(#profile_id#))
                             Div(Body: Span(Class: h5, Body: LangRes(member_id)))
                             
                             
@@ -133,10 +70,10 @@ Div(row df){
                         Span(Class: h3, Body: LangRes(tokens_transfer))
                     }
                 }
-                Div(Class: list-group-item){
-                    Div(Class: row df f-valign){
-                        Div(Class: col-md-3 mt-sm text-right){Label(Body: LangRes(my_account))}
-                        Div(Class: col-md-9 mc-sm text-left){
+                Div(list-group-item){
+                    Div(row df f-valign){
+                        Div(col-md-3 mt-sm text-right){Label(Body: LangRes(my_account))}
+                        Div(col-md-9 mc-sm text-left){
                             DBFind(Name: accounts, Source: source_sender).Where("onhold=0 and member_id=#key_id#").Custom(custom_username){
                                 Span(Class: h4 text-bold, Body: id: #id#(EcosysParam(Name: tokens_accounts_systype, Index: #account_type#) ) - LangRes(available): #amount#)
                             }
@@ -145,40 +82,35 @@ Div(row df){
                     }
                 }
                 
-                Div(Class: list-group-item){
-                    Div(Class: row df f-valign){
-                        Div(Class: col-md-3 mt-sm text-right){
+                Div(list-group-item){
+                    Div(row df f-valign){
+                        Div(col-md-3 mt-sm text-right){
                             Label(For: recipient_id){
                                 Span(Body: LangRes(recipient_account))
                             }
                         }
-                        Div(Class: col-md-9 mb-sm text-left){
-                            DBFind(Name: accounts, Source: source_recipient).Columns(id, member_name, member_id, account_type).Custom(custom_username){
+                        Div(col-md-9 mb-sm text-left){
+                            DBFind(Name: accounts, Source: source_recipient).Where("onhold=0 and account_type!=4 and account_type!=5").Custom(custom_username){
                                 Span(Class: h4 text-bold, Body: id: #id#(EcosysParam(Name: tokens_accounts_systype, Index: #account_type#) ) - #member_name#(Address(#member_id#) ) )
-                            }.Where("onhold=0 and account_type<>4 and account_type<>5")
+                            }
                             Select(Name: recipient_id, Source: source_recipient, NameColumn: custom_username, ValueColumn: id)
                         }
                     }
                     
-                    Div(Class: row df f-valign){
-                        Div(Class: col-md-3 mt-sm text-right){
+                    Div(row df f-valign){
+                        Div(col-md-3 mt-sm text-right){
                             Label(For: amount){
                                 Span(Body: LangRes(amount))
                             }
                         }
-                        Div(Class: col-md-9 mc-sm text-left){
+                        Div(col-md-9 mc-sm text-left){
                             Input(Class: form-control, Placeholder: 0, Type: Number, Name: amount)
                         }
                     }
                 }
                 
-                Div(Class: panel-footer clearfix){
-                    Div(Class: pull-left){
-                        Button(Body: LangRes(back), Class: btn btn-default, Page: land_registry)
-                    }
-                    Div(Class: pull-right){
-                        Button(Body: LangRes(send), Class: btn btn-primary, Page: tokens_accounts_list, Contract: Tokens_Transfer).Alert(Text: $want_send_tokens$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
-                    }
+                Div(panel-footer clearfix){
+                    Button(Body: LangRes(send), Class: btn btn-primary, Page: tokens_accounts_list, Contract: Tokens_Transfer).Alert(Text: $want_send_tokens$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
                 }
             }
         }
