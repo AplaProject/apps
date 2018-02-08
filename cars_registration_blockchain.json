@@ -1,0 +1,79 @@
+{
+    "blocks": [],
+    "contracts": [
+        {
+            "Name": "auto_sales_accept",
+            "Value": "contract auto_sales_accept {\n    data {\n\t    protocol_id int\n    }\n\n    conditions {\n\n    }\n\n    action {\n\n        var new_num_int int\n        var new_num_str string\n\n        $ret_num = DBFind(\"registration_auto\").Columns(\"id\").Order(\"id desc\")\n        if (Len($ret_num)>0){\n            var vals_num map\n            vals_num = $ret_num[0]\n\n            new_num_int = Int(vals_num[\"id\"])\n            if ( (new_num_int >= 0) && (new_num_int < 10) ){\n                new_num_str = \"DL 01 AA 000\" + string(vals_num[\"id\"])\n            }\n            if ( (new_num_int >= 10) && (new_num_int < 100) ){\n                new_num_str = \"DL 01 AA 00\" + string(vals_num[\"id\"])\n            }\n            if ( (new_num_int >= 100) && (new_num_int < 1000) ){\n                new_num_str = \"DL 01 AA 0\" + string(vals_num[\"id\"])\n            }\n            if ( (new_num_int >= 1000) && (new_num_int < 10000) ){\n                new_num_str = \"DL 01 AA \" + string(vals_num[\"id\"])\n            }\n        } else {\n            new_num_str = \"DL 01 AA 0000\"\n        }\n\n        $ret_protocol= DBFind(\"vde_registration_protocols\").Columns(\"id,auto_id,engine_number,chassis_number,member_id,member_name,member_photo,auto_manufacturer,auto_model\").Where(\"id=$\", $protocol_id).Order(\"id\")\n        var vals_protocol map\n        vals_protocol = $ret_protocol[0]\n\n        $auto_info = string(vals_protocol[\"auto_manufacturer\"]) + \" \" + string(vals_protocol[\"auto_model\"])\n\n        DBInsert(`registration_auto`, `auto_id,engine_number,chassis_number,auto_info,member_id,member_info,member_photo,timestamp registration_date,delete,registration_number,protocol_id`,\n                    Int(vals_protocol[\"auto_id\"]), string(vals_protocol[\"engine_number\"]), string(vals_protocol[\"chassis_number\"]), $auto_info,\n                    Int(vals_protocol[\"member_id\"]), string(vals_protocol[\"member_name\"]), string(vals_protocol[\"member_photo\"]), $block_time, 0, new_num_str, string(vals_protocol[\"id\"]))\n\n        DBUpdate(`vde_registration_protocols`, $protocol_id, `status,reviewer_id,timestamp review_date`, 1, $key_id, $time) \n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "auto_sales_reject",
+            "Value": "contract auto_sales_reject {\n    data {\n\t    protocol_id int\n    }\n\n    conditions {\n\n    }\n\n    action {\n        DBUpdate(`vde_registration_protocols`, $protocol_id, `status,reviewer_id,timestamp review_date`, 2, $key_id, $time) \n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "registration_numbers_del",
+            "Value": "contract registration_numbers_del {\n    data {\n\t    row_id int\n    }\n\n    conditions {\n\n    }\n\n    action {\n        DBUpdate(`registration_auto`, $row_id, `delete`, 1) \n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        }
+    ],
+    "data": [],
+    "languages": [
+        {
+            "Name": "cars_reg",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Registration of cars\",\"ru\":\"Регистрация автомобилей\"}"
+        },
+        {
+            "Name": "yes",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Yes\",\"ru\":\"Да\"}"
+        },
+        {
+            "Name": "сlosed",
+            "Conditions": "",
+            "Trans": "{\"en\": \"Closed\", \"ru\": \"Закрыто\"}"
+        }
+    ],
+    "menus": [
+        {
+            "Name": "default_menu",
+            "Value": "MenuGroup(Title:$cars_reg$, Icon:\"fa fa-car\"){\r\n    MenuItem(Title:Go to VDE, Page:auto_sales, Icon:\"fa fa-arrow-right\", Vde:true)\r\n    MenuItem(Title:RTA, Page:signatureRTA, Icon:\"fa fa-car\")\r\n    MenuItem(Title:Registration numbers, Page:registration_numbers, Icon:\"fa fa-ellipsis-h\")\r\n}",
+            "Conditions": "ContractAccess(\"@1EditMenu\")"
+        }
+    ],
+    "pages": [
+        {
+            "Name": "registration_numbers",
+            "Value": "Div(Class: content-wrapper){\r\n\r\n\tSetTitle(Registration numbers)\r\n\tDiv(breadcrumb){\r\n\t\tSpan(Class: text-muted, Body: Registration numbers)\r\n\t}\r\n\r\n    DBFind(Name: registration_auto, Source: src_registration_auto).Custom(custom_address){\r\n        Span(Address(#member_id#))\r\n    }.Custom(custom_photo){\r\n        Span(Body: Image(Src: \"#member_photo#\").Style(width: 50px;  border: 1px solid #5A5D63;))\r\n    }.Custom(actions){\r\n        If(#delete# == 0){\r\n            Button(Body: Show, Class: btn btn-primary, PageParams: \"row_id=#protocol_id#\", Page: signatureRTA_view)\r\n        }\r\n    }.Where(\"delete=0\").Order(\"id ASC\")\r\n\r\n    Div(Class: panel panel-primary){\r\n        Form(){\r\n\r\n            Div(Class: list-group-item){ \r\n                Table(Source: src_registration_auto, Columns: \"ID=id,Photo=custom_photo,Member=member_info,Member_id=custom_address,Auto=auto_info,Engine number=engine_number,Chassis number=chassis_number,Registration number=registration_number,Actions=actions\")\r\n            }\r\n            \r\n        }           \r\n    }\r\n\r\n}",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Menu": "default_menu"
+        },
+        {
+            "Name": "registration_numbers_admin",
+            "Value": "Div(Class: content-wrapper){\r\n\r\n\tSetTitle(Registration numbers)\r\n\tDiv(breadcrumb){\r\n\t\tSpan(Class: text-muted, Body: Registration numbers)\r\n\t}\r\n\r\n    DBFind(Name: registration_auto, Source: src_registration_auto).Custom(actions){\r\n        If(#delete# == 0){\r\n            Button(Body: Em(Class: fa fa-trash), Class: btn btn-danger, Contract: registration_numbers_del, Params: \"row_id=#id#\", Page: registration_numbers)\r\n        }\r\n    }.Where(\"delete=0\").Order(\"id ASC\")\r\n\r\n    Div(Class: panel panel-primary){\r\n        Form(){\r\n\r\n            Div(Class: list-group-item){ \r\n                Table(Source: src_registration_auto, Columns: \"ID=id,Actions=actions\")\r\n            }\r\n            \r\n        }           \r\n    }\r\n\r\n}",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Menu": "default_menu"
+        },
+        {
+            "Name": "signatureRTA",
+            "Value": "Div(Class: content-wrapper){\r\n\r\n\tSetTitle(RTA)\r\n\tDiv(breadcrumb){\r\n\t\tSpan(Class: text-muted, Body: RTA)\r\n\t}\r\n\r\n    DBFind(Name: vde_registration_protocols, Source: src_registration_protocols).Custom(custom_auto_photo_dealer){\r\n        Div(Body: Image(Src: \"#member_photo_dealer#\").Style(width: 100px;  border: 1px solid #5A5D63;))\r\n        Div(Body: DateTime(DateTime: #auto_photo_dealer_date#, Format: \"DD.MM.YYYY HH:MM\"))\r\n    }.Custom(custom_auto_photo){\r\n        Div(Body: Image(Src: \"#auto_photo#\").Style(width: 100px;  border: 1px solid #5A5D63;))\r\n        Div(Body: #auto_manufacturer# #auto_model#)\r\n    }.Custom(custom_auto_info){\r\n        Div(Body: \"engine_number: #engine_number#\")\r\n        Div(Body: \"chassis_number: #chassis_number#\")\r\n    }.Custom(custom_status){\r\n        If(#status# == 1){\r\n            Span(Class: text-success h4, Body:Accept)\r\n        }.ElseIf(#status# == 2){\r\n            Span(Class: text-danger h4, Body:Reject)\r\n        }.Else{\r\n            Span(Class: text-warning h4, Body:Waiting)\r\n        }\r\n    }.Custom(actions){\r\n        If(#delete# == 0){\r\n            Button(Body: Show, Class: btn btn-primary, PageParams: \"row_id=#id#\", Page: signatureRTA_view)\r\n        }\r\n    }.Where(\"delete=0\").Order(\"id DESC\")\r\n\r\n    Div(Class: panel panel-primary){\r\n        Form(){\r\n\r\n            Div(Class: list-group-item){ \r\n                Table(Source: src_registration_protocols, Columns: \"ID=id,Сar photo=custom_auto_photo,Dealer's photo=custom_auto_photo_dealer,Info=custom_auto_info,Status=custom_status,Actions=actions\")\r\n            }\r\n            \r\n        }           \r\n    }\r\n\r\n}",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Menu": "default_menu"
+        },
+        {
+            "Name": "signatureRTA_view",
+            "Value": "DBFind(Name: vde_registration_protocols, Source: src_registration_protocols).Where(id=#row_id#).Vars(protocol)\r\nDBFind(Name: vde_registry_auto, Source: src_registry_auto).Where(id=#protocol_auto_id#).Vars(auto)\r\nDBFind(Name: vde_members, Source: src_members).Where(\"id=#protocol_member_id#\").Vars(member)\r\n\r\nDiv(Class: \"text-center bg-gray-dark p-lg\"){\r\n    Div(Class: \"row row-table\"){\r\n         Div(Class: \"col-xs-12 br\"){\r\n            Div(Class: \"text-bold h1 m0\", Body: #auto_manufacturer# #auto_model# (#auto_characteristics#))\r\n         }\r\n    }\r\n}\r\nDiv(Class: \"text-center bg-gray p-lg\"){\r\n    Div(Class: \"row row-table\"){\r\n         Div(Class: \"col-xs-3 br\"){\r\n             Div(Class: \"h3 m0\", Body: Date)\r\n             P(Class: \"m0\", Body: DateTime(DateTime: #protocol_member_photo_dealer_date#, Format: \"DD.MM.YYYY\"))\t\r\n        }\r\n        Div(Class: \"col-xs-3 br\"){\r\n             Div(Class: \"h3 m0\", Body: Engine number)\r\n             P(Class: \"m0\", Body: #protocol_engine_number#)\t\r\n        }\r\n        Div(Class: \"col-xs-3 br\"){\r\n             Div(Class: \"h3 m0\", Body: Chassis number)\r\n             P(Class: \"m0\", Body: #protocol_chassis_number#)\r\n        }\r\n        Div(Class: \"col-xs-3\"){\r\n            Div(Class: \"h3 m0\", Body: Registration number)\r\n            If(#protocol_status# == 0){\r\n                Div(Class: \"text-center\"){\r\n                    Form(){\r\n                        Input(Class: form-control hidden, Type: text, Name: protocol_id, Value: #row_id#)\r\n                        Input(Class: form-control hidden, Type: text, Name: member_id, Value: #member_id#)\r\n                        Button(Body: Span(Class: \"btn-label\", Body: Em(Class: \"fa fa-ban\"))Reject, Class: \"btn btn-labeled btn-danger btn-xs\", Page: signatureRTA, Contract: auto_sales_reject)\r\n                        Button(Body: Span(Class: \"btn-label\", Body: Em(Class: \"fa fa-check\"))Registration, Class: \"btn btn-labeled btn-danger btn-xs\", Class: \"btn btn-labeled btn-success ml-lg btn-xs\", Page: registration_numbers, Contract: auto_sales_accept)\r\n                    }\r\n                }\r\n            }\r\n            If(#protocol_status# == 2){\r\n                Div(Class: \"text-center\"){\r\n                    Span(Class: \"text-bold text-danger h3\", Body: Rejected)\r\n                }\r\n            }\r\n            If(#protocol_status# == 1){\r\n                Div(Class: \"text-center\"){\r\n                    DBFind(Name: registration_auto, Source: src_registration_auto).Where(\"engine_number='#protocol_engine_number#' and chassis_number='#protocol_chassis_number#' and delete=0\").Vars(registration)\r\n                    Span(Class: \"text-bold text-success h3\", Body: #registration_registration_number#)\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\nDiv(Class: \"content-wrapper\"){\t\r\n    Div(Class: \"row\"){\r\n        Div(Class: \"col-md-6\"){\r\n            Div(Class: \"panel widget\"){\r\n                Div(Class: \"row row-table row-flush\"){\r\n                    Div(Class: \"col-xs-8\"){\r\n                        Div(Class: \"lateral-picture\"){\r\n                            Image(Src: \"#protocol_member_photo_dealer#\").Style(min-height: 100%;)\r\n                        }\r\n                    }\r\n                    Div(Class: \"col-xs-4 align-middle p-lg\"){\r\n                        P(Class: \"text-lg\", Body: Buyer)\r\n                        P(Class: \"text-uppercase\", Body: Strong(Date: DateTime(DateTime: #protocol_member_photo_dealer_date#, Format: \"DD.MM.YYYY\")))\r\n                        P(Class: \"text-white\", Body: |)\r\n                        P(Class: \"text-white\", Body: |)\r\n                    }\r\n                }\r\n            }\r\n        }\r\n        Div(Class: \"col-md-6\"){\r\n            Div(Class: \"panel widget\"){\r\n                Div(Class: \"row row-table row-flush\"){\r\n                    Div(Class: \"col-xs-5\"){\r\n                        Div(Class: \"lateral-picture\"){\r\n                            Image(Src: \"#member_avatar#\").Style(min-height: 100%;)\r\n                        }\r\n                    }\r\n                    Div(Class: \"col-xs-7 align-middle p-lg\"){\r\n                        P(Class: \"text-lg\", Body: #member_member_name#)\r\n                        P(Class: \"text-uppercase\", Body: Strong(Recognition confidence: #protocol_face_recognition_confidence_double#%))\r\n                        P(Body: Address(#member_id#))\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n    Div(Class: \"row\"){\r\n        Div(Class: \"col-md-12\"){\r\n            Div(Class: \"panel widget\"){\r\n                Div(Class: \"row row-table row-flush\"){\r\n                    Div(Class: \"col-xs-12 align-middle p-lg\"){\r\n                        P(Class: \"text-lg\", Body: Body Style Recognition)\r\n                        P(Class: \"text-uppercase\", Body: GetVar(protocol_body_type_1))\r\n                        P(Class: \"text-uppercase\", Body: GetVar(protocol_body_type_2))\r\n                        P(Class: \"text-uppercase\", Body: GetVar(protocol_body_type_3))\r\n                        P(Class: \"text-uppercase\", Body: GetVar(protocol_body_type_4))\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n }",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Menu": "default_menu"
+        }
+    ],
+    "parameters": [],
+    "tables": [
+        {
+            "Name": "registration_auto",
+            "Columns": "[{\"name\":\"protocol_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"delete\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"auto_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"member_info\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"member_photo\",\"type\":\"bytea\",\"conditions\":\"true\"},{\"name\":\"engine_number\",\"type\":\"varchar\",\"conditions\":\"true\"},{\"name\":\"chassis_number\",\"type\":\"varchar\",\"conditions\":\"true\"},{\"name\":\"registration_date\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"registration_number\",\"type\":\"varchar\",\"conditions\":\"true\"},{\"name\":\"auto_info\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"member_id\",\"type\":\"number\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
+        }
+    ]
+}

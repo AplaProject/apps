@@ -1,0 +1,49 @@
+contract auto_sales_accept {
+    data {
+	    protocol_id int
+    }
+
+    conditions {
+
+    }
+
+    action {
+
+        var new_num_int int
+        var new_num_str string
+
+        $ret_num = DBFind("registration_auto").Columns("id").Order("id desc")
+        if (Len($ret_num)>0){
+            var vals_num map
+            vals_num = $ret_num[0]
+
+            new_num_int = Int(vals_num["id"])
+            if ( (new_num_int >= 0) && (new_num_int < 10) ){
+                new_num_str = "DL 01 AA 000" + string(vals_num["id"])
+            }
+            if ( (new_num_int >= 10) && (new_num_int < 100) ){
+                new_num_str = "DL 01 AA 00" + string(vals_num["id"])
+            }
+            if ( (new_num_int >= 100) && (new_num_int < 1000) ){
+                new_num_str = "DL 01 AA 0" + string(vals_num["id"])
+            }
+            if ( (new_num_int >= 1000) && (new_num_int < 10000) ){
+                new_num_str = "DL 01 AA " + string(vals_num["id"])
+            }
+        } else {
+            new_num_str = "DL 01 AA 0000"
+        }
+
+        $ret_protocol= DBFind("vde_registration_protocols").Columns("id,auto_id,engine_number,chassis_number,member_id,member_name,member_photo,auto_manufacturer,auto_model").Where("id=$", $protocol_id).Order("id")
+        var vals_protocol map
+        vals_protocol = $ret_protocol[0]
+
+        $auto_info = string(vals_protocol["auto_manufacturer"]) + " " + string(vals_protocol["auto_model"])
+
+        DBInsert(`registration_auto`, `auto_id,engine_number,chassis_number,auto_info,member_id,member_info,member_photo,timestamp registration_date,delete,registration_number,protocol_id`,
+                    Int(vals_protocol["auto_id"]), string(vals_protocol["engine_number"]), string(vals_protocol["chassis_number"]), $auto_info,
+                    Int(vals_protocol["member_id"]), string(vals_protocol["member_name"]), string(vals_protocol["member_photo"]), $block_time, 0, new_num_str, string(vals_protocol["id"]))
+
+        DBUpdate(`vde_registration_protocols`, $protocol_id, `status,reviewer_id,timestamp review_date`, 1, $key_id, $time) 
+    }
+}
