@@ -1,0 +1,64 @@
+contract land_registry_Install{
+    data{}
+    
+    func conditions{
+        MainCondition()
+    }
+    
+    func action{
+        var members array
+        members = DBFind("member")
+        
+        var i int
+        while i< Len(members){
+            // clone members from member
+            var m map
+            m = members[i]
+            var isExist map
+            isExist = DBFind("members").Where("id=?", m["id"]).Row()
+            if !isExist{
+                DBInsert("members", "id,member_name,avatar", Int(m["id"]), m["member_name"], m["avatar"])
+            }
+            // refresh accounts
+            var amount int
+            amount = 1000000
+            var mAccount map
+            mAccount = DBFind("land_registry_accounts").Where("member_id=?", m["id"]).Row()
+            if mAccount {
+                DBUpdate("land_registry_accounts", Int(mAccount["id"]), "member_id,member_avatar,member_name,amount_money,amount,onhold", Int(m["id"]),m["avatar"],m["member_name"], amount, amount,0)
+            }else{
+                DBInsert("land_registry_accounts", "member_id,member_avatar,member_name,amount_money,amount", Int(m["id"]),m["avatar"],m["member_name"], amount, amount)
+            }
+            i=i+1
+        }
+        // create required roles
+        i = 0
+        while i < 3{
+            var roleName string
+            roleName = Sprintf("depart_role%v", i+1)
+            var role map
+            role = DBFind("roles_list").Where("role_name=? and delete=0", roleName).Row()
+            if !role{
+                // role_type==1 must be assigned_role
+                Roles_Create("role_name,role_type,company_id", roleName, 1, 0)
+            }
+            i=i+1
+        }
+        // assign roles
+        i = 0
+        while i < 3{
+            var roleName string
+            roleName = Sprintf("depart_role%v", i+1)
+            var role, m, isAssigned map
+            role = DBFind("roles_list").Where("role_name=? and delete=0", roleName).Row()
+            if role && i < Len(members){
+                isAssigned = DBFind("roles_assign").Where("role_id=? and delete=0", role["id"]).Row()
+                if !isAssigned{
+                    m = members[i]
+                    Roles_Assign("role_id,member_id", Int(role["id"]), Int(m["id"]))
+                }
+            }
+            i=i+1
+        }
+    }
+}

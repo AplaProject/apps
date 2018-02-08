@@ -14,26 +14,11 @@ contract land_registry_MoneyTransfer
         
         //----CHECK RECIPIENT----------------------------
         var recipientAccount map
-        recipientAccount = DBFind("accounts").Where("id=? and onhold=0", $to_acc_id).Row()
-        
-        var recipientType int
-        recipientType = Int(recipientAccount["type"])
-        
-        // transfer of tokens to sys-emission account is impossible; use emission
-        if recipientType==1 && $from_acc_id != 0 {
-            warning "Sorry, you can not send money to the system account"
-        }
-        
-        // transfer of tokens to sys-trash account is impossible; this account is necessary for storing remote tokens
-        if recipientType==2 && $Signature == "" {
-            warning "Sorry, you can not send money to the system account"
-        }
-        
-        recipientAccount = DBFind("accounts").Where("id=?", $to_acc_id).Row()
+        recipientAccount = DBFind("land_registry_accounts").Where("id=? and onhold=0", $to_acc_id).Row()
         var recipientHold int
         recipientHold = Int(recipientAccount["onhold"])
         
-        if recipientHold > 0 && recipientType != 2{
+        if recipientHold > 0 {
             warning "Recipient account on hold"
         }
         
@@ -41,19 +26,9 @@ contract land_registry_MoneyTransfer
         if $from_acc_id != 0 {
             var senderAccount map
             
-            senderAccount = DBFind("accounts").WhereId($from_acc_id).Order("id desc").Row()
+            senderAccount = DBFind("land_registry_accounts").WhereId($from_acc_id).Order("id desc").Row()
             
-            // transfer tokens from sys-emission account can only gov_account
-            if Int(senderAccount["type"]) == 1{
-                MainCondition()
-            }
-            
-            // transfer tokens from sys-trash is impossible
-            if Int(senderAccount["type"]) == 2 {
-                warning "Sorry, you can not send funds from trash-account"
-            }
-            
-            if Int(senderAccount["onhold"]) > 0 && recipientType != 2 {
+            if Int(senderAccount["onhold"]) > 0 {
                 warning "Sender account on hold"
             }
             
@@ -70,14 +45,14 @@ contract land_registry_MoneyTransfer
     
     func action {
         var recipientAccount map
+        recipientAccount = DBFind("land_registry_accounts").WhereId($to_acc_id).Row()
         var recipientBalance money
-        recipientAccount = DBFind("accounts").WhereId($to_acc_id).Row()
         recipientBalance = Int(recipientAccount["amount"]) + $Amount
-        DBUpdate("accounts", $to_acc_id, "amount", recipientBalance)
+        DBUpdate("land_registry_accounts", $to_acc_id, "amount", recipientBalance)
         
         if($from_acc_id != 0) {
             $senderBalance = $senderBalance - $Amount
-            DBUpdate("accounts", $from_acc_id, "amount", $senderBalance)
+            DBUpdate("land_registry_accounts", $from_acc_id, "amount", $senderBalance)
         }
     }
     

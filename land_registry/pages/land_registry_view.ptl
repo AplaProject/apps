@@ -7,7 +7,6 @@ If(GetVar(notific_id)){}.Else{SetVar(Name: notific_id, Value: 0)}
 SetVar(registry, land_registry)
 SetVar(this, #registry#_view)
 SetVar(title, $land_record$)
-SetVar(fake_avatar, "")
 
 If(#admin#>0){}.Else{SetVar(admin, 0)}
 
@@ -18,11 +17,11 @@ If(GetVar(LandId)){
     DBFind(Name: #registry#_ownership, Source: src_land_ownership).Where(lend_object_id=#LandId#).Vars(ownership)
     
     SetVar(trade_step, #ownership_step#)
-    DBFind(Name: members, Source: src_owner).Where("member_id=#ownership_owner_id#").Vars(owner)
-    DBFind(Name: members, Source: src_buyer).Where("member_id=#ownership_owner_id#").Vars(buyer)
+    DBFind(Name: members, Source: src_owner).Where("id=#ownership_owner_id#").Vars(owner)
+    DBFind(Name: members, Source: src_buyer).Where("id=#ownership_owner_id#").Vars(buyer)
     
     If(#ownership_owner_id#!=#ownership_owner_new_id#){
-        DBFind(Name: members, Source: src_owners).Where("member_id=#ownership_owner_new_id#").Vars(buyer)
+        DBFind(Name: members, Source: src_owners).Where("id=#ownership_owner_new_id#").Vars(buyer)
     }
 }
 SetTitle(#title#)
@@ -43,9 +42,8 @@ Div(content-wrapper){
     }
     If(GetVar(LandId)){
         Div(row df f-valign){
-            Div(col-md-2)
-            Div(col-md-8 mt-sm text-left){
-                Div(panel panel-default data-sweet-alert){
+            Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3 mt-sm text-left){
+                Div(panel panel-default){
                     Form(){
                         Div(list-group-item){
                             Div(h3){$land_record$ #GetVar(LandId)}
@@ -60,13 +58,7 @@ Div(content-wrapper){
                                 }
                                 Div(col-md-6 mt-sm text-left h5){
                                     Div(){
-                                        If(GetVar(owner_avatar)){
-                                            SetVar(avatar, #owner_avatar#)
-                                        }.Else{
-                                            SetVar(avatar, "#fake_avatar#")
-                                        }
-                                        
-                                        Image(Src: #avatar#, Alt: ava, Class: img-thumbnail img-circle).Style(max-width:40px;margin-right:10px;)
+                                        Image(Src: #owner_avatar#, Alt: ava, Class: img-thumbnail img-circle).Style(max-width:40px;margin-right:10px;)
                                         Span(#owner_member_name#)
                                     }
                                 }
@@ -125,7 +117,7 @@ Div(content-wrapper){
                             Div(row df){
                                 Div(col-md-5 mt-sm text-right h5){Strong($legal_status$:)}
                                 Div(col-md-7 mt-sm text-left h5){
-                                    DBFind(Name: notifications, Source: src_role2).Where("page_val_int=#LandId# and page_val_str='role2_second_request' and closed=0").Vars(role2_alert)
+                                    DBFind(Name: notifications, Source: src_role2).Where("page_params='val_int=#LandId#,val_str=role2_second_request' and closed=0").Vars(role2_alert)
                                     If(GetVar(role2_alert_id)){
                                         SetVar(alert_role2, 1)
                                     }.Else{
@@ -162,7 +154,7 @@ Div(content-wrapper){
                             Div(row df){
                                 Div(col-md-5 mt-sm text-right h5){Strong($tax_and_bills$:)}
                                 Div(col-md-7 mt-sm text-left h5){
-                                    DBFind(Name: notifications, Source: src_role2).Where("page_val_int=#LandId# and page_val_str='role3_second_request' and closed=0").Vars(role3_alert)
+                                    DBFind(Name: notifications, Source: src_role2).Where("page_params='val_int=#LandId#,val_str=role3_second_request' and closed=0").Vars(role3_alert)
                                     If(GetVar(role3_alert_id)){
                                         SetVar(alert_role3, 1)
                                     }.Else{
@@ -225,8 +217,8 @@ Div(content-wrapper){
                         
                         If(And(#entry_price#>0,#entry_tax_receipt_and_bills#==1,#entry_legal_status#==1,#entry_encumbrance_certificate#==1, #trade_step#==-1,#ownership_owner_id#!=#key_id#)){
                             Div(list-group-item clearfix){
-                                DBFind(Name: members, Source: src_me).Where(member_id=#key_id#).Vars(me)
-                                DBFind(Name: accounts, Source: me_acc).Where("member_id=#key_id# and onhold=0").Vars(me_acc)
+                                DBFind(Name: members, Source: src_me).Where(id=#key_id#).Vars(me)
+                                DBFind(Name: land_registry_accounts, Source: me_acc).Where("member_id=#key_id# and onhold=0").Vars(me_acc)
                                 Div(pull-right){
                                     If(#me_acc_amount#>=#entry_price#){
                                         $start_buying_land$:
@@ -251,12 +243,7 @@ Div(content-wrapper){
                                     Strong($owner$)
                                     Div(row df f-valign){
                                         Div(col-md-6 mt-sm text-right){
-                                            If(GetVar(owner_avatar)){
-                                                Image(Src: "#owner_avatar#", Alt: ava, Class: img-thumbnail img-circle).Style(width:40px;)
-                                            }.Else{
-                                                Image(Src: "#fake_avatar#", Alt: ava, Class: img-thumbnail img-circle).Style(width:40px;)
-                                            }
-                                            
+                                            Image(Src: "#owner_avatar#", Alt: ava, Class: img-thumbnail img-circle).Style(width:40px;)
                                         }
                                         Div(col-md-6 h5 text-left){#owner_member_name#}
                                     }
@@ -296,12 +283,7 @@ Div(content-wrapper){
                                     Strong($buyer$)
                                     Div(row df f-valign){
                                         Div(col-md-6 mt-sm text-right){
-                                            If(GetVar(buyer_avatar)){
-                                                Image(Src: "#buyer_avatar#", Alt: avatar, Class: img-thumbnail img-circle).Style(width:40px;)
-                                            }.Else{
-                                                Image(Src: "fake_avatar", Alt: avatar, Class: img-thumbnail img-circle).Style(width:40px;)
-                                            }
-                                            
+                                            Image(Src: "#buyer_avatar#", Alt: avatar, Class: img-thumbnail img-circle).Style(width:40px;)
                                         }
                                         Div(col-md-6 h5 text-left){#buyer_member_name#}
                                     }
@@ -310,13 +292,13 @@ Div(content-wrapper){
                                 Div(panel-footer){
                                     If(#trade_step#==1){
                                         Div(h5 text-bold text-center){
-                                            $please_amount$ Mult(#entry_price#, 1.05)
+                                            $please_amount$ Calculate(#entry_price# * 1.05)
                                             INR $to_land_bank$
                                         }
                                     }
                                     
                                     If(#trade_step#==2){
-                                        DBFind(Name: accounts, Source: buyer_accounts).Where(member_id=#ownership_owner_new_id# and account_type=3 and onhold=0).Vars(buyer)
+                                        DBFind(Name: land_registry_accounts, Source: buyer_accounts).Where(member_id=#ownership_owner_new_id# and account_type=3 and onhold=0).Vars(buyer)
                                         Div(h5 text-bold text-center){
                                             $buyer_trans_self$
                                             Span(GetVar(buyer_amount))
@@ -346,6 +328,5 @@ Div(content-wrapper){
                 }
             }
         }
-        Div(col-md-2)
     }
 }

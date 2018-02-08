@@ -31,7 +31,7 @@ contract land_registry_TransferTokens{
         
         //перевод денег с эмиссии покупателю(персональный счет)
         var buyerAccount map
-        buyerAccount = DBFind("accounts").Where("member_id=? and onhold=0 and account_type=1", buyerId).Row()
+        buyerAccount = DBFind("land_registry_accounts").Where("member_id=? and onhold=0 and account_type=1", buyerId).Row()
         if !buyerAccount {
             info "Buyers account not found"
         }
@@ -39,7 +39,7 @@ contract land_registry_TransferTokens{
         bankAccountId = 1
         buyerAccountId = Int(buyerAccount["id"])
         // land_registry_MoneyTransfer_NoSign("sender_acc_id,recipient_acc_id,Amount", 1, buyerAccountId, landPrice)
-        Tokens_Transfer("sender_id,recipient_id,amount", buyerAccountId, bankAccountId, landPrice)
+        land_registry_Tokens_Transfer("sender_id,recipient_id,amount", buyerAccountId, bankAccountId, landPrice)
         
         DBUpdate(ownershipTable, ownershipId, "step", 2)
                 
@@ -49,7 +49,7 @@ contract land_registry_TransferTokens{
         header = "$new_purchase$"
         body = "$need_your_processing$"
         page = "land_registry_view"
-        params = Sprintf("val_int=%s",$LandId)
+        params = Sprintf("val_int=%v",$LandId)
         Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val",
         ownerId, icon, header, body, page, params)
     }
