@@ -3,7 +3,6 @@ contract land_registry_MoneyTransfer
     data {
         from_acc_id int
         to_acc_id int
-        
         Amount money
         Signature string "optional"
     }
@@ -14,50 +13,52 @@ contract land_registry_MoneyTransfer
         }
         
         //----CHECK RECIPIENT----------------------------
-        $to_acc = DBFind("accounts").Where("id=? and onhold=0", $to_acc_id)
-        $to_acc_type = $to_acc[0]["type"]
+        var recipientAccount map
+        recipientAccount = DBFind("accounts").Where("id=? and onhold=0", $to_acc_id).Row()
+        
+        var recipientType int
+        recipientType = Int(recipientAccount["type"])
         
         // transfer of tokens to sys-emission account is impossible; use emission
-        if($to_acc_type==1) &&($from_acc_id != 0) {
+        if recipientType==1 && $from_acc_id != 0 {
             warning "Sorry, you can not send money to the system account"
         }
         
         // transfer of tokens to sys-trash account is impossible; this account is necessary for storing remote tokens
-        if($to_acc_type==2) &&($Signature == "") {
+        if recipientType==2 && $Signature == "" {
             warning "Sorry, you can not send money to the system account"
         }
         
-        $to_acc_onholded = DBFind("accounts").WhereId($to_acc_id)
-        $to_acc_onhold = $to_acc_onholded[0]["onhold"]
+        recipientAccount = DBFind("accounts").Where("id=?", $to_acc_id).Row()
+        var recipientHold int
+        recipientHold = Int(recipientAccount["onhold"])
         
-        if($to_acc_onhold > 0) &&($to_acc_type != 2){
+        if recipientHold > 0 && recipientType != 2{
             warning "Recipient account on hold"
         }
         
         //----CHECKING SENDER----------------------------
         if $from_acc_id != 0 {
-            var from_acc_select array
-            var from_acc map
+            var senderAccount map
             
-            from_acc_select = DBFind("accounts").WhereId($from_acc_id).Order("id desc")
-            from_acc = from_acc_select[0]
+            senderAccount = DBFind("accounts").WhereId($from_acc_id).Order("id desc").Row()
             
             // transfer tokens from sys-emission account can only gov_account
-            if Int(from_acc["type"]) == 1{
+            if Int(senderAccount["type"]) == 1{
                 MainCondition()
             }
             
             // transfer tokens from sys-trash is impossible
-            if Int(from_acc["type"]) == 2 {
+            if Int(senderAccount["type"]) == 2 {
                 warning "Sorry, you can not send funds from trash-account"
             }
             
-            if(Int(from_acc["onhold"]) > 0) &&($to_acc_type != 2) {
+            if Int(senderAccount["onhold"]) > 0 && recipientType != 2 {
                 warning "Sender account on hold"
             }
             
-            $from_balance = money(from_acc["amount"])
-            if $from_balance < $Amount {
+            $senderBalance = money(senderAccount["amount"])
+            if $senderBalance < $Amount {
                 warning "Sorry, your account has insufficient funds"
             }
         }
@@ -68,16 +69,15 @@ contract land_registry_MoneyTransfer
     }
     
     func action {
-        var to_acc map
-        var to_balance money
-        to_acc = DBFind("accounts").WhereId($to_acc_id)
-        to_balance = to_acc[0]["amount"]
-        to_balance = to_balance + $Amount
-        DBUpdate("accounts", $to_acc_id, "amount", to_balance)
+        var recipientAccount map
+        var recipientBalance money
+        recipientAccount = DBFind("accounts").WhereId($to_acc_id).Row()
+        recipientBalance = Int(recipientAccount["amount"]) + $Amount
+        DBUpdate("accounts", $to_acc_id, "amount", recipientBalance)
         
         if($from_acc_id != 0) {
-            $from_balance = $from_balance - $Amount
-            DBUpdate("accounts", $from_acc_id, "amount", $from_balance)
+            $senderBalance = $senderBalance - $Amount
+            DBUpdate("accounts", $from_acc_id, "amount", $senderBalance)
         }
     }
     

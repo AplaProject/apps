@@ -5,35 +5,37 @@ contract land_registry_PurchaseAccept{
     }
     
     action{
-        $tblName = "land_registry_ownership"
+        var table string
+        table = "land_registry_ownership"
         
-        $rowQuery = DBFind($tblName).Where("lend_object_id=?", $land_id)
-        $landOwnership = $rowQuery[0]
-        $ownership_id = Int($landOwnership["id"])
+        var ownership map
+        ownership = DBFind(table).Where("lend_object_id=?", $land_id).Row()
+        var ownershipId, buyerId int
+        ownershipId = Int($landOwnership["id"])
+        buyerId = Int($landOwnership["owner_new_id"])
         
-        DBUpdate($tblName, $ownership_id, "step", 1)
+        DBUpdate(table, ownershipId, "step", 1)
         
-        //уведомляем покупателя
-        $owner_new_id = Int($landOwnership["owner_new_id"])
-        $memberId = $owner_new_id
-        $iconName = "fa fa-bell-o"
-        $textHeader = "$purchase_approved$"
-        $textBody = "$waiting_bank$"
-        $pageName = "land_registry_view"
-        $valInt = $land_id
-        $valStr = ""
-        Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,val_int,val_str",$memberId,$iconName,$textHeader,$textBody,$pageName,$valInt,$valStr)
+        // notify buyer
+        var icon, header, body, page, params string
+        icon = "fa-bell"
+        header = "$purchase_approved$"
+        body = "$waiting_bank$"
+        page = "land_registry_view"
+        params = Sprintf("val_int=%d", $land_id)
         
-        //уведомляем банк
-        $roleId = 4
-        $closureType = 2
-        $textHeader = "$new_land$"
-        $textBody = "$need_your_processing$"
-        $pageName = "land_registry_bank"
-        Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,val_int,val_str",$roleId,$closureType,$iconName,$textHeader,$textBody,$pageName,$valInt,$valStr)
+        Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", buyerId, icon, header, body, page, params)
         
+        // notify bank
+        var roleId, closureType int
+        header = "$new_land$"
+        body = "$need_your_processing$"
+        closureType = 2
+        page = "land_registry_bank"
+        roleId = 4
+        Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val",roleId,closureType,icon,header,body,page,params)
         
-        //закрываем оповещение для владельца
+        // closing notify for owner
         Notifications_Single_Close("notific_id", $notific_id)
     }
 }

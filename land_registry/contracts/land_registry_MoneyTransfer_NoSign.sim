@@ -2,7 +2,6 @@ contract land_registry_MoneyTransfer_NoSign{
     data{
         from_acc_id int
         to_acc_id int
-        
         Amount money
     }
     
@@ -12,72 +11,70 @@ contract land_registry_MoneyTransfer_NoSign{
         }
         
         //----CHECK RECIPIENT----------------------------
-        $to_acc = DBFind("accounts").Where("id=? and onhold=0", $to_acc_id)
-        $to_acc_type = $to_acc[0]["type"]
+        var recipientAccount map
+        recipientAccount = DBFind("accounts").Where("id=? and onhold=0", $to_acc_id).Row()
+        var recipientAccountType int
+        recipientAccountType = Int(recipientAccount["type"])
         
         // transfer of tokens to sys-emission account is impossible; use emission
-        //if(($to_acc_type==1) &&($from_acc_id != 0) )
-        //{
+        //if((recipientAccountType==1) &&($from_acc_id != 0) ) {
         //	warning "Sorry, you can not send money to the system account"
         //}
         
         // transfer of tokens to sys-trash account is impossible; this account is necessary for storing remote tokens
-        //if(($to_acc_type==2) &&($Signature == "") )
-        //{
+        //if((recipientAccountType==2) &&($Signature == "") ){
         //	warning "Sorry, you can not send money to the system account"
         //}
+        var recipientAccountHolded map
+        recipientAccountHolded = DBFind("accounts").Where("id=? and onhold>0", $to_acc_id).Row()
         
-        $to_acc_holded = DBFind("accounts").Where("id=? and onhold>0", $to_acc_id)
-        $to_acc_onhold = $to_acc_holded[0]["onhold"]
+        var recipientOnhold int
+        recipientOnhold = Int(recipientAccountHolded["onhold"])
         
-        if($to_acc_onhold > 0) &&($to_acc_type != 2) {
+        if recipientOnhold > 0 && recipientAccountType != 2 {
             warning "Recipient account on hold"
         }
         
         //----CHECKING SENDER----------------------------
         if $from_acc_id != 0 {
-            var from_acc_select array
-            var from_acc map
-            
-            from_acc_select = DBFind("accounts").WhereId($from_acc_id).Order("id desc")
-            from_acc = from_acc_select[0]
+            var senderAccount map
+            senderAccount = DBFind("accounts").WhereId($from_acc_id).Order("id desc").Row()
             
             // transfer tokens from sys-emission account can only gov_account
-            if Int(from_acc["type"]) == 1 {
+            if Int(senderAccount["type"]) == 1 {
                 MainCondition()
             }
             
             // transfer tokens from sys-trash is impossible
-            if Int(from_acc["type"]) == 2 {
+            if Int(senderAccount["type"]) == 2 {
                 warning "Sorry, you can not send funds from trash-account"
             }
             
-            if(Int(from_acc["onhold"]) > 0) &&($to_acc_type != 2) {
+            if Int(senderAccount["onhold"]) > 0 && recipientAccountType != 2 {
                 warning "Sender account on hold"
             }
             
-            $from_balance = money(from_acc["amount"])
-            if $from_balance < $Amount {
+            $senderBalance = money(senderAccount["amount"])
+            if $senderBalance < $Amount {
                 warning "Sorry, your account has insufficient funds"
             }
         }
         else{
-            // if from_acc_id == 0, then this emission
+            // if senderAccount_id == 0, then this emission
             MainCondition()
         }
     }
     
     func action {
         var to_acc map
-        var to_balance money
-        to_acc = DBFind("accounts").WhereId($to_acc_id)
-        to_balance = to_acc[0]["amount"]
-        to_balance = to_balance + $Amount
-        DBUpdate("accounts", $to_acc_id, "amount", to_balance)
+        var recipientBalance money
+        recipientAccount = DBFind("accounts").WhereId($to_acc_id).Row()
+        recipientBalance = Int(recipientAccount["amount"]) + $Amount
+        DBUpdate("accounts", $to_acc_id, "amount", recipientBalance)
         
         if $from_acc_id != 0 {
-            $from_balance = $from_balance - $Amount
-            DBUpdate("accounts", $from_acc_id, "amount", $from_balance)
+            $senderBalance = $senderBalance - $Amount
+            DBUpdate("accounts", $from_acc_id, "amount", $senderBalance)
         }
     }
 }

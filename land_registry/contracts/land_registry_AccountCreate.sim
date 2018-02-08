@@ -9,26 +9,21 @@ contract land_registry_AccountCreate{
         MainCondition()
         
         $account_id = 0;
-        $acc_address = AddressToId($member_id)
+        $memberId = AddressToId($member_id)
         
-        if($account_type == 1) ||($account_type == 2){
-            $acc_query = DBFind("accounts").Where("type=? and onhold=0", $account_type)
-            
+        var account map
+        if $account_type == 1 || $account_type == 2 {
+            account = DBFind("accounts").Where("type=? and onhold=0", $account_type).Row()
         } else {
-            $acc_query = DBFind("accounts").Where("type=? and member_id=? and onhold=0", $account_type,$acc_address)
-        }
-        if Len($acc_query) >0{
-            $acc = $acc_query[0]
-            $account_id = $acc["id"]
+            account = DBFind("accounts").Where("type=? and member_id=? and onhold=0", $account_type,$memberId).Row()
         }
         
-        //looking for an existing account
-        if($account_id != 0) {
+        if account {
             warning "Account with this type has already been created"
         }
     }
     
     func action {
-        DBInsert("accounts", "member_id,type", $acc_address, $account_type)
+        DBInsert("accounts", "member_id,type", $memberId, $account_type)
     }
 }
