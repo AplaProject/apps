@@ -1,0 +1,43 @@
+contract land_registry_Add{
+    data{
+        OwnerId int
+        CoordsAddress string
+        Area int
+        BuildingsUseClass int
+        Coords string "optional"
+        LandNature int
+        RegistrationDate string "optional"
+    }
+    
+    func conditions{
+        var member map
+        member = DBFind("members").Where("id = ?", $OwnerId).Row()
+        if !member {
+            warning "Member account for Owner not found"
+        }
+    }
+
+    func action{
+        var icon, header, body, page, params, roleParams string
+        var closureType, landId, landUse, landLocalBody int
+        
+        landId = DBInsert("land_registry", "owner_id,address,area,buildings_use_class,map_coords,land_use,timestamp date_create,delete,land_nature,land_local_body,registration_date,timestamp modification_date", $OwnerId, $CoordsAddress, $Area, $BuildingsUseClass, $Coords, landUse, $block_time, 0, $LandNature, landLocalBody, $RegistrationDate, $block_time)
+        
+        DBInsert("land_registry_ownership", "step, timestamp date_creat, timestamp date_signing, lend_object_id, owner_id, owner_new_id", -1, $block_time, $block_time, landId, $OwnerId, $OwnerId)
+        
+        icon = "fa fa-bell-o"
+        header = "Department of Legal Affairs: new Land"
+        body = "Need your processing"
+        
+        //notify depart
+        params = Sprintf("LandId=%v,admin=1", landId)
+        page = "land_registry_edit"
+        Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", $key_id,icon,header,body,page,params)
+        
+        //notify owner
+        header = "New Land: need price"
+        params = Sprintf("LandId=%v", landId)
+        page = "land_registry_edit"
+        Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", $OwnerId,icon,header,body,page,params)
+    }
+}

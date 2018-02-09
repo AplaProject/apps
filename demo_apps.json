@@ -14,6 +14,16 @@
             "Name": "demo_block_sendPage",
             "Value": "DBFind(parameters).Where(name='founder_account').Vars(founder)\nSetTitle($demo_title$)\nDiv(content-wrapper){\n    Div(row){\n        Div(col-lg-8 col-lg-offset-2){\n            Div(h4){LangRes(input)}\n            Div(panel panel-primary){\n                Form(panel-body input-group){\n                    Input(Name: SomeText, Type:text, Placeholder:Enter text, Value: Hello World!)\n                    Div(input-group-btn){\n                        Button(Body:$send_page$, Page:demo_page_sendPage, PageParams: \"pageValue=Val(SomeText)\", Class:btn btn-primary)\n                    }\n                }\n            }\n            \n            \n            Div(h4){LangRes(result)}\n            Div(panel panel-primary){\n                Div(panel-body){\n                    pageValue : #pageValue#\n                }\n            }\n            \n            Div(h4){LangRes(code)}\n            Div(panel panel-primary){\n                Div(panel-body){   \n                    If(#founder_value#==#key_id#){\n                        Div(h5){\n                            DBFind(blocks).Where(name='demo_block_sendPage').Vars(page)\n                            LinkPage(Page: \"edit-block\", PageParams: \"id=#page_id#\"){ $edit_page$ }\n                        }\n                    }.Else{\n                        Div(h5 text-bold){$page_code$}\n                    }\n                    Code(\nForm(panel-body input-group){\n    Input(Name: SomeText, Type:text, Placeholder:Enter text, Value: Hello World!)\n    Div(input-group-btn){\n        Button(Body:Send to Page, Page:demo_page_sendPage, PageParams: \"pageValue=Val(SomeText)\", Class:btn btn-primary)\n    }\n}\n                    )\n                }\n            }\n            \n            Div(h4){LangRes(description)}\n            Div(panel panel-primary){\n                Div(panel-body){\n                    LangRes(demo_description_sendPage)\n                }\n            }\n        }\n    }\n}",
             "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "land_registry_edit",
+            "Value": "If(GetVar(LandId)){}.Else{\n    SetVar(LandId, 1)\n}\n\n\nSetVar(root, land_registry)\nSetVar(this, #root#_edit)\n\nIf(#admin#==1){\n    SetTitle($depart_role2$)\n}.Else{\n    SetTitle($owner$)\n}\n\nEcosysParam(Name: land_yes_no, Source: src_yes_no)\n\nDBFind(Name: #root#, Source: src_entry).Where(id=#LandId#).Vars(entry)\nDBFind(Name: members, Source: src_owners).Where(id=#entry_owner_id#).Vars(owner)\n\nDiv(content-wrapper red){\n    Div(breadcrumb){\n        Div(){\n            LinkPage(LangRes(land_records), #root#_records, PageParams: \"admin=#admin#\").Style(margin-right: 10px;)\n            Span(/).Style(margin-right: 10px;)\n            Span(LangRes(land_records_edit) ##LandId#, text-muted).Style(margin-right: 10px;)\n            Image(Alt: ava, Class: img-thumbnail img-circle, Src: \"#owner_avatar#\").Style(width:30px;margin-right: 10px;)\n            Span(#owner_member_name#, text-muted)\n        }\n    }\n    Div(row df f-valign){\n        \n        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3 mt-sm text-left){\n            Div(panel panel-primary data-sweet-alert){\n                Form(){\n                    Div(panel-heading){\n                        Div(panel-title){LangRes(land_records_edit)}\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right){\n                                Strong(LangRes(coordinates))\n                            }\n                            Div(col-md-8 mt-sm text-left){\n                                If(){\n                                    InputMap(Name: Coords, Value: #entry_map_coords#)\n                                }.Else{\n                                    If(GetVar(entry_map_coords)){\n                                        #entry_map_coords#\n                                    }\n                                }\n                            }\n                        }\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right){Strong(LangRes(area_size))}\n                            Div(col-md-8 mt-sm text-left){\n                                If(){\n                                    Input(Name: Area, Class: form-control input-sm,Value: #entry_area#, Type: text)\n                                }.Else{\n                                    If(GetVar(entry_area)){\n                                        #entry_area#\n                                    }\n                                }\n                            }\n                        }\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right){Strong(LangRes(address))}\n                            Div(col-md-8 mt-sm text-left){\n                                If(){\n                                    Input(Name: CoordsAddress, Class: form-control input-sm, Type: text, Value: GetVar(entry_address))\n                                }.Else{\n                                    If(GetVar(entry_address)){\n                                        #entry_address#\n                                    }\n                                }\n                            }\n                        }\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right h5){Strong(LangRes(owner))}\n                            Div(col-md-8 mt-sm text-left h5){\n                                Image(Alt: ava, Class: img-thumbnail img-circle, Src: \"#owner_avatar#\").Style(width:40px;margin-right: 10px;)\n                                Span(#owner_member_name#, text-muted)\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right h5){Strong(LangRes(registration_date):) }\n                            Div(col-md-8 mt-sm text-left h5){\n                                DateTime(#entry_registration_date#)\n                            }\n                        }\n                    }\n                    \n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right){Strong(LangRes(buildings_use_class))}\n                            Div(col-md-8 mt-sm text-left){\n                                If(){\n                                    EcosysParam(Name: land_buildings_use_class, Source: src_buildings_use_class)\n                                    Select(Name: BuildingsUseClass, Source: src_buildings_use_class, Class: form-control, Value: #entry_buildings_use_class#, NameColumn: name, ValueColumn: id)\n                                }.Else{\n                                    If(GetVar(entry_buildings_use_class)){\n                                        EcosysParam(Name: buildings_use_class, Index: #entry_buildings_use_class#)\n                                    }.Else{\n                                        LangRes(undefined)\n                                    }\n                                }\n                            }\n                        }\n                    }\n                    \n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right){Strong(LangRes(land_nature))}\n                            Div(col-md-8 mt-sm text-left){\n                                If(){\n                                    EcosysParam(Name: land_nature, Source: src_nature)\n                                    Select(Name: LandNature,Source: src_nature, Class: form-control,Value: #entry_land_nature#, NameColumn: name, ValueColumn: id)\n                                }.Else{\n                                    If(GetVar(entry_land_nature)){\n                                        EcosysParam(Name: land_nature, Index: #entry_land_nature#)\n                                    }.Else{\n                                        LangRes(undefined)\n                                    }\n                                }\n                            }\n                        }\n                    }\n                    \n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right h5){Strong(LangRes(consideration_value))}\n                            Div(col-md-8 mt-sm text-left h5){\n                                If(#admin#==1){\n                                    If(GetVar(entry_price)){\n                                        #entry_price#\n                                    }\n                                }.Else{\n                                    Input(Name: Price,Class: form-control input-sm, Value: #entry_price#, Type: number)\n                                }\n                            }\n                        }\n                    }\n                    \n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right h5){Strong(LangRes(encumbrance_certificate))}\n                            Div(col-md-8 mt-sm text-left h5){\n                                If(#admin#==1){\n                                    Div(form-inline){\n                                        RadioGroup(Name: EncumbranceCertificate,Class: form-control, Value: #entry_encumbrance_certificate#, Source: src_yes_no, ValueColumn: id, NameColumn: name)\n                                    }\n                                }.Else{\n                                    If(GetVar(entry_encumbrance_certificate)){\n                                        Span(EcosysParam(Name: land_yes_no, Index: #entry_encumbrance_certificate#))\n                                    }.Else{\n                                        LangRes(undefined)\n                                    }\n                                }\n                            }\n                        }\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right h5){Strong(LangRes(legal_status))}\n                            Div(col-md-8 mt-sm text-left h5){\n                                If(#admin#==1){\n                                    Div(form-inline){\n                                        RadioGroup(Name: LegalStatus,Class: form-control, Value: #entry_legal_status#, Source: src_yes_no, ValueColumn: id, NameColumn: name)\n                                    }\n                                }.Else{\n                                    If(GetVar(entry_legal_status)){\n                                        Span(EcosysParam(Name: land_yes_no, Index: #entry_legal_status#))\n                                    }.Else{\n                                        LangRes(undefined)\n                                    }\n                                }\n                            }\n                        }\n                    }\n                    \n                    \n                    Div(panel-footer){\n                        Div(clearfix){\n                            Div(pull-right){\n                                Input(Name: LandId, Type: hidden, Value: #LandId#)\n                                Div(btn-group){\n                                    Button(Page: #root#_records, Body: $back$, Class: btn btn-default btn-pill-left, PageParams: \"admin=#admin#\")\n                                    \n                                    If(#admin#==1){\n                                        Button(Body: $save$, Class: btn btn-primary btn-pill-right, Contract: #root#_UpdateAdmin, Params: \"NotificId=#notific_id#\", Page: #root#_records_admin)\n                                    }.Else{\n                                        Button(Body: $save$, Class: btn btn-primary btn-pill-right, Contract: #root#_UpdateOwner, Params: \"Price=Val(Price),NotificId=#notific_id#\", Page: #root#_records)\n                                    }\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "land_registry_records",
+            "Value": "If(#isOrder#==1){\n    SetVar(Name:v_Order, Value: \"price\")\n}.ElseIf(#isOrder#==2){\n    SetVar(Name:v_Order, Value: \"area\")\n}.ElseIf(#isOrder#==3){\n    SetVar(Name:v_Order, Value: \"price desc\")\n}.ElseIf(#isOrder#==4){\n    SetVar(Name:v_Order, Value: \"area desc\")\n}.Else{\n    SetVar(Name:v_Order, Value: \"id desc\")\n}\n\nDBFind(Name: land_registry, Source: src_land_registry).Where(#v_Where#).Order(#v_Order#).Custom(_id){\n    Div(text-center h5){#id#}.Style(align:center; width:50px;)\n}.Custom(_owner){\n    DBFind(Name: members, Source: src_members).Where(id=#owner_id#).Vars(row)\n    Div(text-bold text-center){\n        Image(Class: img-thumbnail img-circle, Alt: ava, Src: #row_avatar#).Style(width:30px;height:30px;)\n        \n        Div(){\n            LinkPage(Page: land_registry_member, PageParams: \"v_member_id=#owner_id#\", Body: #row_member_name#).Style(cursor:pointer;)\n        }\n    }.Style(max-width:100px;overflow:hidden;)\n}.Custom(_land){\n    Span(EcosysParam(Name: land_use, Index: #land_use#))\n}.Custom(_buildings){\n    Span(EcosysParam(Name: buildings_use_class, Index: #buildings_use_class#))\n}.Custom(_area){\n    Span(#area#)\n}.Custom(_address){\n    Span(#address#)\n}.Custom(_cons){\n    Div(text-center h6){\n        If(#price#){\n            #price#\n        }.Else{\n            Em(Class: fa fa-1x text-muted fa-question-circle)\n        }\n    }.Style(width:60px;)\n    \n}.Custom(_legal){\n    Div(text-center h6){\n        \n        If(#legal_status#==0){\n            Em(Class: fa fa-1x text-muted fa-question-circle)\n        }\n        If(#legal_status#==1){\n            Em(Class: fa fa-1x text-success fa-check-circle)\n        }\n        If(#legal_status#==2){\n            Em(Class: fa fa-1x text-danger fa-exclamation-circle)\n        }\n    }.Style(width:60px;)\n    \n}.Custom(_encumberance){\n    Div(text-center h6){\n        If(#encumbrance_certificate#==0){\n            Em(Class: fa fa-1x text-muted fa-question-circle)\n        }\n        If(#encumbrance_certificate#==1){\n            Em(Class: fa fa-1x text-success fa-check-circle)\n        }\n        If(#encumbrance_certificate#==2){\n            Em(Class: fa fa-1x text-danger fa-exclamation-circle)\n        }\n    }.Style(width:60px;)\n    \n}.Custom(_common){\n    Form(){\n        Button(Page: land_registry_view, PageParams: \"notific_val_int=#id#\", Class: btn btn-default fa fa-2x fa-eye)\n    }\n    \n}.Custom(_admin){\n    Form(btn-group){\n        Button(Page: land_registry_view, PageParams: \"LandId=#id#,admin=#admin#\", Class: btn btn-default fa fa-2x fa-eye)\n        Button(Page: #this#, Contract: land_registry_Delete, Params: \"LandId=#id#\", Class: btn btn-danger fa fa-2x fa-trash)\n    }.Style(width:180px;display:flex;)\n    \n}\n\nDiv(content-wrapper){\n    Div(panel panel-primary data-sweet-alert){\n        Div(list-group-item){\n            Div(row df f-valign){\n                Div(col-md-2 mt-sm text-center text-bold){$land_use$}\n                Div(col-md-7 mt-sm text-left){\n                    Form(input-group){\n                        EcosysParam(Name: land_use, Source: src_land_use)\n                        Select(Name: LandUseSelect, Source: src_land_use, Class: form-control, NameColumn: name, ValueColumn: id, Value: #str_search#)\n                        \n                        Div(input-group-btn){\n                            Button(Page: #this#, PageParams: \"str_search=Val(LandUseSelect),isSearch=1,isOrder=#isOrder#,admin=#admin#,sales=#sales#\", Class: btn btn-default fa fa-search)\n                        }\n                    }\n                }\n                Div(col-md-3 mt-sm btn-group){\n                    SetVar(params_sort, \"admin=#admin#,sales=#sales#,isOrder\")\n                    SetVar(Name: b_ask, Value: fa fa-sort-numeric-asc)\n                    SetVar(Name: b_desk, Value: fa fa-sort-numeric-desc)\n                    If(#isOrder#==1){\n                        Button(Page: #this#, Class: btn btn-default, PageParams: \"#params_sort#=3\"){\n                            Span(Class:#b_ask# active) LangRes(price)\n                        }\n                    }.ElseIf(#isOrder#==3){\n                        Button(Page: #this#, Class: btn btn-default, PageParams: \"#params_sort#=1\"){\n                            Span(Class:#b_desk# active) LangRes(price)\n                        }\n                    }.Else{\n                        Button(Page: #this#, Class: btn btn-default,PageParams: \"#params_sort#=1\"){\n                            LangRes(price)\n                        }\n                    }\n                    \n                    If(#isOrder#==2){\n                        Button(Page: #this#, Class: btn btn-default, PageParams: \"#params_sort#=4\"){\n                            Span(Class:#b_ask# active) LangRes(area_size)\n                        }\n                    }.ElseIf(#isOrder#==4){\n                        Button(Page: #this#, Class: btn btn-default, PageParams: \"#params_sort#=2\"){\n                            Span(Class:#b_desk# active) LangRes(area_size)\n                        }\n                    }.Else{\n                        Button(Page: #this#, Class: btn btn-default, PageParams: \"#params_sort#=4\"){\n                            LangRes(area_size)\n                        }\n                    }\n                }.Style(display:flex;)\n            }\n            \n            \n            \n            Div(table-responsive){\n                \n                If(#admin#==1){\n                    Table(Source:src_land_registry, Columns: \"ID=_id,$owner$=_owner,$area_size$=_area,$address$=_address,$consideration_value$(INR)=_cons,$legal_status$=_legal,$encumbrance_certificate$=_encumberance,=_admin\")\n                }\n                If(#admin#==0){\n                    Table(Source:src_land_registry, Columns: \"ID=_id,$owner$=_owner,$area_size$=_area,$address$=_address,$consideration_value$(INR)=_cons,$legal_status$=_legal,$encumbrance_certificate$=_encumberance,=_common\")\n                }\n            }\n            \n            If(#isSearch#==1){\n                Form(text-center){\n                    Button(Page: #this#, PageParams:\"isSearch=0,admin=#admin#\", Class: btn btn-primary btn-oval){\n                        LangRes(view_all)\n                    }\n                }\n            }\n            \n        }\n        Div(panel-footer){\n            Div(clearfix){\n                Form(pull-right){\n                    Button(Page: land_registry_add, Class: btn btn-primary){\n                        LangRes(add)\n                    }\n                }\n            }\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
         }
     ],
     "contracts": [
@@ -30,7 +40,7 @@
         {
             "Name": "Roles_Assign",
             "Value": "contract Roles_Assign {\n    data {\n        role_id int\n        member_id int\n    }\n    \n    conditions {\n        \n        $role_map = DBFind(\"roles_list\").Where(\"id = $\", $role_id).Row()\n        $member_map = DBFind(\"members\").Where(\"id = $\", $member_id).Row()\n        $appointer_map = DBFind(\"members\").Where(\"id = $\", $key_id).Row()\n        \n        if !$role_map {\n            warning \"Role not found\"\n        }\n        if !$member_map {\n            warning \"Member not found\"\n        }\n        if !$appointer_map {\n            warning \"Appointer not found\"\n        }\n        \n        if(Int($role_map[\"delete\"]) == 1) {\n            warning \"This role has been deleted. The appointment of members is impossible\"\n        }\n        if((Int($role_map[\"role_type\"]) != 1) &&(Int($role_map[\"role_type\"]) != 4)) {\n            warning \"This role is not assignable. The appointment of members is impossible\"\n        }\n        if(Int($role_map[\"creator_id\"]) != $key_id) {\n            warning \"Sorry, you are not the creator of this role. The appointment of members is impossible\"\n        }\n        \n        $assign_id = DBFind(\"roles_assign\").Where(\"role_id=$ and member_id=$ and delete=0\", $role_id, $member_id).One(\"id\")\n        if($assign_id != nil) {\n            warning \"This member has already been added\"\n        }\n    }\n    \n    action {\n        DBInsert(\"roles_assign\", \"role_id,role_type,role_name,member_id,member_name,member_avatar,appointed_by_id,appointed_by_name,timestamp date_start,delete\",\n        $role_id, $role_map[\"role_type\"], $role_map[\"role_name\"], $member_id, $member_map[\"member_name\"], $member_map[\"avatar\"], $key_id, $appointer_map[\"member_name\"], $block_time, 0)\n    }\n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "Companies_Del",
@@ -45,12 +55,12 @@
         {
             "Name": "Notifications_Single_Send",
             "Value": "contract Notifications_Single_Send {\n    data {\n        member_id int\n        icon_name string\n        text_header string\n        text_body string\n        page_name string\n        params_val string\n    }\n\n    conditions {\n\t\t$member_map = DBFind(\"members\").Where(\"id = $\", $member_id).Row()\n\t\t\n\t\tif ($member_map[\"id\"] == nil){\n\t\t\twarning \"Member not found\"\n\t\t}\n    }\n\n    action {\n\t\t$notification_id = DBInsert(`notifications`, `icon,header_text,body_text,page_name,notification_type,recipient_id,recipient_name,recipient_avatar,timestamp date_create,page_params`, \n\t\t\t$icon_name, $text_header, $text_body, $page_name, 1, $member_id, $member_map[\"member_name\"], $member_map[\"avatar\"], $block_time, $params_val)\n    }\n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "Profile_Edit",
             "Value": "contract Profile_Edit {\n    data {\n        Username string\n        Avatar string \"image\"\n        Kid int \"optional\"\n    }\n    \n    conditions {\n        $id = 0\n        if $Kid == 0{\n            $Kid = $key_id\n        }\n        $member = DBFind(\"members\").Where(\"id=?\",$Kid).Row()\n        if $member {\n            $id = Int($member[\"id\"])\n        }\n    }\n    \n    action {\n        if $id != 0{\n            DBUpdate(\"members\", $id, \"member_name,avatar\", $Username, $Avatar)\n        }else{\n            DBInsert(\"members\", \"id,member_name,avatar\", $Kid, $Username, $Avatar)\n        }\n    }\n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "Notifications_Roles_Finishing",
@@ -70,7 +80,7 @@
         {
             "Name": "Notifications_Single_Close",
             "Value": "contract Notifications_Single_Close {\n    data {\n\t    notific_id int\n    }\n\n    conditions {\n    }\n\n    action {\n        DBUpdate(`notifications`, $notific_id, `closed,timestamp finished_processing_time,finished_processing_id`, 1, $block_time, $key_id) \n    }\n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "DemoNotificationSingle",
@@ -95,17 +105,37 @@
         {
             "Name": "Roles_Create",
             "Value": "contract Roles_Create {\n    data {\n        role_name string\n        role_type int\n        company_id int \"optional\"\n    }\n\n    conditions {\n        // system role\n        if ($role_type == 3) {\n            warning \"System role can not be created\"\n        }\n\n        // company role\n        if ($role_type == 4) {\n\n            // check param\n            if ($company_id == 0) {\n                warning \"On this page you can not create a role for the company. Go to the company's view page to create a role\"\n            }\n\n            // check the company\n            $company_map = DBFind(\"companies\").Where(\"id = $\", $company_id).Row()\n            if ($company_map[\"id\"] == nil) {\n                warning \"Company not found\"\n            }\n\n            // check creator of the company\n            if ($company_id != $key_id) {\n                warning \"Sorry, you are not the creator of this company\"\n            }\n        }\n\n        // check member\n        $member_map = DBFind(\"members\").Where(\"id = $\", $key_id).Row()\n        if ($member_map[\"id\"] == nil) {\n            warning \"You are not a member of the ecosystem\"\n        }\n    }\n\n    action {\n        if ($role_type == 4) {\n            DBInsert(`roles_list`, `role_name,role_type,creator_id,creator_name,creator_avatar,company_id,timestamp date_create,delete`,\n                $role_name, $role_type, $key_id, $member_map[\"member_name\"], $member_map[\"avatar\"], $company_id, $block_time, 0)\n        } else {\n            DBInsert(`roles_list`, `role_name,role_type,creator_id,creator_name,creator_avatar,company_id,timestamp date_create,delete`,\n                $role_name, $role_type, $key_id, $member_map[\"member_name\"], $member_map[\"avatar\"], 0, $block_time, 0)\n        }\n    }\n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "Roles_Unassign",
             "Value": "contract Roles_Unassign {\n    data {\n        row_id int\n    }\n\n    conditions {\n        // check record\n        $assign_map = DBFind(`roles_assign`).Where(`id=$`, $row_id).Row()\n        if ($assign_map[\"id\"] == nil) {\n            warning \"Role not found for the specified member\"\n        }\n\n        // get role\n        $role_map = DBFind(\"roles_list\").Where(\"id=$\", Int($assign_map[\"role_id\"])).Row()\n        if ($role_map[\"id\"] == nil) {\n            warning \"Role not found in the roles registry\"\n        }\n\n        // check creator of the role\n        if (Int($role_map[\"creator_id\"]) != $key_id) {\n            warning \"Sorry, you are not the creator of this role\"\n        }\n    }\n\n    action {\n        // delete the member\n        DBUpdate(`roles_assign`, $row_id, `delete,timestamp date_end`, 1, $block_time)\n\n        // if company is specified, delete the member from the company\n        if (Int($role_map[\"company_id\"]) != 0) {\n\n            // search member in the company\n            $assign_id = DBFind(`companies_participants`).Where(\"company_id=$ and role_id=$ and member_id=$ and delete=$\", Int($role_map[\"company_id\"]), Int($assign_map[\"role_id\"]), Int($assign_map[\"member_id\"]), 0).One(\"id\")\n\n            // if found, then delete the member\n            if ($assign_id != nil){\n                Companies_Participants_Del(\"participant_id\", Int($assign_id))\n            }\n        }\n\n    }\n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "Roles_Del",
             "Value": "contract Roles_Del {\n    data {\n        role_id int\n    }\n\n    conditions {\n        // check role\n        $role_map = DBFind(\"roles_list\").Where(\"id=$\", $role_id).Row()\n        if ($role_map[\"id\"] == nil) {\n            warning \"Role not found\"\n        }\n\n        // system role can not be deleted\n        if (Int($role_map[\"role_type\"]) == 3) {\n            warning \"System role can not be removed\"\n        }\n\n        // check creator of the role\n        if (Int($role_map[\"creator_id\"]) != $key_id) {\n            warning \"Sorry, you are not the creator of this role\"\n        }\n    }\n\n    action {\n        // get the list of participants\n        $ret_assign = DBFind(\"roles_assign\").Columns(\"id\").Where(\"role_id = $ and delete = $\", $role_id, 0).Order(\"id\")\n\n        // delete all participants\n        $len_assign = Len($ret_assign)\n        $i_assign = 0\n        while ($i_assign < $len_assign) {\n            $vals_assign = $ret_assign[$i_assign]\n            Roles_Unassign(\"row_id\", Int($vals_assign[\"id\"]))\n            $i_assign = $i_assign + 1\n        }\n\n        // delete the role\n        DBUpdate(`roles_list`, $role_id, `delete,timestamp date_delete`, 1, $block_time)\n    }\n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "land_registry_Add",
+            "Value": "contract land_registry_Add{\n    data{\n        OwnerId int\n        CoordsAddress string\n        Area int\n        BuildingsUseClass int\n        Coords string \"optional\"\n        LandNature int\n        RegistrationDate string \"optional\"\n    }\n    \n    func conditions{\n        var member map\n        member = DBFind(\"members\").Where(\"id = ?\", $OwnerId).Row()\n        if !member {\n            warning \"Member account for Owner not found\"\n        }\n    }\n\n    func action{\n        var icon, header, body, page, params, roleParams string\n        var closureType, landId, landUse, landLocalBody int\n        \n        landId = DBInsert(\"land_registry\", \"owner_id,address,area,buildings_use_class,map_coords,land_use,timestamp date_create,delete,land_nature,land_local_body,registration_date,timestamp modification_date\", $OwnerId, $CoordsAddress, $Area, $BuildingsUseClass, $Coords, landUse, $block_time, 0, $LandNature, landLocalBody, $RegistrationDate, $block_time)\n        \n        DBInsert(\"land_registry_ownership\", \"step, timestamp date_creat, timestamp date_signing, lend_object_id, owner_id, owner_new_id\", -1, $block_time, $block_time, landId, $OwnerId, $OwnerId)\n        \n        icon = \"fa fa-bell-o\"\n        header = \"Department of Legal Affairs: new Land\"\n        body = \"Need your processing\"\n        \n        //notify depart\n        params = Sprintf(\"LandId=%v,admin=1\", landId)\n        page = \"land_registry_edit\"\n        Notifications_Single_Send(\"member_id,icon_name,text_header,text_body,page_name,params_val\", $key_id,icon,header,body,page,params)\n        \n        //notify owner\n        header = \"New Land: need price\"\n        params = Sprintf(\"LandId=%v\", landId)\n        page = \"land_registry_edit\"\n        Notifications_Single_Send(\"member_id,icon_name,text_header,text_body,page_name,params_val\", $OwnerId,icon,header,body,page,params)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "land_registry_Delete",
+            "Value": "contract land_registry_Delete{\n    data{\n        LandId int\n    }\n    \n    func conditions{}\n    \n    func action{\n        DBUpdate(\"land_registry\", $LandId, \"delete\", \"1\")\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "land_registry_UpdateAdmin",
+            "Value": "contract land_registry_UpdateAdmin{\n    data {\n        LandId int\n        EncumbranceCertificate int\n        LegalStatus int\n        NotificId int\n    }\n    func conditions {\n        $land = DBFind(\"land_registry\").Where(\"id=?\", $LandId).Row()\n        if !$land{\n            warning \"Land not found in registry\"\n        }\n        $name = DBFind(\"members\").Where(\"id=?\", $key_id).One(\"member_name\")\n    }\n    \n    func logRegistry(f string, v int){\n        var val string\n        val = Sprintf(\"%v\", v)\n        if val != $land[f]{\n            DBInsert(\"land_registry_editing\", \"editing_attribute,lend_object_id,new_attr_value,old_attr_value,person_id,person_name,timestamp date\", f, $LandId, v, $land[f],$key_id, $name, $block_time)\n        }\n    }\n    \n    func action {\n        // logRegistry(\"legal_status\", $LegalStatus)\n        // logRegistry(\"encumbrance_certificate\", $EncumbranceCertificate)\n        \n        DBUpdate(\"land_registry\", $LandId, \"legal_status,encumbrance_certificate\", $LegalStatus, $EncumbranceCertificate)\n        Notifications_Single_Close(\"notific_id\", $NotificId)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "land_registry_UpdateOwner",
+            "Value": "contract land_registry_UpdateOwner{\n    data{\n        LandId int\n        NotificId int\n        Price int\n    }\n    \n    func conditions{}\n    \n    func action{\n        DBUpdate(\"land_registry\", $LandId, \"price, timestamp modification_date\", $Price, $block_time)\n        Notifications_Single_Close(\"notific_id\", $NotificId)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "sysparams_RoleUnassign",
@@ -155,17 +185,17 @@
         {
             "Name": "voting_UpdateDataForGraphs",
             "Value": "contract voting_UpdateDataForGraphs {\n    data {\n        votingID int\n    }\n\n    conditions {\n\t\t$voting_map = DBFind(\"voting_instances\").Where(\"id=$\", $votingID).Row()\n\t\tif ($voting_map[\"id\"] == nil){\n\t\t\twarning \"Voting is not found\"\n\t\t}\t\n\t\t\n\t\t$number_participants = Int($voting_map[\"number_participants\"])  // number of participants\n\t\t$number_voters       = Int($voting_map[\"number_voters\"])        // number of voters\n\t\t$volume              = Int($voting_map[\"volume\"])               // percentage of votes for this vote\n    }\n\n    action {\n\t\t// increment count of voters\n\t\t$number_voters = $number_voters + 1\n\t\t\n\t\t// calculate the percentage of the ratio of the number of voters to the number of participants (for the graph)\n\t\t$percent_voters = ($number_voters * 100) / $number_participants\n\t\tif ($percent_voters > 100) {$percent_voters = 100}\n\t\t\n\t\t// update progress\n\t\t$percent_success = ($percent_voters * 100) / $volume\n\t\tif ($percent_success > 100) {$percent_success = 100}\n\t\t\n\t\t// update the flag of success\n\t\t$flag_success = 0\n\t\tif ($percent_success == 100) {$flag_success = 1}\n\n\t\tDBUpdate(`voting_instances`, $votingID, `number_voters,percent_voters,percent_success,flag_success`, \n\t\t\t\t$number_voters, $percent_voters, $percent_success, $flag_success)\n    } \n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "voting_RejectDecision",
             "Value": "contract voting_RejectDecision {\n    data {\n        votingID int\n    }\n\n    conditions {\n\t\t$voting_map = DBFind(\"voting_instances\").Where(\"id=$\", $votingID).Row()\n\t\tif ($voting_map[\"id\"] == nil){\n\t\t\twarning \"Voting is not found\"\n\t\t}\n\t\t\n\t\t// check the participant of the voting\n\t\t$participant_id = DBFind(`voting_participants`).Where(\"voting_id=$ and member_id=$\", $votingID, $key_id).One(\"id\")\n\t\tif ($participant_id == nil){\n\t\t\twarning \"You are not a participant in this voting\"\n\t\t}\n    }\n\n    action {\n\t\t// if notifications have been sent, then close it\n\t\tif ( Int($voting_map[\"flag_notifics\"]) == 1 ){\n\t\t\tvar params string\n\t\t\tparams = \"notific_param=\" + Str($votingID)\t\n\t\t\t$notific_id = DBFind(`notifications`).Where(\"recipient_id=$ and page_name=$ and page_params=$ and closed=$\", $key_id, \"voting_view\", params, 0).One(\"id\")\n\t\t\tif ($notific_id != nil){\n\t\t\t\tNotifications_Single_Close(\"notific_id\", Int($notific_id))\n\t\t\t}\n\t\t}\n\n\t\t// check the decision\n\t\tif ( Int($voting_map[\"flag_decision\"]) == 1 ){\n\t\t\twarning \"Decision was taken. Voting is now not possible\"\n\t\t} \n\t\t\n\t\t// check start-end of voting time\n\t\t$voting_start = DBFind(`voting_instances`).Where(\"id=$ and startdate < now()\", $votingID).One(\"id\")\n\t\t$voting_end   = DBFind(`voting_instances`).Where(\"id=$ and enddate   > now()\", $votingID).One(\"id\")\n\t\tif ($voting_start == nil){\n\t\t\twarning \"Voting has not yet begun. Try again later, please\"\n\t\t}\n\t\tif ($voting_end == nil){\n\t\t\twarning \"Voting has expired. Voting is now not possible\"\n\t\t}\n\t\t\n\t\t//-----------------------------------------------------------------------------------------------\n\n\t\t// write the result of the voting\n\t\tDBUpdate(`voting_participants`, Int($participant_id), `timestamp decision_date, decision`, $block_time, -1)\n\n\t\tvoting_UpdateDataForGraphs(\"votingID\", $votingID)\n    }\n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "voting_CheckDecision",
             "Value": "contract voting_CheckDecision {\n    func stringToMap(s string) map{\n        var arr, par array\n        var i int\n        var res map\n        arr = Split(s, \";\")\n        while i < Len(arr){\n            par = Split(arr[i], \"->\")\n            if Len(par) == 2{\n                res[par[0]] = par[1]\n            }\n            i=i+1\n        }\n        return res\n    }\n    data {\n        votingID int\n    }\n    \n    conditions {\n        $voting_map = DBFind(\"voting_instances\").Where(\"id=$ and enddate < now()\", $votingID).Row()\n        if !$voting_map[\"id\"]{\n            warning \"Voting has not expired. Try again later, please\"\n        }\n        if Int($voting_map[\"creator_id\"]) != $key_id {\n            warning \"Only creator the voting can check decision\"\n        }\n        \n        $type_voting = Int($voting_map[\"type_voting\"])\t//system or custom\n        $number_voters = Int($voting_map[\"number_voters\"]) // number of participants who have already voted\n        $optional_role_vacancies = Int($voting_map[\"optional_role_vacancies\"]) // number of vacancies for the role\n        $voting_name = $voting_map[\"name\"]\n        $quorum = Int($voting_map[\"quorum\"])\n        $optional_role_id = Int($voting_map[\"optional_role_id\"])\n        $contract_accept = $voting_map[\"optional_contract_accept\"]\n        $contract_reject = $voting_map[\"optional_contract_reject\"]\n        $param_accept = stringToMap($voting_map[\"contract_accept_params\"])\n        $param_reject = stringToMap($voting_map[\"contract_reject_params\"])\n        $flag_success = Int($voting_map[\"flag_success\"])\n        $typedecision = Int($voting_map[\"typedecision\"])\n        \n        $subjectId = DBFind(\"voting_subject\").Where(\"voting_id=$\", $votingID).One(\"id\")\n        if $subjectId == nil {\n            warning \"Subject of voting is not found\"\n        }\n    }\n    \n    action {\n        // if notifications have been sent, then close it\n        var params string\n        params = \"notific_param=\" + Str($votingID)\n        $ret_notifics = DBFind(\"notifications\").Where(\"page_name=$ and page_params=$ and closed=0\", \"voting_view\", params)\n        var i int\n        while(i < Len($ret_notifics)){\n            $vals_notifics = $ret_notifics[i]\n            Notifications_Single_Close(\"notific_id\", Int($vals_notifics[\"id\"]))\n            i = i + 1\n        }\n        \n        //if the flag of success = true(enough participants to make a decision)\n        if($flag_success == 1){\n            if(($typedecision == 1) ||($typedecision == 2) ){\n                $number_inserts = 0 // number of candidates who have already been added(for comparison with the number of vacancies)\n                $flag_decision = -1 // none of the candidates has been added yet\n                \n                $ret_subject = DBFind(\"voting_subject\").Where(\"voting_id=$\", $votingID).Order(\"number_accept DESC\")\n                i = 0\n                while i < Len($ret_subject){\n                    $vals_subject = $ret_subject[i]\n                    \n                    // if there are still vacancies\n                    if $number_inserts < $optional_role_vacancies {\n                        // calculate the percentage to compare it with the quorum\n                        $v_percent = Int($vals_subject[\"number_accept\"]) * 100 / $number_voters\n                        // if percentage >= quorum values, then this candidate must be added to the role\n                        if $v_percent >= $quorum {\n                            // get role name\n                            $role_name = DBFind(`roles_list`).Where(\"id=$\", $optional_role_id).One(\"role_name\")\n                            if $role_name != nil {\n                                // add a candidate to the role\n                                DBInsert(`roles_assign`, `role_id,role_name,member_id,member_name,member_avatar,timestamp date_start,appointed_by_id,appointed_by_name`,$optional_role_id, string($role_name), Int($vals_subject[\"member_id\"]), string($vals_subject[\"member_name\"]), string($vals_subject[\"member_avatar\"]), $block_time, $votingID, $voting_name)\n                                \n                                // increment of the counter of candidates\n                                $number_inserts = $number_inserts + 1\n                                // if at least one of the candidates was added to the role, then the voting decision is considered successful\n                                $flag_decision = 1\n                            }\n                        }\n                    }\n                    i = i + 1\n                }\n                \n                DBUpdate(`voting_instances`, $votingID, `flag_decision`, $flag_decision)\n                \n                // starting optional contract\n                if($flag_decision == 1){\n                    if($contract_accept != \"\"){\n                        CallContract($contract_accept, $param_accept)\n                    }\n                }\n                else{\n                    if($contract_reject != \"\"){\n                        CallContract($contract_reject, $param_reject)\n                    }\n                }\n            }\n            \n            if($typedecision == 3){\n                $number_accept = DBFind(`voting_subject`).Where(\"voting_id=$\", $votingID).One(\"number_accept\")\n                if($number_accept != nil){\n                    // calculate the percentage to compare it with the quorum\n                    $v_percent = Int($number_accept) * 100 / $number_voters\n                    \n                    // if percentage >= quorum values, then this document will be approved\n                    if($v_percent >= $quorum){\n                        $flag_decision = 1\n                    }\n                    // otherwise the document will be rejected\n                    else{\n                        $flag_decision = -1\n                    }\n                    \n                    DBUpdate(`voting_instances`, $votingID, `flag_decision`, $flag_decision)\n                    \n                    // starting optional contract\n                    if($flag_decision == 1){\n                        if($contract_accept != \"\"){\n                            CallContract($contract_accept, $param_accept)\n                        }\n                    }\n                    else{\n                        if($contract_reject != \"\"){\n                            CallContract($contract_reject, $param_reject)\n                        }\n                    }\n                }\n            }\n            \n            if($typedecision == 4){\n                $subject_map = DBFind(\"voting_subject\").Where(\"voting_id=$\", $votingID).Row()\n                if($subject_map[\"id\"] != nil){\n                    $number_accept = Int($subject_map[\"number_accept\"])\n                    \n                    // calculate the percentage to compare it with the quorum\n                    $v_percent = $number_accept * 100 / $number_voters\n                    \n                    // if percentage >= quorum values, then this document will be approved\n                    if($v_percent >= $quorum){\n                        $flag_decision = 1\n                        \n                        $decisionTable = $subject_map[\"formal_decision_table\"]\n                        $decisionId = Int($subject_map[\"formal_decision_tableid\"])\n                        $decisionColumn =$subject_map[\"formal_decision_column\"]\n                        $decisionValue = $subject_map[\"formal_decision_colvalue\"]\n                        \n                        // type of voting - custom\n                        if($type_voting == 1){\n                            // ALWAYS CHECK THE PERMISSION\n                            DBUpdate($decisionTable, $decisionId, $decisionColumn, $decisionValue)\n                        }\n                        \n                        // type of voting - system\n                        if($type_voting == 2){\n                            DBUpdateSysParam($decisionColumn, $decisionValue, ``)\n                        }\n                    }\n                    // otherwise the document will be rejected\n                    else{\n                        $flag_decision = -1\n                    }\n                    \n                    DBUpdate(`voting_instances`, $votingID, `flag_decision`, $flag_decision)\n                    \n                    // starting optional contract\n                    if($flag_decision == 1){\n                        if($contract_accept != \"\"){\n                            CallContract($contract_accept, $param_accept)\n                        }\n                    }\n                    else{\n                        if($contract_reject != \"\"){\n                            CallContract($contract_reject, $param_reject)\n                        }\n                    }\n                }\n            }\n            \n            if($typedecision == 5){\n                $subject_map = DBFind(\"voting_subject\").Where(\"voting_id=$\", $votingID).Row()\n                if($subject_map[\"id\"] != nil){\n                    $number_accept = Int($subject_map[\"number_accept\"])\n                    \n                    // calculate the percentage to compare it with the quorum\n                    $v_percent = $number_accept * 100 / $number_voters\n                    \n                    $con_accept = $subject_map[\"contract_accept\"]\n                    $con_accept = $subject_map[\"contract_accept\"]\n                    $param_accept = stringToMap($subject_map[\"contract_accept_params\"])\n                    $param_reject = stringToMap($subject_map[\"contract_reject_params\"])\n                    \n                    // if percentage >= quorum values, then this document will be approved\n                    if($v_percent >= $quorum){\n                        $flag_decision = 1\n                        \n                        CallContract($con_accept, $param_accept)\n                    }\n                    // otherwise the document will be rejected\n                    else{\n                        $flag_decision = -1\n                        \n                        CallContract($con_reject, $param_reject)\n                    }\n                }\n                \n                DBUpdate(`voting_instances`, $votingID, `flag_decision`, $flag_decision)\n            }\n        }\n        // decision can not be made(not enough participants to make a decision)\n        else {\n            DBUpdate(`voting_instances`, $votingID, `flag_decision`, -2)\n        }\n    }\n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "voting_Invite",
@@ -185,12 +215,12 @@
         {
             "Name": "voting_AcceptDecision",
             "Value": "contract voting_AcceptDecision {\n    data {\n        votingID int\n    }\n\n    conditions {\n\t\t$voting_map = DBFind(\"voting_instances\").Where(\"id=$\", $votingID).Row()\n\t\tif ($voting_map[\"id\"] == nil){\n\t\t\twarning \"Voting is not found\"\n\t\t}\n\t\t$subject_map = DBFind(\"voting_subject\").Where(\"voting_id=$\", $votingID).Row()\n\t\tif ($subject_map[\"id\"] == nil){\n\t\t\twarning \"Subject of voting is not found\"\n\t\t}\n\t\t\n\t\t// check the participant of the voting\n\t\t$participant_id = DBFind(`voting_participants`).Where(\"voting_id=$ and member_id=$\", $votingID, $key_id).One(\"id\")\n\t\tif ($participant_id == nil){\n\t\t\twarning \"You are not a participant in this voting\"\n\t\t}\n    }\n\n    action {\n\t\t// if notifications have been sent, then close it\n\t\tif ( Int($voting_map[\"flag_notifics\"]) == 1 ){\n\t\t\tvar params string\n\t\t\tparams = \"notific_param=\" + Str($votingID)\t\n\t\t\t$notific_id = DBFind(`notifications`).Where(\"recipient_id=$ and page_name=$ and page_params=$ and closed=$\", $key_id, \"voting_view\", params, 0).One(\"id\")\n\t\t\tif ($notific_id != nil){\n\t\t\t\tNotifications_Single_Close(\"notific_id\", Int($notific_id))\n\t\t\t}\n\t\t}\n\n\t\t// check the decision\n\t\tif ( Int($voting_map[\"flag_decision\"]) == 1 ){\n\t\t\twarning \"Decision was taken. Voting is now not possible\"\n\t\t} \n\t\t\n\t\t// check start-end of voting time\n\t\t$voting_start = DBFind(`voting_instances`).Where(\"id=$ and startdate < now()\", $votingID).One(\"id\")\n\t\t$voting_end   = DBFind(`voting_instances`).Where(\"id=$ and enddate   > now()\", $votingID).One(\"id\")\n\t\tif ($voting_start == nil){\n\t\t\twarning \"Voting has not yet begun. Try again later, please\"\n\t\t}\n\t\tif ($voting_end == nil){\n\t\t\twarning \"Voting has expired. Voting is now not possible\"\n\t\t}\n\t\t\n\t\t//-----------------------------------------------------------------------------------------------\n\n\t\t// write the result of the voting\n\t\tDBUpdate(`voting_participants`, Int($participant_id), `timestamp decision_date, decision`, $block_time, 1)\n\n\t\t// increment count of accept\n\t\t$subject_id     = Int($subject_map[\"id\"])\n\t\t$number_accept  = Int($subject_map[\"number_accept\"])\n\t\t$number_accept   = $number_accept + 1\n\t\tDBUpdate(`voting_subject`, $subject_id, `number_accept`, $number_accept)\n\n\t\tvoting_UpdateDataForGraphs(\"votingID\", $votingID)\n    }\n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "voting_SendNotifics",
             "Value": "contract voting_SendNotifics {\n    data {\n        votingID int\n    }\n\n    conditions {\n\t\t$voting_id = DBFind(`voting_instances`).Where(\"id=$ and enddate > now()\", $votingID).One(\"id\")\n        if ($voting_id == nil){\n\t\t\twarning \"Voting has expired. Notifications can not be sent\"\n\t\t}\n\t\n\t\t$voting_map = DBFind(\"voting_instances\").Where(\"id=$ and startdate < now()\", $votingID).Row()\n\t\tif ($voting_map[\"id\"] == nil){\n\t\t\twarning \"Voting has not yet begun. Try again later, please\"\n\t\t}\t\n\t\t\n\t\tif( Int($voting_map[\"creator_id\"]) != $key_id ){\n\t\t\twarning \"You are not the creator of the voting\"\n\t\t}\n\t\tif( Int($voting_map[\"flag_notifics\"]) == 1 ){\n\t\t\twarning \"Notifications have already been sent\"\n\t\t}\n\t\t\n\t\t$voting_name = string($voting_map[\"name\"])\n    }\n\n    action {\n\t\t$ret_participants = DBFind(\"voting_participants\").Where(\"voting_id=$ and decision=$\", $votingID, 0)\n\t\t$i = 0\n\t\twhile($i < Len($ret_participants)){\n\t\t\t$vals_participants = $ret_participants[$i]\n\t\t\t$recipient = Int($vals_participants[\"member_id\"])\n\t\t\t\n\t\t\tvar params string\n\t\t\tparams = \"notific_param=\" + Str($votingID)\n\t\t\t\n\t\t\tNotifications_Single_Send(\"member_id,icon_name,text_header,text_body,page_name,params_val\", \n\t\t\t\t\t\t\t\t$recipient, \"fa-check\", \"Voting\", $voting_name, \"voting_view\", params)\n\t\t\t$i = $i + 1\n\t\t}\n\t\t\n\t\tDBUpdate(`voting_instances`, $votingID, `flag_notifics`, 1)\n    }\n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "voting_SubjectSettings",
@@ -215,7 +245,7 @@
         {
             "Name": "sysparams_NewVoting",
             "Value": "contract sysparams_NewVoting {\n    data {\n        v_name string\n        new_val string\n        \n        now_date string \"date\"\n        start_date string \"date\"\n        end_date string \"date\"\n    }\n    \n    conditions {\n        $voting_name = \"New system parameter\"\n        $description = \"Voting for the system parameter\"\n        $volume = 75\n        $quorum = 50\n        \n        $role_name = \"Investor with voting rights\"\n        $type_participants = 3 // role\n        $type_decision = 4 // formal decision\n        $table_to_written = \"system_parameters\"\n        $column_name = \"value\"\n    }\n    \n    action {\n        // create new voting\n        voting_CreateNew(\"voting_name,type_voting,description,type_participants,type_decision,now_date,start_time,start_date,end_date,end_time,volume,quorum\",\n            $voting_name, 2, $description, $type_participants, $type_decision, $now_date, \"00:00\", $start_date, $end_date, \"00:00\", $volume, $quorum)\n            \n            // get voting id\n            $ret_instance = DBFind(\"voting_instances\").Order(\"id DESC\")\n            if(Len($ret_instance) > 0){\n                $vals_instance = $ret_instance[0]\n                $votingID = Int($vals_instance[\"id\"])\n                \n                // set subject of voting\n                voting_SubjectFormal(\"votingID,description,table_to_written,row_id,column_name,written_value\",\n                    $votingID, $description, \"system_parameters\", 0, $v_name, $new_val)\n                    \n                    // search role\n                    $ret_role = DBFind(\"roles_list\").Where(\"role_name=$ and role_type=$ and delete=0\", $role_name, 3).Order(\"id\")\n                    if(Len($ret_role) > 0){\n                        $vals_role = $ret_role[0]\n                        $role_id = Int($vals_role[\"id\"])\n                        \n                        // refresh list of the investors in the role\n                        sysparams_RefreshInvestors(\"role_id\", $role_id)\n                        \n                        // add all participants from the role\n                        voting_Invite(\"votingID,var_id\", $votingID, $role_id)\n                    }\n                }\n            }\n        }",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "voting_TemplateRun",
@@ -235,7 +265,7 @@
         {
             "Name": "voting_AcceptCandidates",
             "Value": "contract voting_AcceptCandidates {\n    data {\n        votingID int\n        candidateID int\n    }\n\n    conditions {\n\t\t$voting_map = DBFind(\"voting_instances\").Where(\"id=$\", $votingID).Row()\n\t\tif ($voting_map[\"id\"] == nil){\n\t\t\twarning \"Voting is not found\"\n\t\t}\n\t\t$subject_map = DBFind(\"voting_subject\").Where(\"voting_id=$ and member_id=$\", $votingID, $candidateID).Row()\n\t\tif ($subject_map[\"id\"] == nil){\n\t\t\twarning \"Subject of voting is not found\"\n\t\t}\n\t\t\n\t\t// check the participant of the voting\n\t\t$participant_id = DBFind(`voting_participants`).Where(\"voting_id=$ and member_id=$\", $votingID, $key_id).One(\"id\")\n\t\tif ($participant_id == nil){\n\t\t\twarning \"You are not a participant in this voting\"\n\t\t}\n    }\n\n    action {\n\t\t// if notifications have been sent, then close it\n\t\tif ( Int($voting_map[\"flag_notifics\"]) == 1 ){\n\t\t\tvar params string\n\t\t\tparams = \"notific_param=\" + Str($votingID)\t\t\n\t\t\t$notific_id = DBFind(`notifications`).Where(\"recipient_id=$ and page_name=$ and page_params=$ and closed=$\", $key_id, \"voting_view\", params, 0).One(\"id\")\n\t\t\tif ($notific_id != nil){\n\t\t\t\tNotifications_Single_Close(\"notific_id\", Int($notific_id))\n\t\t\t}\n\t\t}\n\n\t\t// check the decision\n\t\tif ( Int($voting_map[\"flag_decision\"]) == 1 ){\n\t\t\twarning \"Decision was taken. Voting is now not possible\"\n\t\t} \n\t\t\n\t\t// check start-end of voting time\n\t\t$voting_start = DBFind(`voting_instances`).Where(\"id=$ and startdate < now()\", $votingID).One(\"id\")\n\t\t$voting_end   = DBFind(`voting_instances`).Where(\"id=$ and enddate   > now()\", $votingID).One(\"id\")\n\t\tif ($voting_start == nil){\n\t\t\twarning \"Voting has not yet begun. Try again later, please\"\n\t\t}\n\t\tif ($voting_end == nil){\n\t\t\twarning \"Voting has expired. Voting is now not possible\"\n\t\t}\n\t\t\n\t\t//-----------------------------------------------------------------------------------------------\n\n\t\t// write the result of the voting\n\t\tDBUpdate(`voting_participants`, Int($participant_id), `timestamp decision_date, decision`, $block_time, $candidateID)\n\n\t\t// increment count of accept\n\t\t$subject_id     = Int($subject_map[\"id\"])\n\t\t$number_accept  = Int($subject_map[\"number_accept\"])\n\t\t$number_accept   = $number_accept + 1\n\t\tDBUpdate(`voting_subject`, $subject_id, `number_accept`, $number_accept)\n\n\t\tvoting_UpdateDataForGraphs(\"votingID\", $votingID)\n    }\n}",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         }
     ],
     "data": [
@@ -326,6 +356,11 @@
             "Trans": "{\"en\": \"Add member\", \"ru\": \"Добавить члена\"}"
         },
         {
+            "Name": "add_new_record",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Add new record\",\"ru\":\"Добавить новую запись\"}"
+        },
+        {
             "Name": "add_role",
             "Conditions": "",
             "Trans": "{\"en\": \"Add role\", \"ru\": \"Добавить роль\"}"
@@ -374,6 +409,41 @@
             "Name": "appointment_impossible",
             "Conditions": "",
             "Trans": "{\"ru\":\"*Эта роль не является назначаемой. Назначение членов невозможно\",\"en\":\"*This role is not assignable. The appointment of members is impossible\"}"
+        },
+        {
+            "Name": "area_size",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Area size\",\"ru\":\"Размер\"}"
+        },
+        {
+            "Name": "ask_accept_purchase",
+            "Conditions": "",
+            "Trans": "{\"en\":\" Do you want to accept the purchase?\",\"ru\":\"Вы хотите принять покупку?\"}"
+        },
+        {
+            "Name": "ask_delete",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Do you want to delete entry?\",\"ru\":\"Вы хотите удалить эту запись?\"}"
+        },
+        {
+            "Name": "ask_initiate_land_purchase",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Do you want to initiate land purchase?\",\"ru\":\"Вы хотите начать процесс покупки земли?\"}"
+        },
+        {
+            "Name": "ask_reject_purchase",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Do you want to reject the purchase?\",\"ru\":\"Вы хотите отклонить покупку?\"}"
+        },
+        {
+            "Name": "ask_request_second",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Do you want to send a second request?\",\"ru\":\"Вы хотите отправить повторный запрос?\"}"
+        },
+        {
+            "Name": "ask_sign",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Do you want to sign?\",\"ru\":\"Вы хотите поставить подпись?\"}"
         },
         {
             "Name": "assign",
@@ -436,9 +506,54 @@
             "Trans": "{\"en\": \"Body text\", \"ru\": \"Основной текст\"}"
         },
         {
+            "Name": "buildings_use_class",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Buildings use class\",\"ru\":\"Класс используемых зданий\"}"
+        },
+        {
+            "Name": "buy",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Buy\",\"ru\":\"Купить\"}"
+        },
+        {
+            "Name": "buyer",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Buyer\",\"ru\":\"Покупатель\"}"
+        },
+        {
+            "Name": "buyer_has_money",
+            "Conditions": "",
+            "Trans": "{\"en\":\"The buyer has the necessary amount in the bank account\",\"ru\":\"Покупатель имеет необходимую сумму на банковском счете\"}"
+        },
+        {
+            "Name": "buyer_not_has_money",
+            "Conditions": "",
+            "Trans": "{\"en\":\"The buyer has NOT the necessary amount in the bank account\",\"ru\":\"У покупателя нет необходимой суммы на банковском счете\"}"
+        },
+        {
+            "Name": "buyer_trans_amount",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Buyer transferred amount to account \",\"ru\":\"Покупатель перечислил сумму на счет\"}"
+        },
+        {
+            "Name": "buyer_trans_self",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Buyer transferred to his account an amount\",\"ru\":\"Покупатель перечислил на свой счет сумму\"}"
+        },
+        {
+            "Name": "buyer_transferred_to_account_amount",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Buyer transferred to his account an amount\",\"ru\":\"Покупатель перечислил на свой счет сумму \"}"
+        },
+        {
             "Name": "can_apply_voting",
             "Conditions": "",
             "Trans": "{\"en\": \"You can apply for voting\", \"ru\": \"Вы можете подать заявку на голосование\"}"
+        },
+        {
+            "Name": "cancel",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Cancel\",\"ru\":\"Отмена\"}"
         },
         {
             "Name": "candidates",
@@ -516,9 +631,19 @@
             "Trans": "{\"en\":\"Company role\",\"ru\":\"Роль компании\"}"
         },
         {
+            "Name": "confirm",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Confirm\",\"ru\":\"Подтвердить\"}"
+        },
+        {
             "Name": "confirmation",
             "Conditions": "",
             "Trans": "{\"en\":\"Confirmation\",\"ru\":\"Подтверждение\"}"
+        },
+        {
+            "Name": "consideration_value",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Consideration value\",\"ru\":\"Справедливая стоимость\"}"
         },
         {
             "Name": "contract_accept",
@@ -554,6 +679,11 @@
             "Name": "contract_rejected",
             "Conditions": "",
             "Trans": "{\"en\": \"Contract reject\", \"ru\": \"Контракт отклонен\"}"
+        },
+        {
+            "Name": "coordinates",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Coordinates\",\"ru\":\"Координаты\"}"
         },
         {
             "Name": "create",
@@ -656,6 +786,26 @@
             "Trans": "{\"en\":\"Welcome!\",\"ru\":\"Добро пожаловать!\"}"
         },
         {
+            "Name": "depart_role1",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Department of Land Resources\",\"ru\":\"Департамент земельных ресурсов\"}"
+        },
+        {
+            "Name": "depart_role2",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Department of Legal Affairs\",\"ru\":\"Департамент по правовым вопросам\"}"
+        },
+        {
+            "Name": "depart_role3",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Department of Revenue\",\"ru\":\"Департамент налогов и сборов\"}"
+        },
+        {
+            "Name": "department_of_land_resources",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Department of Land Resources\",\"ru\":\"Отдел земельных ресурсов\"}"
+        },
+        {
             "Name": "description",
             "Conditions": "",
             "Trans": "{\"en\": \"Description\", \"ru\": \"Описание\"}"
@@ -731,6 +881,11 @@
             "Trans": "{\"en\": \"[no]\", \"ru\": \"[нет]\"}"
         },
         {
+            "Name": "encumbrance_certificate",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Encumbrance certificate\",\"ru\":\"Сертификат обременения\"}"
+        },
+        {
             "Name": "execute",
             "Conditions": "",
             "Trans": "{\"en\": \"Execute\", \"ru\": \"Выполнить\"}"
@@ -771,9 +926,19 @@
             "Trans": "{\"en\": \"Gender\", \"ru\": \"Пол\"}"
         },
         {
+            "Name": "government_value",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Government value\",\"ru\":\"Государственная стоимость\"}"
+        },
+        {
             "Name": "group_person",
             "Conditions": "",
             "Trans": "{\"en\":\"Group of person\",\"ru\":\"Группа персон\"}"
+        },
+        {
+            "Name": "have_offer_buy_land",
+            "Conditions": "",
+            "Trans": "{\"en\":\"You have an offer to buy land\",\"ru\":\"Вы получили предложение купить землю\"}"
         },
         {
             "Name": "header",
@@ -816,9 +981,94 @@
             "Trans": "{\"en\":\"Input\",\"ru\":\"Ввод\"}"
         },
         {
+            "Name": "install_app",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Install app\",\"ru\":\"Установить приложение\"}"
+        },
+        {
             "Name": "institution",
             "Conditions": "",
             "Trans": "{\"en\":\"Institution\",\"ru\":\"Учреждение\"}"
+        },
+        {
+            "Name": "land_bank",
+            "Conditions": "",
+            "Trans": "{\"ru\":\"Земельный Банк\",\"en\":\"Land Bank\"}"
+        },
+        {
+            "Name": "land_nature",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Nature\",\"ru\":\"Тип\"}"
+        },
+        {
+            "Name": "land_record",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Land record\",\"ru\":\"Земельная запись\"}"
+        },
+        {
+            "Name": "land_records",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Land Registry\",\"ru\":\"Земельный реестр\"}"
+        },
+        {
+            "Name": "land_records_add",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Land Record adding\",\"ru\":\"Добавление земельной записи\"}"
+        },
+        {
+            "Name": "land_records_admin",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Land records (edit)\",\"ru\":\"Земельный реестр (ред.)\"}"
+        },
+        {
+            "Name": "land_records_edit",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Land record edit\",\"ru\":\"Редактирование земельной записи\"}"
+        },
+        {
+            "Name": "land_records_sales",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Land records (Available for sale)\",\"ru\":\"Земельный реестр (продажа)\"}"
+        },
+        {
+            "Name": "land_registry",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Land Registry\",\"ru\":\"Земельный реестр\"}"
+        },
+        {
+            "Name": "land_registry_bank",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Land Bank\",\"ru\":\"Земельный Банк\"}"
+        },
+        {
+            "Name": "land_registry_edit_role1",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Add price\",\"ru\":\"Установите цену\"}"
+        },
+        {
+            "Name": "land_registry_edit_role2",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Department of Legal Affairs\",\"ru\":\"Департамент по правовым вопросам\"}"
+        },
+        {
+            "Name": "land_registry_edit_role3",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Department of Revenue\",\"ru\":\"Департамент налогов и сборов\"}"
+        },
+        {
+            "Name": "land_registry_view",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Land record\",\"ru\":\"Страница земельного ресурса\"}"
+        },
+        {
+            "Name": "land_use",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Land use\",\"ru\":\"Землепользование\"}"
+        },
+        {
+            "Name": "legal_status",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Legal status\",\"ru\":\"Правовой статус\"}"
         },
         {
             "Name": "limited",
@@ -831,9 +1081,19 @@
             "Trans": "{\"en\": \"Lists of roles and\", \"ru\": \"Список ролей и\"}"
         },
         {
+            "Name": "local_body",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Local Body\",\"ru\":\"Местный орган\"}"
+        },
+        {
             "Name": "male",
             "Conditions": "",
             "Trans": "{\"en\": \"Male\", \"ru\": \"Мужской\"}"
+        },
+        {
+            "Name": "market_value",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Market value\",\"ru\":\"Рыночная стоимость\"}"
         },
         {
             "Name": "member",
@@ -876,6 +1136,16 @@
             "Trans": "{\"en\": \"Membership, roles, notifications\", \"ru\": \"Членство, роли, уведомления\"}"
         },
         {
+            "Name": "message",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Message\",\"ru\":\"Сообщение\"}"
+        },
+        {
+            "Name": "modification_date",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Modification date\",\"ru\":\"Дата изменения\"}"
+        },
+        {
             "Name": "multiple",
             "Conditions": "",
             "Trans": "{\"en\": \"Multiple\", \"ru\": \"Множественные\"}"
@@ -906,9 +1176,24 @@
             "Trans": "{\"en\": \"Middle name\", \"ru\": \"Отчество\"}"
         },
         {
+            "Name": "need_your_processing",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Need your processing\",\"ru\":\"Нужна ваша обработка\"}"
+        },
+        {
             "Name": "new_ecosystem",
             "Conditions": "",
             "Trans": "{\"en\":\"New ecosystem\",\"ru\":\"Создать экосистему\"}"
+        },
+        {
+            "Name": "new_land",
+            "Conditions": "",
+            "Trans": "{\"en\":\"New land\",\"ru\":\"Новая земля\"}"
+        },
+        {
+            "Name": "new_purchase",
+            "Conditions": "",
+            "Trans": "{\"en\":\"New purchase\",\"ru\":\"Новая покупка\"}"
         },
         {
             "Name": "new_role",
@@ -941,6 +1226,11 @@
             "Trans": "{\"en\":\"NO - Do not include a member in the role\",\"ru\":\"НЕТ - Не включать члена в роль\"}"
         },
         {
+            "Name": "no_problem",
+            "Conditions": "",
+            "Trans": "{\"en\":\"No Issues\",\"ru\":\"Нет проблем\"}"
+        },
+        {
             "Name": "not_enough_votes",
             "Conditions": "",
             "Trans": "{\"en\": \"Not enough votes\", \"ru\": \"Недостаточно голосов\"}"
@@ -961,6 +1251,11 @@
             "Trans": "{\"en\": \"Number of members\", \"ru\": \"Количество членов\"}"
         },
         {
+            "Name": "offer_purchase_sent",
+            "Conditions": "",
+            "Trans": "{\"en\":\"The offer for purchase sent to the owner\",\"ru\":\"Предложение о покупке, отправленно владельцу\"}"
+        },
+        {
             "Name": "onhold",
             "Conditions": "",
             "Trans": "{\"en\": \"onHold\", \"ru\": \"Закрыт\"}"
@@ -979,6 +1274,21 @@
             "Name": "organization",
             "Conditions": "",
             "Trans": "{\"en\":\"Organization\",\"ru\":\"Организация\"}"
+        },
+        {
+            "Name": "owner",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Owner\",\"ru\":\"Владелец\"}"
+        },
+        {
+            "Name": "owner_rejected_purchase",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Owner rejected to purchase\",\"ru\":\"Владелец отказался от продажи\"}"
+        },
+        {
+            "Name": "owner_rejected_selling",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Owner rejected to selling\",\"ru\":\"Владелец отказался от продажи\"}"
         },
         {
             "Name": "page_code",
@@ -1016,9 +1326,24 @@
             "Trans": "{\"en\": \"Person\", \"ru\": \"Персональный\"}"
         },
         {
+            "Name": "please_amount",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Please enter the amount\",\"ru\":\"Пожалуйста введите сумму\"}"
+        },
+        {
             "Name": "possible",
             "Conditions": "",
             "Trans": "{\"en\": \"Possible\", \"ru\": \"Возможно\"}"
+        },
+        {
+            "Name": "price",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Price\",\"ru\":\"Цена\"}"
+        },
+        {
+            "Name": "problem",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Have Issues\",\"ru\":\"Проблемы\"}"
         },
         {
             "Name": "processing",
@@ -1041,6 +1366,26 @@
             "Trans": "{\"en\": \"Progress\", \"ru\": \"Прогресс\"}"
         },
         {
+            "Name": "publickey",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Public key\",\"ru\":\"Публичный ключ\"}"
+        },
+        {
+            "Name": "purchase_approved",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Purchase Approved\",\"ru\":\"Подтверждение покупки\"}"
+        },
+        {
+            "Name": "purchase_rejected",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Purchase rejected\",\"ru\":\"Сделка отменена\"}"
+        },
+        {
+            "Name": "purchase_request",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Purchase request\",\"ru\":\"Предложение о покупке\"}"
+        },
+        {
             "Name": "quorum",
             "Conditions": "",
             "Trans": "{\n    \"en\": \"Quorum\",\n    \"ru\": \"Кворум\"\n}"
@@ -1054,6 +1399,16 @@
             "Name": "recipient_account",
             "Conditions": "",
             "Trans": "{\"en\": \"Recipient account\", \"ru\": \"Счет получателя\"}"
+        },
+        {
+            "Name": "record_add_date",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Record Add Date\",\"ru\":\"Дата добавления записи\"}"
+        },
+        {
+            "Name": "registration_date",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Registration Date\",\"ru\":\"Дата регистрации\"}"
         },
         {
             "Name": "reject",
@@ -1161,9 +1516,19 @@
             "Trans": "{\"en\":\"Send to page\",\"ru\":\"Отправить на страницу\"}"
         },
         {
+            "Name": "send_request",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Send request\",\"ru\":\"Послать запрос\"}"
+        },
+        {
             "Name": "sender_account",
             "Conditions": "",
             "Trans": "{\"en\":\"Sender account\",\"ru\":\"Счет отправителя\"}"
+        },
+        {
+            "Name": "sign_sales_contract",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Sign the sales contract\",\"ru\":\"Подписать договор купли-продажи\"}"
         },
         {
             "Name": "single",
@@ -1184,6 +1549,11 @@
             "Name": "start",
             "Conditions": "",
             "Trans": "{\n    \"en\": \"Start\",\n    \"ru\": \"Начать\"\n}"
+        },
+        {
+            "Name": "start_buying_land",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Start buying land\",\"ru\":\"Начать процесс покупки земли\"}"
         },
         {
             "Name": "started",
@@ -1261,6 +1631,21 @@
             "Trans": "{\"en\": \"Table to which the value will be written (Example: accounts)\", \"ru\": \"Таблица, в которую будет записано значение (Пример: accounts)\"}"
         },
         {
+            "Name": "taken_note",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Taken note\",\"ru\":\"Понятно\"}"
+        },
+        {
+            "Name": "tax",
+            "Conditions": "",
+            "Trans": "{\"ru\":\"Налог\",\"en\":\"Tax\"}"
+        },
+        {
+            "Name": "tax_and_bills",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Tax and bills\",\"ru\":\"Налог и счета\"}"
+        },
+        {
             "Name": "template_create",
             "Conditions": "",
             "Trans": "{\n    \"en\": \"Creating template\",\"ru\": \"Создание шаблона\"}"
@@ -1286,6 +1671,11 @@
             "Trans": "{\n    \"en\": \"Title\",\n    \"ru\": \"Название\"\n}"
         },
         {
+            "Name": "to_land_bank",
+            "Conditions": "",
+            "Trans": "{\"en\":\"to Land Bank\",\"ru\":\"к Земельному банку\"}"
+        },
+        {
             "Name": "tokens",
             "Conditions": "",
             "Trans": "{\"en\": \"Tokens\", \"ru\": \"Токены\"}"
@@ -1301,9 +1691,19 @@
             "Trans": "{\"en\": \"Tokens transfer\", \"ru\": \"Перевод токенов\"}"
         },
         {
+            "Name": "total",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Total\",\"ru\":\"Всего\"}"
+        },
+        {
             "Name": "tranche",
             "Conditions": "",
             "Trans": "{\"en\":\"Tranche\",\"ru\":\"Транш\"}"
+        },
+        {
+            "Name": "transfer_tokens",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Transfer INR tokens\",\"ru\":\"Перевести токены\"}"
         },
         {
             "Name": "trash_account_not_found",
@@ -1324,6 +1724,11 @@
             "Name": "type_voting_system",
             "Conditions": "",
             "Trans": "{\"en\":\"System\",\"ru\":\"Системное\"}"
+        },
+        {
+            "Name": "undefined",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Undefined\",\"ru\":\"Не определено\"}"
         },
         {
             "Name": "unlimited",
@@ -1536,6 +1941,11 @@
             "Trans": "{\"en\": \"Waiting\", \"ru\": \"Ожидание\"}"
         },
         {
+            "Name": "waiting_bank",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Waiting for a response bank\",\"ru\":\"Ожидание ответа банка\"}"
+        },
+        {
             "Name": "want_accept_contract",
             "Conditions": "",
             "Trans": "{\"en\": \"Do you want to accept this contract?\", \"ru\": \"Вы хотите принять этот контракт?\"}"
@@ -1733,8 +2143,13 @@
     ],
     "menus": [
         {
+            "Name": "admin_menu",
+            "Value": "MenuItem(Title: \"Land Records (admin)\",Page: land_registry_records_admin,Icon: \"fa icon-home\")",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
             "Name": "default_menu",
-            "Value": "MenuItem(Title: $demo_sendPage$, Page: demo_page_sendPage, Icon: fa fa-envelope-open-o)\nMenuItem(Title: $demo_sendContract$, Page: demo_page_sendContract, Icon:fa fa-envelope-o)\nMenuItem(Title: $demo_sendMessage$, Page: demo_page_sendMessage, Icon:fa fa-paper-plane-o)\nMenuItem(Title: $notifications$, Page: demo_notifications, Icon:fa fa-inbox)\nMenuItem(Title: $profile_edit$, Page: profile_edit, Icon:fa fa-address-card-o)",
+            "Value": "MenuItem(Title: $demo_sendPage$, Page: demo_page_sendPage, Icon: fa fa-envelope-open-o)\nMenuItem(Title: $demo_sendContract$, Page: demo_page_sendContract, Icon:fa fa-envelope-o)\nMenuItem(Title: $demo_sendMessage$, Page: demo_page_sendMessage, Icon:fa fa-paper-plane-o)\nMenuItem(Title: $notifications$, Page: demo_notifications, Icon:fa fa-inbox)\nMenuItem(Title: $profile_edit$, Page: profile_edit, Icon:fa fa-address-card-o)\nMenuItem(Title: \"Land Records\",Page: land_registry_records,Icon: \"fa icon-home\")",
             "Conditions": "ContractAccess(\"@1EditMenu\")"
         }
     ],
@@ -1766,37 +2181,37 @@
         {
             "Name": "default_page",
             "Value": "Include(demo_block_sendMessage)",
-            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
             "Menu": "default_menu"
         },
         {
             "Name": "demo_notifications",
             "Value": "DBFind(Name: notifications, Source: noti_s).Where(\"closed=0 and notification_type=1 and recipient_id=#key_id#\")\nSetTitle($notifications$)\nDiv(content-wrapper){\n    Div(row){\n        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){\n            Div(panel panel-primary){\n                Div(panel-heading){$notifications$}\n                Div(panel-body){\n                    ForList(noti_s){\n                        Div(Class: list-group-item){\n                            LinkPage(Page: #page_name#, PageParams: \"notific_id=#id#,notific_type=#notification_type#,notific_header=#header_text#,#page_params#\"){\n                                Div(media-box){\n                                    Div(Class: pull-left){\n                                        Em(Class: fa #icon# fa-1x text-info)\n                                    }\n                                    Div(media-box-body clearfix){\n                                        Div(Class: m0 text-normal, Body: #header_text#)\n                                        Div(Class: m0 text-muted h6, Body: #body_text#)\n                                    }\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n}",
-            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
             "Menu": "default_menu"
         },
         {
             "Name": "demo_page_message",
             "Value": "If(#notific_id#>0){\n    SetTitle($demo_sendMessage$)\n    Div(content-wrapper){\n        Div(row){\n            Div(col-xs-8 col-xs-offset-2 col-lg-6 col-lg-offset-3){\n                Div(panel panel-primary){\n                    Div(panel-heading){$result$}\n                    Div(panel-body){\n                        Div(row){\n                            Div(col-sm-10 col-sm-offset-1 alert alert-default){\n                                Div(){Header: #notific_header#}\n                                Div(){SomeText: #SomeText#}\n                            }\n                            \n                        }.Style(display: flex;align-items: flex-end;)\n                    }\n                    Div(panel-footer clearfix){\n                        Div(pull-right text-right){\n                            Button(Page: demo_page_sendMessage, Class: btn btn-primary, Contract:Notifications_Single_Close, Params:\"notific_id=#notific_id#\", Body: $close$)\n                        }\n                    }\n                }\n            }\n        }\n    }\n}",
-            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
             "Menu": "default_menu"
         },
         {
             "Name": "demo_page_sendContract",
             "Value": "Include(demo_block_sendContract)",
-            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
             "Menu": "default_menu"
         },
         {
             "Name": "demo_page_sendMessage",
             "Value": "Include(demo_block_sendMessage)",
-            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
             "Menu": "default_menu"
         },
         {
             "Name": "demo_page_sendPage",
             "Value": "Include(demo_block_sendPage)",
-            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
             "Menu": "default_menu"
         },
         {
@@ -1806,8 +2221,38 @@
             "Menu": "default_menu"
         },
         {
+            "Name": "land_registry_add",
+            "Value": "SetVar(root, land_registry)\nSetVar(this, #root#_add)\n\nDiv(content-wrapper){\n    Div(breadcrumb){\n        Div(){\n            LinkPage(LangRes(land_records), #root#_records)\n            Span(/).Style(margin-right: 10px; margin-left: 10px;)\n            Span(LangRes(land_records_add), text-muted)\n        }\n    }\n    SetTitle($department_of_land_resources$)\n    \n    Div(row df f-valign){\n        Div(col-sm-8 col-sm-offset-2 text-left){\n            Div(panel panel-primary data-sweet-alert){\n                Form(){\n                    Div(panel-heading){\n                        Div(panel-title, LangRes(add_new_record))\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong(LangRes(coordinates))\n                            }\n                            Div(col-md-9 text-center){\n                                InputMap(Name: Coords,Type: poligon, MapType: hybrid)\n                            }\n                        }\n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong($area_size$ Span(m).(2).Style(vertical-align: super;font-size:small;))\n                            }\n                            Div(col-md-9 mt-xs text-left){\n                                Input(Name: Area, Class: form-control input-sm, Value: \"\", Type: number)\n                            }\n                        }\n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong(LangRes(address))\n                            }\n                            Div(col-md-9 mt-xs text-left){\n                                Input(Name: CoordsAddress, Class: form-control input-sm, Value: \"\", Type: text)\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong(LangRes(owner))\n                            }\n                            Div(col-md-9 mt-xs text-left){\n                                DBFind(Name: members, Source: src_owners)\n                                Select(Name: OwnerId, Source: src_owners, ValueColumn: id, NameColumn: member_name, Class: form-control m-b)\n                            }\n                        }\n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong(LangRes(land_nature))\n                            }\n                            Div(col-md-9 mt-xs text-left){\n                                EcosysParam(Name: land_nature, Source: src_nature)\n                                Select(Name: LandNature, Source: src_nature, Class: form-control, ValueColumn: id, NameColumn: name)\n                            }\n                        }\n                        \n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong(LangRes(buildings_use_class))\n                            }\n                            Div(col-md-9 mt-xs text-left){\n                                EcosysParam(Name: land_buildings_use_class, Source: use_class)\n                                Select(Name: BuildingsUseClass, Source: use_class, Class: form-control, ValueColumn: id, NameColumn: name)\n                            }\n                        }\n                    }\n                    Div(panel-footer){\n                        Div(clearfix){\n                            Div(pull-right){\n                                Div(btn-group){\n                                    Input(Name: RegistrationDate, Type: hidden, Value: Now(datetime))\n                                    Button(Page: #root#_records, Body: LangRes(back), Class: btn btn-default btn-pill-left)\n                                    Button(Body: LangRes(add), Class: btn btn-primary btn-pill-right, Contract: #root#_Add, Page: #root#_records)\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Menu": "default_menu"
+        },
+        {
+            "Name": "land_registry_edit",
+            "Value": "Include(land_registry_edit)",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Menu": "default_menu"
+        },
+        {
+            "Name": "land_registry_records",
+            "Value": "SetTitle($land_records$)\nSetVar(this, land_registry_records)\nSetVar(admin, 0)\n\nIf(And(#isSearch#==1, #str_search#>0)){\n    SetVar(v_Where, \"delete=0 and land_use=#str_search#\")\n}.Else{\n    SetVar(v_Where, \"delete=0\")\n}\n\nInclude(land_registry_records)\n",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Menu": "default_menu"
+        },
+        {
+            "Name": "land_registry_records_admin",
+            "Value": "SetTitle($land_records$ (admin))\nSetVar(this, land_registry_records_admin)\nSetVar(admin, 1)\n\nIf(And(#isSearch#==1, #str_search#>0)){\n    SetVar(v_Where, \"delete=0 and land_use=#str_search#\")\n}.Else{\n    SetVar(v_Where, \"delete=0\")\n}\n\nInclude(land_registry_records)\n",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Menu": "admin_menu"
+        },
+        {
+            "Name": "land_registry_view",
+            "Value": "If(GetVar(notific_val_int)){\n    SetVar(LandId, #notific_val_int#)\n}.Else{}\n\nIf(GetVar(notific_id)){}.Else{SetVar(notific_id,0)}\n\nSetVar(root, land_registry)\nSetVar(this, #root#_view)\nSetVar(title,$land_record$)\n\nIf(#admin#==1){}.Else{SetVar(admin, 0)}\n\nIf(#LandId#>0){}.Else{SetVar(LandId, 1)}\n\nIf(GetVar(LandId)){\n    DBFind(Name: #root#, Source: src_entry).WhereId(#LandId#).Vars(entry)\n    DBFind(Name: #root#_ownership, Source: src_land_ownership).Where(lend_object_id=#LandId#).Vars(ownership)\n    \n    DBFind(Name: members, Source: src_owner).Where(id=#ownership_owner_id#).Vars(owner)\n}\nSetTitle(#title#)\n\nDiv(content-wrapper){\n    Div(breadcrumb){\n        Div(){\n            LinkPage(Body:$land_records$,Page: #root#_records, PageParams: \"admin=#admin#\")\n            Span(/).Style(margin-right: 10px; margin-left: 10px;)\n            Span(#title#, text-muted)\n        }\n    }\n    If(GetVar(LandId)){\n        Div(row df f-valign){\n            Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3 mt-sm text-left){\n                Div(panel panel-default){\n                    Form(){\n                        Div(list-group-item){\n                            Div(h3){$land_record$ #GetVar(LandId)}\n                        }\n                        Div(list-group-item){\n                            Map #entry_coords#, maptype=satellite hmap=300\n                        }\n                        Div(list-group-item){\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right h5){\n                                    Strong($owner$:)\n                                }\n                                Div(col-md-6 mt-sm text-left h5){\n                                    Div(){\n                                        Image(Src: #owner_avatar#, Alt: ava, Class: img-thumbnail img-circle).Style(max-width:40px;margin-right:10px;)\n                                        Span(#owner_member_name#)\n                                    }\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right h5){\n                                    Strong($area_size$)\n                                    (Span(m).(2).Style(vertical-align: super;font-size:small;)):\n                                }\n                                Div(col-md-7 mt-sm text-left h5){#entry_area#}\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right h5){\n                                    Strong($address$:)\n                                }\n                                Div(col-md-7 mt-sm text-left h5){#entry_address#}\n                            }\n                            \n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right h5){Strong($record_add_date$:)}\n                                Div(col-md-7 mt-sm text-left h5){DateTime(#entry_date_create#)}\n                            }\n                            \n                            Div(row df){\n                                Div(col-md-5 mt-sm text-right h5){Strong($buildings_use_class$:)}\n                                Div(col-md-7 mt-sm text-left h5){\n                                    #entry_buildings_use_class#\n                                    EcosysParam(Name: buildings_use_class, Index: #entry_buildings_use_class#)\n                                }\n                            }\n                            \n                            Div(row df){\n                                Div(col-md-5 mt-sm text-right h5){Strong($land_nature$:)}\n                                Div(col-md-7 mt-sm text-left h5){\n                                    #entry_land_nature#\n                                    EcosysParam(Name: land_nature, Index: #entry_land_nature#)\n                                }\n                            }\n                            \n                            DBFind(Name: notifications, Source: src_alert).Where(page_params='LandId=#LandId#,second_request=1' and closed=0).Vars(alert)\n                            Div(row df){\n                                Div(col-md-5 mt-sm text-right h5){Strong($legal_status$:)}\n                                Div(col-md-7 mt-sm text-left h5){\n                                    If(GetVar(alert_id)){\n                                        SetVar(alert, 1)\n                                    }.Else{\n                                        SetVar(alert, 0)\n                                    }\n                                    #entry_legal_status#\n                                    EcosysParam(Name: legal_status, Index: #entry_legal_status#)\n                                    Span().Style(margin-right:10px;)\n                                    If(And(#entry_legal_status#!=1, #alert#==0)){\n                                        Button(Contract: #root#_SecondRequest_Role2, Body:$send_request$, \"LandId=#LandId#\", Class: btn btn-default, Page: #root#_records, Params: \"LandId=#LandId#\").Alert(Text:$ask_request_second$, ConfirmButton:$confirm$, CancelButton:$cancel$)\n                                    }\n                                }\n                            }\n                            \n                            Div(row df){\n                                Div(col-md-5 mt-sm text-right h5){Strong($encumbrance_certificate$:)}\n                                Div(col-md-7 mt-sm text-left h5){\n                                    #entry_encumbrance_certificate#\n                                    EcosysParam(Name: land_ec_status, Index: #entry_encumbrance_certificate#)\n                                    Span().Style(margin-right:10px;)\n                                    If(And(#entry_encumbrance_certificate#!=1, #alert#==0)){\n                                        Button(Contract: #root#_SecondRequest_Role2, Body:$send_request$, Params: \"LandId=#LandId#\", Class: btn btn-default, Page: #this#, PageParams: \"LandId=#LandId#\").Alert(Text:$ask_request_second$, ConfirmButton:$confirm$, CancelButton:$cancel$)\n                                    }\n                                }\n                            }\n                            \n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right h5){Strong($consideration_value$:)}\n                                Div(col-md-7 mt-sm text-left h5){\n                                    If(#entry_price#>0){\n                                        #entry_price# INR\n                                    }.Else{\n                                        $undefined$\n                                    }\n                                    If(#ownership_owner_id#==#key_id#){\n                                        Button(Page: #root#_edit, Body:$change$, PageParams: \"LandId=#LandId#\", Class: btn btn-default)\n                                    }\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Menu": "default_menu"
+        },
+        {
             "Name": "members_list",
-            "Value": "Div(Class: content-wrapper){\n\n\tSetTitle($membership$)\n\tDiv(breadcrumb){\n\t\tSpan(Class: text-muted, Body: $membership$)\n\t}\n\n    If(GetVar(isSearch) == 1){\n        SetVar(Name: v_Where, Value: \"member_name='#v_Search#'\")\n    }.Else{\n        SetVar(Name: v_Where, Value: \"id!=0\")\n        SetVar(Name: v_Search, Value: \"\")\n    }\n\n    DBFind(Name: members, Source: src_member).Custom(custom_username){\n        LinkPage(Page: profile_view, PageParams: \"v_member_id=#id#\"){\n            If(#avatar# != \"\"){\n                Image(Src: \"#avatar#\", Class: img-circle).Style(width: 30px;  border: 1px solid #5A5D63; margin-right: 10px;)\n            }\n            Span(Class: h5 text-bold, Body: #member_name#)\n        }\n\t}.Custom(custom_member_id){\n        Span(Body: Address(#id#))\n    }.Where(#v_Where#).Order(\"member_name\")\n\n    Div(Class: panel panel-primary){\n        Form(){\n            Div(Class: list-group-item){\n                Div(Class: row df f-valign){\n                    Div(Class: col-md-1 mt-sm text-right){\n                        Label(For: Search){\n                            Span(Body: LangRes(username))\n                        }\n                    }\n                    Div(Class: col-md-11 mc-sm){\n                        Div(Class: input-group){\n                            Input(Class: form-control, Type: text, Name: Search, Value: #v_Search#)\n                            Div(Class: input-group-btn){\n                                Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: members_list, PageParams: \"isSearch=1,v_Search=Val(Search)\")\n                            }\n                        }\n                    }\n                }  \n            }\n\n            Div(Class: list-group-item){ \n                Table(Source: src_member, Columns: \"$username$=custom_username,$id$=id,$member_id$=custom_member_id\")\n                If(GetVar(isSearch) == 1){\n                    Div(Class: text-center){  \n                        Button(Body: $view_all$, Class: btn btn-primary, Page: members_list, PageParams: \"isSearch=0\")\n                    }\n                }\n            }\n            \n        }           \n    }\n\n}",
+            "Value": "Div(Class: content-wrapper){\n    \n    SetTitle($membership$)\n    Div(breadcrumb){\n        Span(Class: text-muted, Body: $membership$)\n    }\n    \n    If(GetVar(isSearch) == 1){\n        SetVar(Name: v_Where, Value: \"member_name='#v_Search#'\")\n    }.Else{\n        SetVar(Name: v_Where, Value: \"id!=0\")\n        SetVar(Name: v_Search, Value: \"\")\n    }\n    \n    DBFind(Name: members, Source: src_member).Custom(custom_username){\n        LinkPage(Page: profile_view, PageParams: \"v_member_id=#id#\"){\n            Image(Class: img-circle, Alt: avatar, Src: \"#avatar#\").Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)\n            Span(Class: h5 text-bold, Body: #member_name#)\n        }\n    }.Custom(custom_member_id){\n        Span(Body: Address(#id#))\n    }.Where(#v_Where#).Order(\"member_name\")\n    \n    Div(Class: panel panel-primary){\n        Form(){\n            Div(Class: list-group-item){\n                Div(Class: row df f-valign){\n                    Div(Class: col-md-1 mt-sm text-right){\n                        Label(For: Search){\n                            Span(Body: LangRes(username))\n                        }\n                    }\n                    Div(Class: col-md-11 mc-sm){\n                        Div(Class: input-group){\n                            Input(Class: form-control, Type: text, Name: Search, Value: #v_Search#)\n                            Div(Class: input-group-btn){\n                                Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: members_list, PageParams: \"isSearch=1,v_Search=Val(Search)\")\n                            }\n                        }\n                    }\n                }\n            }\n            \n            Div(Class: list-group-item){\n                Table(Source: src_member, Columns: \"$username$=custom_username,$id$=id,$member_id$=custom_member_id\")\n                If(GetVar(isSearch) == 1){\n                    Div(Class: text-center){\n                        Button(Body: $view_all$, Class: btn btn-primary, Page: members_list, PageParams: \"isSearch=0\")\n                    }\n                }\n            }\n            \n        }\n    }\n    \n}",
             "Conditions": "ContractAccess(\"@1EditPage\")",
             "Menu": "default_menu"
         },
@@ -1820,7 +2265,7 @@
         {
             "Name": "notifications",
             "Value": "DBFind(Name: notifications, Source: noti_s).Where(\"closed=0 and notification_type=1 and recipient_id=#key_id#\")\nDBFind(Name: notifications, Source: noti_r).Where(\"closed=0 and notification_type=2 and (started_processing_id=0 or started_processing_id=#key_id#)\")\n\nForList(noti_s){\n        Div(Class: list-group-item){\n            LinkPage(Page: #page_name#, PageParams: \"notific_id=#id#,notific_type=#notification_type#,notific_header=#header_text#,#page_params#\"){        \n                Div(media-box){\n                    Div(Class: pull-left){\n                        Em(Class: fa #icon# fa-1x text-info)\n                    } \n                    Div(media-box-body clearfix){ \n                        Div(Class: m0 text-normal, Body: #header_text#) \n                        Div(Class: m0 text-muted h6, Body: #body_text#)\n                    }\n                }\n            }\n        }\n}\n\nForList(noti_r){\n    DBFind(Name: roles_assign, Source: src_roles).Where(\"member_id=#key_id# and role_id=#role_id# and delete=0\").Vars(prefix)\n    If(#prefix_id# > 0){\n        Div(Class: list-group-item){\n            LinkPage(Page: #page_name#, PageParams: \"notific_id=#id#,notific_type=#notification_type#,notific_header=#header_text#,#page_params#\"){        \n                Div(media-box){\n                    Div(Class: pull-left){\n                        Em(Class: fa #icon# fa-1x text-primary)\n                    } \n                    Div(media-box-body clearfix){ \n                        Div(Class: m0 text-normal, Body: #header_text#) \n                        Div(Class: m0 text-muted h6, Body: #body_text#)\n                    }\n                }\n            }\n        }\n    }\n}",
-            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
             "Menu": "default_menu"
         },
         {
@@ -1988,29 +2433,74 @@
     ],
     "parameters": [
         {
+            "Name": "buildings_use_class",
+            "Value": "Shops,Financial and professional services,Restaurants and cafes,Business,Hotels,Dwellinghouses,Non-residential institutions,No",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
             "Name": "company_type",
             "Value": "group_person,company,institution,organization",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "land_buildings_use_class",
+            "Value": "Shops,Financial and professional services,Restaurants and cafes,Business,Hotels,Dwellinghouses,Non-residential institutions,No",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "land_ec_status",
+            "Value": "No Issues,Have Issues",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "land_local_body",
+            "Value": "Minor Gram Panchayat,Major Gram Panchayat,Other Municipality/Notified Area,Municipal Corporation",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "land_nature",
+            "Value": "0101 Sale Deed,0111 AGREEMENT OF SALE CUM GPA,0202 Mortgage without Possession,0206 Mortgage deed by small farmer for Agrl.loans in f/o PAC/Bank,0208 Deposit of Title Deeds,0302 Gift Settlement in f/o family member,0303 Gift Settlement in f/o others,0304 Gift Settlement for Charitable/religious purposes,0401 Partition,0402 Partition among Family Members,0505 RECEIPT(R.T.D.M),0701 Lease Deed,0801 Rectification Deed,0803 Cancellation Deed",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "land_use",
+            "Value": "01 Residential-U,09 URBAN VacantLand(Residential)-U,21 Dry land-R,26 Wet Land double crop-R,27 Wet Land single crop-R,30 Coconut Garden-R",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "land_yes_no",
+            "Value": "no_problem,problem",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "legal_status",
+            "Value": "No Issues,Title Not Clear,Multiple Owner Claims,Khata Not Clear",
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "notification_closure",
             "Value": "single,multiple",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "notification_icon",
             "Value": "fa-bell,fa-comment,fa-envelope,fa-bookmark,fa-check,fa-exclamation-triangle,fa-info-circle",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "notification_type",
             "Value": "single,role",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "roles_types",
             "Value": "assigned_role,elective_role,system_role,company_role",
-            "Conditions": "ContractConditions(`MainCondition`)"
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "tax_receipt_and_bills",
+            "Value": "No Issues,Have Issues",
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "type_voting",
@@ -2042,6 +2532,21 @@
         {
             "Name": "demo_page_table",
             "Columns": "[{\n    \"name\": \"member_name\",\n    \"type\": \"text\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"member_id\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"some_text\",\n    \"type\": \"text\",\n    \"conditions\": \"true\"\n}]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
+        },
+        {
+            "Name": "land_registry",
+            "Columns": "[{\"name\":\"delete\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"legal_status\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"area\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"land_use\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"owner_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"map_coords\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"land_nature\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"land_local_body\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"modification_date\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"price_market_value\",\"type\":\"money\",\"conditions\":\"true\"},{\"name\":\"tax_receipt_and_bills\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"encumbrance_certificate\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"address\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"date_create\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"price_gov_value\",\"type\":\"money\",\"conditions\":\"true\"},{\"name\":\"buildings_use_class\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"price\",\"type\":\"money\",\"conditions\":\"true\"},{\"name\":\"registration_date\",\"type\":\"datetime\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
+        },
+        {
+            "Name": "land_registry_editing",
+            "Columns": "[{\"name\":\"person_name\",\"type\":\"varchar\",\"conditions\":\"true\"},{\"name\":\"lend_object_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"new_attr_value\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"old_attr_value\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"editing_attribute\",\"type\":\"varchar\",\"conditions\":\"true\"},{\"name\":\"date\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"person_id\",\"type\":\"number\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
+        },
+        {
+            "Name": "land_registry_ownership",
+            "Columns": "[{\"name\":\"dep3_approved\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"owner_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"date_creat\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"date_signing\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"owner_new_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"dep2_approved\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"step\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"price\",\"type\":\"money\",\"conditions\":\"true\"},{\"name\":\"owner_type\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"lend_object_id\",\"type\":\"number\",\"conditions\":\"true\"}]",
             "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
         },
         {
