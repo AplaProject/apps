@@ -1,10 +1,8 @@
 contract auto_sales_add {
     data {
         auto_id int
-
         engine_number string
         chassis_number string
-
         isRandom int
         member_photo_dealer string "image"
     }
@@ -12,7 +10,7 @@ contract auto_sales_add {
     conditions {}
 
     action {
-
+		// if its a random buyer, get photo from the table
         if ($isRandom == 1){
             $photo_map = DBFind("random_buyer").Where("flag_selection=$", 1).Row()
             if ($photo_map["id"] == nil){
@@ -21,6 +19,7 @@ contract auto_sales_add {
             $member_photo_dealer = string($photo_map["buyer_photo"]) 
         }
 
+		// start recognizing
         var labels map
         labels = awsrek_getLabels($member_photo_dealer)
 
@@ -54,38 +53,33 @@ contract auto_sales_add {
             i = i + 1
         }
 
-
         i = Len(found_body_styles)
         while (i < 4) {
             found_body_styles[i] = ""
             i = i + 1
         }
 
-
+		// get data after recognition
         $member = awsrek_getMemberIdByFace($member_photo_dealer)
         $member_id = $member["id"]
         $face_recognition_confidence = Float($member["confidence"])
         
-        //получаем данные о покупателе
-        $ret_member = DBFind("members").Where("id=$", $member_id)
-
-        //если покупатель найден в базе
-        if (Len($ret_member) > 0) {
-
-            var vals_member map
-            vals_member = $ret_member[0]
-
-            //получаем данные об авто 
-            $ret_auto = DBFind("registry_auto").Columns("id,auto_photo,manufacturer,model").Where("id=?", $auto_id).Order("id")
-            var vals_auto map
-            vals_auto = $ret_auto[0]
-
-            //создаем протокол
-            DBInsert(`registration_protocols`, `member_id,member_name,member_photo,auto_id,auto_manufacturer,auto_model,engine_number,chassis_number,auto_photo,member_photo_dealer,timestamp member_photo_dealer_date,delete,status,face_recognition_confidence_double, body_type_1, body_type_2, body_type_3, body_type_4`,
-                $member_id, string(vals_member["member_name"]), string(vals_member["avatar"]),
-                $auto_id, string(vals_auto["manufacturer"]), string(vals_auto["model"]), $engine_number, $chassis_number, string(vals_auto["auto_photo"]),
-                $member_photo_dealer, $time, 0, 0, $face_recognition_confidence, found_body_styles[0], found_body_styles[1], found_body_styles[2], found_body_styles[3])
-        }
-
+		// search member
+		$member_map = DBFind("recognition_members").Where("recognition_id=$", $member_id).Row()
+		if ($member_map["id"] == nil) {
+			warning "Member not recognized"
+		}
+		
+		// search auto
+		$auto_map = DBFind("registry_auto").Where("id=?", $auto_id).Row()
+		if ($auto_map["id"] == nil) {
+			warning "Auto not found"
+		}
+		
+		// create a protocol
+		DBInsert("registration_protocols", "member_id,member_name,member_photo,auto_id,auto_manufacturer,auto_model,engine_number,chassis_number,auto_photo,member_photo_dealer,timestamp member_photo_dealer_date,delete,status,face_recognition_confidence_double, body_type_1, body_type_2, body_type_3, body_type_4",
+			$member_id, string($member_map["member_name"]), string($member_map["avatar"]),
+			$auto_id, string($auto_map["manufacturer"]), string($auto_map["model"]), $engine_number, $chassis_number, string($auto_map["auto_photo"]),
+			$member_photo_dealer, $time, 0, 0, $face_recognition_confidence, found_body_styles[0], found_body_styles[1], found_body_styles[2], found_body_styles[3])
     }
 }
