@@ -20,22 +20,45 @@ jQuery(document).ready(function () {
       }
     }
   }) // error:function()
-
-
-  var svg_div = jQuery('#graphviz_svg_div')
-  var graphviz_data_textarea = jQuery('#graphviz_data')
-
-  function InsertGraphvizText(text) {
-    graphviz_data_textarea.val(text)
-  }
+  let svgDiv = jQuery('#graphviz_svg_div')
 
   jQuery(document).on('click', '.graph-link', function (event) {
+    let width = window.innerWidth,
+      height = window.innerHeight
+
     event.preventDefault()
-    svg_div.html("")
-    let url = $(this).attr("href")
+    svgDiv.html('')
+    let url = $(this).attr('href')
     fetch(url).then((resp) => resp.text()).then(data => {
-      var svg = Viz(data, "svg")
-      svg_div.html("<hr>" + svg)
+      let svg = Viz(data, 'svg')
+      svgDiv.html(svg)
+      let viewBox = $('#graphviz_svg_div > svg')
+
+      let zoomer = svgPanZoom('svg', {
+        zoomScaleSensitivity: 0.4,
+        minZoom: 0.1,
+        maxZoom: 10,
+        fit: false,
+        center: true,
+        refreshRate: 'auto'
+      })
+      let sizes = zoomer.getSizes()
+      viewBox.attr("height", height)
+      viewBox.attr("width", width)
+
+      zoomer.zoom(width / sizes.width)
+      sizes = zoomer.getSizes()
+      console.log(sizes)
+      let y = 0
+      if (sizes.height < height) {
+        y = (height - sizes.height) / 2
+      }else{
+        y = sizes.height/(sizes.height/height) - height
+      }
+      zoomer.pan({
+        x: 0,
+        y: y,
+      })
     })
   })
 })
