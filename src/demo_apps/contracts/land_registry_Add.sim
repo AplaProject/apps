@@ -1,8 +1,8 @@
 contract land_registry_Add{
     data{
         OwnerId int
-        CoordsAddress string
-        Area int
+        // CoordsAddress string
+        Coords string // {"coords":[{"lat":float,"lng":float},],"area": float,"address": string}
         BuildingsUseClass int
         Coords string "optional"
         LandNature int
@@ -18,10 +18,14 @@ contract land_registry_Add{
     }
 
     func action{
-        var icon, header, body, page, params, roleParams string
-        var closureType, landId, landUse, landLocalBody int
-        
-        landId = DBInsert("land_registry", "owner_id,address,area,buildings_use_class,map_coords,land_use,timestamp date_create,delete,land_nature,land_local_body,registration_date,timestamp modification_date", $OwnerId, $CoordsAddress, $Area, $BuildingsUseClass, $Coords, landUse, $block_time, 0, $LandNature, landLocalBody, $RegistrationDate, $block_time)
+        var icon, header, body, page, params, roleParams, coords_address string
+        var closureType, landId, landUse, landLocalBody, area int
+        var coords, map_coords map
+        coords = JSONToMap($Coords)
+        coords_address = coords["address"]
+        area = coords["area"]
+
+        landId = DBInsert("land_registry", "owner_id,address,area,buildings_use_class,map_coords,land_use,timestamp date_create,delete,land_nature,land_local_body,registration_date,timestamp modification_date", $OwnerId, coords_address, area, $BuildingsUseClass, coords, landUse, $block_time, 0, $LandNature, landLocalBody, $RegistrationDate, $block_time)
         
         DBInsert("land_registry_ownership", "step, timestamp date_creat, timestamp date_signing, lend_object_id, owner_id, owner_new_id", -1, $block_time, $block_time, landId, $OwnerId, $OwnerId)
         
