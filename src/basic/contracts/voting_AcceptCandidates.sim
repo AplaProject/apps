@@ -15,7 +15,7 @@ contract voting_AcceptCandidates {
 		}
 		
 		// check the participant of the voting
-		$participant_id = DBFind(`voting_participants`).Where("voting_id=$ and member_id=$", $votingID, $key_id).One("id")
+		$participant_id = DBFind("voting_participants").Where("voting_id=$ and member_id=$", $votingID, $key_id).One("id")
 		if ($participant_id == nil){
 			warning "You are not a participant in this voting"
 		}
@@ -26,7 +26,7 @@ contract voting_AcceptCandidates {
 		if ( Int($voting_map["flag_notifics"]) == 1 ){
 			var params string
 			params = "notific_param=" + Str($votingID)		
-			$notific_id = DBFind(`notifications`).Where("recipient_id=$ and page_name=$ and page_params=$ and closed=$", $key_id, "voting_view", params, 0).One("id")
+			$notific_id = DBFind("notifications").Where("recipient_id=$ and page_name=$ and page_params=$ and closed=$", $key_id, "voting_view", params, 0).One("id")
 			if ($notific_id != nil){
 				Notifications_Single_Close("notific_id", Int($notific_id))
 			}
@@ -38,8 +38,8 @@ contract voting_AcceptCandidates {
 		} 
 		
 		// check start-end of voting time
-		$voting_start = DBFind(`voting_instances`).Where("id=$ and startdate < now()", $votingID).One("id")
-		$voting_end   = DBFind(`voting_instances`).Where("id=$ and enddate   > now()", $votingID).One("id")
+		$voting_start = DBFind("voting_instances").Where("id=$ and startdate < now()", $votingID).One("id")
+		$voting_end   = DBFind("voting_instances").Where("id=$ and enddate   > now()", $votingID).One("id")
 		if ($voting_start == nil){
 			warning "Voting has not yet begun. Try again later, please"
 		}
@@ -50,13 +50,13 @@ contract voting_AcceptCandidates {
 		//-----------------------------------------------------------------------------------------------
 
 		// write the result of the voting
-		DBUpdate(`voting_participants`, Int($participant_id), `timestamp decision_date, decision`, $block_time, $candidateID)
+		DBUpdate("voting_participants", Int($participant_id), "timestamp decision_date, decision", $block_time, $candidateID)
 
 		// increment count of accept
 		$subject_id     = Int($subject_map["id"])
 		$number_accept  = Int($subject_map["number_accept"])
 		$number_accept   = $number_accept + 1
-		DBUpdate(`voting_subject`, $subject_id, `number_accept`, $number_accept)
+		DBUpdate("voting_subject", $subject_id, "number_accept", $number_accept)
 
 		voting_UpdateDataForGraphs("votingID", $votingID)
     }
