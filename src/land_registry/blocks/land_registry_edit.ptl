@@ -1,47 +1,19 @@
-If(GetVar(val_int)){
-    If(GetVar(LandId)){}.Else{
-        SetVar(LandId, #val_int#)
-    }
+If(#LandId#>0){
 }.Else{
     SetVar(notific_id, 0)
     SetVar(LandId, 1)
 }
 
-
-SetVar(registry, land_registry)
-
-If(#depart#>0){}.Else{
-    Include(land_registry_set_depart)
-}
-If(#debug#==1){
-    Div(){notific_id:#notific_id#}
-    Div(){notific_type:#notific_type#}
-    Div(){notific_header:#notific_header#}
-    Div(){val_str:#val_str#}
-    Div(){val_int:#val_int#}
-}
-
-If(GetVar(depart)){
-    If(#depart1#==1){
-        SetTitle($land_registry_edit_role1$)
-    }
-    
-    If(#depart2#==1){
-        SetTitle($land_registry_edit_role2$)
-    }
-    
-    If(#depart3#==1){
-        SetTitle($land_registry_edit_role3$)
-    }
-}.Else{
-    SetTitle($land_records_edit$)
-}
 If(#admin#==1){}.Else{SetVar(admin, 0)}
-
+If(Or(#depart1#==1,#depart2#==1,#depart3#==1)){
+    SetVar(depart, 1)
+}.Else{
+    SetVar(depart, 0)
+}
 EcosysParam(Name: land_yes_no, Source: src_yes_no)
 
-DBFind(Name: land_registry, Source: src_entry).WhereId(#LandId#).Vars(entry)
-DBFind(Name: members, Source: src_owners).Where(id=#entry_owner_id#).Vars(owner)
+DBFind(Name: land_registry, Source: _entry).WhereId(#LandId#).Vars(entry)
+DBFind(Name: members, Source: _members).Where(id=#entry_owner_id#).Vars(owner)
 
 Div(content-wrapper red){
     Div(breadcrumb){
@@ -70,73 +42,39 @@ Div(content-wrapper red){
                             }
                             Div(col-md-8 mt-sm text-left){
                                 If(#depart#==1){
-                                    If(GetVar(entry_map_coords)){
-                                        #entry_map_coords#
-                                    }.Else{}
+                                    Map(Type:poligon, MapType:hybrid, Value:#entry_map_coords#)
                                 }.Else{
-                                    Input(Name: Coords, Value: #entry_map_coords#, Type: text, Class: form-control input-sm)
+                                    InputMap(Name: Coords, Type:poligon, MapType:hybrid, Value:#entry_map_coords#)
                                 }
                             }
                         }
                         
-                        Div(row df f-valign){
-                            Div(col-md-4 mt-sm text-right){Strong(LangRes(area_size))}
-                            Div(col-md-8 mt-sm text-left){
-                                If(#depart#==1){
-                                    If(GetVar(entry_area)){
-                                        #entry_area#
-                                    }.Else{}
-                                }.Else{
-                                    Input(Name: Area, Class: form-control input-sm,Value: #entry_area#, Type: text)
-                                }
-                            }
-                        }
-                        Div(row df f-valign){
-                            Div(col-md-4 mt-sm text-right){Strong(LangRes(address))}
-                            Div(col-md-8 mt-sm text-left){
-                                If(#depart#==1){
-                                    If(GetVar(entry_address)){
-                                        #entry_address#
-                                    }.Else{}
-                                }.Else{
-                                    Input(Name: CoordsAddress, Class: form-control input-sm, Type: text, Value: GetVar(entry_address))
-                                }
-                            }
-                        }
                         If(#depart#==1){
                             Div(row df f-valign){
                                 Div(col-md-4 mt-sm text-right h5){Strong(LangRes(owner))}
                                 Div(col-md-8 mt-sm text-left h5){
-                                    If(GetVar(owner_avatar)){
-                                        Image(Alt: ava, Class: img-thumbnail img-circle, Src: "#owner_avatar#").Style(width:40px;margin-right: 10px;)
-                                    }.Else{}
+                                    Image(Alt: ava, Class: img-thumbnail img-circle, Src: "#owner_avatar#").Style(width:40px;margin-right: 10px;)
                                     Span(#owner_member_name#, text-muted)
                                 }
                             }
-                        }.Else{}
+                        }
                     }
                     If(#depart#==1){
                         Div(list-group-item){
                             Div(row df f-valign){
                                 Div(col-md-4 mt-sm text-right h5){Strong(LangRes(registration_date):) }
-                                Div(col-md-8 mt-sm text-left h5){
-                                    DateTime(#entry_registration_date#)
-                                }
+                                Div(col-md-8 mt-sm text-left h5){DateTime(#entry_registration_date#)}
                             }
                             Div(row df f-valign){
                                 Div(col-md-4 mt-sm text-right h5){Strong(LangRes(record_add_date):)}
-                                Div(col-md-8 mt-sm text-left h5){
-                                    DateTime(#entry_date_create#)
-                                }
+                                Div(col-md-8 mt-sm text-left h5){DateTime(#entry_date_create#)}
                             }
                             Div(row df f-valign){
                                 Div(col-md-4 mt-sm text-right h5){Strong(LangRes(modification_date):)}
-                                Div(col-md-8 mt-sm text-left h5){
-                                    DateTime(#entry_modification_date#)
-                                }
+                                Div(col-md-8 mt-sm text-left h5){DateTime(#entry_modification_date#)}
                             }
                         }
-                    }.Else{}
+                    }
                     
                     Div(list-group-item){
                         Div(row df f-valign){
@@ -317,13 +255,13 @@ Div(content-wrapper red){
                                     
                                     If(GetVar(depart)){
                                         If(GetVar(depart1)){
-                                            Button(Body: LangRes(save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Update_Role1, Params: "Price=Val(Price),LandId=#LandId#,NotificId=#notific_id#", Page: land_registry_records)
+                                            Button(Body: LangRes(save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Depart1Edit, Params: "Price=Val(Price),LandId=#LandId#,NotificId=#notific_id#", Page: land_registry_records)
                                             
                                         }.ElseIf(GetVar(depart2)){
-                                            Button(Body: LangRes(save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Update_Role2, Params: "LandId=#LandId#,LegalStatus=Val(LegalStatus),EncumbranceCertificate=Val(EncumbranceCertificate),NotificId=#notific_id#", Page: land_registry_records)
+                                            Button(Body: LangRes(save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Depart2Edit, Params: "LandId=#LandId#,LegalStatus=Val(LegalStatus),EncumbranceCertificate=Val(EncumbranceCertificate),NotificId=#notific_id#", Page: land_registry_records)
                                             
                                         }.ElseIf(GetVar(depart3)){
-                                            Button(Body: LangRes(save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Update_Role3, Params: "LandId=#LandId#,TaxReceiptAndBills=Val(TaxReceiptAndBills),PriceMarket=Val(PriceMarket),PriceGov=Val(PriceGov),NotificId=#notific_id#", Page: land_registry_records)
+                                            Button(Body: LangRes(save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Depart3Edit, Params: "LandId=#LandId#,TaxReceiptAndBills=Val(TaxReceiptAndBills),PriceMarket=Val(PriceMarket),PriceGov=Val(PriceGov),NotificId=#notific_id#", Page: land_registry_records)
                                         }.Else{}
                                         
                                     }.Else{
