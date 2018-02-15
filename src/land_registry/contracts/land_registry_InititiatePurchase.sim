@@ -6,21 +6,18 @@ contract land_registry_InititiatePurchase{
     conditions{}
     
     action{
-        var table string
-        table = "land_registry_ownership"
-        
         var ownership map
-        ownership = DBFind(table).Where("lend_object_id=?", $LandId).Row()
+        ownership = DBFind("land_registry_ownership").Where("lend_object_id=?", $LandId).Row()
         
         var ownershipId, ownerId int
         ownershipId = Int(ownership["id"])
         ownerId = Int(ownership["owner_id"])
         
-        DBUpdate(table, ownershipId, "owner_new_id,step", $key_id, 0)
+        DBUpdate("land_registry_ownership", ownershipId, "owner_new_id,step", $key_id, 0)
         
-        var notifications array
         var query string
-        query = Sprintf("params_val='val_int=%v'", $LandId)
+        query = Sprintf("page_params='LandId=%v'", $LandId)
+        var notifications array
         notifications = DBFind("notifications").Where(query)
         var i int
         while i < Len(notifications) {
@@ -36,10 +33,10 @@ contract land_registry_InititiatePurchase{
         header = "$purchase_request$"
         body = "$need_your_processing$"
         page = "land_registry_view"
-        params = Sprintf("val_int=%v",$LandId)
+        params = Sprintf("LandId=%v,",$LandId)
         Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", ownerId, icon, header, body, page, params)
         
-        //DBUpdate(table, ownershipId, "owner_new_id, step", $key_id, 1)
+        //DBUpdate("land_registry_ownership", ownershipId, "owner_new_id, step", $key_id, 1)
         // notify self
         // $textHeader = "New purchase"
         // $textBody = "Waiting for a response from the bank"

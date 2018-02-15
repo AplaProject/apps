@@ -3,18 +3,20 @@ contract land_registry_PurchaseAccept{
         LandId int
         NotificId int
     }
-    
+    conditions{
+        $roleId = DBFind("roles_list").Where("role_name=? and delete=0", "land_bank").One("id")
+        if $roleId == nil{
+            info "Banker not found"
+        }
+    }
     action{
-        var table string
-        table = "land_registry_ownership"
-        
         var ownership map
-        ownership = DBFind(table).Where("lend_object_id=?", $LandId).Row()
+        ownership = DBFind("land_registry_ownership").Where("lend_object_id=?", $LandId).Row()
         var ownershipId, buyerId int
-        ownershipId = Int($landOwnership["id"])
-        buyerId = Int($landOwnership["owner_new_id"])
+        ownershipId = Int(ownership["id"])
+        buyerId = Int(ownership["owner_new_id"])
         
-        DBUpdate(table, ownershipId, "step", 1)
+        DBUpdate("land_registry_ownership", ownershipId, "step", 1)
         
         // notify buyer
         var icon, header, body, page, params string
@@ -22,7 +24,7 @@ contract land_registry_PurchaseAccept{
         header = "$purchase_approved$"
         body = "$waiting_bank$"
         page = "land_registry_view"
-        params = Sprintf("val_int=%v", $LandId)
+        params = Sprintf("LandId=%v", $LandId)
         
         Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", buyerId, icon, header, body, page, params)
         
@@ -32,8 +34,7 @@ contract land_registry_PurchaseAccept{
         body = "$need_your_processing$"
         closureType = 2
         page = "land_registry_bank"
-        roleId = 4
-        Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val",roleId,closureType,icon,header,body,page,params)
+        Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val",Int($roleId),closureType,icon,header,body,page,params)
         
         // closing notify for owner
         Notifications_Single_Close("notific_id", $NotificId)

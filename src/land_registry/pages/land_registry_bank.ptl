@@ -1,33 +1,23 @@
-SetVar(registry, land_registry)
-SetVar(this, #registry#_bank)
-SetVar(fake_ava, "/static/img/apps/ava.png")
 SetTitle($land_bank$)
 
-If(#notific_val_int#>0){
-    SetVar(Name: LandId, Value: #notific_val_int#)
+
+DBFind(Name: land_registry_ownership, Source: src_step1).Where("step=1").Vars(step1)
+
+If(GetVar(step1_lend_object_id)){
+    SetVar(LandId, #step1_lend_object_id#)
 }.Else{
-    DBFind(Name: land_registry_ownership, Source: src_step1).Where("step=1").Vars(step1)
-    
-    If(GetVar(step1_lend_object_id)){
-        SetVar(Name: LandId, Value: #step1_lend_object_id#)
-    }.Else{
-        SetVar(Name: LandId, Value: 0)
-    }
+    SetVar(LandId, 0)
 }
+
 If(GetVar(LandId)){
     DBFind(Name: land_registry, Source: src_land_registry).WhereId(#LandId#).Vars(entity)
-    DBFind(Name: roles_assign, Source: src_roles_assign).Where("role_id=4 and delete=0").Vars(bank_role)
+    DBFind(Name: roles_assign, Source: src_roles_assign).Where("role_name='land_bank' and delete=0").Vars(bank_role)
     
-    If(GetVar(bank_role_member_id)){
-        DBFind(Name: members, Source: src_member).Where("id=#bank_role_member_id#").Vars(bank)
-    }.Else{
-        DBFind(Name: members, Source: src_member).WhereId(1).Vars(bank)
-    }
+    DBFind(Name: members, Source: src_member).Where("id=#bank_role_member_id#").Vars(bank)
+    
     
     DBFind(Name: land_registry_ownership,Source: src_land_ownership).Where("lend_object_id=#LandId#").Vars(ownership)
     
-    If(GetVar(entity_owner_id)){}.Else{SetVar(entity_owner_id, #key_id#)}
-    If(GetVar(ownership_owner_new_id)){}.Else{SetVar(ownership_owner_new_id, #key_id#)}
     DBFind(Name: members, Source: src_member).Where("id=#entity_owner_id#").Vars(owner)
     DBFind(Name: members, Source: src_member).Where("id=#ownership_owner_new_id#").Vars(buyer)
     
@@ -37,18 +27,13 @@ If(GetVar(LandId)){
         Div(breadcrumb){
             Div(text-muted){
                 Span($land_bank$).Style(margin-right:10px;)
-                If(GetVar(bank_avatar)!==""){
-                    Image(Src: "#bank_avatar#", Alt: Avatar,Class: img-thumbnail img-circle).Style(width:30px;)
-                }.Else{
-                    Span(Class: fa fa-user-secret).Style(font-size:20px;)
-                }
+                Image(Src: "#bank_avatar#", Alt: Avatar,Class: img-thumbnail img-circle).Style(width:30px;)
                 Span(GetVar(bank_member_name)).Style(margin-left:10px;)
             }
         }
         
         Div(row df f-valign){
-            Div(col-md-2 mt-sm text-left)
-            Div(col-md-8 mt-sm text-left){
+            Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
                 Div(panel panel-primary data-sweet-alert){
                     Div(panel-heading){
                         Div(panel-title){
@@ -82,11 +67,7 @@ If(GetVar(LandId)){
                                     Div(h5 text-normal){ LangRes(owner):}
                                 }
                                 Div(col-md-7 mt-sm text-left text-bold){
-                                    If(GetVar(owner_avatar)){
-                                        Image(Src:"#owner_avatar#", Alt: avatar, Class: img-thumbnail img-circle).Style(width:30px;)
-                                    }.Else{
-                                        Span(Class: fa fa-user-secret).Style(font-size:30px;)
-                                    }
+                                    Image(Src:"#owner_avatar#", Alt: avatar, Class: img-thumbnail img-circle).Style(width:30px;)
                                     Span(GetVar(owner_member_name)).Style(margin-left:10px;)
                                 }
                             }
@@ -95,11 +76,7 @@ If(GetVar(LandId)){
                                     Div(h5 text-normal){ LangRes(buyer):}
                                 }
                                 Div(col-md-7 mt-sm text-left text-bold){
-                                    If(GetVar(buyer_avatar)){
-                                        Image(Src: "#buyer_avatar#", Alt: avatar, Class: img-thumbnail img-circle).Style(width:30px;)
-                                    }.Else{
-                                        Span(Class: fa fa-user-secret).Style(font-size:30px;)
-                                    }
+                                    Image(Src: "#buyer_avatar#", Alt: avatar, Class: img-thumbnail img-circle).Style(width:30px;)
                                     Span(GetVar(buyer_member_name)).Style(margin-left:10px;)
                                 }
                             }
@@ -221,7 +198,7 @@ If(GetVar(LandId)){
                                     Div(h4 text-normal){ LangRes(tax):}
                                 }
                                 Div(col-md-3 mt-sm text-right){
-                                    SetVar(Name: tax, Value: Calculate("#entity_price#*0.05"))
+                                    SetVar(tax, Calculate("#entity_price#*0.05"))
                                     Div(h4 text-normal){ GetVar(tax)}
                                 }
                                 Div(col-md-4 mt-sm text-left){
@@ -233,7 +210,7 @@ If(GetVar(LandId)){
                                     Div(h4 text-bold){ LangRes(total):}
                                 }
                                 Div(col-md-3 mt-sm text-right){
-                                    SetVar(Name: smmm, Value: Calculate("#entity_price#*1.05"))
+                                    SetVar(smmm, Calculate("#entity_price#*1.05"))
                                     Div(h4 text-bold){ GetVar(smmm)}
                                 }
                                 Div(col-md-4 mt-sm text-left){
@@ -254,17 +231,16 @@ If(GetVar(LandId)){
                         Div(clearfix){
                             Div(pull-right){
                                 Input(Name: LandId, Type: hidden, Value: #LandId#)
-                                Input(Name: notific_id, Type: hidden, Value: #notific_id#)
-                                Button(Class:btn btn-primary, Contract: land_registry_TransferTokens, Body: LangRes(transfer_tokens), Page: land_registry_records)
+                                Input(Name: NotificId, Type: hidden, Value: #notific_id#)
+                                Button(Class:btn btn-primary, Contract: land_registry_BankAction, Body: LangRes(transfer_tokens), Page: land_registry_records)
                             }
                         }
                     }
                 }
-                
             }
-            Div(col-md-2 mt-sm text-left)
         }
     }
 }.Else{
-    Div(text-center h4){No one purchase land now}
+    Div(text-center h4){$transactions_not_found$}
+    
 }
