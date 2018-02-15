@@ -1,23 +1,21 @@
 contract land_registry_PurchaseReject{
     data{
-        land_id int
-        notific_id int
+        LandId int
+        NotificId int
     }
     
     action{
         //close notify for owner
-        Notifications_Single_Close("notific_id", $notific_id)
-        var table string  
-        table = "land_registry_ownership"
+        Notifications_Single_Close("notific_id", $NotificId)
         
         // new status deal - cancelled
         var ownership map
-        ownership = DBFind(table).Where("lend_object_id=?", $land_id)
+        ownership = DBFind("land_registry_ownership").Where("lend_object_id=?", $LandId)
         var ownershipId, buyerId int
         ownershipId = Int(ownership["id"])
         buyerId = Int(ownership["owner_new_id"])
         
-        DBUpdate(table, ownershipId, "step", 10)
+        DBUpdate("land_registry_ownership", ownershipId, "step", 10)
         
         // notify buyer
         var icon, header, body, page, params string
@@ -25,7 +23,7 @@ contract land_registry_PurchaseReject{
         header = "$purchase_rejected$"
         body = "$owner_rejected_purchase$"
         page = "land_registry_view"
-        params = Sprintf("val_int=%v", $land_id)
+        params = Sprintf("LandId=%v", $LandId)
         
         Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val",buyerId,icon,header,body,page,params)
     }
