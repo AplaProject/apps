@@ -1,0 +1,143 @@
+Div(content-wrapper){
+    Div( row df f-valign){
+    	Div( col-md-2 mt-sm text-left)
+        Div( col-md-8 mt-sm text-left){ 
+            Div(md-8 panel panel-default elastic data-sweet-alert){
+                Form(){
+					DBFind(supplychains_supply, src_supply).Where("cargo_id = #notific_val_int#").Limit(1).Vars("supply")
+
+					Input(Name: cargo_id, "form-control hidden m-b disabled=''",text,text,#notific_val_int#)
+
+					Input(Name: vOne, Class: "form-control hidden m-b disabled=''", Type: text, Value: 1)
+					Input(Name: vTwo, Class: "form-control hidden m-b disabled=''", Type: text, Value: 2)
+                
+                    Div(list-group-item){
+
+                        Div( row df f-valign){
+                			Div( col-md-3 mt-xs text-center){
+								DBFind(supplychains_cargo, src_cargo).Where("id = #supply_cargo_id#").Vars("cargo")
+                			    SetVar(image, #cargo_qr_code#) 
+                			    Div(h4 text-center, If(GetVar(image)!==""){ Image(#image#) })
+                            }
+                			Div( col-md-3 mt-xs text-right){
+                                P(h5){ Supplier name: }
+								P(h5){ Cargo name: }
+                                If(#supply_step#>-2){
+									P(h5){ Recipient name: }
+									P(h5){ Date dispatch: }
+									P(h5){ Date receipt: }
+                                }
+                            }
+                			Div( col-md-6 mt-xs text-left){
+								P(h5){ #supply_supplier_name# }
+								P(h5){ #supply_cargo_name# }
+								P(h5){  #supply_recipient_name# }
+								P(h5){  DateTime(#supply_date_dispatch#, DD.MM.YYYY HH:MI) }
+								P(h5){  DateTime(#supply_date_receipt#, DD.MM.YYYY HH:MI) }
+								P(h5){  #supply_step# / #supply_total_steps# }
+                            }
+                        }
+
+                    }                
+                    
+					DBFind(supplychains_supply, src_supply_id).Columns(id).Where("cargo_id = #notific_val_int#").Limit(1).Vars("supply")
+					
+					DBFind(supplychains_steps, src_pos).Columns("holder_role_id, receiver_role_id, step, id, holder_signature, receiver_signature, receiver_date_signature, holder_date_signature, holder_name, holder_type, receiver_name,receiver_type").Where("supply_id = #supply_id#").Order(id)
+                    
+                    ForList(src_pos){
+                        Div(list-group-item) {
+                        
+							If(Or(#holder_role_id#>0,#holder_role_id#<0)){
+								DBFind(roles_assign, src_hol).Where("role_id=#holder_role_id# and delete=0").Limit(1).Vars("hol")
+							}
+							
+							If(Or(#receiver_role_id#>0,#receiver_role_id#<0)){
+								DBFind(roles_assign, rec).Where("role_id=#receiver_role_id# and delete=0").Limit(1).Vars("rec")
+							}
+
+                            Div( row df f-valign){
+                                Div( col-md-2 m-xs text-center){
+                                    Div(h5, #holder_name#)
+									If(Or(#holder_signature#>0,#holder_signature#<0)){
+                    			        Div(h6 text-success, Successfully signed at DateTime(#holder_date_signature#, DD.MM.YYYY HH:MI))
+                    			    }
+                                }
+                    			Div( col-md-3 m-xs text-right){
+                    			
+                    			   If(Or(#hol_member_id#>0,#hol_member_id#<0)){ 
+										DBFind(member, src_member_hol).Where("id = #hol_member_id#").Limit(1).Vars("hld")
+                    			        Div(h5 text-bold){
+											#hld_member_name# 
+											Image(If(GetVar(hld_avatar)!==""){ #hld_avatar# }.Else{ "/static/img/apps/ava.png"}, Avatar, img-thumbnail img-circle thumb-full h-30 w-30)
+										}
+                    			   }
+
+                    			   Div(h6 text-muted, EcosysParam(supply_type,#holder_type#))
+                    			   
+                                }
+                                Div( col-md-2 m-xs text-center){
+                                    Div(h4 text-normal, Em(Class: fa fa-arrow-right))
+                                }
+                    			Div( col-md-3 m-xs text-left){
+                    			
+                    			    If(Or(#rec_member_id#>0,#rec_member_id#<0)){
+										DBFind(member, src_member_rec).Where("id = #rec_member_id#").Limit(1).Vars("rcv")
+                    			        Div(h5 text-bold){
+											Image(If(GetVar(rcv_avatar)!==""){ #rcv_avatar# }.Else{ "/static/img/apps/ava.png" }, Avatar, img-thumbnail img-circle thumb-full h-30 w-30)
+											#rcv_member_name# }
+                    			    }
+                    			    
+                    			    Div(h6 text-muted, EcosysParam(supply_type,#receiver_type#))
+                    			    
+                                }
+                                
+                                Div( col-md-2 m-xs text-center){
+                                    Div(h5 , #receiver_name# )
+									If(Or(#receiver_signature#>0,#receiver_signature#<0)){
+                    			        Div(h6 text-success, Successfully signed at DateTime(#receiver_date_signature#, DD.MM.YYYY HH:MI))
+                    			    }
+                                }
+                            }
+                        }
+                    }
+					
+					DBFind(supplychains_steps, src_pos).Columns("id, holder_role_id, receiver_role_id").Where("supply_id=#supply_id# and step=#supply_step#").Limit(1).Vars("steps")
+					DBFind(roles_assign, src_hol).Where("role_id=#steps_holder_role_id# and member_id=#key_id# and delete=0").Limit(1).Vars("hold")
+					DBFind(roles_assign, src_rec).Where("role_id=#steps_receiver_role_id# and member_id=#key_id# and delete=0").Limit(1).Vars("recv")
+					
+					Div(panel-footer){
+						
+						SetVar(hold_member_id, 0)
+						SetVar(recv_member_id, 0)
+						
+						Div(pull-left){
+							If(#recv_member_id#!== 0){
+								ImageInput(photo,320)
+							}
+						}
+					
+						Div( pull-right ){
+							If(Or(#hold_member_id#>0, #hold_member_id#<0)){     
+								DBFind(member, src_hld).Where("id = #hold_member_id#").Limit(1).Vars("hld")
+								Div(text-bold){ 
+									Your signature: Image(If(GetVar(hld_avatar)!==""){ #hld_avatar#}.Else{ "/static/img/apps/ava.png"}, Avatar, img-thumbnail img-circle thumb-full h-30 w-30) 
+									#hld_member_name#
+									Button(Contract: supplychains_sign, Body: Handed over, Params: "vID=#steps_id#,vFlag=1,NotificID=#notific_id#,photo=Val(photo)", Page: supplychains_view, PageParams: "cargo=#notific_val_int#", Class: btn bg-gray-dark) 
+								}
+							}
+							If(Or(#recv_member_id#>0, #recv_member_id#<0)){
+								DBFind(member, src_hld).Where("id = #recv_member_id#").Limit(1).Vars("rcv")
+								Div(text-bold){
+									Your signature: Image(If(GetVar(rcv_avatar)!==""){ #rcv_avatar#}.Else{ "/static/img/apps/ava.png"}, Avatar, img-thumbnail img-circle thumb-full h-30 w-30) 
+									#rcv_member_name# 
+									Button(Contract: supplychains_sign, Body: Taken over, Params: "vID=#steps_id#,vFlag=2,NotificID=#notific_id#,photo=Val(photo)", Page: supplychains_view, PageParams: "cargo=#notific_val_int#", Class: btn bg-gray-dark) 
+								}
+							}
+						}
+					}
+                }
+            }
+        }
+        Div( col-md-2 mt-sm text-left)
+    }
+}

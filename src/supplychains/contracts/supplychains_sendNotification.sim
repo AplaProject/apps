@@ -1,0 +1,70 @@
+contract supplychains_sendNotification 
+{
+    
+    data 
+    {
+        supply_id int   
+    }
+
+    conditions 
+    {
+
+    }
+
+    action 
+    {
+        
+		var supplies array
+		supplies = DBFind("supplychains_supply").Columns("step, total_steps, cargo_id").Where("id = ?", $supply_id)
+		
+		var supply map
+		supply = supplies[0]
+		
+		var step int
+        step = supply["step"]
+		
+		var total_steps int
+        total_steps = supply["total_steps"]
+        
+        if (step < total_steps)
+        {
+			var cargo_id int
+            cargo_id =  supply["cargo_id"]
+            
+			var supply_steps array
+			supply_steps = DBFind("supplychains_steps").Columns("receiver_role_id, holder_role_id").Where("supply_id=? and step=" + Str(step), $supply_id)
+
+			var supply_step map
+			supply_step = supply_steps[0]
+			
+			var receiver_role_id int
+            receiver_role_id = supply_step["receiver_role_id"]
+			
+			var holder_role_id int
+            holder_role_id = supply_step["holder_role_id"]
+            
+			var receiver_roles array
+			receiver_roles = DBFind("roles_assign").Columns("member_id").Where("role_id=? and delete=0", receiver_role_id)
+			
+			var receiver_role map
+			receiver_role = receiver_roles[0]
+			
+			var receiver_member int
+            receiver_member = receiver_role["member_id"]
+
+			var holder_roles array
+			holder_roles = DBFind("roles_assign").Columns("member_id").Where("role_id=? and delete=0", holder_role_id)
+
+			var holder_role map
+			holder_role = holder_roles[0]
+			
+			var holder_member int
+            holder_member = holder_role["member_id"]
+            
+            Notifications_Single_Send("icon_name,text_header,text_body,page_name,params_val,member_id", 7, "Supply Chain", "Requires your signature", "supplychains_sign", "notific_val_int=" + Str(cargo_id), receiver_member)
+            
+            Notifications_Single_Send("icon_name,text_header,text_body,page_name,params_val,member_id", 7, "Supply Chain", "Requires your signature", "supplychains_sign", "notific_val_int=" + Str(cargo_id), holder_member)
+		} 
+    }
+    
+}

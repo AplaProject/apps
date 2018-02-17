@@ -1,0 +1,38 @@
+contract supplychains_addCargo{
+	data 
+	{
+	    vID int
+	    m_id int
+	    name string
+	    cargo_type int
+		weight int
+	}
+
+	conditions 
+	{
+	}
+	
+	action 
+	{
+	    if ($vID == 0)
+	    {
+   		    var ret array      
+    		var row map        
+			
+			ret = DBFind("supplychains_qr").Columns("id, qr_code, counter").Where("id > ?", 0).Order("counter ASC").Limit(1)
+    		row = ret[0] 
+    		$qr_code_id    =  Int(row["id"])
+    		$qr_code_image =  string(row["qr_code"])
+    		$qr_code_cnte  =  Int(row["counter"])
+	        
+	    	DBInsert("supplychains_cargo", "name,cargo_type,weight,delete,manufacturer_id,btn_block,qr_code", $name, $cargo_type, $weight, 0, $m_id,0,$qr_code_image )
+	    	
+	    	$qr_code_cnte = $qr_code_cnte + 1
+	    	DBUpdate("supplychains_qr",$qr_code_id,"counter", $qr_code_cnte)
+	    }
+	    else
+	    {
+	        DBUpdate("supplychains_cargo",$vID,"name,cargo_type,weight", $name, $cargo_type, $weight)
+	    }
+	}
+}

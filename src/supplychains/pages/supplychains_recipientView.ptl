@@ -1,0 +1,116 @@
+DBFind(supplychains_recipients, src_recipients).Columns(name).Where("id=#m_id#").Limit(1).Vars("m")
+SetTitle($recipient_company_details$: #m_name#)
+Div(breadcrumb){
+	LinkPage($recipient_companies$, supplychains_recipients)
+	Span(/).Style(margin-right: 10px; margin-left: 10px;)
+	Span(Class: text-muted, Body: #m_name#)
+}
+SetVar(ppp, "(supply_id=0)")
+
+DBFind(supplychains_supply, src_ids).Columns("id").Where("delete=0 and status>2")
+
+ForList(src_ids){
+	SetVar(ppp = "#ppp# or (supply_id=#id#)")
+}
+
+DBFind(supplychains_steps, src_steps).Custom(custom_id){
+	Div(text-center h4){
+		#supply_id#
+	}.Style(width: 60;)
+}.Custom(custom_supplier){
+	DBFind(supplychains_supply, src_supply_supplier).Columns(supplier_name).Where("id=#supply_id#").Limit(1).Vars("")
+	Div(h4){
+		#supplier_name#
+	}
+}.Custom(custom_cargo){
+	DBFind(supplychains_supply, src_supply_cargo).Columns(cargo_name).Where("id=#supply_id#").Limit(1).Vars("")
+	Div(h4){
+		#cargo_name#
+	}
+}.Custom(custom_recipient){
+	DBFind(supplychains_supply, src_supply_recipient).Columns(recipient_name).Where("id=#supply_id#").Limit(1).Vars("")
+	Div(h4){
+		#recipient_name#
+	}
+}.Custom(custom_total_steps){
+	DBFind(supplychains_supply, src_supply_steps).Columns(total_steps).Where("id=#supply_id#").Limit(1).Vars("")
+	Div(text-center h4){
+		#total_steps#
+	}
+}.Custom(custom_finishing_steps){
+	DBFind(supplychains_supply, src_supply_step).Columns(step).Where("id=#supply_id#").Limit(1).Vars("")
+	Div(text-center h4){
+		#step#
+	}
+}.Custom(custom_status){
+	DBFind(supplychains_supply, src_supply_status).Columns(status).Where("id=#supply_id#").Limit(1).Vars("")
+	Div(h4 text-center){
+		EcosysParam(supply_status, #status#)
+	}
+}.Custom(custom_supply){
+	DBFind(supplychains_supply, src_supply_cargo_id).Columns(cargo_id).Where("id=#supply_id#").Limit(1).Vars("")
+	Div(text-center h4){
+		Button(Page: supplychains_view, Body: View Supply, PageParams: "cargo=#cargo_id#")
+	}
+}.Where("receiver_id=#m_id# and receiver_type=4 and (#ppp#)").Order("id")
+
+Div(md-12 panel panel-default data-sweet-alert){
+    Div(list-group-item){
+        P(Class: h3 text-center text-bold, Body: Supply Chains)
+    }
+    Div(panel-body){
+        Div(table-responsive){
+            Table(Source: src_supply, Columns: "$id$=custom_id,$supplier$=custom_supplier,$cargo$=custom_cargo,$recipient$=custom_recipient,$total_steps$=custom_total_steps,$fiishing_steps$=custom_finishing_steps,$status$=custom_status,$supply$=custom_supply")
+        }
+    }
+}
+
+
+DBFind(supplychains_steps, src_steps2).Custom(custom_id){
+	DBFind(supplychains_supply, src_supply_cargo_id2).Columns(cargo_id).Where("id=#supply_id#").Limit(1).Vars("steps2")
+	SetVar(cargo_id, #steps2_cargo_id#)
+	Div(text-center h4){
+		#steps2_cargo_id#
+	}.Style(width: 60;)
+}.Custom(custom_name){
+	DBFind(supplychains_cargo, src_cargo_name2).Columns(name).Where("id=#cargo_id#").Limit(1).Vars("steps2")
+	Div(h4){
+		#steps2_name#
+	}
+}.Custom(custom_cargo_type){
+	DBFind(supplychains_cargo, src_cargo_type2).Columns(type).Where("id=#cargo_id#").Limit(1).Vars("steps2")
+	Div(text-center h4){
+		EcosysParam(cargo_type, #steps2_type#)
+	}
+}.Custom(custom_weight){
+	DBFind(supplychains_cargo, src_cargo_type2).Columns(weight).Where("id=#cargo_id#").Limit(1).Vars("steps2")
+	Div(text-center h4){
+		#steps2_weight#
+	}
+}.Custom(custom_qr){
+	DBFind(supplychains_cargo, src_cargo_qr2).Columns(qr_code).Where("id=#cargo_id#").Limit(1).Vars("steps2")
+	SetVar(image, #steps2_qr_code#)
+	
+	Div(text-center h4){
+		If(GetVar(image)!==""){
+			Image(Src: #image#, Alt: Image, Class: img-thumbnail w-50 h-50)
+		}
+	}
+}.Custom(custom_supply){
+	Div(text-center h4){
+		If(GetVar(image)!==""){
+			Button(Page: supplychains_view, Body: View Supply, PageParams: "cargo=#cargo_id#")
+		}
+	}.Style(width: 100;)
+}.Where("receiver_id=#m_id# and receiver_type=4 and receiver_signature <> 0 and (#ppp#)").Order(id)
+
+Div(md-12 panel panel-default data-sweet-alert){
+    Div(list-group-item){
+        P(Class: h3 text-center text-bold, Body: Cargos)
+    }
+    Div(panel-body){
+        Div(table-responsive){
+            Table(Source: src_supply, Columns: "$id$=custom_id,$name$=custom_name,$cargo_type$=cargo_type,$weight$=weight,$qr_code$=custom_qr,$supply$=custom_supply)
+        }
+    }
+}
