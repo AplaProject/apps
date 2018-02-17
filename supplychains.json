@@ -72,6 +72,11 @@
             "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
+            "Name": "supplychains_suppliers_add",
+            "Value": "contract supplychains_suppliers_add{\n    data {\n        supplier_id int\n        supplier_name string\n        supplier_type int\n        supplier_map string\n    }\n\n    conditions {\n        var map_data map\n        map_data = JSONToMap($supplier_map)\n\n        $supplier_map_coords = Str(map_data[\"coords\"])\n        $supplier_map_area = Float(map_data[\"area\"])\n        $supplier_map_address = Str(map_data[\"address\"])\n\n\t\tif ($supplier_map_address == \"\"){\n\t\t\twarning \"Area is zero. Select another site\"\n\t\t}\n\n\t\tif ($supplier_map_area == 0){\n\t\t\twarning \"Address is empty. Select another site or enter the address manually\"\n\t\t}\n    }\n\n    action {\n        if ($supplier_id == 0) {\n            var role_id int\n            role_id = Roles_Create(\"role_name,role_type\", $supplier_name, 1)\n            DBInsert(\"supplychains_suppliers\", \"name,supplier_type,role_id,area,address,supplier_map,delete\", $supplier_name, $supplier_type, role_id, $supplier_map_area, $supplier_map_address, $supplier_map, 0)\n        } else {\n            DBUpdate(\"supplychains_suppliers\", $supplier_id, \"name,supplier_type,area,address,supplier_map\", $supplier_name, $supplier_type, $supplier_map_area, $supplier_map_address, $supplier_map)\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
             "Name": "supplychains_supplyAddRecipient",
             "Value": "contract supplychains_supplyAddRecipient\n{\n    data \n    {\n        cargo_id int\n        \n        recipient_id int\n        date_dispatch string \"date\"\n        date_receipt string \"date\"\n    }\n\n    conditions \n    {\n    }\n\n    action \n    {\n        var supply_rows array\n        supply_rows = DBFind(\"supplychains_supply\").Columns(\"id, supplier_id, supplier_name\").Where(\"cargo_id=?\", $cargo_id)\n\n        DBInsert(\"debug\", \"data\", \"21\")\n\n        var supply map\n        supply = supply_rows[0]\n\n        var supply_id int\n        supply_id = supply[\"id\"]\n\n        DBInsert(\"debug\", \"data\", \"29\")\n        \n        var recipients_rows array\n        recipients_rows = DBFind(\"supplychains_recipients\").Columns(\"role_id, name\").Where(\"id=?\", $recipient_id)\n        //DBStringWhere(Table(\"company_consumer\"), \"name\",  \"id=?\",  $company_consumer)\n\n        DBInsert(\"debug\", \"data\", \"35\")\n\n        var recipient map\n        recipient = recipients_rows[0]\n\n        var recipient_name string\n        recipient_name = recipient[\"name\"]\n\n        DBInsert(\"debug\", \"data\", \"43\")\n\n        var role_id int\n        role_id =  recipient[\"role_id\"]\n\n        DBInsert(\"debug\", \"data\", \"48\")\n\n        DBInsert(\"debug\", \"data\", Sprintf(\"%v %v %v %v %v %v %v %v\", $recipient_id, recipient_name, role_id, \"timestamp \" + $date_dispatch + \" 00:00:00\", \"timestamp \" + $date_receipt + \" 00:00:00\", -1, 2, $time))\n\n        DBInsert(\"debug\", \"data\", Str(supply_id))\n        DBUpdateExt(\"supplychains_supply\", \"id\", supply_id, \"recipient_id,recipient_name,recipient_role_id,date_dispatch,date_receipt,step,status\", $recipient_id, recipient_name, role_id, \"timestamp \" + $date_dispatch, \"timestamp \" + $date_receipt, -1, 1)\n\t\t\n        DBInsert(\"debug\", \"data\", \"49\")\n\n\t\tvar holder_id int\n        holder_id = supply[\"supplier_id\"]\n\t\t\n\t\tvar holder_name string\n        holder_name = supply[\"supplier_name\"]\n\t\t\n\t\tvar manufacturers array\n\t\tmanufacturers = DBFind(\"supplychains_manufacturers\").Columns(\"role_id\").Where(\"id=?\", holder_id)\n\n        var manufacturer map\n        manufacturer = manufacturers[0]\n\n        DBInsert(\"debug\", \"data\", \"60\")\n\t\t\n\t\tvar manufacturer_role_id int\n\t\tmanufacturer_role_id = manufacturer[\"role_id\"]\n\t\t\n        DBInsert(\"supplychains_steps\", \"supply_id, holder_id, holder_name, holder_type, holder_role_id, step\", supply_id, holder_id, holder_name, 1, manufacturer_role_id, -1)\n\n        DBInsert(\"debug\", \"data\", \"67\")\n    }\n}",
             "Conditions": "ContractConditions(\"MainCondition\")"
@@ -233,7 +238,7 @@
         {
             "Name": "supply_chain",
             "Conditions": "",
-            "Trans": "{\"ru\":\"Supply Chain\",\"en\":\"Supply Chain\"}"
+            "Trans": "{\"ru\":\"Цепочка поставок\",\"en\":\"Supply Chain\"}"
         },
         {
             "Name": "supplychain_plan",
@@ -273,8 +278,13 @@
     ],
     "menus": [
         {
+            "Name": "default_menu",
+            "Value": "MenuItem(Title:$supply_chain$, Page:supplychains_list, Icon:\"fa icon-link\")",
+            "Conditions": "ContractAccess(\"@1EditMenu\")"
+        },
+        {
             "Name": "supplychains_menu",
-            "Value": "MenuItem(Supply Chains,supplychains_list,, \"fa pull-left icon-link\")\r\nMenuItem($manufacturers$,supplychains_manufacturers,, \"fa pull-left icon-share-alt\")\r\nMenuItem($transport_companies$,supplychains_transport,, \"fa pull-left icon-anchor\")\r\nMenuItem($warehouses$,supplychains_warehouses,, \"fa pull-left icon-layers\")\r\nMenuItem($recipient_companies$,supplychains_recipients,, \"fa pull-left icon-basket-loaded\")",
+            "Value": "MenuItem(Title:$supply_chain$, Page:supplychains_list, Icon:\"fa icon-link\")\r\nMenuItem(Title:$manufacturers$, Page:supplychains_manufacturers, Icon:\"icon-share-alt\")\r\nMenuItem(Title:$transport_companies$, Page:supplychains_transport, Icon:\"fa icon-anchor\")\r\nMenuItem(Title:$warehouses$, Page:supplychains_warehouses, Icon:\"fa icon-layers\")\r\nMenuItem(Title:$recipient_companies$, Page:supplychains_recipients, Icon:\"icon-basket-loaded\")",
             "Conditions": "ContractAccess(\"@1EditMenu\")"
         }
     ],
@@ -370,6 +380,18 @@
             "Menu": "supplychains_menu"
         },
         {
+            "Name": "supplychains_suppliers",
+            "Value": "Div(content-wrapper ){\r\n\r\n\tSetTitle($manufacturers$)\r\n\tDiv(breadcrumb){\r\n\t\tSpan(Class: text-muted, Body: $manufacturers$)\r\n\t}\r\n\r\n\tDBFind(supplychains_supplier, src_suppliers).Custom(custom_name){\r\n\t\tLinkPage(Page: supplychains_manufacturerView, PageParams: \"m_id=#id#,m_name='#name#'\"){\r\n\t\t\tSpan(Class: h5 text-bold, Body: #name#)\r\n\t\t}\t\r\n\t}.Custom(custom_type){\r\n\t\tDiv(Class: text-normal, Body: EcosysParam(supplier_type, #supplier_type#))\r\n\t}.Custom(custom_map){\r\n\t\tMap(MapType:hybrid, Hmap:80, Value:#supplier_map#)\r\n\t}.Custom(custom_address){\r\n\t\tDiv(Class: text-normal, Body: #address#)\r\n\t}.Custom(custom_edit){\r\n        Div(Class: pull-right){\r\n\t\t    Button(Class: btn btn-primary, Body: Em(Class:fa fa-edit), Page: supplychains_addManufacturer, PageParams: \"supplier_id=#id#\")\r\n            If(EcosysParam(supplychains_is_demo)==1){ \r\n                Button(Class: btn btn-danger, Body: Em(Class:fa fa-close), Contract: supplychains_deleteManufacturer, Params: \"supplier_id=#id#\", Page: supplychains_manufacturers).Alert(Text: Do you want to delete?, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)\r\n            }\r\n        }\r\n\t}.Where(\"delete=0\").Order(\"id\")\r\n\r\n    Div(Class: panel panel-primary){\r\n        Form(){\r\n            Div(Class: list-group-item){ \r\n                Table(Source: src_suppliers, Columns: \"$id$=id,$name$=custom_name,$supplier_type$=custom_type,$map$=custom_map,$address$=custom_address,=custom_edit\")\r\n            }\r\n\r\n            Div(Class: panel-footer clearfix){\r\n                Div(Class: pull-right){\r\n                    Button(Page: supplychains_addManufacturer, Body: LangRes(add), Class: btn btn-primary)\r\n                }\r\n            }\r\n        }           \r\n    }\r\n\r\n}",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Menu": "supplychains_menu"
+        },
+        {
+            "Name": "supplychains_suppliers_add",
+            "Value": "Div(Class: content-wrapper){\r\n\r\n    SetTitle($create_manufacturer$)\r\n\tDiv(breadcrumb){\r\n        LinkPage($manufacturers$, supplychains_manufacturers)\r\n        Span(/).Style(margin-right: 10px; margin-left: 10px;)\r\n\t\tSpan(Class: text-muted, Body: $create_manufacturer$)\r\n\t}\r\n\t\r\n    Div(Class: row df f-valign){\r\n        Div(Class: col-md-3)\r\n        Div(Class: col-md-6){\r\n\r\n            Div(Class: panel panel-primary){\r\n                Div(Class: panel-heading, Body: LangRes(create_manufacturer))\r\n                Form(){\r\n\r\n\t\t\t\t\tIf(#supplier_id#>0){\r\n\t\t\t\t\t\tInput(Name: supplier_id, Class: form-control hidden, Type: Number, Value: #supplier_id#)\r\n\t\t\t\t\t\tDBFind(Name: supplychains_supplier, Source: src_suppliers).Where(id=#supplier_id#).Vars(prefix)\r\n\t\t\t\t\t}.Else{\r\n\t\t\t\t\t\tInput(Name: supplier_id, Class: form-control hidden, Type: Number, Value: 0)\r\n\t\t\t\t\t\tSetVar(Name: prefix_name, Value: \"\")\r\n\t\t\t\t\t\tSetVar(Name: prefix_supplier_type, Value: 1)\r\n\t\t\t\t\t}\r\n\t\t\t\t\t\t\r\n                    Div(Class: list-group-item){\r\n                        Div(Class: row df f-valign){\r\n                            Div(Class: col-md-3 mt-sm text-right){\r\n                                Label(For: supplier_name){\r\n                                    Span(Body: LangRes(name))\r\n                                }\r\n                            }\r\n                            Div(Class: col-md-9 mc-sm text-left){\r\n\t\t\t\t\t\t\t\tInput(Name: supplier_name, Class: form-control, Type: text, Value: #prefix_name#)\r\n                            } \r\n                        }\r\n                    }\r\n\t\t\t\t\t\r\n                    Div(Class: list-group-item){\r\n                        Div(Class: row df f-valign){\r\n                            Div(Class: col-md-3 mt-sm text-right){\r\n                                Label(For: supplier_type){\r\n                                    Span(Body: LangRes(supplier_type))\r\n                                }\r\n                            }\r\n                            Div(Class: col-md-9 mc-sm text-left){\r\n\t\t\t\t\t\t\t   EcosysParam(Name: supplier_type, Source: src_supplier_type)\r\n\t\t\t\t\t\t\t   Select(Name: supplier_type, Source: src_supplier_type, NameColumn: name, ValueColumn: id, Value: #prefix_supplier_type#)\r\n                            } \r\n                        }\r\n                    }\r\n\t\t\t\t\t\r\n                    Div(Class: list-group-item){\r\n                        Div(Class: row df f-valign){\r\n                            Div(Class: col-md-3 mt-sm text-right){\r\n                                Label(For: supplier_map){\r\n                                    Span(Body: LangRes(map))\r\n                                }\r\n                            }\r\n                            Div(Class: col-md-9 mc-sm text-left){\r\n\t\t\t\t\t\t\t\tIf(#supplier_id#>0){\r\n\t\t\t\t\t\t\t\t\tInputMap(Name: supplier_map, Type: poligon, MapType: hybrid, Value: #prefix_supplier_map#)\r\n\t\t\t\t\t\t\t\t}.Else{\r\n\t\t\t\t\t\t\t\t\tInputMap(Name: supplier_map, Type: poligon, MapType: hybrid, Value: `{\"zoom\":8, \"center\":{\"lat\":55.749942860682545,\"lng\":37.6207172870636}}`)\r\n\t\t\t\t\t\t\t\t}\r\n                            } \r\n                        }\r\n                    }\r\n\r\n                    Div(Class: panel-footer clearfix){\r\n                        Div(Class: pull-right){\r\n                            Button(Body: LangRes(back), Class: btn btn-default, Page: supplychains_manufacturers)\r\n                            Button(Body: LangRes(add), Class: btn btn-primary, Page: supplychains_manufacturers, Contract: supplychains_suppliers_add)\r\n                        }\r\n                    }\r\n                }\r\n\r\n            }\r\n        }\r\n\r\n        Div(Class: col-md-3)\r\n    }\r\n}",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Menu": "supplychains_menu"
+        },
+        {
             "Name": "supplychains_transport",
             "Value": "SetTitle($transport_companies$)\r\nDiv(breadcrumb){\r\n\tSpan(Class: text-muted, Body: $transport_companies$)\r\n}\r\n\r\nDBFind(supplychains_transport, src_transport).Custom(custom_id){\r\n\tDiv(h4 text-center){\r\n\t\t#id#\r\n\t}.Style(width: 60;)\r\n}.Custom(custom_name){\r\n\tDiv(h4 text-bold){\r\n\t\tLinkPage(Page: supplychains_transportView, Body: #name#, PageParams: \"m_id=#id#,m_name='#name#'\", Class: profile-flag text-blue)\r\n\t}\r\n}.Custom(custom_type){\r\n\tDiv(h4 text-center){\r\n\t\tEcosysParam(type_transport_company,#type#)\r\n\t}\r\n}.Custom(custom_edit){\r\n\tDiv(h4 text-center){\r\n\t\tButton(Page: supplychains_addTransport, Body: Em(Class: fa fa-edit), Params: \"vID=#id#\", Class: btn btn-primary)\r\n\t}\r\n\tIf(StateVal(is_demo)==1){ \r\n\t\tDiv(text-center){ \r\n\t\t\tButton(Contract: supplychains_deleteTransport, Body: Em(Class: fa fa-close), Params: \"vID=#id#\",Class: btn btn-danger, Page: supplychains_transport).Alert(Do you want to delete?, $yes$, $no$, Em(fa fa-close))\r\n\t\t}\r\n\t}\r\n}.Where(\"delete=0\").Order(\"id\")\r\n\r\nDiv(md-12 panel panel-default data-sweet-alert){\r\n    Div(panel-body){\r\n        Div(table-responsive){\r\n            Table(Source: src_transport, Columns: \"$id$=custom_id,$name$=custom_name,$type$=custom_type,$edit$=custom_edit\")\r\n        }\r\n    }\r\n    Div(panel-footer){\r\n        Div(clearfix){\r\n            Div(pull-right){\r\n\t\t\t\tButton(Page: supplychains_addTransport, Body: Add, Class: btn btn-primary)\r\n            }\r\n        }\r\n    }\r\n}",
             "Conditions": "ContractAccess(\"@1EditPage\")",
@@ -404,7 +426,7 @@
         {
             "Name": "cargo_type",
             "Value": "Container cargo, Liquid bulk, Dry bulk, Breakbulk, Ro-ro",
-            "Conditions": "ContractAccess(\"@1EditPage\")"
+            "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
             "Name": "supplier_type",
@@ -424,6 +446,11 @@
         {
             "Name": "supply_type",
             "Value": "manufacturer,transport company,warehouse,recipient",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "supplychains_is_demo",
+            "Value": "1",
             "Conditions": "ContractConditions(\"MainCondition\")"
         },
         {
@@ -456,6 +483,11 @@
         {
             "Name": "supplychains_steps",
             "Columns": "[{\"name\":\"receiver_role_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"holder_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"receiver_type\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"holder_role_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"holder_signature\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"receiver_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"date_signature\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"receiver_signature\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"receiver_date_signature\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"photo\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"supply_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"holder_name\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"receiver_name\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"step\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"delete\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"holder_type\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"holder_date_signature\",\"type\":\"datetime\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
+        },
+        {
+            "Name": "supplychains_suppliers",
+            "Columns": "[{\"name\":\"supplier_map\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"supplier_type\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"area\",\"type\":\"double\",\"conditions\":\"true\"},{\"name\":\"name\",\"type\":\"varchar\",\"conditions\":\"true\"},{\"name\":\"delete\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"address\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"role_id\",\"type\":\"number\",\"conditions\":\"true\"}]",
             "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
         },
         {
