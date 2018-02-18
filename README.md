@@ -2,7 +2,7 @@
 
 ### Useful links
 
-* [Apla packager](https://github.com/CynepHy6/ap)
+* [Applications packager](https://github.com/CynepHy6/ap)
 
 * [Applications structure](https://genesiskernel.github.io/apps/)
 
