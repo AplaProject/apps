@@ -1,50 +1,43 @@
-const masterBase = 'https://github.com/GenesisKernel/apps/tree/master/src'
-const linkBasePattern = /(<a href="\/GenesisKernel\/apps\/tree\/master\/src\/\w+?")/g
-function getLinks(){
-  fetch(masterBase).then(resp => resp.text()).then(data =>{
-    let links = data.match(linkBasePattern)
-    console.log(links)
+const masterUrl = 'https://api.github.com/repos/GenesisKernel/apps/git/trees/master'
+const baseLink = '<a href="https://raw.githubusercontent.com/GenesisKernel/apps/master/src/'
+
+function createLinks() {
+  fetch(masterUrl).then(resp => resp.json()).then(data => {
+    data.tree.forEach(el => {
+      if (el.type == 'tree' && el.path == 'src'){
+        fetch(el.url).then(resp => resp.json()).then(data => {
+          
+          data.tree.forEach(e =>{
+            let a = $(`${baseLink}${e.path}/struct.dot" class="graph-link" title="${e.path}">${e.path}</a><br>`)
+            $('#menu_list').append(a)
+          })
+        })
+      }
+    });
   })
 }
 
-jQuery(document).ready(function () {
-  getLinks()
-  // Installs error handling.
-  jQuery.ajaxSetup({
-    error: function (resp, e) {
-      if (resp.status == 0) {
-        alert('You are offline!!\n Please Check Your Network.')
-      } else if (resp.status == 404) {
-        alert('Requested URL not found.')
-      } else if (resp.status == 500) {
-        alert('Internel Server Error:\n\t' + resp.responseText)
-      } else if (e == 'parsererror') {
-        alert('Error.\nParsing JSON Request failed.')
-      } else if (e == 'timeout') {
-        alert('Request timeout.')
-      } else {
-        alert('Unknown Error.\n' + resp.responseText)
-      }
-    }
-  }) // error:function()
-  let svgDiv = jQuery('#graphviz_svg_div')
+$(document).ready(function () {
+  createLinks()
 
-  jQuery(document).on('click', '.graph-link', function (event) {
+  let svgDiv = $('#graphviz_svg_div')
+
+  $(document).on('click', '.graph-link', function (event) {
     let width = window.innerWidth,
       height = window.innerHeight
 
     event.preventDefault()
     svgDiv.html('')
     let url = $(this).attr('href')
-    fetch(url).then((resp) => resp.text()).then(data => {
+    fetch(url).then(resp => resp.text()).then(data => {
       let svg = Viz(data, 'svg')
       svgDiv.html(svg)
       let viewBox = $('#graphviz_svg_div > svg')
 
       let zoomer = svgPanZoom('svg', {
-        zoomScaleSensitivity: 0.4,
+        zoomScaleSensitivity: 0.2,
         minZoom: 0.1,
-        maxZoom: 10,
+        maxZoom: 50,
         fit: false,
         center: true,
         refreshRate: 'auto'
@@ -55,12 +48,12 @@ jQuery(document).ready(function () {
 
       zoomer.zoom(width / sizes.width)
       sizes = zoomer.getSizes()
-      console.log(sizes)
+      
       let y = 0
       if (sizes.height < height) {
         y = (height - sizes.height) / 2
-      }else{
-        y = sizes.height/(sizes.height/height) - height
+      } else {
+        y = sizes.height / (sizes.height / height) - height
       }
       zoomer.pan({
         x: 0,
