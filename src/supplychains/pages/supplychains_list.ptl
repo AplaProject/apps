@@ -1,77 +1,43 @@
-SetTitle(Supply Chains)
-Div(breadcrumb){
-    Span(Class: text-muted, Body: Supply Chains)
-}
+Div(content-wrapper ){
 
-DBFind(supplychains_supply, src_supply).Custom(custom_id){
-	Div(text-center h4){
-		#id#
+	SetTitle($supply_chain$)
+	Div(breadcrumb){
+		Span(Class: text-muted, Body: $supply_chain$)
 	}
-}.Custom(custom_supplier){
-	Div(text-left h4){
-		#supplier_name#
-	}
-}.Custom(custom_cargo){
-	Div(text-left h4){
-		#cargo_name#
-	}
-}.Custom(custom_recipient){
-	Div(text-left h4){
-		#recipient_name#
-	}
-}.Custom(custom_total_steps){
-	Div(text-center h4){
-		#total_steps#
-	}
-}.Custom(custom_finishing_steps){
-	Div(text-center h4){
+
+	DBFind(supplychains_supply, src_supply).Custom(custom_finishing_steps){
 		If(#status#>=3){ 
-			#step#
+			Span(#step#)
 		}
-	}
-}.Custom(custom_status){
-	Div(text-center h4){
-		EcosysParam(supply_status, #status#)
-	}
-}.Custom(custom_supply_chain){
-	Div(text-center h4){
+	}.Custom(custom_status){
+		Div(Class: text-normal, Body: EcosysParam(supply_status, #status#))
+	}.Custom(custom_supply_chain){
 		If(#status#<2){ 
-			Button(Page: supplychains_plan, Body: Plan Supply Chain, PageParams: "cargo=#cargo_id#", Class: btn btn-primary)
+			Button(Page: supplychains_view, Body: Plan Supply Chain, PageParams: "cargo_id=#cargo_id#", Class: btn btn-primary)
 		}
-	}
-	
-	Div(text-center h4){
 		If(#status#==2){ 
-			Button(Page: supplychains_plan, Body: Start Supply Chain, PageParams: "cargo=#cargo_id#", Class: btn btn-primary)
+			Button(Page: supplychains_view, Body: Start Supply Chain, PageParams: "cargo_id=#cargo_id#", Class: btn btn-primary)
 		}
-	}
-	
-	Div(text-center h4){
 		If(#status#>=3){ 
-			Button(Page: supplychains_view, Body: Supply Chain, PageParams: "cargo=#cargo_id#", Class: btn btn-primary)
+			Button(Page: supplychains_view, Body: Supply Chain, PageParams: "cargo_id=#cargo_id#", Class: btn btn-primary)
 		}
-	}
-}.Custom(custom_delete){
-	Div(text-center h4){
-		Button(Contracts: supplychains_delete, Bode: Em(fa fa-close), Params: "vID=#id#", Class: btn btn-danger,template, Page: supplychains_list)
-	}
-}
+	}.Custom(custom_delete){
+        If(EcosysParam(supplychains_is_demo)==1){ 
+		    Button(Class: btn btn-danger, Body: Em(Class:fa fa-close), Contract: supplychains_delete, Params: "supply_id=#id#", Page: supplychains_list).Alert(Text: Do you want to delete?, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+        }
+    }
 
-Div(md-12 panel panel-default data-sweet-alert){
-    Div(panel-body){
-        Div(table-responsive){
-            If(StateVal(is_demo)==1){
-				Table(Source: src_supply, Columns: "$id$=columns_id,$manufacturer$=custom_supplier,$cargo$=custom_cargo,$recipient$=custom_supplier,$total_steps$=custom_total_steps,$finished_steps$=custom_finishing_steps,$status$=custom_status,$supply_chain$=custom_supply_chain,$delete$=custom_delete")
-			}.Else{
-				Table(Source: src_supply, Columns: "$id$=columns_id,$manufacturer$=custom_supplier,$cargo$=custom_cargo,$recipient$=custom_supplier,$total_steps$=custom_total_steps,$finished_steps$=custom_finishing_steps,$status$=custom_status,$supply_chain$=custom_supply_chain")
-			}
-        }
-    }
-    Div(panel-footer){
-        Div(clearfix){
-            Div(pull-right){
-                Button(Page: supplychains_createStep1, Body: Create Supply Chain, Class: btn btn-primary)
+    Div(Class: panel panel-primary){
+        Form(){
+            Div(Class: list-group-item){ 
+                Table(Source: src_supply, Columns: "$id$=id,$manufacturer$=supplier_name,$cargo$=cargo_name,$recipient$=recipient_name,$total_steps$=total_steps,$finished_steps$=custom_finishing_steps,$status$=custom_status,$supply_chain$=custom_supply_chain,=custom_delete")
             }
-        }
-    }
+
+            Div(Class: panel-footer clearfix){
+                Div(Class: pull-right){
+                    Button(Page: supplychains_add_step1, Body: LangRes(create_supply_chain), Class: btn btn-primary)
+                }
+            }
+        }           
+    }	
 }
