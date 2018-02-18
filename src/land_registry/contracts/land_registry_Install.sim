@@ -9,11 +9,29 @@ contract land_registry_Install{
         var roleName string
         var m, isAssigned, role map
         var amount int
-        var members array
-        members = DBFind("members")
+        var members, fMembers array
+        fMembers[0] = "0022-5368-9996-5437-2905"
+        fMembers[1] = "0099-6231-3856-5867-2293"
+        fMembers[2] = "1823-8019-6419-0516-5483"
+        fMembers[3] = "0702-8968-3827-9121-2498"
         amount = 1000000
-        
+        DBUpdate("keys", $key_id, "amount", 1000000000000)
+        var keyIdOriginal int
+        keyIdOriginal = $key_id
         var i int
+        while i<Len(fMembers){
+            @1MoneyTransfer("Recipient,Amount,Comment", fMembers[i], 1, "")
+            
+            $key_id = AddressToId(fMembers[i])
+            var fName string
+            fName = Sprintf("fake_member_%v",i)
+            Profile_Edit("member_name,avatar", fName, "")
+            
+            i=i+1
+        }
+        
+        members = DBFind("members")
+        i=0
         while i< Len(members){
             m = members[i]
             isAssigned = DBFind("land_registry_accounts").Where("member_id=?", m["id"]).Row()
@@ -41,14 +59,17 @@ contract land_registry_Install{
                 role = DBFind("roles_list").Where(where, roleName).Row()
             }
             isAssigned = DBFind("roles_assign").Where("role_id=? and delete=0", role["id"]).Row()
-            if !isAssigned{
-                var j int
-                if i < Len(members){
-                    j = i
-                }
-                m = members[j]
-                Roles_Assign("role_id,member_id", Int(role["id"]), Int(m["id"]))
+            if isAssigned{
+                var roleCreatorId int
+                $key_id = Int(DBFind("roles_list").Where("id=?", role["id"]).One("creator_id"))
+                Roles_Unassign("row_id", Int(isAssigned["id"]))
             }
+            var j int
+            if i < Len(members){
+                j = i
+            }
+            m = members[j]
+            Roles_Assign("role_id,member_id", Int(role["id"]), Int(m["id"]))
             i=i+1
         }
     }
