@@ -1,29 +1,24 @@
-contract supplychains_addSupply  
-{
-    data 
-    {
-        manufacturer int
-        cargo int
+contract supplychains_addSupply {
+    data {
+        supplier_id int
+        cargo_id int
     }
 
-    conditions 
-    {
-    }
+    conditions {}
 
-    action 
-    {
-		var ret array
-		ret = DBFind("supplychains_manufacturers").Columns("name").Where("id=?", $manufacturer)
-		ret = ret[0]
-		$manufacturer_name = ret["name"]
-		ret = DBFind("supplychains_cargo").Columns("name").Where("id=?", $cargo)
-		ret = ret[0]
-        $cargo_name = ret["name"]
+    action {
 
-        
-        
-        DBInsert("supplychains_supply", "supplier_id,supplier_name,cargo_id,cargo_name,status,step,delete", $manufacturer, $manufacturer_name, $cargo, $cargo_name, 0, -2, 0)
-        
-        DBUpdate("supplychains_cargo", $cargo, "btn_block", 1)
+        $supplier_name = DBFind("supplychains_suppliers").Where("id=?", $supplier_id).One("name")
+		if ($supplier_name == nil){
+			warning "Supplier not found"
+		}
+
+        $cargo_name = DBFind("supplychains_cargos").Where("id=?", $cargo_id).One("name")
+		if ($cargo_name == nil){
+			warning "Cargo not found"
+		}
+
+        DBInsert("supplychains_supply", "supplier_id,supplier_name,cargo_id,cargo_name,status,step,delete", $supplier_id, $supplier_name, $cargo_id, $cargo_name, 0, -2, 0)
+        DBUpdate("supplychains_cargos", $cargo_id, "btn_block", 1)
     }
 }

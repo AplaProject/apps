@@ -1,56 +1,51 @@
 Div(content-wrapper){
+
 	SetTitle($supplychain_plan$)
     Div(breadcrumb){
         LinkPage(Supply Chains, supplychains_list)
         Span(/).Style(margin-right: 10px; margin-left: 10px;)
         Span(Class: text-muted, Body: $supplychain_plan$)
     }
-    Div( row df f-valign){
-    	Div( col-md-2 mt-sm text-left)
-        Div( col-md-8 mt-sm text-left){ 
-            Div(md-8 panel panel-default elastic data-sweet-alert){
+	
+    Div(Class: row df f-valign){
+        Div(Class: col-md-2)
+        Div(Class: col-md-8){
+		
+            Div(Class: panel panel-primary){
                 Form(){
-					DBFind(supplychains_supply, src_supply).Where("cargo_id = #cargo#").Limit(1).Vars("supply")
-
-					Input(Name: cargo_id, "form-control hidden m-b disabled=''",text,text,#cargo#)
-
-					Input(Name: vOne, Class: "form-control hidden m-b disabled=''", Type: text, Value: 1)
-					Input(Name: vTwo, Class: "form-control hidden m-b disabled=''", Type: text, Value: 2)
+					DBFind(supplychains_supply, src_supply).Where("cargo_id = #cargo_id#").Vars("supply")
+					Input(Name: cargo_id, Class: form-control hidden, Type: Number, Value: #cargo_id#)
+					Input(Name: vOne, Class: form-control hidden, Type: Number, Value: 1)
+					Input(Name: vTwo, Class: form-control hidden, Type: Number, Value: 2)
                 
-                    Div(list-group-item){
-
-                        Div( row df f-valign){
-                			Div( col-md-3 mt-xs text-center){
-								DBFind(supplychains_cargo, src_cargo).Where("id = #supply_cargo_id#").Vars("cargo")
-                			    SetVar(image, #cargo_qr_code#) 
-                			    Div(h4 text-center, If(GetVar(image)!==""){ Image(#image#) })
+					DBFind(supplychains_cargos, src_cargos).Where("id=#cargo_id#").Vars("cargo")
+                    Div(Class: list-group-item){
+                        Div(Class: row df f-valign){
+                            Div(Class: col-md-3 mt-sm text-center){
+								Image(Src: "#cargo_qr_code#").Style(width: 100px;)
                             }
-                			Div( col-md-3 mt-xs text-right){
-                                P(h5){ Supplier name: }
-								P(h5){ Cargo name: }
+                            Div(Class: col-md-3 mt-sm text-right){
+                                Div(Body: Supplier name:)
+								Div(Body: Cargo name:)
                                 If(#supply_step#>-2){
-									P(h5){ Recipient name: }
-									P(h5){ Date dispatch: }
-									P(h5){ Date receipt: }
+									Div(Body: Recipient name:)
+									Div(Body: Date dispatch:)
+									Div(Body: Date receipt:)
                                 }
-                            }
-                			Div( col-md-6 mt-xs text-left){
-								P(h5){ #supply_supplier_name# }
-								P(h5){ #supply_cargo_name# }
+                            } 
+                            Div(Class: col-md-6 mt-sm text-left){
+								Div(Body: #supply_supplier_name#)
+								Div(Body: #supply_cargo_name#)
                                 If(#supply_step#>-2){
-                                    P(h5){  #supply_recipient_name# }
-                                    P(h5){  DateTime(#supply_date_dispatch#, DD.MM.YYYY HH:MI) }
-                                    P(h5){  DateTime(#supply_date_receipt#, DD.MM.YYYY HH:MI) }
+                                    Div(Body: #supply_recipient_name#)
+                                    Div(Body: DateTime(DateTime: #supply_date_dispatch#, Format: "DD.MM.YYYY"))
+                                    Div(Body: DateTime(DateTime: #supply_date_receipt#, Format: "DD.MM.YYYY"))
                                 }
-                            }
+                            } 
                         }
-
-                    }                
+                    }          
                     
-					DBFind(supplychains_supply, src_supply_id).Columns(id).Where("cargo_id = #cargo#").Limit(1).Vars("supply")
-					
-					DBFind(supplychains_steps, src_pos).Columns("step, id, holder_name, holder_type, receiver_name,receiver_type").Where("supply_id = #supply_id#")
-                    
+					DBFind(supplychains_steps, src_pos).Where("supply_id = #supply_id#")
                     ForList(src_pos){
                         Div(list-group-item) {
                         
@@ -100,38 +95,55 @@ Div(content-wrapper){
                         
                         SetVar(hol_member_id, 0)
                         SetVar(rec_member_id, 0)
-                        
                     }
                     
+					
+					
+					
+					
+					
+					
+					
+					
                     If(#supply_step#==-2){
-                        Div(list-group-item){
-                            Div( row df f-valign){
-                    			Div( col-md-4 mt-sm text-right){
-                    			    Div(h4 text-normal, "Recipient:")
-                                }
-                    			Div( col-md-8 mt-sm text-left){
-									DBFind(supplychains_recipients, src_recipientsList).Columns(name,id).Where("delete=0")
-									Select(Source: src_recipientsList, Name: recipient_id, NameColumn: name, ValueColumn: id, Value: 0)
+						Div(Class: list-group-item){
+							Div(Class: row df f-valign){
+								Div(Class: col-md-4 mt-sm text-right){
+									Label(){
+										Span(Body: LangRes(recipient))
+									}
 								}
-                            }
-                            Div( row df f-valign){
-                    			Div( col-md-4 mt-sm text-right){
-                    			    Div(h4 text-normal, "Date dispatch:")
-                                }
-                    			Div( col-md-8 mt-sm text-left){
-                    			    Input(Name: date_dispatch, Class: form-control, Placeholder: "", Type: date, Value: Now(YYYY/MM/DD 00:00))
-                                }
-                            }
-                            Div( row df f-valign){
-                    			Div( col-md-4 mt-sm text-right){
-                    			    Div(h4 text-normal, "Date receipt:")
-                                }
-                    			Div( col-md-8 mt-sm text-left){
-                                    Input(Name: date_receipt, Class: form-control, Placeholder: "", Type: date, Value: Now(YYYY/MM/DD 00:00, 10 days))
-                                }
-                            }
-                        }
+								Div(Class: col-md-8 mb-sm text-left){
+									DBFind(supplychains_recipients, src_recipientsList).Columns(name,id).Where("delete=0")
+									Select(Source: src_recipientsList, Name: recipient_id, NameColumn: name, ValueColumn: id)
+								}
+							}
+							Div(Class: row df f-valign){
+								Div(Class: col-md-4 mt-sm text-right){
+									Label(){
+										Span(Body: LangRes(Date dispatch))
+									}
+								}
+								Div(Class: col-md-8 mb-sm text-left){
+									Input(Name: date_dispatch, Class: form-control, Type: date, Value: Now("YYYY-MM-DD"))
+								}
+							}
+							Div(Class: row df f-valign){
+								Div(Class: col-md-4 mt-sm text-right){
+									Label(){
+										Span(Body: LangRes(Date receipt))
+									}
+								}
+								Div(Class: col-md-8 mc-sm text-left){
+									Input(Name: date_receipt, Class: form-control, Type: date, Value: Now("YYYY-MM-DD", 10 days))
+								}
+							}
+						}
                     }
+					
+					
+					
+					
                     If(#supply_step#==-1){
                         Div(list-group-item){
                             Div( row df f-valign){
@@ -174,33 +186,26 @@ Div(content-wrapper){
                         }
                     }
 					
-					Div(panel-footer){
-						If(#supply_step#==-2){
-							Div(clearfix){
-								Div(pull-right){
-									Button(Contract: supplychains_supplyAddRecipient, Body: Next, Params: "cargo_id=#cargo_id#, recipient_id=Val(recipient_id), date_dispatch=Val(date_dispatch), date_receipt=Val(date_receipt)", Page: supplychains_plan, PageParams: "cargo=#cargo#", Class: btn btn-primary)
-								}
+					Div(Class: panel-footer clearfix){
+						Div(Class: pull-right){
+							If(#supply_step#==-2){
+								Button(Body: LangRes(next_step), Class: btn btn-primary, Contract: supplychains_supplyAddRecipient, Params: "cargo_id=#cargo_id#, recipient_id=Val(recipient_id), date_dispatch=Val(date_dispatch), date_receipt=Val(date_receipt)", Page: supplychains_plan, PageParams: "cargo_id=#cargo_id#")
 							}
-						}
-						If(#supply_step#==-1){
-							Div( clearfix pull-right){
-								Button(Contract: supplychains_supplyAddTransportCompany, Body: Next, Params: "cargo_id=#cargo_id#, transport_company_id=Val(transport_company_id)", Page: supplychains_plan, PageParams: "cargo=#cargo#", Class: btn btn-primary)
+							If(#supply_step#==-1){
+								Button(Body: LangRes(next_step), Class: btn btn-primary, Contract: supplychains_supplyAddTransportCompany, Params: "cargo_id=#cargo_id#, transport_company_id=Val(transport_company_id)", Page: supplychains_plan, PageParams: "cargo_id=#cargo_id#")
 							}
-						}
-						If(And(#supply_step#>-1,#supply_status#==1)){
-							Div( clearfix pull-right){
-								Button(Contract: supplychains_recipientPoint, Body: Recipient point, Params: "cargo_id=#cargo_id#", Page: supplychains_plan, PageParams: "cargo=#cargo#", Class: btn btn-primary)
+							If(And(#supply_step#>-1,#supply_status#==1)){
+								Button(Body: LangRes(recipient_point), Class: btn btn-primary, Contract: supplychains_recipientPoint, Params: "cargo_id=#cargo_id#", Page: supplychains_plan, PageParams: "cargo_id=#cargo_id#")
 							}
-						}
-						If(#supply_status#==2){
-							Div( clearfix pull-right){
-								Button(Class: btn btn-primary, Contract: supplychains_start, Body: Start Supply Chain, Params: "cargo_id=#cargo_id#", Page: supplychains_plan, PageParams: "cargo=#cargo#")
+							If(#supply_status#==2){
+								Button(Body: LangRes(start_supply_chain), Class: btn btn-primary, Contract: supplychains_start, Params: "cargo_id=#cargo_id#", Page: supplychains_plan, PageParams: "cargo_id=#cargo_id#")
 							}
 						}
 					}
-                }
-            }
-        }
-        Div( col-md-2 mt-sm text-left)
+
+				}
+			}
+		}
+        Div(Class: col-md-3)
     }
 }
