@@ -35,7 +35,7 @@ $(document).ready(function () {
       let viewBox = $('#graphviz_svg_div > svg')
 
       let zoomer = svgPanZoom('svg', {
-        zoomScaleSensitivity: 0.2,
+        zoomScaleSensitivity: 0.4,
         minZoom: 0.1,
         maxZoom: 50,
         fit: false,
