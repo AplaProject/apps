@@ -1,7 +1,14 @@
-// Delay loading any function until the html dom has loaded. All functions are
-// defined in this top level function to ensure private scope.
-jQuery(document).ready(function () {
+const masterBase = 'http://github.com/GenesisKernel/apps/tree/master/src'
+const linkBasePattern = /(<a href="\/GenesisKernel\/apps\/tree\/master\/src\/\w+?")/g
+function getLinks(){
+  fetch(masterBase).then(resp => resp.text()).then(data =>{
+    let links = data.match(linkBasePattern)
+    console.log(links)
+  })
+}
 
+jQuery(document).ready(function () {
+  getLinks()
   // Installs error handling.
   jQuery.ajaxSetup({
     error: function (resp, e) {
