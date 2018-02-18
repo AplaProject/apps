@@ -1,4 +1,4 @@
-const masterBase = 'http://github.com/GenesisKernel/apps/tree/master/src'
+const masterBase = 'https://github.com/GenesisKernel/apps/tree/master/src'
 const linkBasePattern = /(<a href="\/GenesisKernel\/apps\/tree\/master\/src\/\w+?")/g
 function getLinks(){
   fetch(masterBase).then(resp => resp.text()).then(data =>{
