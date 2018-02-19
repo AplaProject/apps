@@ -8,4 +8,6 @@
 
 * [Genesis Blockchain](https://github.com/GenesisKernel/go-genesis)
 
+* [Genesis front](https://github.com/GenesisKernel/genesis-front)
+
 * [Quick-start Genesis demo](https://github.com/GenesisKernel/quick-start)
