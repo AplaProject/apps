@@ -1,0 +1,84 @@
+contract car145_nextStep {
+    data {
+        application_id int
+    }
+
+    conditions {
+
+    }
+
+    action {
+        var confirmatons map
+        confirmatons = DBFind("car145_confirmations").Where("application_id = ?", $application_id).Row()
+
+        while(true){
+
+            if(confirmatons["step_102"] == 0){
+                var admin_id int
+                admin_id = DBFind("roles_assign").Where("role_name = ?", "Admin").One("member_id")
+
+                DBUpdate("car145_applications", $application_id, "status, can_edit", 1, 0)
+
+                var params string
+                params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v", $application_id, "102", "1.02", "Review all documents")
+
+                Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", admin_id, "fa-file-alt", "CAR-145", "An application is pending", "car145_adminView", params)
+                break
+            }
+            if(confirmatons["step_1021"] == 0){
+                var admin_id int
+                admin_id = DBFind("roles_assign").Where("role_name = ?", "Admin").One("member_id")
+
+                var params string
+                params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v", $application_id, "1021", "1.021", "Choose payment amount")
+
+                Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", admin_id, "fa-file-alt", "CAR-145", "Choose payment amount", "car145_choosePayment", params)
+                break
+            }
+            if(confirmatons["step_106"] == 0){
+                var applicant_id int
+                applicant_id = DBFind("car145_applications").Where("id = ?", $application_id).One("coordinator_id")
+
+                var params string
+                params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v", $application_id, "106", "1.06", "Payment confirmation")
+
+                Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", applicant_id, "fa-file-alt", "CAR-145", "Confirm payment", "car145_confirmPayment", params)
+                break
+            }
+            if(confirmatons["step_201"] == 0){
+                var admin_id int
+                admin_id = DBFind("roles_assign").Where("role_name = ?", "Admin").One("member_id")
+
+                var params string
+                params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v", $application_id, "201", "2.01", "Review completeness of provided Documents")
+
+                Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", admin_id, "fa-file-alt", "CAR-145", "An application is pending", "car145_adminView", params)
+                break
+            }
+            if(confirmatons["step_204"] == 0){
+                var manager_id int
+                manager_id = DBFind("roles_assign").Where("role_name = ?", "TAM Manager").One("member_id")
+
+                var params string
+                params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v", $application_id, "204", "2.04", "Accept Application and Assign to an Inspector")
+
+                Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", manager_id, "fa-file-alt", "CAR-145", "An application is pending", "car145_adminView", params)
+                break
+            }
+            if(confirmatons["step_207"] == 0){
+                var inspector_id int
+                inspector_id = DBFind("roles_assign").Where("role_name = ?", "Inspector").One("member_id")
+
+                var params string
+                params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v", $application_id, "207", "2.07", "Review submitted documents")
+
+                Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", inspector_id, "fa-file-alt", "CAR-145", "An application is pending", "car145_adminView", params)
+                break
+            }
+
+            break
+        }
+
+            
+    }
+}

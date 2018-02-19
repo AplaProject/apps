@@ -1,0 +1,26 @@
+contract car145_rejectApplication {
+    data {
+        application_id int
+        stage int
+        message string
+        notific_id int
+    }
+
+    conditions {
+
+    }
+
+    action {
+        var applicant_id int
+        applicant_id = DBFind("car145_applications").Where("id = ?", $application_id).One("coordinator_id")
+
+        var params string
+        params = Sprintf("application_id=%v,stage=%v", $application_id, $stage)
+
+        DBUpdate("car145_applications", $application_id, "can_edit", 1)
+
+        Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", applicant_id, "fa-file-alt", "CAR-145", $message, "car145_view", params)
+
+        Notifications_Single_Close("notific_id", $notific_id)
+    }
+}
