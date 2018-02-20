@@ -41,30 +41,61 @@ Div(content-wrapper){
                             } 
                         }
                     }          
-                    
-					DBFind(supplychains_steps, src_pos).Where("supply_id=#supply_id# and step=#supply_step#")
+
+					DBFind(supplychains_steps, src_pos).Where("supply_id=#supply_id# and step=#supply_step#").Order("step")
                     ForList(src_pos){
+					
+                        SetVar(hol_id, 0)
+                        SetVar(rec_id, 0)
+					
+						DBFind(roles_assign, src_hol).Where("role_id=#holder_role_id# and delete=0").Vars("hol")
+						DBFind(roles_assign, src_rec).Where("role_id=#receiver_role_id# and delete=0").Vars("rec")
+						
                         Div(list-group-item) {
-							
                             Div(row df f-valign){
                                 Div(col-md-2 m-xs text-center){
                                     Div(h5, #holder_name#)
+									
+                    			    If(Or(#holder_signature#>0,#holder_signature#<0)){
+                    			        Div(h5 text-success, Successfully signed DateTime(DateTime: #holder_date_signature#, Format: "DD.MM.YYYY"))
+                    			    }	
                                 }
                     			Div( col-md-3 m-xs text-right){
+									If(#hol_id#>0){
+										LinkPage(Page: profile_view, PageParams: "v_member_id=#hol_member_id#"){
+											Span(Class: h5, Body: #hol_member_name#)
+											If(#hol_member_avatar# != ""){
+												Image(Src: "#hol_member_avatar#", Class: img-circle).Style(width: 30px;  border: 1px solid #5A5D63; margin-left: 10px;)
+											}
+										}
+									}
                     			   Div(h6 text-muted, EcosysParam(supply_type, #holder_type#))
                                 }
                                 Div( col-md-2 m-xs text-center){
                                     Div(h4 text-normal, Em(Class: fa fa-arrow-right))
                                 }
                     			Div( col-md-3 m-xs text-left){
+									If(#rec_id#>0){
+										LinkPage(Page: profile_view, PageParams: "v_member_id=#rec_member_id#"){
+											If(#rec_member_avatar# != ""){
+												Image(Src: "#rec_member_avatar#", Class: img-circle).Style(width: 30px;  border: 1px solid #5A5D63; margin-right: 10px;)
+											}
+											Span(Class: h5, Body: #rec_member_name#)
+										}
+									}
                     			    Div(h6 text-muted, EcosysParam(supply_type,#receiver_type#))
                                 }
                                 Div( col-md-2 m-xs text-center){
                                     Div(h5 , #receiver_name# )
+									
+                    			    If(Or(#receiver_signature#>0,#receiver_signature#<0)){
+                    			        Div(h5 text-success, Successfully signed DateTime(DateTime: #receiver_date_signature#, Format: "DD.MM.YYYY"))
+                    			    }
                                 }
                             }
                         }
                     }
+					
 					
 					Div(Class: list-group-item){
 						Div(Class: row){
@@ -74,7 +105,7 @@ Div(content-wrapper){
 								}
 							}
 							Div(col-md-5 mc-sm text-left){
-								ImageInput(Name: photo, Width: 100, Ratio: 1/1)
+								ImageInput(Name: photo, Width: 450, Ratio: 2/1)
 							} 
 							Div(col-md-3 mc-sm) 
 						}
