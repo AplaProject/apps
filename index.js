@@ -21,8 +21,10 @@ $(document).ready(function () {
   createLinks()
 
   let svgDiv = $('#graphviz_svg_div')
+  let title = $('#title')
 
   $(document).on('click', '.graph-link', function (event) {
+    title.text($(this).html())
     let width = window.innerWidth,
       height = window.innerHeight
 
