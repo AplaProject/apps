@@ -1,11 +1,13 @@
 contract car145_nextStep {
+    
     data {
         application_id int
     }
     
     conditions {}
-        
+    
     action {
+        
         var confirmatons map
         confirmatons = DBFind("car145_confirmations").Where("application_id = ?", $application_id).Row()
         
@@ -21,6 +23,7 @@ contract car145_nextStep {
                 params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v,role_name=%v", $application_id, "102", "1.02", "Review all documents", "Admin")
                 
                 Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val", admin_id, 1, "fa-file-alt", "CAR-145", "An application is pending", "car145_adminView", params)
+                Notifications_Roles_Processing("notific_id", $notification_id)
                 break
             }
             if(confirmatons["step_1021"] == 0){
@@ -31,6 +34,7 @@ contract car145_nextStep {
                 params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v,role_name=%v", $application_id, "1021", "1.021", "Choose payment amount", "Admin")
                 
                 Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val", admin_id, 1, "fa-file-alt", "CAR-145", "Choose payment amount", "car145_choosePayment", params)
+                Notifications_Roles_Processing("notific_id", $notification_id)
                 break
             }
             if(confirmatons["step_106"] == 0){
@@ -51,6 +55,7 @@ contract car145_nextStep {
                 params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v,role_name=%v", $application_id, "201", "2.01", "Review completeness of provided Documents", "Admin")
                 
                 Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val", admin_id, 1, "fa-file-alt", "CAR-145", "An application is pending", "car145_adminView", params)
+                Notifications_Roles_Processing("notific_id", $notification_id)
                 break
             }
             if(confirmatons["step_204"] == 0){
@@ -61,6 +66,7 @@ contract car145_nextStep {
                 params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v,role_name=%v", $application_id, "204", "2.04", "Accept Application and Assign to an Inspector", "TAM Manager")
                 
                 Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val", manager_id, 1, "fa-file-alt", "CAR-145", "An application is pending", "car145_adminView", params)
+                Notifications_Roles_Processing("notific_id", $notification_id)
                 break
             }
             if(confirmatons["step_207"] == 0){
@@ -71,6 +77,7 @@ contract car145_nextStep {
                 params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v,role_name=%v", $application_id, "207", "2.07", "Review submitted documents", "Inspector")
                 
                 Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val", inspector_id, 1, "fa-file-alt", "CAR-145", "An application is pending", "car145_adminView", params)
+                Notifications_Roles_Processing("notific_id", $notification_id)
                 break
             }
             
@@ -84,30 +91,32 @@ contract car145_nextStep {
                 var role_id int
                 role_id = DBFind("roles_list").Where("role_name = ? and delete=0", role_name).One("id")
                 Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val", role_id, 1, "fa-file-alt", "CAR-145", title, page, params)
+                Notifications_Roles_Processing("notific_id", $notification_id)
                 break
             }
             if confirmatons["step_304"] == 0 {
                 var role_name, title, page, params string
-                role_name = "Applicat"
+                role_name = "Applicant"
                 title = "Compliance Report upload"
                 page = "car145_documentAdd_304"
                 params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v,role_name=%v", $application_id, "304", "3.04", title, role_name)
                 
-                var role_id int
-                role_id = DBFind("roles_list").Where("role_name=? and delete=0", role_name).One("id")
-                Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val", role_id, 1, "fa-file-alt", "CAR-145", title, page, params)
+                var applicant_id int
+                applicant_id = DBFind("car145_applications").Where("id = ?", $application_id).One("coordinator_id")
+                Notifications_Single_Send("role_id,icon_name,text_header,text_body,page_name,params_val", applicant_id, "fa-file-alt", "CAR-145", title, page, params)
                 break
             }
             if confirmatons["step_307"] == 0 {
                 var role_name, title, page, params string
-                role_name = "Applicat"
+                role_name = "Applicant"
                 title = "Provide Recommendation to the Manager"
                 page = "car145_textForm_307"
                 params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v,role_name=%v", $application_id, "307", "3.07", title, role_name)
                 
-                var role_id int
-                role_id = DBFind("roles_list").Where("role_name=? and delete=0", role_name).One("id")
-                Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val", role_id, 1, "fa-file-alt", "CAR-145", title, page, params)
+                var applicant_id int
+                applicant_id = DBFind("car145_applications").Where("id = ?", $application_id).One("coordinator_id")
+                Notifications_Roles_Send("role_id,icon_name,text_header,text_body,page_name,params_val", applicant_id, "fa-file-alt", "CAR-145", title, page, params)
+                Notifications_Roles_Processing("notific_id", $notification_id)
                 break
             }
             
@@ -121,6 +130,7 @@ contract car145_nextStep {
                 params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v,role_name=%v", $application_id, "308", "3.08", "Recommendation", "TAM Manager")
                 
                 Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val", manager_id, 1, "fa-file-alt", "CAR-145", "Recommendation from inspector", "car145_step308", params)
+                Notifications_Roles_Processing("notific_id", $notification_id)
                 break
             }
             if(confirmatons["step_401"] == 0){
@@ -131,6 +141,7 @@ contract car145_nextStep {
                 params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v,role_name=%v", $application_id, "401", "4.01", "Calculate the fees of the service based on parameters of working hours", "Inspector")
                 
                 Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val", inspector_id, 1, "fa-file-alt", "CAR-145", "Calculate the fees of the service based on parameters of working hours", "car145_fees", params)
+                Notifications_Roles_Processing("notific_id", $notification_id)
                 break
             }
             if(confirmatons["step_402"] == 0){
@@ -141,6 +152,7 @@ contract car145_nextStep {
                 params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v,role_name=%v", $application_id, "402", "4.02", "Payment confirmation", "Inspector")
                 
                 Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val", inspector_id, 1, "fa-file-alt", "CAR-145", "Payment confirmation", "car145_confirmPayment402", params)
+                Notifications_Roles_Processing("notific_id", $notification_id)
                 break
             }
             if(confirmatons["step_404"] == 0){
@@ -151,6 +163,7 @@ contract car145_nextStep {
                 params = Sprintf("application_id=%v,stage=%v,stage_str=%v,stage_name=%v,role_name=%v", $application_id, "404", "4.04", "Sign Certificate as per TAM", "TAM Manager")
                 
                 Notifications_Roles_Send("role_id,closure_type,icon_name,text_header,text_body,page_name,params_val", manager_id, 1, "fa-file-alt", "CAR-145", "Sign Certificate as per TAM", "car145_certificateSign", params)
+                Notifications_Roles_Processing("notific_id", $notification_id)
                 break
             }
             if(confirmatons["step_4041"] == 0){
