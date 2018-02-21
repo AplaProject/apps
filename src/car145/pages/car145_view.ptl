@@ -1,12 +1,11 @@
 Div(Class: content-wrapper){
+	DBFind("car145_applications").Where("coordinator_id = #key_id#").Order("id desc").Limit(1).Vars("app")
+	Div(Class: h1 text-center, Body: Application #app_id#, Step: #app_current_step#)
     Div(Class: df f-valign){
         Div(Class: block-center container-lg){
             Div(Class: panel panel-primary){
 				Div(Class: panel-heading, Body: CAR-145 Application)
 				Form(){
-					
-						DBFind("car145_applications").Where("coordinator_id = #key_id#").Order("id desc").Limit(1).Vars("app")
-						
 						SetVar(application_id, #app_id#)
 						
 						Input(Name: application_id, Class: form-control hidden, Type: number, Value: #application_id#)
@@ -174,11 +173,15 @@ Div(Class: content-wrapper){
 						}
 						Div(Class: list-group-item pb0){
 							Div(Class: text-center h3, Body: Specialized Services)
-							DBFind(Name: car145_specializedservices, Source: src_specializedservices).Where(application_id = #application_id# and delete = 0).Order(id desc).Custom(custom_name){
+							DBFind(Name: car145_specializedservices, Source: src_specializedservices).Where(application_id = #application_id# and delete = 0).Order(id desc).Custom(custom_actions){
+								If(GetVar(app_can_edit)){
+									Button(Class: btn btn-danger, Body: Em(Class: "fa fa-trash"), Contract: car145_serviceDelete, Params: "id=#id#", Page: "car145_view", PageParams: "application_id=#application_id#,notific_id=#notific_id#,stage=#stage#,stage_str=#stage_str#,stage_name=#stage_name#,role_name=#role_name#")
+								}
+							}.Custom(custom_name){
 								EcosysParam(specialized_services, #service_id#)
 							}
 							Div(Class: df f-valign){
-								Table(Source: src_specializedservices, Columns: "$name$=custom_name,$actions$=custom_actions")
+								Table(Source: src_specializedservices, Columns: "$name$=custom_name,$actions$=custom_actions").Style("tr  > *:first-child {padding-left:0px;} tr  > *:last-child {text-align:right; padding-right:0px;}")
 							}
 							If(GetVar(app_can_edit)){
 								Div(Class: row df f-valign panel-footer){
@@ -266,7 +269,7 @@ Div(Class: content-wrapper){
 							}
 							
 							Div(Class: df f-valign){
-								Table(src_documents, "Description=comment,$document_type$=custom_document_type,Link=data,$actions$=custom_actions").Style("tr  > *:first-child {padding-left:0px;} tr  > *:last-child {text-align:right; padding-right:0px;}")
+								Table(src_documents, "Description=comment,$document_type$=custom_document_type,Blockchain Link=data,$actions$=custom_actions").Style("tr  > *:first-child {padding-left:0px;} tr  > *:last-child {text-align:right; padding-right:0px;}")
 							}
 							If(GetVar(app_can_edit)){
 								Div(Class: row df f-valign panel-footer){
@@ -289,11 +292,27 @@ Div(Class: content-wrapper){
 								}
 							}.Else{
 								Div(Class: row df f-valign){
-									Div(Class: text-center){
-										Span(Body: #app_note#)
+									Div(Class: col-md-1)
+									Div(Class: col-md-10 text-center){
+										Span(Body: #app_note#).Style("white-space: pre-wrap;word-wrap: break-word;")
 									}
 								}
 							}				
+						}
+						If(#app_rejected# > 0){
+							Div(Class: list-group-item pb0){
+								If(#app_rejected_finally# > 0){
+									Div(Class: text-center h3 text-danger, Body: Finally Rejected)
+								}.Else{
+									Div(Class: text-center h3 text-danger, Body: Rejected)
+								}
+								Div(Class: text-center h3, Body: Comment from #app_rejected_by_role# (#app_rejected_by_name#))
+								Div(Class: row df f-valign){
+									Div(Class: text-center){
+										Span(Body: #app_rejection_reason#)
+									}
+								}			
+							}
 						}
 						If(And(GetVar(app_can_edit), GetVar(app_services_filled), GetVar(app_note_filled), GetVar(app_aircraft_filled), GetVar(app_component_filled), GetVar(app_organization_filled), GetVar(app_other_filled), GetVar(app_engine_filled))){
 							Div(Class: p-lg clearfix){
@@ -304,6 +323,27 @@ Div(Class: content-wrapper){
 										}.Else{
 											Button(Class: btn btn-primary, Body: Send, Contract: car145_nextStep, Params: "application_id=#application_id#", Page: "car145_view")
 										}
+										
+									}
+								}
+							}
+						}
+						If(#stage# == 310){
+							Div(Class: p-lg clearfix){
+								Div(Class: df f-valign){
+									Div(Class: text-center){
+										Button(Class: btn btn-primary, Body: OK, Contract: Notifications_Single_Close, Params: "notific_id=#notific_id#", Page: "car145_view")
+									}
+								}
+							}
+						}
+						
+						DBFind("car145_confirmations").Where("application_id = #application_id#").Limit(1).Vars("confirm")
+						If(#confirm_step_404# > 0){
+							Div(Class: p-lg clearfix){
+								Div(Class: df f-valign){
+									Div(Class: text-center){
+										Button(Class: btn btn-primary, Body: View Certificate, Page: "car145_certrificateView")
 									}
 								}
 							}
