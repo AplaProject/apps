@@ -24,12 +24,12 @@ Div(content-wrapper){
 								Image(Src: "#cargo_qr_code#").Style(width: 120px;)
                             }
                             Div(Class: col-md-3 mt-sm text-right){
-                                Div(Body: Supplier name:)
-								Div(Body: Cargo name:)
-								Div(Body: Recipient name:)
-								Div(Body: Date dispatch:)
-								Div(Body: Date receipt:)
-                                Div(Body: Step:)
+								Div(Body: LangRes(supplier):)
+								Div(Body: LangRes(cargo):)
+								Div(Body: LangRes(recipient):)
+								Div(Body: LangRes(date_dispatch):)
+								Div(Body: LangRes(date_receipt):)
+								Div(Body: LangRes(finished_steps):)
                             } 
                             Div(Class: col-md-6 mt-sm text-left){
 								Div(Body: #supply_supplier_name#)
@@ -57,7 +57,8 @@ Div(content-wrapper){
                                     Div(h5, #holder_name#)
 									
                     			    If(Or(#holder_signature#>0,#holder_signature#<0)){
-                    			        Div(h5 text-success, Successfully signed DateTime(DateTime: #holder_date_signature#, Format: "DD.MM.YYYY"))
+                    			        Div(h5 m0 text-success, LangRes(supply_successfully_signed))
+										Div(h5 m0 text-success, DateTime(DateTime: #holder_date_signature#, Format: "DD.MM.YYYY HH:MI"))
                     			    }	
                                 }
                     			Div( col-md-3 m-xs text-right){
@@ -89,51 +90,54 @@ Div(content-wrapper){
                                     Div(h5 , #receiver_name# )
 									
                     			    If(Or(#receiver_signature#>0,#receiver_signature#<0)){
-                    			        Div(h5 text-success, Successfully signed DateTime(DateTime: #receiver_date_signature#, Format: "DD.MM.YYYY"))
+                    			        Div(h5 m0 text-success, LangRes(supply_successfully_signed))
+										Div(h5 m0 text-success, DateTime(DateTime: #receiver_date_signature#, Format: "DD.MM.YYYY HH:MI"))
                     			    }
                                 }
                             }
                         }
                     }
 					
-					
-					Div(Class: list-group-item){
-						Div(Class: row){
-							Div(Class: col-md-4 mt-sm text-right){
-								Label(For: photo){
-									Span(Body: LangRes(photo))
-								}
-							}
-							Div(col-md-5 mc-sm text-left){
-								ImageInput(Name: photo, Width: 450, Ratio: 2/1)
-							} 
-							Div(col-md-3 mc-sm) 
-						}
-					}
-					
 					DBFind(supplychains_steps, src_steps).Where("id = #step_id#").Vars("step")
-					DBFind(roles_assign, src_assign1).Where("role_id=#step_holder_role_id# and member_id=#key_id# and delete=0").Vars("hol")
-					DBFind(roles_assign, src_assign1).Where("role_id=#step_receiver_role_id# and member_id=#key_id# and delete=0").Vars("rec")
+					DBFind(roles_assign, src_assign_hol).Where("role_id=#step_holder_role_id# and delete=0").Vars("hol")
+					DBFind(roles_assign, src_assign_rec).Where("role_id=#step_receiver_role_id# and delete=0").Vars("rec")
 					
-					Div(Class: panel-footer clearfix){
-						Div(Class: pull-right){
-							DBFind(members, src_members).Where("id = #key_id#").Vars("prefix")
-							Span(Your signature:).Style(margin-right: 20px;)
-							Span(){
-								If(#prefix_avatar# != ""){
-									Image(Src: "#prefix_avatar#", Class: img-circle).Style(width: 30px;  border: 1px solid #5A5D63; margin-right: 10px;)
+					If(#rec_member_id# == #key_id#){
+						Div(Class: list-group-item){
+							Div(Class: row){
+								Div(Class: col-md-4 mt-sm text-right){
+									Label(For: photo){
+										Span(Body: LangRes(recipient_photo))
+									}
 								}
-								Span(Class: h5, Body: #prefix_member_name#)
-							}.Style(margin-right: 20px;)
-							If(#hol_id#>0){
-								Button(Contract: supplychains_sign, Body: Handed over, Params: "step_id=#step_id#,vFlag=1,notific_id=#notific_id#", Page: supplychains_view, PageParams: "cargo_id=#cargo_id#", Class: btn bg-gray-dark)
-							}
-							If(#rec_id#>0){
-								Button(Contract: supplychains_sign, Body: Taken over, Params: "step_id=#step_id#,vFlag=2,notific_id=#notific_id#", Page: supplychains_view, PageParams: "cargo_id=#cargo_id#", Class: btn bg-gray-dark)
+								Div(col-md-5 mc-sm text-left){
+									ImageInput(Name: photo, Width: 450, Ratio: 2/1)
+								} 
+								Div(col-md-3 mc-sm) 
 							}
 						}
 					}
 					
+					If(Or(And(#hol_member_id#==#key_id#,#step_holder_signature#==0),And(#rec_member_id#==#key_id#,#step_receiver_signature#==0))){
+						Div(Class: panel-footer clearfix){
+							Div(Class: pull-right){
+								DBFind(members, src_members).Where("id = #key_id#").Vars("prefix")
+								Span(Body: LangRes(supply_your_signature):).Style(margin-right: 20px;)
+								Span(){
+									If(#prefix_avatar# != ""){
+										Image(Src: "#prefix_avatar#", Class: img-circle).Style(width: 30px;  border: 1px solid #5A5D63; margin-right: 10px;)
+									}
+									Span(Class: h5, Body: #prefix_member_name#)
+								}.Style(margin-right: 20px;)
+								If(And(#hol_member_id#==#key_id#,#step_holder_signature#==0)){
+									Button(Contract: supplychains_sign, Body: LangRes(supply_handed_over), Params: "step_id=#step_id#,vFlag=1,notific_id=#notific_id#", Page: supplychains_view, PageParams: "cargo_id=#cargo_id#", Class: btn bg-gray-dark)
+								}
+								If(And(#rec_member_id#==#key_id#,#step_receiver_signature#==0)){
+									Button(Contract: supplychains_sign, Body: LangRes(supply_taken_over), Params: "step_id=#step_id#,vFlag=2,notific_id=#notific_id#", Page: supplychains_view, PageParams: "cargo_id=#cargo_id#", Class: btn bg-gray-dark)
+								}
+							}
+						}
+					}
 				}
 			}
 		}
