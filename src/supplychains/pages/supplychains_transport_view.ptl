@@ -9,11 +9,9 @@ Div(Class: content-wrapper){
 		Span(Class: text-muted, Body: #prefix_name#)
 	}
 
-    DBFind(Name: supplychains_requests, Source: src_requests).Where("request_type=2 and param=#transport_id#").Order("id DESC").Vars(retrieve)
-
     Div(Class: panel panel-primary){
         Form(){
-            DBFind(Name: supplychains_supply, Source: src_supply).Where("status>1 and delete=0 and id in (#retrieve_request1#)").Custom(custom_supplier){
+            DBFind(Name: supplychains_supply, Source: src_supply).Where("delete=0 and id in (#prefix_string_supply_id#)").Custom(custom_supplier){
                 Span(Class: h5 text-bold, Body: #supplier_name#)
             }.Custom(custom_recipient){
                 Span(Class: h5 text-bold, Body: #recipient_name#)
@@ -55,12 +53,17 @@ Div(Class: content-wrapper){
 
     Div(Class: panel panel-primary){
         Form(){
-			DBFind(supplychains_cargos, src_cargo).Where("delete=0 and id in (#retrieve_request2#)").Custom(custom_cargo_type){
+			DBFind(supplychains_cargos, src_cargo).Where("delete=0 and transport_id=#transport_id#").Custom(custom_cargo_type){
                 Div(Class: text-normal, Body: EcosysParam(supply_cargos, #cargo_type#))
 			}.Custom(custom_qr){
                 Image(Src: "#qr_code#").Style(width: 60px; border: 2px solid #5A5D63;)
             }.Custom(custom_edit){
                 Div(Class: pull-right){
+                    If(EcosysParam(supply_admin_mode)==1){
+                        Span(){ 
+                            Button(Class: btn btn-danger, Body: Em(Class:fa fa-2x fa-close), Contract: supplychains_cargos_del, Params: "cargo_id=#id#", Page: supplychains_transport_view, PageParams: "transport_id=#transport_id#").Alert(Text: Do you want to delete?, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                        }.Style(margin-right: 20px;)
+                    }
                     Button(Page: supplychains_view, Body: Em(Class: fa-2x icon-eye), PageParams: "cargo_id=#id#", Class: btn btn-default)
                 }
 			}.Order(id)

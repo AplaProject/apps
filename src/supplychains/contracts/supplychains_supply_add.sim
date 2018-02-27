@@ -4,12 +4,9 @@ contract supplychains_supply_add {
         cargo_id int
     }
 
-    conditions {}
-
-    action {
-
-        $supplier_name = DBFind("supplychains_suppliers").Where("id=?", $supplier_id).One("name")
-		if ($supplier_name == nil){
+    conditions {
+        $supplier_map = DBFind("supplychains_suppliers").Where("id=?", $supplier_id).Row()
+		if ($supplier_map["id"] == nil){
 			warning "Supplier not found"
 		}
 
@@ -17,8 +14,19 @@ contract supplychains_supply_add {
 		if ($cargo_name == nil){
 			warning "Cargo not found"
 		}
+    }
 
-        DBInsert("supplychains_supply", "supplier_id,supplier_name,cargo_id,cargo_name,status,step,delete", $supplier_id, $supplier_name, $cargo_id, $cargo_name, 0, -2, 0)
+    action {
+        // create new supply
+        $supply_id = DBInsert("supplychains_supply", "timestamp date_create,supplier_id,supplier_name,cargo_id,cargo_name,status,step,delete", 
+            $block_time, $supplier_id, Str($supplier_map["name"]), $cargo_id, $cargo_name, 0, -2, 0)
+
+        // add supply in supplier
+        $string_supply_id = Str($supplier_map["string_supply_id"])
+        $string_supply_id = $string_supply_id + "," + Str($supply_id)
+        DBUpdate("supplychains_suppliers", $supplier_id, "string_supply_id", $string_supply_id)
+
+        // blocked cargo
         DBUpdate("supplychains_cargos", $cargo_id, "btn_block", 1)
     }
 }
