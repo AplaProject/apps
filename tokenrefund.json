@@ -2,8 +2,23 @@
     "blocks": [],
     "contracts": [
         {
+            "Name": "Debug",
+            "Value": "contract Debug{\n    data{\n        Value string\n    }\n    action{\n        DBInsert(\"debug\", \"value\", $Value)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "tokenrefund_Accept",
+            "Value": "contract tokenrefund_Accept{\n    data{\n        Id string\n    }\n    \n    func refundAmount(SufferingAccount,SuspectAccount,Amount string){\n        //todo: ВОЗВРАТ ТОКЕНОВ\n        Debug(\"Value\",\"ВОЗВРАТ ТОКЕНОВ\")\n    }\n    func unblockAccounts(SufferingAccount,SuspectAccount string){\n        //todo: РАЗБЛОКИРОВКА АККАУНТОВ\n        Debug(\"Value\",\"РАЗБЛОКИРОВКА АККАУНТОВ\")\n    }\n    \n    conditions{\n        Debug(\"Value\",\"tokenrefund_Accept\")\n        $tokenrefund = DBFind(\"tokenrefund\").Where(\"id=?\", $Id).Row()\n        if !$tokenrefund{\n            Debug(\"Value\", \"tokenrefund не найден\")\n            return\n        }\n    }\n    \n    action{\n        unblockAccounts($tokenrefund[\"suffering_key_id\"],$tokenrefund[\"suspect_key_id\"])\n        refundAmount($tokenrefund[\"suffering_key_id\"],$tokenrefund[\"suspect_key_id\"],$tokenrefund[\"amount\"])\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "tokenrefund_Reject",
+            "Value": "contract tokenrefund_Reject{\n    data{\n        Id string\n    }\n    \n    func unblockAccounts(SufferingAccount,SuspectAccount string){\n        //todo: РАЗБЛОКИРОВКА АККАУНТОВ\n        Debug(\"Value\", \"РАЗБЛОКИРОВКА АККАУНТОВ\")\n    }\n    \n    conditions{\n        Debug(\"Value\", \"tokenrefund_Reject\")\n        $tokenrefund = DBFind(\"tokenrefund\").Where(\"id=?\", $Id).Row()\n        if !$tokenrefund{\n            Debug(\"Value\", \"tokenrefund не найден\")\n            return\n        }\n    }\n    \n    action{\n        unblockAccounts($tokenrefund[\"suffering_key_id\"],$tokenrefund[\"suspect_key_id\"])\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
             "Name": "tokenrefund_Start",
-            "Value": "contract tokenrefund_Start{\n    data{\n        SufferingAccount string\n        SuspectAccount string\n        Amount int\n        Note string\n        DateStart string \"date\"\n        DateEnd string \"date\"\n        DatetimeNow string \"date\"\n        TimeNow string \"date\"\n    }\n    \n    conditions{\n        var allowed map\n        allowed = DBFind(\"roles_assign\").Where(\"role_name='Validator' and role_type=3 and delete=0 and member_id=?\", $key_id)\n        if !allowed{\n            warning \"You can not to run this\"\n        }\n        \n        var template_id int\n        template_id = DBFind(\"laws\").Where(\"name='tokenrefund'\").One(\"voting_template_id\")\n        if template_id == nil{\n            info \"Template not found\"\n        }\n        \n        $template = DBFind(\"voting_templates\").Where(\"id=?\", template_id).Row()\n        $votersRoleName = $template[\"voters\"]\n        $votingName = $template[\"title\"]\n        $typeParticipants = 3 // участников добавим по роли\n        $typeDecision = 5 // запуск контракта\n        $typeVoting = 2 // системное голосование\n        $volume = Int($template[\"volume\"])\n        $quorum = Int($template[\"quorum\"])\n        $contractAccept = $template[\"contract_accept\"]\n        $contractReject = $template[\"contract_reject\"]\n        \n        $desc = Sprintf(\"%v [#%v]\", $votingName, $TemplateId)\n        \n        \n        $isCreated = DBFind(\"voting_instances\").Where(\"name=? and description=? and delete=0\", $votingName, $desc).Row()\n        if $isCreated{\n            // info \"Voting already created\" // раскомментировать на проде\n        }\n        \n        $defaultParams = Sprintf(\"VotingTemplateId->%v;KeyId->%v\", $TemplateId, $key_id)\n    }\n    \n    action{\n        $voting_id = 0 // должно установиться в voting_CreateNew\n        voting_CreateNew(\"voting_name,type_voting,description,type_participants,type_decision,volume,quorum,now_date,start_time,end_time,start_date,end_date\", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $volume, $quorum, $DatetimeNow, $TimeNow, $TimeNow, $DateStart, $DateEnd)\n        if $voting_id == 0 {\n            $voting_id = DBFind(\"voting_instances\").Where(\"voting_name=? and start_date=?\", $votingName, $DateStart).One(\"id\")\n            $voting_id = Int($voting_id)\n        }\n        voting_SubjectContract(\"votingID,contract_reject,contract_accept,contract_reject_params,contract_accept_params\", $voting_id, $contractAccept, $contractReject, $defaultParams, $defaultParams)\n        \n        var roleId int\n        roleId = DBFind(\"roles_list\").Where(\"role_name=? and delete=0\", $votersRoleName).One(\"id\")\n        voting_Invite(\"votingID,var_id\", $voting_id, roleId)\n    }\n}",
+            "Value": "contract tokenrefund_Start{\n    data{\n        SufferingAccount string\n        SuspectAccount string\n        Amount int\n        Note string\n        DateStart string \"date\"\n        DateEnd string \"date\"\n        DatetimeNow string \"date\"\n        TimeNow string \"date\"\n    }\n    func blockAccounts(sufferingKey, suspectKey int){\n        //todo: БЛОКИРОВКА АККАУНТОВ\n        Debug(\"Value\", Sprintf(\"БЛОКИРОВКА АККАУНТОВ (%s, %s)\", sufferingKey, suspectKey))\n    }\n    \n    conditions{\n        Debug(\"Value\", \"tokenrefund_Start\")\n        \n        $sufferingKey = AddressToId($SufferingAccount)\n        $suspectKey = AddressToId($SuspectAccount)\n        if $Amount <= 0{\n            info \"Amount not valid\"\n        }\n        if $sufferingKey == 0{\n            info \"Suffering address not valid\"\n        }\n        if $suspectKey == 0{\n            info \"Suspect address not valid\"\n        }\n        if Size($Note) == 0{\n            info \"Please add description\"\n        }\n        var allowed map\n        allowed = DBFind(\"roles_assign\").Where(\"role_name='Validator' and role_type=3 and delete=0 and member_id=?\", $key_id)\n        if !allowed{\n            // закомментировано для отладки\n            // warning \"You not Validator. You can not to run this\"\n        }\n        \n        var template_id int\n        template_id = DBFind(\"laws\").Where(\"name='tokenrefund'\").One(\"voting_template_id\")\n        if template_id == nil{\n            template_id = DBFind(\"voting_templates\").Where(\"type='law' and type_id=1\").One(\"id\")\n            if template_id == nil{\n                info \"Template not found\"\n            }\n            Debug(\"Value\", \"template id найдено в voting_templates\")\n        }\n        \n        $template = DBFind(\"voting_templates\").Where(\"id=?\", template_id).Row()\n        $votersRoleName = $template[\"voters\"]\n        $votingName = $template[\"title\"]\n        $typeParticipants = 3 // участников добавим по роли\n        $typeDecision = 5 // запуск контракта\n        $typeVoting = 2 // системное голосование\n        $volume = Int($template[\"volume\"])\n        $quorum = Int($template[\"quorum\"])\n        $contractAccept = $template[\"contract_accept\"]\n        $contractReject = $template[\"contract_reject\"]\n        \n        $desc = Sprintf(\"%v [#%v]\", $votingName, template_id)\n        \n        var isExist map\n        isExist = DBFind(\"voting_instances\").Where(\"name=? and description=? and delete=0\", $votingName, $desc).Row()\n        if isExist{\n            // info \"Voting already created\" // раскомментировать на проде\n        }\n        \n        Debug(\"Value\", \"tokenrefund_Start. condition ok\")\n    }\n    \n    action{\n        blockAccounts($sufferingKey,$suspectKey)\n        \n        $voting_id = 0 // должно установиться в voting_CreateNew\n        voting_CreateNew(\"voting_name,type_voting,description,type_participants,type_decision,volume,quorum,now_date,start_time,end_time,start_date,end_date\", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $volume, $quorum, $DatetimeNow, $TimeNow, $TimeNow, $DateStart, $DateEnd)\n        if $voting_id == 0 {\n            $voting_id = DBFind(\"voting_instances\").Where(\"voting_name=? and start_date=?\", $votingName, $DateStart).One(\"id\")\n            $voting_id = Int($voting_id)\n        }\n        var tokenrefundId int\n        tokenrefundId = DBInsert(\"tokenrefund\", \"suffering_key_id,suspect_key_id,amount,note,validator_key_id,blocked_at,voting_id\", $sufferingKey, $suspectKey, $Amount, $Note, $key_id, $DatetimeNow, $voting_id)\n        \n        $defaultParams = Sprintf(\"Id->%v\", tokenrefundId)\n        \n        voting_SubjectContract(\"votingID,contract_reject,contract_accept,contract_reject_params,contract_accept_params\", $voting_id, $contractReject, $contractAccept, $defaultParams, $defaultParams)\n        \n        var roleId int\n        roleId = DBFind(\"roles_list\").Where(\"role_name=? and delete=0\", $votersRoleName).One(\"id\")\n        voting_Invite(\"votingID,var_id\", $voting_id, roleId)\n        \n        \n        Debug(\"Value\", \"tokenrefund_Start. action ok\")\n    }\n}",
             "Conditions": "ContractConditions(\"MainCondition\")"
         }
     ],
@@ -16,7 +31,9 @@
                 "volume",
                 "quorum",
                 "contract_accept",
-                "contract_reject"
+                "contract_reject",
+                "type",
+                "type_id"
             ],
             "Data": [
                 [
@@ -25,7 +42,9 @@
                     "70",
                     "51",
                     "tokenrefund_Accept",
-                    "tokenrefund_Reject"
+                    "tokenrefund_Reject",
+                    "law",
+                    "1"
                 ]
             ]
         }
@@ -49,7 +68,7 @@
         {
             "Name": "tokenrefund_start",
             "Conditions": "",
-            "Trans": "{\"en\": \"Closed\", \"ru\": \"Закрыто\"}"
+            "Trans": "{\"en\": \"Refund\", \"ru\": \"Возврат средств\"}"
         },
         {
             "Name": "tokenrefund_status0",
@@ -88,7 +107,7 @@
         },
         {
             "Name": "tokenrefund_start",
-            "Value": "Data(Source: inputs, Columns:\"name,type,res\"){\n    Amount,number,amount\n    SufferingAccount,text,tokenrefund_suffering\n    SuspectAccount,text,tokenrefund_suspect\n    Note,textarea,description\n}\nDiv(content-wrapper){\n    SetTitle($tokenrefund_start$)\n    Div(row){\n        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){\n            Form(panel panel-primary){\n                Div(panel-heading, Body: $new_voting_value$)\n                Div(panel-body){\n                    ForList(Source: inputs){\n                        Div(row form-group){\n                            Div(col-sm-4){LangRes(#res#)}\n                            Div(col-sm-8){\n                                Input(Name: #name#, Type: #type#)\n                            }\n                        }\n                    }\n                }\n                Div(panel-footer text-right){\n                    Input(Name: DateStart, Type: hidden, Value: Now(\"YYYY-MM-DD\", +1 day))\n                    Input(Name: DateEnd, Type: hidden, Value: Now(\"YYYY-MM-DD\", +2 day))\n                    Input(Name: DatetimeNow, Type: hidden, Value: Now(\"YYYY-MM-DD HH:MI\"))\n                    Input(Name: TimeNow, Type: hidden, Value: Now(\"HH:MI\"))\n                    Button(Body: $start_refund$, Contract: tokenrefund_Start, Page: tokenrefund_list, Class: btn btn-primary)\n                }\n            }\n        }\n    }\n}",
+            "Value": "Data(Source: inputs, Columns:\"name,type,res,placeholder\"){\n    Amount,number,amount,\"\"\n    SufferingAccount,text,tokenrefund_suffering,xxxx-xxxx-xxxx-xxxx-xxxx\n    SuspectAccount,text,tokenrefund_suspect,xxxx-xxxx-xxxx-xxxx-xxxx\n    Note,textarea,description,\"\"\n}\nDiv(content-wrapper){\n    SetTitle($tokenrefund_start$)\n    Div(row){\n        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){\n            Form(panel panel-primary){\n                Div(panel-heading, Body: $new_voting_value$)\n                Div(panel-body){\n                    ForList(Source: inputs){\n                        Div(row form-group){\n                            Div(col-sm-4){LangRes(#res#)}\n                            Div(col-sm-8){\n                                Input(Name: #name#, Type: #type#, Placeholder: #placeholder#)\n                            }\n                        }\n                    }\n                }\n                Div(panel-footer text-right){\n                    Input(Name: DateStart, Type: hidden, Value: Now(\"YYYY-MM-DD\", +1 day))\n                    Input(Name: DateEnd, Type: hidden, Value: Now(\"YYYY-MM-DD\", +2 day))\n                    Input(Name: DatetimeNow, Type: hidden, Value: Now(\"YYYY-MM-DD HH:MI\"))\n                    Input(Name: TimeNow, Type: hidden, Value: Now(\"HH:MI\"))\n                    Button(Body: $start_refund$, Contract: tokenrefund_Start, Page: tokenrefund_list, Class: btn btn-primary)\n                }\n            }\n        }\n    }\n}",
             "Conditions": "ContractConditions(\"MainCondition\")",
             "Menu": "default_menu"
         }
@@ -107,13 +126,18 @@
     ],
     "tables": [
         {
+            "Name": "debug",
+            "Columns": "[\n    {\n        \"name\": \"value\",\n        \"type\": \"text\",\n        \"conditions\": \"true\"\n    }\n]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
+        },
+        {
             "Name": "laws",
             "Columns": "[\n    {\n        \"name\": \"name\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"page\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"voting_template_id\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    }\n]",
             "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
         },
         {
             "Name": "tokenrefund",
-            "Columns": "[\n    {\n        \"name\": \"accounts\",\n        \"type\": \"text\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"amount\",\n        \"type\": \"money\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"note\",\n        \"type\": \"text\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"validator_id\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"blocked_at\",\n        \"type\": \"datetime\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"voting_id\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"result\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"status\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"closed_at\",\n        \"type\": \"datetime\",\n        \"conditions\": \"true\"\n    }\n]",
+            "Columns": "[\n    {\n        \"name\": \"suffering_key_id\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"suspect_key_id\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"amount\",\n        \"type\": \"money\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"note\",\n        \"type\": \"text\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"validator_key_id\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"blocked_at\",\n        \"type\": \"datetime\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"voting_id\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"result\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"status\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"closed_at\",\n        \"type\": \"datetime\",\n        \"conditions\": \"true\"\n    }\n]",
             "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
         }
     ]
