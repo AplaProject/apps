@@ -1,0 +1,26 @@
+contract Roles_CandidateDelegate_Add{
+    data{
+        MemberId int
+    }
+    
+    conditions{
+        var roleName string
+        roleName = "candidate_delegate"
+        var roleType int
+        roleType = 1 // appointed
+        var member map
+        member = DBFind("members").Where("id=?",$MemberId).Row()
+        if !member{
+            info Sprintf("Member (%v) not found", $MemberId)
+        }
+        // create role if not exists
+        $role = DBFind("roles_list").Where("role_name=?",roleName).Row()
+        if !$role{
+            info Sprintf("Role (%s) not found", roleName)
+        }
+    }
+    
+    action{
+        Roles_Assign("role_id,member_id", Int($role["id"]), $MemberId)
+    }
+}
