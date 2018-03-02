@@ -1,31 +1,31 @@
 contract tokenrefund_Start{
     data{
-        SufferingAccount string
+        VictimAccount string
         SuspectAccount string
         Amount int
         Note string
         DateStart string "date"
         DateEnd string "date"
-        DatetimeNow string "date"
+        DateNow string "date"
         TimeNow string "date"
     }
-    func blockAccounts(sufferingKey, suspectKey int){
+    func blockAccounts(victimKey, attackerKey int){
         //todo: БЛОКИРОВКА АККАУНТОВ
-        Debug("Value", Sprintf("БЛОКИРОВКА АККАУНТОВ (%s, %s)", sufferingKey, suspectKey))
+        Debug("Value", Sprintf("БЛОКИРОВКА АККАУНТОВ (%v, %v)", victimKey, attackerKey))
     }
     
     conditions{
         Debug("Value", "tokenrefund_Start")
         
-        $sufferingKey = AddressToId($SufferingAccount)
-        $suspectKey = AddressToId($SuspectAccount)
+        $victimKey = AddressToId($VictimAccount)
+        $attackerKey = AddressToId($SuspectAccount)
         if $Amount <= 0{
             info "Amount not valid"
         }
-        if $sufferingKey == 0{
-            info "Suffering address not valid"
+        if $victimKey == 0{
+            info "Victim address not valid"
         }
-        if $suspectKey == 0{
+        if $attackerKey == 0{
             info "Suspect address not valid"
         }
         if Size($Note) == 0{
@@ -59,7 +59,7 @@ contract tokenrefund_Start{
         $contractAccept = $template["contract_accept"]
         $contractReject = $template["contract_reject"]
         
-        $desc = Sprintf("%v [#%v]", $votingName, template_id)
+        $desc = Sprintf("%v (victim: %v, attacker: %v)", $votingName, $VictimAccount, $SuspectAccount)
         
         var isExist map
         isExist = DBFind("voting_instances").Where("name=? and description=? and delete=0", $votingName, $desc).Row()
@@ -71,16 +71,16 @@ contract tokenrefund_Start{
     }
     
     action{
-        blockAccounts($sufferingKey,$suspectKey)
+        blockAccounts($victimKey,$attackerKey)
         
         $voting_id = 0 // должно установиться в voting_CreateNew
-        voting_CreateNew("voting_name,type_voting,description,type_participants,type_decision,volume,quorum,now_date,start_time,end_time,start_date,end_date", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $volume, $quorum, $DatetimeNow, $TimeNow, $TimeNow, $DateStart, $DateEnd)
+        voting_CreateNew("voting_name,type_voting,description,type_participants,type_decision,volume,quorum,now_date,start_time,end_time,start_date,end_date", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $volume, $quorum, $DateNow, $TimeNow, $TimeNow, $DateStart, $DateEnd)
         if $voting_id == 0 {
             $voting_id = DBFind("voting_instances").Where("voting_name=? and start_date=?", $votingName, $DateStart).One("id")
             $voting_id = Int($voting_id)
         }
         var tokenrefundId int
-        tokenrefundId = DBInsert("tokenrefund", "suffering_key_id,suspect_key_id,amount,note,validator_key_id,blocked_at,voting_id", $sufferingKey, $suspectKey, $Amount, $Note, $key_id, $DatetimeNow, $voting_id)
+        tokenrefundId = DBInsert("tokenrefund", "victim_key_id,attacker_key_id,amount,note,validator_key_id,blocked_at,voting_id", $victimKey, $attackerKey, $Amount, $Note, $key_id, $DateNow, $voting_id)
         
         $defaultParams = Sprintf("Id->%v", tokenrefundId)
         
