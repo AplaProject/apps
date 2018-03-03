@@ -1,0 +1,39 @@
+Div(content-wrapper){
+    SetTitle($sysparams_candidates_list$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $sysparams_candidates_list$)
+    }
+    
+    DBFind(Name:sysparams_candidate, Source: src_candidates).Where("deleted=0").Custom(buttons){
+        DBFind(Name: voting_instances, Source: src_vi).Where("name='Voting for Validator'").Where("contract_accept_params='VotingTemplateId->1;KeyId->#candidate_key_id#'").Where("delete=0").Vars(vi)
+
+        
+        If(#vi_id#>0){}.Else{
+            Form(btn-group){
+                Input(Name:Id, Type: hidden, Value: #id#)
+                Input(Name:Start, Type: hidden, Value: Now("YYYY-MM-DD", +1 days))
+                Input(Name:StartTime, Type: hidden, Value: Now("HH:MI"))
+                Input(Name:End, Type: hidden, Value: Now("YYYY-MM-DD", +14 days))
+                Input(Name:EndTime, Type: hidden, Value: Now("HH:MI"))
+                Button(Body: $voting_start$, Contract: sysparams_StartVotingValidator, Page: voting_list, Params: "VotingParamId=1", Class: btn btn-primary)
+            }
+        }
+    }.Custom(_date){
+        DateTime(DateTime: #date_created#, Format: YYYY-MM-DD HH:MI)
+    }
+    
+    Div(row){
+        Div(col-md-12){
+            Div(panel panel-primary){
+                Div(Class: list-group-item){
+                    Table(Source: src_candidates, Columns: "$id$=id,$host_ip$=host_ip,$commission_address$=commission_address,$description_equipment$=description,$comment$=comment,$date_created$=_date,=buttons")
+                }
+                Div(Class: panel-footer clearfix){
+                    Div(Class: pull-right){
+                        Button(Body: LangRes(add), Class: btn btn-primary, Page: sysparams_candidate_validators_form)
+                    }
+                }
+            }
+        }
+    }
+}

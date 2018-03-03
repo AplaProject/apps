@@ -1,0 +1,24 @@
+contract request_membership {
+    data {
+        member_name string
+        avatar string "image"
+    }
+
+    conditions {
+
+    }
+
+    action {
+		var request_id int
+        request_id = DBInsert("membership_requests", "public_key,member_name,avatar", $key_id, $member_name, $avatar)
+
+        var params, heads map
+        heads["Authorization"] = "Bearer " + $auth_token
+        params["vde"] = "false"
+        params["request_id"] = request_id
+
+        var ret string
+        ret = HTTPRequest("http://localhost:7079/api/v2/node/membership_sendNotification", "POST", heads, params)
+        DBInsert("debug", "data", ret)
+    }
+}
