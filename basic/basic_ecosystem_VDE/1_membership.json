@@ -3,7 +3,7 @@
     "contracts": [
         {
             "Name": "membership_request",
-            "Value": "contract membership_request {\n    data {\n        member_name string\n        avatar string \"image\"\n    }\n\n    conditions {\n        $request_id = DBFind(\"membership_requests\").Where(\"member_id = $\", $key_id).One(\"id\")\n        if ($request_id != nil) {\n            warning \"Request was sent earlier\"\n        }\n\n        if(Size($avatar) == 0){\n            warning \"Avatar was not received\"\n        }\n    }\n\n    action {\n        DBInsert(\"membership_requests\", \"member_id,member_name,avatar\", $key_id, $member_name, $avatar)\n    }\n}",
+            "Value": "contract membership_request {\n    data {\n        member_name string\n        pub_key string\n        avatar string \"image\"\n        comment string \"optional\" \n    }\n\n    conditions {\n        $request_id = DBFind(\"membership_requests\").Where(\"member_id = $\", $key_id).One(\"id\")\n        if ($request_id != nil) {\n            warning \"Request was sent earlier\"\n        }\n\n        if(Size($avatar) == 0){\n            warning \"Avatar was not received\"\n        }\n\n        if(Size($pub_key) == 0){\n            warning \"Public key was not received\"\n        }\n    }\n\n    action {\n        DBInsert(\"membership_requests\", \"member_id,member_name,avatar,pub_key,comment\", $key_id, $member_name, $avatar, $pub_key, $comment)\n    }\n}",
             "Conditions": "ContractConditions(\"MainCondition\")"
         }
     ],
@@ -20,9 +20,19 @@
             "Trans": "{\"en\":\"Back\",\"ru\":\"Назад\"}"
         },
         {
+            "Name": "comment",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Comment\",\"ru\":\"Комментарий\"}"
+        },
+        {
             "Name": "member_id",
             "Conditions": "",
             "Trans": "{\"en\":\"Member ID\",\"ru\":\"ID члена\"}"
+        },
+        {
+            "Name": "pub_key",
+            "Conditions": "",
+            "Trans": "{\"en\":\"Public key\",\"ru\":\"Публичный ключ\"}"
         },
         {
             "Name": "request_accepted",
@@ -81,7 +91,7 @@
         },
         {
             "Name": "membership_request",
-            "Value": "Div(Class: content-wrapper){\r\n\r\n\tSetTitle($request_membership$)\r\n\tDiv(Class: breadcrumb){\r\n\t\tLinkPage($request_info$, membership_info)\r\n\t\tSpan(/).Style(margin-right: 10px; margin-left: 10px;)\r\n\t\tSpan(Class: text-muted, Body: $request_membership$)\r\n\t}\r\n\r\n    Div(Class: row df f-valign){\r\n        Div(Class: col-md-3)\r\n        Div(Class: col-md-6){\r\n            Div(Class: panel panel-primary){\r\n                Div(Class: panel-heading, Body: LangRes(request_membership))\r\n                Form(){ \r\n\t\t\t\t\tDiv(Class: list-group-item){\r\n\t\t\t\t\t\tDiv(Class: row df f-valign){\r\n\t\t\t\t\t\t\tDiv(Class: col-md-3 mt-sm text-right){\r\n\t\t\t\t\t\t\t\tLabel(For: username){\r\n\t\t\t\t\t\t\t\t\tSpan(Body: LangRes(username))\r\n      \t\t\t\t\t\t\t\tSpan(Class: text-danger, Body:*)\r\n\t\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\tDiv(Class: col-md-9 mc-sm text-left){\r\n\t\t\t\t\t\t\t\tInput(Class: form-control, Type: text, Name: member_name)\r\n\t\t\t\t\t\t\t} \r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t}\r\n\r\n\t\t\t\t\tDiv(Class: list-group-item){\r\n\t\t\t\t\t\tDiv(Class: row df f-valign){\r\n\t\t\t\t\t\t\tDiv(Class: col-md-3 mt-sm text-right){\r\n\t\t\t\t\t\t\t\tLabel(For: avatar){\r\n\t\t\t\t\t\t\t\t\tSpan(Body: LangRes(avatar))\r\n\t\t\t\t\t\t\t\t\tSpan(Class: text-danger, Body:*)\r\n\t\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\tDiv(col-md-9 mc-sm text-left){\r\n\t\t\t\t\t\t\t\tImageInput(Name: avatar, Width: 100, Ratio: 1/1)\r\n\t\t\t\t\t\t\t} \r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t}\r\n                    \r\n\t\t\t\t\tDiv(Class: panel-footer clearfix){\r\n\t\t\t\t\t\tDiv(Class: pull-right){\r\n\t\t\t\t\t\t\tButton(Body: LangRes(back), Class: btn btn-default, Page: membership_info)\r\n\t\t\t\t\t\t\tButton(Body: LangRes(send), Class: btn btn-primary, Contract: membership_request, Page: membership_info)\r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t}\r\n                }\r\n            }\r\n        }\r\n        Div(Class: col-md-3)\r\n    }\r\n}",
+            "Value": "Div(Class: content-wrapper){\r\n\r\n\tSetTitle($request_membership$)\r\n\tDiv(Class: breadcrumb){\r\n\t\tLinkPage($request_info$, membership_info)\r\n\t\tSpan(/).Style(margin-right: 10px; margin-left: 10px;)\r\n\t\tSpan(Class: text-muted, Body: $request_membership$)\r\n\t}\r\n\r\n    Div(Class: row df f-valign){\r\n        Div(Class: col-md-3)\r\n        Div(Class: col-md-6){\r\n            Div(Class: panel panel-primary){\r\n                Div(Class: panel-heading, Body: LangRes(request_membership))\r\n                Form(){ \r\n\t\t\t\t\tDiv(Class: list-group-item){\r\n\t\t\t\t\t\tDiv(Class: row df f-valign){\r\n\t\t\t\t\t\t\tDiv(Class: col-md-3 mt-sm text-right){\r\n\t\t\t\t\t\t\t\tLabel(For: username){\r\n\t\t\t\t\t\t\t\t\tSpan(Body: LangRes(username))\r\n      \t\t\t\t\t\t\t\tSpan(Class: text-danger, Body:*)\r\n\t\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\tDiv(Class: col-md-9 mb-sm text-left){\r\n\t\t\t\t\t\t\t\tInput(Class: form-control, Type: text, Name: member_name)\r\n\t\t\t\t\t\t\t} \r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t\tDiv(Class: row df f-valign){\r\n\t\t\t\t\t\t\tDiv(Class: col-md-3 mt-sm text-right){\r\n\t\t\t\t\t\t\t\tLabel(For: avatar){\r\n\t\t\t\t\t\t\t\t\tSpan(Body: LangRes(avatar))\r\n\t\t\t\t\t\t\t\t\tSpan(Class: text-danger, Body:*)\r\n\t\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\tDiv(col-md-9 mc-sm text-left){\r\n\t\t\t\t\t\t\t\tImageInput(Name: avatar, Width: 100, Ratio: 1/1)\r\n\t\t\t\t\t\t\t} \r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t}\r\n\t\t\t\t\tDiv(Class: list-group-item){\r\n\t\t\t\t\t\tDiv(Class: row df f-valign){\r\n\t\t\t\t\t\t\tDiv(Class: col-md-3 mt-sm text-right){\r\n\t\t\t\t\t\t\t\tLabel(For: pub_key){\r\n\t\t\t\t\t\t\t\t\tSpan(Body: LangRes(pub_key))\r\n      \t\t\t\t\t\t\t\tSpan(Class: text-danger, Body:*)\r\n\t\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\tDiv(Class: col-md-1 mt-sm text-right){\r\n\t\t\t\t\t\t\t\tLabel(For: pub_key){\r\n\t\t\t\t\t\t\t\t\tSpan(Class: text-muted, Body: 04)\r\n\t\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\tDiv(Class: col-md-8 mb-sm text-left){\r\n\t\t\t\t\t\t\t\tInput(Class: form-control, Type: text, Name: pub_key)\r\n\t\t\t\t\t\t\t} \r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t}\r\n                    Div(Class: list-group-item){\r\n                        Div(Class: row df f-valign){\r\n                \t\t\tDiv(Class: col-md-3 mt-lg text-right){\r\n                                Label(For: comment){\r\n                                    Span(Body: LangRes(comment))\r\n                                }\r\n                            }\r\n                \t\t\tDiv(Class: col-md-9 mc-sm text-left){\r\n                \t\t\t    Input(Name: comment, Class: form-control, Type: textarea, Value: no)\r\n                \t\t\t}\r\n                        }                      \r\n                    }\r\n\r\n\t\t\t\t\tDiv(Class: panel-footer clearfix){\r\n\t\t\t\t\t\tDiv(Class: pull-right){\r\n\t\t\t\t\t\t\tButton(Body: LangRes(back), Class: btn btn-default, Page: membership_info)\r\n\t\t\t\t\t\t\tButton(Body: LangRes(send), Class: btn btn-primary, Contract: membership_request, Page: membership_info)\r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t}\r\n                }\r\n            }\r\n        }\r\n        Div(Class: col-md-3)\r\n    }\r\n}",
             "Conditions": "ContractAccess(\"@1EditPage\")",
             "Menu": "Membership"
         }
@@ -90,7 +100,7 @@
     "tables": [
         {
             "Name": "membership_requests",
-            "Columns": "[{\"name\":\"avatar\",\"type\":\"bytea\",\"conditions\":\"true\"},{\"name\":\"status\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"member_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"member_name\",\"type\":\"varchar\",\"conditions\":\"true\"}]",
+            "Columns": "[{\"name\":\"avatar\",\"type\":\"bytea\",\"conditions\":\"true\"},{\"name\":\"status\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"comment\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"pub_key\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"member_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"member_name\",\"type\":\"varchar\",\"conditions\":\"true\"}]",
             "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
         }
     ]
