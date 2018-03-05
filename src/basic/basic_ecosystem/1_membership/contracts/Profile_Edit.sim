@@ -1,0 +1,34 @@
+contract Profile_Edit {
+    data {
+        member_name string
+        avatar string "image"
+        param_key_str string "optional"
+    }
+
+    conditions {
+        $param_key_int = 0
+
+        // choice of key
+        if (Size($param_key_str) == 0) {
+            $param_key_int = $key_id
+        } else {
+            $param_key_int = Int($param_key_str)
+        }
+
+        // search for member
+        $member_id = DBFind("members").Where("id = $", $param_key_int).One("id")
+
+        // check editing
+        if (($member_id != nil) && ($param_key_int != $key_id)) {
+            warning "You can not edit another member"
+        }
+    }
+
+    action {
+        if $member_id {
+            DBUpdate("members", Int($member_id), "member_name,avatar", $member_name, $avatar)
+        } else {
+            DBInsert("members", "id,member_name,avatar", $param_key_int, $member_name, $avatar)
+        }
+    }
+}

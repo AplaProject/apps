@@ -1,0 +1,25 @@
+contract membership_Request_Accept {
+    data {
+        v_id int
+    }
+
+    conditions {
+        MainCondition()
+
+        $request_map = DBFind("vde_membership_requests").Where("id=$", $v_id).Row()
+		if !$request_map{
+			warning "Request not found"
+		}
+
+        $key_map = DBFind("keys").Where("id=$", Int($request_map["member_id"])).Row()
+		if $key_map{
+			warning "This key has already been added"
+		}
+    }
+
+    action {
+        DBInsert("keys", "id,pub,amount", Int($request_map["member_id"]), Str($request_map["pub_key"]), 0)
+        DBUpdate("vde_membership_requests", $v_id, "status", 1)
+        Profile_Edit("param_key_str,member_name,avatar", Str($request_map["member_id"]), Str($request_map["member_name"]), Str($request_map["avatar"]))
+    }
+}
