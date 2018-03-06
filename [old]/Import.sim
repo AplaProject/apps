@@ -1,3 +1,4 @@
+
 func ImportList(row array, type string) {
     if !row {
         return
@@ -29,8 +30,8 @@ func ImportList(row array, type string) {
             $menu = DBFind(type).Where("name=?", idata["Name"]).Row()
             if $menu {
                 if !Contains($menu["value"], idata["Value"]){
+                    idata["Value"] = $menu["value"] + "\n" + idata["Value"]
                     idata["Id"] = Int($menu["id"])
-                    idata["Value"] = $menu["value"] + "\n\n" + idata["Value"]
                     CallContract("EditMenu", idata)
                 }
             } else {
@@ -57,38 +58,14 @@ func ImportList(row array, type string) {
             }
         }
         if type == "contracts" {
-            var newName string
-            newName = Join(ContractsList(idata["Value"]), "")
+            var cid int
+            cid = GetContractByName(idata["Name"])
             
-            var lim, limit, step, cid int
-            step = 250
-            limit = Int(DBFind(type).Order("id desc").One("id"))
-            while lim <= limit {
-                var cts array
-                cts = DBFind(type).Where("id > ?",lim).Order("id").Limit(step) // cause default is 25
-                
-                var c int
-                while c < Len(cts) {
-                    var name, contr string
-                    contr = cts[c]
-                    name = Join(ContractsList(contr["value"]), "")
-                    if name == newName {
-                        cid = Int(contr["id"])
-                        break
-                    }
-                    c = c + 1
-                }
-                if cid > 0{
-                    break
-                }
-                lim = lim+step
-            }
             idata["WalletId"] = ""
-            if IsObject(idata["Name"], $ecosystem_id) {
-                if cid > 0 {
-                    idata["Id"] = cid
-                    CallContract("EditContract", idata)
-                }
+            if cid > 0 {
+                idata["Id"] = cid
+                CallContract("EditContract", idata)
+                
             } else {
                 CallContract("NewContract", idata)
             }
