@@ -1,28 +1,12 @@
 contract sysparams_StartVotingValidator{
     data{
-        Id int
-        VotingParamId int
-        Start string "date"
-        StartTime string "date"
-        End string "date"
-        EndTime string "date"
+        AnyId int
     }
     
-    func conditions{
-        $votingParams = DBFind("voting_templates").WhereId($VotingParamId).Row()
-        if !$votingParams{
-            warning "Voting params not found"
-        }
-        
-        $condition = $votingParams["init_condition"]
-        ContractConditions($condition)
-        
-        // Delegate to Validators voting : Голосование экосистем за валидаторов
-        if $votingParams["title"] != "Voting for Validator"{
-            warning "Invalid param"
-        }
-        // renew Delegates
-        $candidate = DBFind("sysparams_candidate").Where("id=?",$Id).Row()
+    conditions{
+        ContractConditions("MainCondition")
+        // TODO проверить и отладить 
+        $candidate = DBFind("sysparams_candidate").Where("id=? and deleted=0", $AnyId).Row()
         if !$candidate{
             warning "Candidate not found"
         }
@@ -30,8 +14,5 @@ contract sysparams_StartVotingValidator{
         
         sysparams_DelegateRefresh()
     }
-    
-    func action{
-        voting_TemplateRun("KeyId,TemplateId,Start,StartTime,End,EndTime",$KeyId,$VotingParamId,$Start,$StartTime,$End,$EndTime)
-    }
+    action{}
 }
