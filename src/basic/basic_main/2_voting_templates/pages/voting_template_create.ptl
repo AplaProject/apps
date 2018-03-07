@@ -1,250 +1,133 @@
 Div(content-wrapper){
-
+    
     SetTitle($template_create$)
-	Div(Class: breadcrumb){
-		LinkPage($voting_templates$, voting_templates)
-		Span(/).Style(margin-right: 10px; margin-left: 10px;)
-		Span(Class: text-muted, Body: $template_create$)
-	}
-
-    If(#TemplateId#>0){
-        DBFind(Name:voting_templates, Source: templates).Where(id=#TemplateId#).Vars(t)
-    }.Else{
-        SetVar(t_id, 0)
+    Div(Class: breadcrumb){
+        LinkPage($voting_templates$, voting_templates)
+        Span(/).Style(margin-right: 10px; margin-left: 10px;)
+        Span(Class: text-muted, Body: $template_create$)
     }
-
+    
+    If(#TemplateId#>0){
+        DBFind(Name:voting_templates, Source: templates).Where(id=#TemplateId#).Vars(template)
+        SetVar(title, #template_title#)
+        SetVar(typepart, #template_type_participants#)
+        SetVar(typevoting, #template_type_voting#)
+        SetVar(typedec, #template_type_decision#)
+        SetVar(volume, #template_volume#)
+        SetVar(subj, #template_subject#)
+        SetVar(quorum, #template_quorum#)
+        SetVar(voters, #template_voters#)
+        SetVar(vacancies, #template_vacancies#)
+        SetVar(contract_init, #template_init_contract#)
+        SetVar(contract_accept, #template_contract_accept#)
+        SetVar(accept_params, #template_accept_params#)
+        SetVar(contract_reject, #template_contract_reject#)
+        SetVar(reject_params, #template_reject_params#)
+        
+    }.Else{
+        SetVar(template_id, 0)
+        SetVar(title, New voting)
+        SetVar(typepart, 0)
+        SetVar(typevoting, 0)
+        If(#TypeDecision#>0){
+            SetVar(typedec, #TypeDecision#)
+        }.Else{
+            SetVar(typedec, 0)
+        }
+        SetVar(volume, 50)
+        SetVar(quorum, 50)
+        SetVar(subj, "")
+        SetVar(voters, "")
+        SetVar(vacancies, 1)
+        SetVar(contract_init, "")
+        SetVar(contract_accept, "")
+        SetVar(accept_params, "")
+        SetVar(contract_reject, "")
+        SetVar(reject_params, "")
+        
+    }
+    
+    EcosysParam(Name: type_voting_participants, Source: src_typepart)
+    EcosysParam(Name: type_voting, Source: src_typevoting)
+    EcosysParam(Name: type_voting_decisions, Source: src_typedec)
+    If(Or(#TypeDecision#>0,#typedec#>0)){
+        Data(inputs, Columns: "name,type,res,star,value,control,src,desc"){
+            Title,text,name,*,#title#,input,"",""
+            TypeParticipants,text,participants,*,#typepart#,select,src_typepart,""
+            TypeVoting,text,voting_type,*,#typevoting#,select,src_typevoting,""
+            TypeDecision,text,decision,*,#typedec#,disabled,"EcosysParam(Name: type_voting_decisions, Index: #typedec#)",""
+            Volume,number,voting_volume,*,#volume#,validate,"",$voting_volume_desc$
+            Quorum,number,voting_quorum,*,#quorum#,validate,"",$voting_quorum_desc$
+            Subject,text,voting_subject,*,#subj#,input,"",""
+            Voters,text,voters,*,#voters#,input,"",""
+            Vacancies,number,vacancies,"",#vacancies#,input,"",""
+            InitContract,text,voting_init_contract,"",#contract_init#,input,"",$voting_init_contract_desc$
+            ContractAccept,text,voting_contract_accept,"",#contract_accept#,contract,ParamsAccept,#accept_params#
+            ContractReject,text,voting_contract_reject,"",#contract_reject#,contract,ParamsReject,#reject_params#
+        }
+    }.Else{
+        Data(inputs, Columns: "name,type,res,star,value,control,src,desc"){
+            TypeDecision,text,decision,*,#typedec#,radio,src_typedec,""
+        }
+    }
     Div(row){
         Div(col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3){
-            Div(panel panel-primary){
+            Form(panel panel-primary){
                 Div(panel-heading){LangRes(new_template)}
-                Form(panel-body){
-                    Div(form-group){
-                        Div(row){
+                Div(panel-body){
+                    ForList(inputs){
+                        Div(row form-group){
                             Div(col-md-4 mt-sm text-right){
-                                Label(For: Title){LangRes(name)}
+                                Label(For: #name#){LangRes(#res#)}
+                                If(#star#=="*"){
+                                    Span(Class: text-danger, Body:*)
+                                }
                             }
                             Div(col-md-8 text-left){
-                                If(#t_id#>0){
-                                    SetVar(title, #t_title#)
-                                }.Else{
-                                    SetVar(title, New voting)
+                                If(#control#=="select"){
+                                    Select(Name: #name#, Source: #src#, NameColumn: name, ValueColumn: id, Value: #value#)
                                 }
-                                Input(Name: Title, Class: form-control, Type: text, Value: #title#)
-                            }
-                        }
-                    }
-                    
-                    Div(form-group){
-                        Div(row){
-                            Div(col-md-4 mt-sm text-right){
-                                Label(For: TypeParticipants){LangRes(participants)}
-                            }
-                            Div(col-md-8 text-left){
-                                If(#t_id#>0){
-                                    SetVar(typepart, #t_type_participants#)
-                                }.Else{
-                                    SetVar(typepart, 0)
+                                If(#control#=="disabled"){
+                                    #src#
+                                    Input(Name: #name#, Type: hidden, Value: #value#)
                                 }
-                                EcosysParam(Name: type_voting_participants, Source: type_voting_participants)
-                                Select(Name: TypeParticipants, Source: type_voting_participants, NameColumn: name, ValueColumn: id, Value: #typepart#)
-                            }
-                        }
-                    }
-                    
-                    Div(form-group){
-                        Div(row){
-                            Div(col-md-4 mt-sm text-right){
-                                Label(For: TypeVoting){LangRes(voting_type)}
-                            }
-                            Div(col-md-8 text-left){
-                                If(#t_id#>0){
-                                    SetVar(typevoting, #t_type_voting#)
-                                }.Else{
-                                    SetVar(typevoting, 0)
+                                If(#control#=="input"){
+                                    Input(Name: #name#, Value: #value#, Type: #type#)
                                 }
-                                EcosysParam(Name: type_voting, Source: type_voting)
-                                Select(Name: TypeVoting, Source: type_voting, NameColumn: name, ValueColumn: id, Value: #typevoting#)
-                            }
-                        }
-                    }
-                    
-                    Div(form-group){
-                        Div(row){
-                            Div(col-md-4 mt-sm text-right){
-                                Label(For: TypeDecision){LangRes(decision)}
-                            }
-                            Div(col-md-8 text-left){
-                                If(#t_id#>0){
-                                    SetVar(typedec, #t_type_decision#)
-                                }.Else{
-                                    SetVar(typedec, 0)
+                                If(#control#=="validate"){
+                                    Input(Name: #name#, Type: #type#, Value: #value#).Validate(minLength: 1)
+                                    InputErr(Name: #name#, minLength: Please enter #name#)
                                 }
-                                EcosysParam(Name: type_voting_decisions, Source: type_voting_decisions)
-                                Select(Name: TypeDecision, Source: type_voting_decisions, NameColumn: name, ValueColumn: id, Value: typedec)
-                            }
-                        }
-                    }
-                    
-                    Div(form-group){
-                        Div(row){
-                            Div(col-md-4 mt-sm text-right){
-                                Label(For: Volume){LangRes(voting_volume)}
-                            }
-                            Div(col-md-8 text-left){
-                                If(#t_id#>0){
-                                    SetVar(volume, #t_volume#)
-                                }.Else{
-                                    SetVar(volume, 50)
-                                }
-                                Input(Name: Volume, Class: form-control, Type: number, Value: #volume#).Validate(minLength: 1)
-                                InputErr(Name: Volume, minLength: Please enter voting volume)
-                                
-                                P(Class: m0 text-muted, Body: $voting_volume_desc$)
-                            }
-                        }
-                    }
-                    
-                    Div(form-group){
-                        Div(row){
-                            Div(col-md-4 mt-sm text-right){
-                                Label(For: quorum){LangRes(voting_quorum)}
-                            }
-                            Div(col-md-8 text-left){
-                                If(#t_id#>0){
-                                    SetVar(quorum, #t_quorum#)
-                                }.Else{
-                                    SetVar(quorum, 50)
-                                }
-                                Input(Name: Quorum, Class: form-control, Type: number, Value: #quorum#).Validate(minLength: 1)
-                                InputErr(Name: Quorum, minLength: Please enter voting quorum)
-                                P(Class: m0 text-muted, Body: $voting_quorum_desc$)
-                            }
-                        }
-                    }
-                    
-                    Div(form-group){
-                        Div(row){
-                            Div(col-md-4 mt-sm text-right){
-                                Label(For: Subject){LangRes(voting_subject)}
-                            }
-                            Div(col-md-8 text-left){
-                                If(#t_id#>0){
-                                    SetVar(subj, #t_subject#)
-                                }.Else{
-                                    SetVar(subj, "")
-                                }
-                                Input(Name: Subject, Class: form-control, Type: text, Value: #subj#)
-                            }
-                        }
-                    }
-                    
-                    Div(form-group){
-                        Div(row){
-                            Div(col-md-4 mt-sm text-right){
-                                Label(For: Voters){LangRes(voters)}
-                            }
-                            Div(col-md-8 text-left){
-                                If(#t_id#>0){
-                                    SetVar(voters, #t_voters#)
-                                }.Else{
-                                    SetVar(voters, "")
-                                }
-                                Input(Name: Voters, Class: form-control, Type: text, Value: #voters#)
-                            }
-                        }
-                    }
-                    
-                    
-                    Div(form-group){
-                        Div(row){
-                            Div(col-md-4 mt-sm text-right){
-                                Label(For: Vacancies){LangRes(vacancies)}
-                            }
-                            Div(col-md-8 text-left){
-                                If(#t_id#>0){
-                                    SetVar(vacancies, #t_vacancies#)
-                                }.Else{
-                                    SetVar(vacancies, 1)
-                                }
-                                Input(Name: Vacancies, Class: form-control, Type: number, #vacancies#)
-                            }
-                        }
-                    }
-                    
-                    Div(form-group){
-                        Div(row){
-                            Div(col-md-4 mt-sm text-right){
-                                Label(For: InitCondition){LangRes(voting_init_condition)}
-                            }
-                            Div(col-md-8 text-left){
-                                If(#t_id#>0){
-                                    SetVar(initcon, #t_init_condition#)
-                                }.Else{
-                                    SetVar(initcon, "")
-                                }
-                                Input(Name: InitCondition, Class: form-control, Type: text, Value: #initcon#)
-                                P(Class: m0 text-muted, Body: $voting_init_condition_desc$)
-                            }
-                        }
-                    }
-                    
-                    Div(form-group){
-                        Div(row){
-                            Div(col-md-4 mt-sm text-right){
-                                Label(For: ContractAccept){LangRes(voting_contract_accept)}
-                            }
-                            Div(col-md-8){
-                                Div(row){
-                                    If(#t_id#>0){
-                                        SetVar(conacc, #t_contract_accept#)
-                                        SetVar(accpar, #t_contract_accept_params#)
-                                    }.Else{
-                                        SetVar(conacc, "")
-                                        SetVar(accpar, "")
-                                    }
-                                    Div(col-md-6){
-                                        Input(Name: ContractAccept, Class: form-control, Type: text,Placeholder: contract, Value: #conacc#)
-                                    }
-                                    Div(col-md-6){
-                                        Input(Name: ParamsAccept, Class: form-control, Type: text,Placeholder: arguments, Value: #accpar#)
+                                If(#control#=="contract"){
+                                    Div(row){
+                                        Div(col-md-6){
+                                            Input(Name: #name#, Type: #type#, Placeholder: $contract$, Value: #value#)
+                                        }
+                                        Div(col-md-6){
+                                            Input(Name: #src#, Type: #type#, Placeholder: $arguments$, Value: #desc#)
+                                        }
                                     }
                                 }
-                            }
-                        }
-                    }
-                    
-                    Div(form-group){
-                        Div(row){
-                            Div(col-md-4 mt-sm text-right){
-                                Label(For: ContractReject){LangRes(voting_contract_reject)}
-                            }
-                            Div(col-md-8){
-                                Div(row){
-                                    If(#t_id#>0){
-                                        SetVar(conrej, #t_contract_reject#)
-                                        SetVar(rejpar, #t_contract_reject_params#)
-                                    }.Else{
-                                        SetVar(conrej, "")
-                                        SetVar(rejpar, "")
-                                    }
-                                    Div(col-md-6){
-                                        Input(Name: ContractReject, Class: form-control, Type: text, Placeholder: contract, Value: #conrej#)
-                                    }
-                                    Div(col-md-6){
-                                        Input(Name: ParamsReject, Class: form-control, Type: text, Placeholder: arguments, Value: #rejpar#)
-                                    }
+                                If(#control#=="radio"){
+                                    RadioGroup(Name: #name#, Value: #value#, Source: #src#, ValueColumn: id, NameColumn: name)
+                                }
+                                If(#desc#!=""){
+                                    P(Class: m0 text-muted, Body: #desc#)
                                 }
                             }
                         }
                     }
                 }
-				
-				Div(panel-footer clearfix){
-					Div(pull-right){
-						Button(Body: LangRes(back), Class: btn btn-default, Page: voting_templates)
-						Button(Body: LangRes(create), Class: btn btn-primary, Page: voting_templates, Contract: voting_TemplateStore)
-					}
-				}
+                
+                Div(panel-footer text-right){
+                    If(Or(#TypeDecision#>0,#typedec#>0)){
+                        Button(Body: LangRes(back), Class: btn btn-default, Page: voting_template_create, PageParams: "TemplateId=#TemplateId#")
+                        Button(Body: LangRes(create), Class: btn btn-primary, Page: voting_templates, Contract: voting_TemplateStore)
+                    }.Else{
+                        Button(Body: LangRes(back), Class: btn btn-default, Page: voting_templates)
+                        Button(Body: LangRes(next), Class: btn btn-primary, Page: voting_template_create, PageParams: "TemplateId=#TemplateId#,TypeDecision=Val(TypeDecision)")
+                    }
+                }
             }
         }
     }
