@@ -1,11 +1,21 @@
 contract voting_TemplateRun{
     data{
+        TableWritten string "optional"
+        RowId string "optional"
+        ColumnName string "optional"
+        NewValue string "optional"
+        TextDocument string "optional"
         KeyId int "optional"
         TemplateId int
         Start string "date"
         StartTime string "date,optional"
         End string "date"
         EndTime string "date,optional"
+    }
+    func checkInput(value, name string){
+        if Size(value) == 0 || value == "NULL" {
+            warning Sprintf("%q not found", name)
+        }
     }
     
     conditions{
@@ -62,7 +72,15 @@ contract voting_TemplateRun{
             $rejectParams = ""
         }
         
-        
+        if $decision == 3 && {
+            checkInput($TextDocument, "TextDocument")
+        }
+        if $decision == 4 {
+            checkInput($TableWritten, "TableWritten")
+            checkInput($RowId, "RowId")
+            checkInput($ColumnName, "ColumnName")
+            checkInput($NewValue, "NewValue")
+        }
         $isCreated = DBFind("voting_instances").Where("name=? and description=? and delete=0", $votingName, $desc).Row()
         if $isCreated{
             // info "Voting already created" // проверка дубликатов голосования
@@ -89,26 +107,29 @@ contract voting_TemplateRun{
         if Size($rejectParams) == 0{
             $rejectParams = $defaultParams
         }
+        
         if $decision == 1 || $decision == 2{
-            // Ролевые кандидаты с регистрацией участников по запросу
-            // Ролевые кандидаты с ручной регистрацией участников
+            // 1. Ролевые кандидаты с регистрацией участников по запросу
+            // 2. Ролевые кандидаты с ручной регистрацией участников
             voting_SubjectCandidates("votingID,memberID", $voting_id, $KeyId)
             voting_SubjectSettings("votingID,roleID,vacancies,contract_accept,accept_params,contract_reject,reject_params", $voting_id, $roleId, $vacancies, $contractAccept, $acceptParams, $contractReject,$rejectParams)
         }
         if $decision == 3 {
-            // TODO: Утверждение документа
-            voting_SubjectDocument()
-        }    
+            // Утверждение документа
+            voting_SubjectDocument("votingID,text_document,contract_accept,contract_accept_params,contract_reject,contract_reject_params", $voting_id,$TextDocument, $contractAccept, $acceptParams, $contractReject, $rejectParams)
+        }
+
         if $decision == 4 {
-            // TODO: Формальное решение
-            voting_SubjectFormal(voting_SubjectFormal {"votingID,description,table_to_written,row_id,column_name,written_value,contract_reject,contract_accept",$voting_id,$desc,)
+            // Формальное решение
+            voting_SubjectFormal("votingID,description,table_to_written,row_id,column_name,written_value,contract_accept,contract_accept_params,contract_reject,contract_reject_params",$voting_id, $desc, $TableWritten, $RowId, $ColumnName, $NewValue, $contractAccept, $acceptParams, $contractReject, $rejectParams)
             
         }
+
         if $decision == 5 {
             // Выполнение контракта
-            voting_SubjectContract("votingID,contract_accept,contract_accept_params,contract_reject,contract_reject_params",$voting_id,$contractAccept, $acceptParams, $contractReject,$rejectParams)
-        }else{
+            voting_SubjectContract("votingID,contract_accept,contract_accept_params,contract_reject,contract_reject_params",$voting_id,$contractAccept, $acceptParams, $contractReject, $rejectParams)
         }
+
         voting_Invite("votingID,var_id", $voting_id, $roleId)
     }
 }

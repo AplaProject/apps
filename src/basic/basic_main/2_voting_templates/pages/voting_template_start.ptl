@@ -9,20 +9,33 @@ Div(content-wrapper){
     If(#TemplateId#>0){
         DBFind(Name:voting_templates, Source: templates).Where(id=#TemplateId#).Vars(template)
         Data(inputs, "res,value"){
-            LangRes(name),#template_title#
-            LangRes(participants),"EcosysParam(Name: type_voting_participants, Index: #template_type_participants#)"
-            LangRes(voting_type),"EcosysParam(Name: type_voting, Index: #template_type_voting#)"
-            LangRes(decision),"EcosysParam(Name: type_voting_decisions, Index: #template_type_decision#)"
-            LangRes(voting_volume),#template_volume#
-            LangRes(voting_quorum),#template_quorum#
-            LangRes(voting_subject),#template_subject#
-            LangRes(voters),#template_voters#
-            LangRes(vacancies),#template_vacancies#
-            LangRes(init_contract),#template_init_contract#
-            LangRes(voting_contract_accept),"#template_contract_accept#(#template_accept_params#)"
-            LangRes(voting_contract_reject),"#template_contract_reject#(#template_reject_params#)"
-            LangRes(date_start),"Input(Name:Start, Type: date)"
-            LangRes(date_end),"Input(Name:End, Type: date)"
+            name,#template_title#
+            participants,"EcosysParam(Name: type_voting_participants, Index: #template_type_participants#)"
+            voting_type,"EcosysParam(Name: type_voting, Index: #template_type_voting#)"
+            decision,"EcosysParam(Name: type_voting_decisions, Index: #template_type_decision#)"
+            voting_volume,#template_volume#
+            voting_quorum,#template_quorum#
+            voting_subject,#template_subject#
+            voters,#template_voters#
+            vacancies,#template_vacancies#
+            init_contract,#template_init_contract#
+            voting_contract_accept,"#template_contract_accept#(#template_accept_params#)"
+            voting_contract_reject,"#template_contract_reject#(#template_reject_params#)"
+            date_start,"Input(Name:Start, Type: date)"
+            date_end,"Input(Name:End, Type: date)"
+        }
+        If(#template_type_decision#==3){
+            Data(decision_inputs, Columns: "name,type,res,star,value,control"){
+                TextDocument,textarea,text_document,*,"",textarea
+            }
+        }
+        If(#template_type_decision#==4){
+            Data(decision_inputs, Columns: "name,type,res,star,value,control"){
+                TableWritten,text,table_to_written,*,"",input
+                RowId,text,row_id,*,"",input
+                ColumnName,text,column_name,*,"",input
+                NewValue,text,written_value,*,"",input
+            }
         }
         Div(row){
             Div(col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3){
@@ -30,15 +43,36 @@ Div(content-wrapper){
                     Div(panel-heading){LangRes(voting_start)}
                     Div(panel-body){
                         ForList(inputs){
-                            Div(form-group){
-                                Div(row){
-                                    Div(col-md-4 text-right){
-                                        Strong(#res#)
+                            Div(row form-group){
+                                Div(col-md-4 text-right){
+                                    Strong(LangRes(#res#))
+                                }
+                                Div(col-md-8 text-left){
+                                    If(#value#!="()"){
+                                        #value#
+                                    }
+                                }
+                            }
+                        }
+                        ForList(decision_inputs){
+                            Div(row form-group){
+                                If(#control#!="textarea"){
+                                    Div(col-md-4 mt-sm text-right){
+                                        Label(For: #name#){LangRes(#res#)}
+                                        If(#star#=="*"){
+                                            Span(Class: text-danger, Body:*)
+                                        }
                                     }
                                     Div(col-md-8 text-left){
-                                        If(#value#!="()"){
-                                            #value#
+                                        If(#control#=="input"){
+                                            Input(Name: #name#, Value: #value#, Type: #type#)
                                         }
+                                    }
+                                }
+                                If(#control#=="textarea"){
+                                    Div(col-md-12){
+                                        Label(For: #name#){LangRes(#res#)}
+                                        Input(Name: #name#, Type: textarea, Value: #value#)
                                     }
                                 }
                             }
