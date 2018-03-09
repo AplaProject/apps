@@ -7,7 +7,7 @@ contract voting_TemplateStore{
         Volume int
         Quorum int
         Subject string
-        Voters string
+        Voters string "optional"
         InitContract string "optional" // Выполнить перед голосованием
         Vacancies int "optional"
         ContractAccept string "optional"
@@ -17,12 +17,11 @@ contract voting_TemplateStore{
     }
     
     func conditions{
-        if Size($InitContract) > 0{
-            if !IsObject($InitContract, $ecosystem_id){
-                warning "Init condition not found"
+        if $TypeDecision == 1 || $TypeDecision == 2 || $TypeParticipants == 3 {
+            if $Voters == 0 {
+                warning "Voters role not found"
             }
         }
-        
         if Size($Title) <3{
             warning "Please enter title"
         }
@@ -33,10 +32,15 @@ contract voting_TemplateStore{
             warning "Wrong quorum range"
         }
         
-        if $TypeDecision != 5 && $Vacancies < 1 {
+        if $Vacancies < 1 && ($TypeDecision == 1 || $TypeDecision == 2) {
             warning "wrong number vacancies"
         }
         
+        if Size($InitContract) > 0{
+            if GetContractByName($InitContract) == 0 {
+                warning "Init Contract not found"
+            }
+        }
         if Size($ContractAccept) > 0{
             if GetContractByName($ContractAccept) == 0 {
                 warning "Contract for accepted decision not found"
@@ -50,7 +54,7 @@ contract voting_TemplateStore{
     }
     
     func action{
-        DBInsert("voting_templates", "title,subject,voters,init_contract,volume,quorum,type_voting,type_participants,type_decision,vacancies,contract_accept,accept_params,contract_reject,reject_params", $Title,$Subject,$Voters,$InitContract,$Volume,$Quorum,$TypeVoting,$TypeParticipants,$TypeDecision,$Vacancies,$ContractAccept,$ParamsAccept,$ContractReject,$ParamsReject)
+        DBInsert("voting_templates", "title,subject,voters,init_contract,volume,quorum,type_voting,type_participants,type_decision,vacancies,contract_accept,accept_params,contract_reject,reject_params", $Title, $Subject, $Voters, $InitContract, $Volume, $Quorum, $TypeVoting, $TypeParticipants, $TypeDecision, $Vacancies, $ContractAccept, $ParamsAccept, $ContractReject, $ParamsReject)
         
     }
 }
