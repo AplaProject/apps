@@ -1,16 +1,17 @@
 contract voting_TemplateRun{
     data{
+        TemplateId int
+        Start string "date"
+        End string "date"
+        
+        EndTime string "date,optional"
+        StartTime string "date,optional"
+        KeyId int "optional"
         TableWritten string "optional"
         RowId string "optional"
         ColumnName string "optional"
         NewValue string "optional"
         TextDocument string "optional"
-        KeyId int "optional"
-        TemplateId int
-        Start string "date"
-        StartTime string "date,optional"
-        End string "date"
-        EndTime string "date,optional"
     }
     func checkInput(value, name string){
         if Size(value) == 0 || value == "NULL" {
@@ -44,6 +45,7 @@ contract voting_TemplateRun{
         }
         
         $voters = $template["voters"]
+        $candidates = $template["candidates"]
         $votingName = $template["title"]
         $volume = Int($template["volume"])
         $quorum = Int($template["quorum"])
@@ -72,10 +74,24 @@ contract voting_TemplateRun{
             $rejectParams = ""
         }
         
-        if $decision == 3 && {
+        if $decision == 1 || $decision == 2 {
+            // ролевые кандидаты
+            checkInput($candidates, "Candidate role")
+            var candidate map
+            candidate = DBFind("roles_list").Where("id=? and delete=0", $candidates).Row()
+            if !candidate {
+                warning Sprintf("Candidates role (%v) not found", candidate["role_name"])
+            }
+            $candidateId = Int(candidate["id"])
+        }
+
+        if $decision == 3 {
+            // утверждение документа
             checkInput($TextDocument, "TextDocument")
         }
+        
         if $decision == 4 {
+            // формальное решение
             checkInput($TableWritten, "TableWritten")
             checkInput($RowId, "RowId")
             checkInput($ColumnName, "ColumnName")
@@ -86,12 +102,13 @@ contract voting_TemplateRun{
             // info "Voting already created" // проверка дубликатов голосования
         }
         
+        
         if $participants == 3 {
             // если тип участников "по роли" - проверяю роль
             var role map
             role = DBFind("roles_list").Where("id=? and delete=0", $voters).Row()
             if !role {
-                warning Sprintf("Voters (%v) not found", role["role_name"])
+                warning Sprintf("Voters role (%v) not found", role["role_name"])
             }
             $roleId = Int(role["id"])
         }
@@ -118,7 +135,7 @@ contract voting_TemplateRun{
             // 1. Ролевые кандидаты с регистрацией участников по запросу
             // 2. Ролевые кандидаты с ручной регистрацией участников
             voting_SubjectCandidates("votingID,memberID", $voting_id, $KeyId)
-            voting_SubjectSettings("votingID,roleID,vacancies,contract_accept,accept_params,contract_reject,reject_params", $voting_id, $roleId, $vacancies, $contractAccept, $acceptParams, $contractReject,$rejectParams)
+            voting_SubjectSettings("votingID,roleID,vacancies,contract_accept,accept_params,contract_reject,reject_params", $voting_id, $candidateId, $vacancies, $contractAccept, $acceptParams, $contractReject,$rejectParams)
         }
         if $decision == 3 {
             // Утверждение документа
@@ -135,7 +152,13 @@ contract voting_TemplateRun{
             // Выполнение контракта
             voting_SubjectContract("votingID,contract_accept,contract_accept_params,contract_reject,contract_reject_params",$voting_id,$contractAccept, $acceptParams, $contractReject, $rejectParams)
         }
-        
-        voting_Invite("votingID,var_id", $voting_id, $roleId)
+        if $participants == 3 {
+            // участники: "по роли"
+            voting_Invite("votingID,var_id", $voting_id, $roleId)
+        }
+        if $participants == 1 {
+            // участники: "все"
+            voting_Invite("votingID,var_id", $voting_id, 0)
+        }
     }
 }

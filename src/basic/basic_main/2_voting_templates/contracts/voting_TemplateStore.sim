@@ -7,7 +7,8 @@ contract voting_TemplateStore{
         Volume int
         Quorum int
         Subject string
-        Voters string "optional"
+        Voters string "optional" // роль участника
+        Candidates string "optional" // роль кандидата
         InitContract string "optional" // Выполнить перед голосованием
         Vacancies int "optional"
         ContractAccept string "optional"
@@ -17,23 +18,28 @@ contract voting_TemplateStore{
     }
     
     func conditions{
-        if $TypeDecision == 1 || $TypeDecision == 2 || $TypeParticipants == 3 {
-            if $Voters == 0 {
+        if $TypeParticipants == 3 {
+            if Size($Voters) == 0 || $Voters == "NULL" || $Voters == 0 {
                 warning "Voters role not found"
             }
         }
-        if Size($Title) <3{
+        if Size($Title) <3 {
             warning "Please enter title"
         }
-        if $Volume <0 || $Volume > 100{
+        if $Volume <0 || $Volume > 100 {
             warning "Wrong volume range"
         }
-        if $Quorum <0 || $Quorum > 100{
+        if $Quorum <0 || $Quorum > 100 {
             warning "Wrong quorum range"
         }
         
-        if $Vacancies < 1 && ($TypeDecision == 1 || $TypeDecision == 2) {
-            warning "wrong number vacancies"
+        if $TypeDecision == 1 || $TypeDecision == 2 {
+            if $Vacancies < 1 {
+                warning "Wrong number vacancies"
+            }
+            if $Candidates == "NULL" || $Candidates == 0 || Size($Candidates) == 0 {
+                warning "Wrong candidate role"
+            }
         }
         
         if Size($InitContract) > 0{
@@ -54,7 +60,7 @@ contract voting_TemplateStore{
     }
     
     func action{
-        DBInsert("voting_templates", "title,subject,voters,init_contract,volume,quorum,type_voting,type_participants,type_decision,vacancies,contract_accept,accept_params,contract_reject,reject_params", $Title, $Subject, $Voters, $InitContract, $Volume, $Quorum, $TypeVoting, $TypeParticipants, $TypeDecision, $Vacancies, $ContractAccept, $ParamsAccept, $ContractReject, $ParamsReject)
+        DBInsert("voting_templates", "title,subject,voters,candidates,init_contract,volume,quorum,type_voting,type_participants,type_decision,vacancies,contract_accept,accept_params,contract_reject,reject_params", $Title, $Subject, $Voters, $Candidates, $InitContract, $Volume, $Quorum, $TypeVoting, $TypeParticipants, $TypeDecision, $Vacancies, $ContractAccept, $ParamsAccept, $ContractReject, $ParamsReject)
         
     }
 }
