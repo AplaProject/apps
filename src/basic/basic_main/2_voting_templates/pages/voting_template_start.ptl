@@ -8,6 +8,19 @@ Div(content-wrapper){
     
     If(#TemplateId#>0){
         DBFind(Name:voting_templates, Source: templates).Where(id=#TemplateId#).Vars(template)
+        If(GetVar(template_voters)){
+            DBFind(Name:roles_list, Source: src_roles).Columns("role_name").Where("id=#template_voters#").Vars(vid)
+            SetVar(v_role, #vid_role_name#)
+        }.Else{
+            SetVar(v_role, "")
+        }
+        
+        If(GetVar(template_candidates)){
+            DBFind(Name:roles_list, Source: src_roles).Columns("role_name").Where("id=#template_candidates#").Vars(cid)
+            SetVar(c_role, #cid_role_name#)
+        }.Else{
+            SetVar(c_role, "")
+        }
         Data(inputs, "res,value"){
             name,#template_title#
             participants,"EcosysParam(Name: type_voting_participants, Index: #template_type_participants#)"
@@ -16,8 +29,8 @@ Div(content-wrapper){
             voting_volume,#template_volume#
             voting_quorum,#template_quorum#
             voting_subject,#template_subject#
-            voters,#template_voters#
-            candidates,#template_candidates#
+            voters,#v_role#
+            candidates,#c_role#
             vacancies,#template_vacancies#
             init_contract,#template_init_contract#
             voting_contract_accept,"#template_contract_accept#(#template_accept_params#)"
@@ -25,7 +38,7 @@ Div(content-wrapper){
             date_start,"Input(Name:Start, Type: date)"
             date_end,"Input(Name:End, Type: date)"
         }
-
+        
         If(#template_type_decision#==3){
             Data(decision_inputs, Columns: "name,type,res,star,value,control"){
                 TextDocument,textarea,text_document,*,"",textarea
@@ -42,7 +55,7 @@ Div(content-wrapper){
                 Data(decision_inputs, Columns: "name,type,res,star,value,control"){}
             }
         }
-
+        
         Div(row){
             Div(col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3){
                 Form(panel panel-primary){
