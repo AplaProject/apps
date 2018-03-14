@@ -23,13 +23,25 @@ contract Roles_Assign {
         if(Int($role_map["delete"]) == 1) {
             warning "This role has been deleted. The appointment of members is impossible"
         }
-        if((Int($role_map["role_type"]) != 1) &&(Int($role_map["role_type"]) != 4)) {
-            warning "This role is not assignable. The appointment of members is impossible"
-        }
-        if(Int($role_map["creator_id"]) != $key_id) {
-            warning "Sorry, you are not the creator of this role. The appointment of members is impossible"
-        }
         
+        var specialRule int
+        if $origin_contract == "sysparams_AcceptValidator" && $role_map["role_name"] == "Validator" {
+            specialRule = 1
+        }
+        if $origin_contract == "sysparams_DelegateRefresh" && $role_map["role_name"] == "Delegate" {
+            specialRule = 1
+        }
+        if $origin_contract == "sysparams_CandidateValidatorRequest" && $role_map["role_name"] == "Candidate for validators" {
+            specialRule = 1
+        }
+        if specialRule == 0 {
+            if((Int($role_map["role_type"]) != 1) &&(Int($role_map["role_type"]) != 4)) {
+                warning "This role is not assignable. The appointment of members is impossible"
+            }
+            if(Int($role_map["creator_id"]) != $key_id) {
+                warning "Sorry, you are not the creator of this role. The appointment of members is impossible"
+            }
+        }
         $assign_id = DBFind("roles_assign").Where("role_id=$ and member_id=$ and delete=0", $role_id, $member_id).One("id")
         if($assign_id != nil) {
             warning "This member has already been added"

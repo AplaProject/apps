@@ -3,9 +3,7 @@ SetTitle($template_create$)
 If(#TemplateId#>0){
     DBFind(Name:voting_templates, Source: templates).Where(id=#TemplateId#).Vars(template)
     SetVar(title, #template_title#)
-    SetVar(typepart, #template_type_participants#)
     SetVar(typevoting, #template_type_voting#)
-    SetVar(typedec, #template_type_decision#)
     SetVar(volume, #template_volume#)
     SetVar(subj, #template_subject#)
     SetVar(quorum, #template_quorum#)
@@ -21,17 +19,7 @@ If(#TemplateId#>0){
 }.Else{
     SetVar(template_id, 0)
     SetVar(title, New voting)
-    If(#TypeDecision#>0){
-        SetVar(typepart, #TypeParticipants#)
-    }.Else{
-        SetVar(typepart, 0)
-    }
     SetVar(typevoting, 0)
-    If(#TypeDecision#>0){
-        SetVar(typedec, #TypeDecision#)
-    }.Else{
-        SetVar(typedec, 0)
-    }
     SetVar(volume, 50)
     SetVar(quorum, 50)
     SetVar(subj, "")
@@ -45,7 +33,16 @@ If(#TemplateId#>0){
     SetVar(reject_params, "")
     
 }
-
+If(#TypeDecision#>0){
+    SetVar(typedec, #TypeDecision#)
+}.Else{
+    SetVar(typedec, 0)
+}
+If(#TypeParticipants#>0){
+    SetVar(typepart, #TypeParticipants#)
+}.Else{
+    SetVar(typepart, 0)
+}
 EcosysParam(Name: type_voting_participants, Source: src_typepart)
 EcosysParam(Name: type_voting, Source: src_typevoting)
 EcosysParam(Name: type_voting_decisions, Source: src_typedec)
@@ -148,7 +145,7 @@ Div(content-wrapper){
                                     If(#control#=="radio"){
                                         RadioGroup(Name: #name#, Value: #value#, Source: #src#, ValueColumn: id, NameColumn: name)
                                     }
-                                    If(#desc#!=""){
+                                    If(And(#desc#!="",#desc#!="NULL")){
                                         P(Class: m0 text-muted, Body: #desc#)
                                     }
                                 }
@@ -158,17 +155,17 @@ Div(content-wrapper){
                 }
                 
                 Div(panel-footer text-right){
-                    If(#TemplateId#>0){
-                        Button(Body: LangRes(back), Class: btn btn-default, Page: voting_template_start, PageParams: "TemplateId=#TemplateId#")
+                    
+                    If(#typedec#>0){
+                        Button(Body: LangRes(back), Class: btn btn-default, Page: voting_template_create, PageParams: "TemplateId=#TemplateId#")
                         Button(Body: LangRes(create), Class: btn btn-primary, Page: voting_templates, Contract: voting_TemplateStore)
                     }.Else{
-                        If(Or(#TypeDecision#>0,#typedec#>0)){
-                            Button(Body: LangRes(back), Class: btn btn-default, Page: voting_template_create, PageParams: "TemplateId=#TemplateId#")
-                            Button(Body: LangRes(create), Class: btn btn-primary, Page: voting_templates, Contract: voting_TemplateStore)
+                        If(#TemplateId#>0){
+                            Button(Body: LangRes(back), Class: btn btn-default, Page: voting_template_start, PageParams: "TemplateId=#TemplateId#")
                         }.Else{
                             Button(Body: LangRes(back), Class: btn btn-default, Page: voting_templates)
-                            Button(Body: LangRes(next), Class: btn btn-primary, Page: voting_template_create, PageParams: "TemplateId=#TemplateId#,TypeDecision=Val(TypeDecision),TypeParticipants=Val(TypeParticipants)")
                         }
+                        Button(Body: LangRes(next), Class: btn btn-primary, Page: voting_template_create, PageParams: "TemplateId=#TemplateId#,TypeDecision=Val(TypeDecision),TypeParticipants=Val(TypeParticipants)")
                     }
                 }
             }

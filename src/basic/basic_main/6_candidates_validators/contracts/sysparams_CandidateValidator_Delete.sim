@@ -3,15 +3,20 @@ contract sysparams_CandidateValidator_Delete{
         Id int
     }
     conditions{
-        $roleName = "Candidate for validators"
-        // RoleConditions("role","deleter")
+        var roleName string
+        var candidateId, roleId int
+        roleId = 2
+        roleName = "Candidate for validators"
+        candidateId = DBFind("sysparams_candidate").Where("id=?",$Id).One("candidate_key_id")
         
-        $candidateId = DBFind("sysparams_candidate").WhereId($Id).One("candidate_key_id")
-        
-        $raId = DBFind("roles_assign").Where("role_name=? and delete=0 and member_id=?",$roleName, $candidateId).One("id")
+        $raId = DBFind("roles_assign").Where("id=? and role_name=? and delete=0 and member_id=?", roleId, roleName, candidateId).One("id")
+        if $raId == nil {
+            warning "Candidate not found"
+        }
     }
     action{
         DBUpdate("sysparams_candidate", $Id, "deleted", 1)
-        DBUpdate("roles_assign", $raId, "delete", 1)
+        $origin_contract = "sysparams_CandidateValidator_Delete"
+        Roles_Unassign("row_id", Int($raId))
     }
 }

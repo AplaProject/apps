@@ -39,14 +39,23 @@ contract sysparams_CandidateValidatorRequest{
         
         $CommissionAddress = AddressToId($CommissionAddress)
         if !DBFind("keys").Where("id=?", $CommissionAddress).Row(){
-            info "Address not valid"
+            warning "Address not valid"
         }
         
         if IsNotValidIp($HostIp){
-            info "Please enter a valid ip address"
+            warning "Please enter a valid ip address"
         }
-        
-        sysparams_RoleAssign("RoleName,KeyId", "Candidate for validators", $key_id)
+        var roleName string
+        var roleId int
+        var role map
+        roleName = "Candidate for validators"
+        roleId = 2
+        role = DBFind("roles_list").Where("role_name=? and id=? and delete=0", roleName, roleId).Row()
+        if !role{
+            warning Sprintf("Role %q not found", roleName)
+        }
+        $origin_contract = "sysparams_CandidateValidatorRequest"
+        Roles_Assign("role_id,member_id", roleId, $key_id)
     }
     
     action{
