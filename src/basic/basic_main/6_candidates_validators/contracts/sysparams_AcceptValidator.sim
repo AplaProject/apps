@@ -5,6 +5,7 @@ contract sysparams_AcceptValidator{
         VotingId string
     }
     func conditions{
+        $origin_contract = "sysparams_AcceptValidator"
         $Id = Int($KeyId)
         
         $votingParams = DBFind("voting_templates").Where("id=?", $VotingTemplateId).Row()
@@ -20,13 +21,12 @@ contract sysparams_AcceptValidator{
     }
     
     func action{
-        $origin_contract = "sysparams_AcceptValidator"
         // reassign old role
         $raId = DBFind("roles_assign").Where("delete=0 and role_id=? and member_id=?", $oldRoleId, $Id).One("id")
         if $raId !=nil {
-            Roles_Unassign("row_id", Int($raId))
+            Roles_Unassign("row_id,origin_contract", Int($raId), $origin_contract)
         }
         // assign new role
-        Roles_Assign("role_id,member_id", Int($roleId), $Id)
+        Roles_Assign("role_id,member_id,origin_contract", Int($roleId), $Id, $origin_contract)
     }
 }
