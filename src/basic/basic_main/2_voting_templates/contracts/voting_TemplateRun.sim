@@ -55,7 +55,9 @@ contract voting_TemplateRun{
         $vacancies = Int($template["vacancies"])
         
         $desc = Sprintf("%v [template #%v]", $votingName, $TemplateId)
-        
+        if $voting < 1 || $voting > 2 {
+            warning "Invalid type of voting"
+        }
         $contractAccept = $template["contract_accept"]
         if $contractAccept == "NULL"{
             $contractAccept = ""
@@ -75,7 +77,7 @@ contract voting_TemplateRun{
         }
         
         if $decision == 1 || $decision == 2 {
-            // ролевые кандидаты
+            // role-candidates
             checkInput($candidates, "Candidate role")
             var candidate map
             candidate = DBFind("roles_list").Where("id=? and delete=0", $candidates).Row()
@@ -84,27 +86,37 @@ contract voting_TemplateRun{
             }
             $candidateId = Int(candidate["id"])
         }
-
+        
         if $decision == 3 {
-            // утверждение документа
+            // document approval
             checkInput($TextDocument, "TextDocument")
         }
         
         if $decision == 4 {
-            // формальное решение
-            checkInput($TableWritten, "TableWritten")
-            checkInput($RowId, "RowId")
+            // formal decision
+            // in the system vote need only a field and a value
             checkInput($ColumnName, "ColumnName")
             checkInput($NewValue, "NewValue")
+            if $voting == 2{
+                $desc = Sprintf("%v [template #%v] %v %q", $votingName, $TemplateId, $ColumnName, $NewValue)
+            }
+            
+            if $voting == 1{
+                checkInput($TableWritten, "TableWritten")
+                checkInput($RowId, "RowId")
+                $desc = Sprintf("%v [template #%v] %v.%v.%v: %q", $votingName, $TemplateId, $TableWritten, $ColumnName, $RowId, $NewValue)
+            }
+            
+            
         }
         $isCreated = DBFind("voting_instances").Where("name=? and description=? and delete=0", $votingName, $desc).Row()
         if $isCreated{
-            // info "Voting already created" // проверка дубликатов голосования
+            // info "Voting already created" // check for duplicate voting
         }
         
         
         if $participants == 3 {
-            // если тип участников "по роли" - проверяю роль
+            // if the type of the participants "in role" - check the role
             var role map
             role = DBFind("roles_list").Where("id=? and delete=0", $voters).Row()
             if !role {
@@ -116,14 +128,14 @@ contract voting_TemplateRun{
     
     action{
         
-        $voting_id = 0 // должно установиться в voting_CreateNew
+        $voting_id = 0 // must be installed in voting_CreateNew
         voting_CreateNew("voting_name,type_voting,description,type_participants,type_decision,now_date,start_time,start_date,end_date,end_time,volume,quorum", $votingName, $voting, $desc, $participants, $decision, $Start, $StartTime, $Start, $End, $EndTime, $volume, $quorum)
         if $voting_id == 0 {
-            // если не смогло установиться в voting_CreateNew (когда/если будет исправлена передача глобальных переменных)
+            // if unable to set in voting_CreateNew (when/if will be fixed passing of global variables)
             $voting_id = DBFind("voting_instances").Where("voting_name=? and start_date=?", $votingName, $Start).One("id")
             $voting_id = Int($voting_id)
         }
-        // дефолтные аргументы для контрактов
+        // the default argument for Contract
         $defaultParams = Sprintf("VotingTemplateId->%v;KeyId->%v;VotingId->%v", $TemplateId, $KeyId, $voting_id)
         if Size($acceptParams) == 0{
             $acceptParams = $defaultParams
@@ -133,32 +145,32 @@ contract voting_TemplateRun{
         }
         
         if $decision == 1 || $decision == 2{
-            // 1. Ролевые кандидаты с регистрацией участников по запросу
-            // 2. Ролевые кандидаты с ручной регистрацией участников
+            // 1. Role candidates with the registration of participants on request
+            // 2. Role candidates with manual registration of the participants
             voting_SubjectCandidates("votingID,memberID", $voting_id, $KeyId)
             voting_SubjectSettings("votingID,roleID,vacancies,contract_accept,accept_params,contract_reject,reject_params", $voting_id, $candidateId, $vacancies, $contractAccept, $acceptParams, $contractReject,$rejectParams)
         }
         if $decision == 3 {
-            // Утверждение документа
+            // Document approval
             voting_SubjectDocument("votingID,text_document,contract_accept,accept_params,contract_reject,reject_params", $voting_id,$TextDocument, $contractAccept, $acceptParams, $contractReject, $rejectParams)
         }
         
         if $decision == 4 {
-            // Формальное решение
+            // Formal decision
             voting_SubjectFormal("votingID,description,table_to_written,row_id,column_name,written_value,contract_accept,accept_params,contract_reject,reject_params",$voting_id, $desc, $TableWritten, $RowId, $ColumnName, $NewValue, $contractAccept, $acceptParams, $contractReject, $rejectParams)
             
         }
         
         if $decision == 5 {
-            // Выполнение контракта
+            // Execution of the contract
             voting_SubjectContract("votingID,contract_accept,accept_params,contract_reject,reject_params",$voting_id,$contractAccept, $acceptParams, $contractReject, $rejectParams)
         }
         if $participants == 3 {
-            // участники: "по роли"
+            // participants: "by role"
             voting_Invite("votingID,var_id", $voting_id, $roleId)
         }
         if $participants == 1 {
-            // если участники "все", инвайт уже произошел  в "voting_CreateNew"
+            // if the participants are "all", the invite has already occurred in "voting_CreateNew"
         }
     }
-}   
+}
