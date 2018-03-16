@@ -13,49 +13,59 @@ contract sysparams_DelegateRefresh{
     
     conditions{
         MainCondition()
-
-        var roleName string
-        var roleId int
-        roleName = "Delegate"
-        roleId = 5
-        $delegateParam = "delegate_account"
+        
+        var ROLE_NAME string
+        var ROLE_ID int
+        ROLE_NAME = "Delegate"
+        ROLE_ID = 5
         
         // get role Id and Type
-        $role = DBFind("roles_list").Where("role_name=? and id=? and delete=0", roleName, roleId).Row()
+        $role = DBFind("roles_list").Where("role_name=? and id=? and delete=0", ROLE_NAME, ROLE_ID).Row()
         if !$role{
-            return "Role not found"
+            warning Sprintf("Role %q not found", ROLE_NAME)
+        }
+        if EcosysParam("last_ecosystem_number") == 0 {
+            warning "last ecosystem number unknown"
         }
     }
     
     action{
-        $origin_contract = "sysparams_DelegateRefresh"
+        var THIS_CONTRACT, DELEGATE_ACCOUNT string
+        DELEGATE_ACCOUNT = "delegate_account"
+        THIS_CONTRACT = "sysparams_DelegateRefresh"
         // get delegates ids
-        var delegateIds array
-        var dIndex, i, lastEcosystemNumber int
+        var delegateIds, currentDelegates array
+        var dIndex, i int
+        
+        var lastEcosystemNumber int
+        lastEcosystemNumber = Int(EcosysParam("last_ecosystem_number"))
+        
         i = 1
-        lastEcosystemNumber = 15
         while i <= lastEcosystemNumber {
-            $delegate = DBFind("parameters").Where("name=?",$delegateParam).Ecosystem(i).Row()
-            if !$delegate{
-                $delegate = DBFind("parameters").Where("name='founder_account'").Ecosystem(i).Row()
+            var delegateParam map
+            delegateParam = DBFind("parameters").Where("name=?", DELEGATE_ACCOUNT).Ecosystem(i).Row()
+            if !delegateParam{
+                delegateParam = DBFind("parameters").Where("name='founder_account'").Ecosystem(i).Row()
             }
-            $delegateValue = $delegate["value"]
-            if NotInArray($delegateValue, delegateIds){
-                delegateIds[dIndex] = $delegateValue
+            var delegateValue string
+            delegateValue = delegateParam["value"]
+            if NotInArray(delegateValue, delegateIds){
+                delegateIds[dIndex] = delegateValue
                 dIndex = dIndex + 1
             }
             i = i + 1
         }
         
         // remove old role assigns
-        $currentDelegates = DBFind("roles_assign").Where("role_id=? and delete=0", $role["id"])
+        currentDelegates = DBFind("roles_assign").Where("role_id=? and delete=0", $role["id"])
         i = 0
-        while i < Len($currentDelegates){
-            $currentDelegate = $currentDelegates[i]
-            if NotInArray($currentDelegate["member_id"], delegateIds){
+        while i < Len(currentDelegates){
+            var delegate map
+            delegate = currentDelegates[i]
+            if NotInArray(delegate["member_id"], delegateIds){
                 var id int
-                id = Int($currentDelegate["id"])
-                Roles_Unassign("row_id,origin_contract", id, $origin_contract)
+                id = Int(delegate["id"])
+                Roles_Unassign("row_id,origin_contract", id, THIS_CONTRACT)
             }
             i = i + 1
         }
@@ -72,7 +82,7 @@ contract sysparams_DelegateRefresh{
                 var assigned map
                 assigned = DBFind("roles_assign").Where("member_id=? and role_id=? and delete=0", delegateId, $role["id"]).Row()
                 if !assigned{
-                    Roles_Assign("role_id,member_id,origin_contract", Int($role["id"]), Int(member["id"]), $origin_contract)
+                    Roles_Assign("role_id,member_id,origin_contract", Int($role["id"]), Int(member["id"]), THIS_CONTRACT)
                 }
             }
             i=i+1
