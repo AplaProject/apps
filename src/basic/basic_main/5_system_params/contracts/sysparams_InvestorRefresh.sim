@@ -13,14 +13,16 @@ contract sysparams_InvestorRefresh {
     conditions{
         MainCondition()
         
-        var roleName string
         var roleId int
-        roleName = "Investor with voting rights"
-        roleId = 4
+        roleId = 4 // Investor with voting rights
         
-        $role = DBFind("roles_list").Where("id=? and role_name=? and delete=0", roleId, roleName).Row()
+        $role = DBFind("roles_list").Where("id=? and delete=0", roleId).Row()
         if !$role{
-            warning Sprintf("Role %q not found", roleName)
+            warning "Investor role not found"
+        }
+        $limitInvestors = Int(EcosysParam("investors_number"))
+        if $limitInvestors == 0 {
+            warning "Investors number not set"
         }
     }
     
@@ -29,9 +31,8 @@ contract sysparams_InvestorRefresh {
         thisContract = "sysparams_InvestorRefresh"
         // get investors ids
         var keysInvestors, assignedInvestors, investorsIds, assignedIds array
-        var limit, dIndex, i int
-        limit = 3
-        keysInvestors = DBFind("keys").Order("amount desc, id").Limit(limit)
+        var dIndex, i int
+        keysInvestors = DBFind("keys").Order("amount desc, id").Limit($limitInvestors)
         assignedInvestors = DBFind("roles_assign").Where("role_id=? and delete=0", $role["id"])
         
         // get ids
@@ -46,7 +47,7 @@ contract sysparams_InvestorRefresh {
         while i < Len(assignedInvestors) {
             var inv map
             inv = assignedInvestors[i]
-            assignedIds[i] =  inv["member_id"]
+            assignedIds[i] = inv["member_id"]
             i = i + 1
         }
         
