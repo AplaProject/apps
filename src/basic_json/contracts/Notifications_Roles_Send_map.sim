@@ -1,0 +1,90 @@
+contract Notifications_Roles_Send_map {
+    data {
+        role_id int
+        closure_type int
+        sender int
+        icon_name string
+        text_header string
+        text_body string "optional"
+        page_name string
+		params_map map
+    }
+
+    conditions {
+        $roles_map = DBFind("roles").Where("id = $", $role_id).Row()
+        if !$roles_map {
+            warning "Role not found"
+        }
+
+        $participant_id = DBFind("roles_participants").Where("role->id=$ and deleted=$", $role_id, 0).One("id")
+        if !$participant_id {
+            warning "Role does not contain members"
+        }
+
+        if ($sender == 1) {
+            $sender_map = DBFind("members").Where("id = $", $key_id).Row()
+            if !$sender_map {
+                warning "Member not found"
+            }
+        }
+        if ($sender == 2) {
+            // !!! need to fix role_id to the global variable !!!!
+            $sender_map = DBFind("roles").Where("id = $", 1).Row()
+            if !$sender_map {
+                warning "Member not found"
+            }
+        }
+    }
+
+    action {
+        //closure_type - Single
+        if ($closure_type == 1) {
+            var recipient map
+            recipient["role_id"] = Str($roles_map["id"])
+            recipient["role_name"] = Str($roles_map["role_name"])
+            recipient["image_id"] = Str($roles_map["image_id"])
+
+            var sender map
+            if ($sender == 1) {
+                sender["type"] = "1"
+                sender["member_id"] = Str($sender_map["id"])
+                sender["member_name"] = Str($sender_map["member_name"])
+                sender["image_id"] = Str($sender_map["image_id"])
+            }
+            if ($sender == 2) {
+                sender["type"] = "2"
+                sender["role_id"] = Str($sender_map["id"])
+                sender["role_name"] = Str($sender_map["role_name"])
+                sender["image_id"] = Str($sender_map["image_id"])
+            }
+
+            var notification map
+            notification["header"] = $text_header
+            notification["type"] = "2"
+            notification["icon"] = $icon_name
+            notification["body"] = $text_body
+
+            DBInsert("notifications", "recipient,sender,notification,page_name,page_params,timestamp date_created",
+                recipient, sender, notification, $page_name, $params_map, $block_time)
+        }
+        //closure_type - Multiple 
+        else {
+            $ret_role = DBFind("roles_participants").Columns("member->member_id").Where("role->id = $ and deleted = $", $role_id, 0).Order("id")
+
+            $len_role = Len($ret_role)
+            $i_role = 0
+            while ($i_role < $len_role) {
+                var vals_role map
+                vals_role = $ret_role[$i_role]
+
+                var member_id int
+                member_id = Int(vals_role["member.member_id"])
+
+                Notifications_Single_Send_str("member_id,sender,icon_name,text_header,text_body,page_name,params_map",
+                    member_id, $sender, $icon_name, $text_header, $text_body, $page_name, $params_map)
+
+                $i_role = $i_role + 1
+            }
+        }
+    }
+}

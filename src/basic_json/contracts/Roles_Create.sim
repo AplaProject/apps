@@ -1,0 +1,61 @@
+contract Roles_Create {
+    data {
+        role_name string
+        role_type int
+        icon string "image"
+        company_id int "optional"
+    }
+
+    conditions {
+        // check icon
+        if (Size($icon) == 0) {
+            warning "Icon was not received"
+        }
+
+        // system role
+        if ($role_type == 3) {
+            warning "System role can not be created"
+        }
+
+        // company role
+        if ($role_type == 4) {
+
+            // check param
+            if ($company_id == 0) {
+                warning "On this page you can not create a role for the company. Go to the company's view page to create a role"
+            }
+
+            // check creator of the company
+            if ($company_id != $key_id) {
+                warning "Sorry, you are not the creator of this company"
+            }
+        }
+
+        // check member
+        $member_map = DBFind("members").Where("id = $", $key_id).Row()
+        if !$member_map {
+            warning "You are not a member of the ecosystem"
+        }
+    }
+
+    action {
+        // new JSON
+        var creator map
+        creator["member_id"] = Str($member_map["id"])
+        creator["member_name"] = Str($member_map["member_name"])
+        creator["image_id"] = Str($member_map["image_id"])
+
+        // new icon
+        var image_id int
+        image_id = DBInsert("binary_data", "binary_data", $icon)
+
+        // insert role
+        if ($role_type == 4) {
+            $result = DBInsert("roles", "role_name,role_type,image_id,creator,timestamp date_created,company_id",
+                $role_name, $role_type, image_id, creator, $block_time, $company_id)
+        } else {
+            $result = DBInsert("roles", "role_name,role_type,image_id,creator,timestamp date_created,company_id",
+                $role_name, $role_type, image_id, creator, $block_time, 0)
+        }
+    }
+}

@@ -1,0 +1,80 @@
+contract voting_UpdateDataForGraphs {
+    data {
+        votingID int
+    }
+
+    conditions {
+        $voting_map = DBFind("voting").Where("id=?", $votingID).Row()
+        if !$voting_map {
+            warning "Voting is not found"
+        }
+    }
+
+    action {
+        // get JSON
+        var progress_json string
+        progress_json = Str($voting_map["progress"])
+
+        // get MAP
+        var progress map
+        progress = JSONToMap(progress_json)
+
+        $number_participants = Int(progress["number_participants"]) // number of participants
+        $number_voters = Int(progress["number_voters"]) // number of voters
+        $percent_voters = Int(progress["percent_voters"])
+
+        // get JSON
+        var voting_json string
+        voting_json = Str($voting_map["voting"])
+
+        // get MAP
+        var voting map
+        voting = JSONToMap(voting_json)
+
+        $volume = Int(voting["volume"])
+        $quorum = Int(voting["quorum"])
+
+        // get JSON
+        var flags_json string
+        flags_json = Str($voting_map["flags"])
+
+        // get MAP
+        var flags map
+        flags = JSONToMap(flags_json)
+
+        //-----------------------------------------------------------------------------------
+
+        // increment count of voters
+        $number_voters = $number_voters + 1
+
+        // calculate the percentage of the ratio of the number of voters to the number of participants (for the graph)
+        $percent_voters = ($number_voters * 100) / $number_participants
+        if ($percent_voters > 100) {
+            $percent_voters = 100
+        }
+
+        // update progress
+        $percent_success = ($percent_voters * 100) / $volume
+        if ($percent_success > 100) {
+            $percent_success = 100
+        }
+
+        // update the flag of success
+        $flag_success = 0
+        if ($percent_success == 100) {
+            $flag_success = 1
+        }
+
+        progress["percent_success"] = Str($percent_success)
+        progress["number_voters"] = Str($number_voters)
+        progress["percent_voters"] = Str($percent_voters)
+
+        flags["success"] = Str($flag_success)
+
+        DBUpdate("voting", $votingID, "progress,flags", progress, flags)
+
+        //if ($percent_voters >= $quorum) {
+        //    voting_CheckDecision("votingID", $votingID)
+        //}
+    }
+}

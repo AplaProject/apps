@@ -1,0 +1,63 @@
+contract Profile_Edit {
+    data {
+        member_name string
+        member_image string "image"
+        information string "optional"
+    }
+
+    conditions {
+        $member_map = DBFind("members").Where("id = $", $key_id).Row()
+
+        if !$member_map {
+            // check member_name 
+            $member_id = DBFind("members").Where("member_name = $", $member_name).One("id")
+            if $member_id {
+                warning "This member name is busy. Enter another member name, please"
+            }
+
+            // check avatar
+            if (Size($member_image) == 0) {
+                warning "Avatar was not received"
+            }
+        }
+    }
+
+    action {
+        if $member_map {
+            // update avatar
+            if (Size($member_image) > 0) {
+                $binary_id = DBFind("binary_data").Where("id = $", Int($member_map["image_id"])).One("id")
+                if $binary_id {
+                    DBUpdate("binary_data", Int($member_map["image_id"]), "binary_data", $member_image)
+                } else {
+                    var image_id int
+                    image_id = DBInsert("binary_data", "binary_data", $member_image)
+                    DBUpdate("members", Int($member_map["id"]), "image_id", image_id)
+                }
+            }
+
+            // get JSON
+            var member_info_json string
+            member_info_json = Str($member_map["member_info"])
+
+            // get MAP
+            var member_info map
+            member_info = JSONToMap(member_info_json)
+            member_info["information"] = $information
+
+            // update member
+            DBUpdate("members", Int($member_map["id"]), "member_info", member_info)
+        } else {
+            // new image
+            var image_id int
+            image_id = DBInsert("binary_data", "binary_data", $member_image)
+
+            // new information
+            var member_info map
+            member_info["information"] = $information
+
+            // insert member
+            DBInsert("members", "id,member_name,image_id,member_info", $key_id, $member_name, image_id, member_info)
+        }
+    }
+}
