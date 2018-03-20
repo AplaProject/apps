@@ -1,0 +1,88 @@
+contract voting_SendNotifics {
+    data {
+        votingID int
+    }
+
+    conditions {
+        $voting_id = DBFind("voting").Where("id=$ and date_ended > now()", $votingID).One("id")
+        if !$voting_id {
+            warning "Voting has expired. Notifications can not be sent"
+        }
+
+        $voting_map = DBFind("voting").Where("id=$ and date_started < now()", $votingID).Row()
+        if !$voting_map {
+            warning "Voting has not yet begun. Try again later, please"
+        }
+
+        // get JSON
+        var creator_json string
+        creator_json = Str($voting_map["creator"])
+
+        // get MAP
+        var creator map
+        creator = JSONToMap(creator_json)
+
+        if (Int(creator["member_id"]) != $key_id) {
+            warning "You are not the creator of the voting"
+        }
+
+        // get JSON
+        var flags_json string
+        flags_json = Str($voting_map["flags"])
+
+        // get MAP
+        var flags map
+        flags = JSONToMap(flags_json)
+
+        if (Int(flags["notifics"]) == 1) {
+            warning "Notifications have already been sent"
+        }
+
+        // get JSON
+        var voting_json string
+        voting_json = Str($voting_map["voting"])
+
+        // get MAP
+        var voting map
+        voting = JSONToMap(voting_json)
+
+        $voting_name = Str(voting["name"])
+    }
+
+    action {
+        $ret_participants = DBFind("voting_participants").Where("voting_id=$ and decision=$", $votingID, 0)
+        $i = 0
+        while ($i < Len($ret_participants)) {
+            $vals_participants = $ret_participants[$i]
+
+			// get JSON
+			var member_json string
+			member_json = Str($vals_participants["member"])
+
+			// get MAP
+			var member map
+			member = JSONToMap(member_json)
+
+            $recipient = Int(member["member_id"])
+
+            var params map
+            params["voting_id"] = Str($votingID)
+
+            Notifications_Single_Send_map("member_id,sender,icon_name,text_header,text_body,page_name,params_map",
+                $recipient, 1, "fa-check", "Voting", $voting_name, "voting_view", params)
+
+            $i = $i + 1
+        }
+
+        // get JSON
+        var flags_json string
+        flags_json = Str($voting_map["flags"])
+
+        // get MAP
+        var flags map
+        flags = JSONToMap(flags_json)
+
+		flags["notifics"] = "1"
+        DBUpdate("voting", $votingID, "flags", flags)
+    }
+}

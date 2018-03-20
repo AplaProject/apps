@@ -1,0 +1,39 @@
+contract Roles_Unassign {
+    data {
+        row_id int
+    }
+
+    conditions {
+        // check record
+        $assign_map = DBFind("roles_participants").Where("id=$", $row_id).Row()
+        if !$assign_map {
+            warning "Participant not found"
+        }
+
+        // check role
+        var role_json string
+        role_json = Str($assign_map["role"])
+        var role map
+        role = JSONToMap(role_json)
+
+        $role_map = DBFind("roles").Where("id=$", Int(role["id"])).Row()
+        if !$role_map["id"] {
+            warning "Role not found in the roles registry"
+        }
+
+        // check creator of the role
+        var creator_json string
+        creator_json = Str($role_map["creator"])
+        var creator map
+        creator = JSONToMap(creator_json)
+
+        if (Int(creator["member_id"]) != $key_id) {
+            warning "Sorry, you are not the creator of this role"
+        }
+    }
+
+    action {
+        // delete the member
+        DBUpdate("roles_participants", $row_id, "deleted,timestamp date_deleted", 1, $block_time)
+    }
+}

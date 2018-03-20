@@ -1,0 +1,78 @@
+contract voting_SubjectCandidates {
+    data {
+        votingID int
+        memberID int
+    }
+
+    conditions {
+        $voting_map = DBFind("voting").Where("id=? and date_started > now()", $votingID).Row()
+        if !$voting_map {
+            warning "Voting already started. Can not edit document"
+        }
+
+        // get JSON
+        var flags_json string
+        flags_json = Str($voting_map["flags"])
+
+        // get MAP
+        var flags map
+        flags = JSONToMap(flags_json)
+
+        // get JSON
+        var voting_json string
+        voting_json = Str($voting_map["voting"])
+
+        // get MAP
+        var voting map
+        voting = JSONToMap(voting_json)
+
+        if (Int(flags["full_data"]) == 1 && Int(voting["type"]) == 2) {
+            warning "This vote is a system. Change settings not allowed"
+        }
+
+        if ($memberID == 0) {
+            $memberID = $key_id
+        }
+
+        $subject_id = DBFind("voting_subject").Where("voting_id=$ and subject->member_id=$", $votingID, $memberID).One("id")
+        if $subject_id {
+            warning "This candidature for this role has already been added before"
+        }
+
+        $member_map = DBFind("members").Where("id = $", $memberID).Row()
+        if !$member_map {
+            warning "Member not found"
+        }
+    }
+
+    action {
+
+        var subject map
+        subject["member_id"] = Str($member_map["id"])
+        subject["member_name"] = Str($member_map["member_name"])
+        subject["image_id"] = Str($member_map["image_id"])
+
+        DBInsert("voting_subject", "voting_id,subject", $votingID, subject)
+
+        // get JSON
+        var optional_json string
+        optional_json = Str($voting_map["optional"])
+
+        // get MAP
+        var optional map
+        optional = JSONToMap(optional_json)
+
+		var number_candidates int
+		if optional["number_candidates"]{
+			number_candidates = Int(optional["number_candidates"])
+			number_candidates = number_candidates + 1
+		} else {
+			number_candidates = 1
+		}
+
+		optional["number_candidates"] = Str(number_candidates)
+        DBUpdate("voting", $votingID, "optional", optional)
+
+        //voting_SubjectCheckFulldata("votingID", $votingID)
+    }
+}
