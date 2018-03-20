@@ -1,20 +1,21 @@
 contract catalog_ecosystems_Add {
     data {
-        Name string
-        Num int
+        Ecosystem_name string
+        Ecosystem_number int
         Logo string "image"
-        Type int
+        Ecosystem_type int
         Description string
         Conditions string
-        Freetype int
-        VdeForm string "optional"
-        VdePage string "optional"
-        WebForm string "optional"
-        WebPage string "optional"
+        Flag_free int
+        Vde_form_address string "optional"
+        Vde_page string "optional"
+        Web_form_address string "optional"
+        Web_page string "optional"
         Email string "optional"
         Phone string "optional"
     }
     conditions {
+
         $founderParam = "founder_account"
         $delegateParam = "delegate_account"
         $catalogTbl = "catalog_ecosystems"
@@ -26,19 +27,20 @@ contract catalog_ecosystems_Add {
                 warning "Invalid email"
             }
         }
+
         if Size($Logo) == 0 {
             warning "Required logo"
         }
 
-        $ecoExists = DBFind($catalogTbl).Where("num=? and deleted=0", $Num).Row()
+        $ecoExists = DBFind($catalogTbl).Where("ecosystem_number=? and deleted=0", $Ecosystem_number).Row()
         if $ecoExists {
             info "The ecosystem with same number already added"
         }
 
-        $founder = DBFind("parameters").Where("name=?", $founderParam).Ecosystem($Num).Row()
+        $founder = DBFind("parameters").Where("name=?", $founderParam).Ecosystem($Ecosystem_number).Row()
         $meFounder = $founder["value"] == $key_id
 
-        $delegate = DBFind("parameters").Where("name=?", $delegateParam).Ecosystem($Num).Row()
+        $delegate = DBFind("parameters").Where("name=?", $delegateParam).Ecosystem($Ecosystem_number).Row()
         if $delegate {
             $meDelegate = $delegate["value"] == $key_id
         }
@@ -48,7 +50,22 @@ contract catalog_ecosystems_Add {
     }
 
     action {
-        DBInsert($catalogTbl, "name,num,logo,type,description,conditions,freetype,vde_form_address,vde_page,web_form_address,web_page,email,phone",
-            $Name, $Num, $Logo, $Type, $Description, $Conditions, $Freetype, $VdeForm, $VdePage, $WebForm, $WebPage, $Email, $Phone)
+        var ecosystem_info map
+        ecosystem_info["description"] = Str($Description)
+        ecosystem_info["conditions"] = Str($Conditions)
+        ecosystem_info["email"] = Str($Email)
+        ecosystem_info["phone"] = Str($Phone)
+
+        var url_address map
+        url_address["web_page"] = Str($Web_page)
+        url_address["web_form_address"] = Str($Web_form_address)
+        url_address["vde_page"] = Str($Vde_page)
+        url_address["vde_form_address"] = Str($Vde_form_address)
+
+        var image_id int
+        image_id = DBInsert("binary_data", "binary_data", $Logo)
+
+        DBInsert($catalogTbl, "ecosystem_name,ecosystem_number,ecosystem_type,image_id,ecosystem_info,url_address,flag_free",
+            $Ecosystem_name, $Ecosystem_number, $Ecosystem_type, image_id, ecosystem_info, url_address, $Flag_free)
     }
 }
