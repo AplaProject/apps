@@ -4,12 +4,12 @@ contract voting_RejectDecision {
     }
 
     conditions {
-        $voting_map = DBFind("voting").Where("id=$", $votingID).Row()
+        $voting_map = DBFind("votings").Where("id=$", $votingID).Row()
         if !$voting_map {
             warning "Voting is not found"
         }
 
-        $participant_id = DBFind("voting_participants").Where("voting_id=$ and member->member_id=$", $votingID, $key_id).One("id")
+        $participant_id = DBFind("votings_participants").Where("voting_id=$ and member->member_id=$", $votingID, $key_id).One("id")
         if !$participant_id {
             warning "You are not a participant in this voting"
         }
@@ -41,8 +41,8 @@ contract voting_RejectDecision {
         }
 
         // check start-end of voting time
-        $voting_start = DBFind("voting").Where("id=$ and date_started < now()", $votingID).One("id")
-        $voting_end = DBFind("voting").Where("id=$ and date_ended > now()", $votingID).One("id")
+        $voting_start = DBFind("votings").Where("id=$ and date_started < now()", $votingID).One("id")
+        $voting_end = DBFind("votings").Where("id=$ and date_ended > now()", $votingID).One("id")
         if !$voting_start {
             warning "Voting has not yet begun. Try again later, please"
         }
@@ -53,7 +53,7 @@ contract voting_RejectDecision {
         //-----------------------------------------------------------------------------------------------
 
         // write the result of the voting
-        DBUpdate("voting_participants", Int($participant_id), "timestamp decision_date,decision", $block_time, -1)
+        DBUpdate("votings_participants", Int($participant_id), "timestamp decision_date,decision", $block_time, -1)
 
         voting_UpdateDataForGraphs("votingID", $votingID)
     }

@@ -5,7 +5,7 @@ contract voting_SubjectCandidates {
     }
 
     conditions {
-        $voting_map = DBFind("voting").Where("id=? and date_started > now()", $votingID).Row()
+        $voting_map = DBFind("votings").Where("id=? and date_started > now()", $votingID).Row()
         if !$voting_map {
             warning "Voting already started. Can not edit document"
         }
@@ -34,7 +34,7 @@ contract voting_SubjectCandidates {
             $memberID = $key_id
         }
 
-        $subject_id = DBFind("voting_subject").Where("voting_id=$ and subject->member_id=$", $votingID, $memberID).One("id")
+        $subject_id = DBFind("votings_subject").Where("voting_id=$ and subject->member_id=$", $votingID, $memberID).One("id")
         if $subject_id {
             warning "This candidature for this role has already been added before"
         }
@@ -52,7 +52,7 @@ contract voting_SubjectCandidates {
         subject["member_name"] = Str($member_map["member_name"])
         subject["image_id"] = Str($member_map["image_id"])
 
-        DBInsert("voting_subject", "voting_id,subject", $votingID, subject)
+        DBInsert("votings_subject", "voting_id,subject", $votingID, subject)
 
         // get JSON
         var optional_json string
@@ -71,7 +71,7 @@ contract voting_SubjectCandidates {
 		}
 
 		optional["number_candidates"] = Str(number_candidates)
-        DBUpdate("voting", $votingID, "optional", optional)
+        DBUpdate("votings", $votingID, "optional", optional)
 
         //voting_SubjectCheckFulldata("votingID", $votingID)
     }

@@ -10,7 +10,7 @@ contract voting_SubjectDocument {
     }
 
     conditions {
-        $voting_map = DBFind("voting").Where("id=? and date_started > now()", $votingID).Row()
+        $voting_map = DBFind("votings").Where("id=? and date_started > now()", $votingID).Row()
         if !$voting_map {
             warning "Voting already started. Can not edit document"
         }
@@ -43,11 +43,11 @@ contract voting_SubjectDocument {
         subject["text"] = Str($text_document)
         subject["hash"] = Str($hash)
 
-        $subject_id = DBFind("voting_subject").Where("voting_id = $", $votingID).One("id")
+        $subject_id = DBFind("votings_subject").Where("voting_id = $", $votingID).One("id")
         if !$subject_id {
-            DBInsert("voting_subject", "voting_id,subject", $votingID, subject)
+            DBInsert("votings_subject", "voting_id,subject", $votingID, subject)
         } else {
-            DBUpdate("voting_subject", Int($subject_id), "subject", subject)
+            DBUpdate("votings_subject", Int($subject_id), "subject", subject)
         }
 
         var accept_params_map map
@@ -73,7 +73,7 @@ contract voting_SubjectDocument {
         optional["contract_reject"] = Str($contract_reject)
         optional["contract_reject_params"] = reject_params_map
 
-        DBUpdate("voting", $votingID, "optional", optional)
+        DBUpdate("votings", $votingID, "optional", optional)
 
         voting_SubjectCheckFulldata("votingID", $votingID)
     }

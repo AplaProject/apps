@@ -4,12 +4,12 @@ contract voting_SendNotifics {
     }
 
     conditions {
-        $voting_id = DBFind("voting").Where("id=$ and date_ended > now()", $votingID).One("id")
+        $voting_id = DBFind("votings").Where("id=$ and date_ended > now()", $votingID).One("id")
         if !$voting_id {
             warning "Voting has expired. Notifications can not be sent"
         }
 
-        $voting_map = DBFind("voting").Where("id=$ and date_started < now()", $votingID).Row()
+        $voting_map = DBFind("votings").Where("id=$ and date_started < now()", $votingID).Row()
         if !$voting_map {
             warning "Voting has not yet begun. Try again later, please"
         }
@@ -50,7 +50,7 @@ contract voting_SendNotifics {
     }
 
     action {
-        $ret_participants = DBFind("voting_participants").Where("voting_id=$ and decision=$", $votingID, 0)
+        $ret_participants = DBFind("votings_participants").Where("voting_id=$ and decision=$", $votingID, 0)
         $i = 0
         while ($i < Len($ret_participants)) {
             $vals_participants = $ret_participants[$i]
@@ -83,6 +83,6 @@ contract voting_SendNotifics {
         flags = JSONToMap(flags_json)
 
 		flags["notifics"] = "1"
-        DBUpdate("voting", $votingID, "flags", flags)
+        DBUpdate("votings", $votingID, "flags", flags)
     }
 }
