@@ -1,0 +1,30 @@
+contract sysparams_RemoveNode{
+    data{
+        NodeId int
+    }
+    func nodeRemove(nodeId int){
+        var nodes_string string
+        var nodes array
+        nodes_string = SysParamString("full_nodes")
+        nodes = JSONToMap(nodes_string)
+        info nodes
+
+    }
+    conditions{
+        var roleId int
+        roleId = 3 // Validator
+        
+        $validatorRow = DBFind("roles_assign").Where("delete=0 and id=? and member_id=?", roleId, $key_id).Row()
+        if $validatorRow {
+            warning "You are not a validator"
+        }
+    }
+    
+    action{
+        var this_contract string
+        this_contract = "sysparams_RemoveNode"
+        
+        nodeRemove($NodeId)
+        // Roles_Unassign("row_id,origin_contract", Int($validatorRow["id"]), this_contract)
+    }
+}
