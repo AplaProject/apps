@@ -1,0 +1,174 @@
+SetTitle($template_create$)
+
+If(#TemplateId#>0){
+    DBFind(Name:voting_templates, Source: templates).Where(id=#TemplateId#).Vars(template)
+    SetVar(title, #template_title#)
+    SetVar(typevoting, #template_type_voting#)
+    SetVar(volume, #template_volume#)
+    SetVar(subj, #template_subject#)
+    SetVar(quorum, #template_quorum#)
+    SetVar(voters, #template_voters#)
+    SetVar(candidates, #template_voters#)
+    SetVar(vacancies, #template_vacancies#)
+    SetVar(contract_init, #template_init_contract#)
+    SetVar(contract_accept, #template_contract_accept#)
+    SetVar(accept_params, #template_accept_params#)
+    SetVar(contract_reject, #template_contract_reject#)
+    SetVar(reject_params, #template_reject_params#)
+    
+}.Else{
+    SetVar(template_id, 0)
+    SetVar(title, New voting)
+    SetVar(typevoting, 0)
+    SetVar(volume, 50)
+    SetVar(quorum, 50)
+    SetVar(subj, "")
+    SetVar(voters, "")
+    SetVar(candidates, "")
+    SetVar(vacancies, 1)
+    SetVar(contract_init, "")
+    SetVar(contract_accept, "")
+    SetVar(accept_params, "")
+    SetVar(contract_reject, "")
+    SetVar(reject_params, "")
+    
+}
+If(#TypeDecision#>0){
+    SetVar(typedec, #TypeDecision#)
+}.Else{
+    SetVar(typedec, 0)
+}
+If(#TypeParticipants#>0){
+    SetVar(typepart, #TypeParticipants#)
+}.Else{
+    SetVar(typepart, 0)
+}
+EcosysParam(Name: type_voting_participants, Source: src_typepart)
+EcosysParam(Name: type_voting, Source: src_typevoting)
+EcosysParam(Name: type_voting_decisions, Source: src_typedec)
+DBFind(Name: roles_list, Source: src_roles).Where("delete=0").Order(id).Custom(name){
+    #role_name#
+}
+
+If(#typedec#>0){
+    Data(data_inputs, Columns: "data"){
+        commons_req
+        decisions
+        participants
+        commons
+    }
+    Data(commons_req, Columns: "name,type,res,star,value,control,src,desc"){
+        Title,text,name,*,#title#,input,"",""
+        TypeParticipants,text,participants,*,#typepart#,disabled,"EcosysParam(Name: type_voting_participants, Index: #typepart#)",""
+        TypeDecision,text,decision,*,#typedec#,disabled,"EcosysParam(Name: type_voting_decisions, Index: #typedec#)",""
+        TypeVoting,text,voting_type,*,#typevoting#,select,src_typevoting,""
+        Volume,number,voting_volume,*,#volume#,validate,"",$voting_volume_desc$
+        Quorum,number,voting_quorum,*,#quorum#,validate,"",$voting_quorum_desc$
+        Subject,text,voting_subject,*,#subj#,input,"",""
+    }
+    Data(commons, Columns: "name,type,res,star,value,control,src,desc"){
+        InitContract,text,voting_init_contract,"",#contract_init#,input,"",$voting_init_contract_desc$
+        ContractAccept,text,voting_contract_accept,"",#contract_accept#,contract,ParamsAccept,#accept_params#
+        ContractReject,text,voting_contract_reject,"",#contract_reject#,contract,ParamsReject,#reject_params#
+    }
+    If(Or(#typedec#==1,#typedec#==2)){
+        Data(decisions, Columns: "name,type,res,star,value,control,src,desc"){
+            Vacancies,number,vacancies,"*",#vacancies#,input,"",""
+            Candidates,text,candidates_role,"*",#voters#,select,src_roles,""
+        }
+    }.Else{
+        Data(decisions, Columns: "name,type,res,star,value,control,src,desc"){}
+    }
+    If(#typepart#==3){
+        Data(participants, Columns: "name,type,res,star,value,control,src,desc"){
+            Voters,text,voters_role,"*",#voters#,select,src_roles,""
+        }
+    }.Else{
+        Data(participants, Columns: "name,type,res,star,value,control,src,desc"){}
+    }
+}.Else{
+    Data(data_inputs, Columns: "data"){
+        commons
+    }
+    Data(commons, Columns: "name,type,res,star,value,control,src,desc"){
+        TypeDecision,text,decision,*,#typedec#,radio,src_typedec,""
+        TypeParticipants,text,participants,*,#typepart#,select,src_typepart,""
+    }
+}
+Div(content-wrapper){
+    Div(breadcrumb){
+        LinkPage($voting_templates$, voting_templates)
+        Span(/).Style(margin-right: 10px; margin-left: 10px;)
+        Span(Class: text-muted, Body: $template_create$)
+    }
+    Div(row){
+        Div(col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3){
+            Form(panel panel-primary){
+                Div(panel-heading){LangRes(voting_params)}
+                Div(panel-body){
+                    ForList(data_inputs){
+                        ForList(#data#){
+                            Div(row form-group){
+                                Div(col-md-4 mt-sm text-right){
+                                    Label(For: #name#){
+                                        LangRes(#res#)
+                                        If(#star#=="*"){
+                                            Span(Class: text-danger, Body:*)
+                                        }
+                                    }
+                                }
+                                Div(col-md-8 text-left){
+                                    If(#control#=="select"){
+                                        Select(Name: #name#, Source: #src#, NameColumn: name, ValueColumn: id, Value: #value#)
+                                    }
+                                    If(#control#=="disabled"){
+                                        #src#
+                                        Input(Name: #name#, Type: hidden, Value: #value#)
+                                    }
+                                    If(#control#=="input"){
+                                        Input(Name: #name#, Value: #value#, Type: #type#)
+                                    }
+                                    If(#control#=="validate"){
+                                        Input(Name: #name#, Type: #type#, Value: #value#).Validate(minLength: 1)
+                                        InputErr(Name: #name#, minLength: Please enter #name#)
+                                    }
+                                    If(#control#=="contract"){
+                                        Div(row){
+                                            Div(col-md-6){
+                                                Input(Name: #name#, Type: #type#, Placeholder: $contract$, Value: #value#)
+                                            }
+                                            Div(col-md-6){
+                                                Input(Name: #src#, Type: #type#, Placeholder: $arguments$, Value: #desc#)
+                                            }
+                                        }
+                                    }
+                                    If(#control#=="radio"){
+                                        RadioGroup(Name: #name#, Value: #value#, Source: #src#, ValueColumn: id, NameColumn: name)
+                                    }
+                                    If(And(#desc#!="",#desc#!="NULL")){
+                                        P(Class: m0 text-muted, Body: #desc#)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Div(panel-footer text-right){
+                    
+                    If(#typedec#>0){
+                        Button(Body: LangRes(back), Class: btn btn-default, Page: voting_template_create, PageParams: "TemplateId=#TemplateId#")
+                        Button(Body: LangRes(create), Class: btn btn-primary, Page: voting_templates, Contract: voting_TemplateStore)
+                    }.Else{
+                        If(#TemplateId#>0){
+                            Button(Body: LangRes(back), Class: btn btn-default, Page: voting_template_start, PageParams: "TemplateId=#TemplateId#")
+                        }.Else{
+                            Button(Body: LangRes(back), Class: btn btn-default, Page: voting_templates)
+                        }
+                        Button(Body: LangRes(next), Class: btn btn-primary, Page: voting_template_create, PageParams: "TemplateId=#TemplateId#,TypeDecision=Val(TypeDecision),TypeParticipants=Val(TypeParticipants)")
+                    }
+                }
+            }
+        }
+    }
+}
