@@ -11,10 +11,23 @@ contract test_voting_Create{
         volume = 50
         quorum = 50
         vacancies = 1
+        
         var subject, voters, candidates, initContract, contractAccept, paramsAccept, contractReject, paramsReject string
         subject = "voting template subject"
-        candidates = DBFind("roles").Where("deleted=0 and (role_type=2 or role_type=3)").One("id") // role id
-        voters = DBFind("roles").Where("deleted=0").One("id") // role id
+        
+        var candidateRole map
+        candidateRole = DBFind("roles").Where("deleted=0 and (role_type=2 or role_type=3)").Row() 
+        if !candidateRole{
+            warning "Candidate role not found"
+        }
+        candidates = candidateRole["id"] 
+        
+        var voterRole map
+        voterRole = DBFind("roles").Where("deleted=0").Row()
+        if !voterRole {
+            warning "Voter role not found"
+        }
+        voters = voterRole["id"] 
         initContract = "test_voting_Init"
         contractAccept = "test_voting_Accept"
         paramsAccept = ""
@@ -34,7 +47,7 @@ contract test_voting_Create{
                     var templateId, kid int
                     voting_TemplateStore("Title,TypeParticipants,TypeVoting,TypeDecision,Volume,Quorum,Subject,Voters,Candidates,InitContract,Vacancies,ContractAccept,ParamsAccept,ContractReject,ParamsReject", title,p,v,d,volume,quorum,subject,voters,candidates,initContract,vacancies,contractAccept,paramsAccept,contractReject,paramsReject)
                     templateId = $result
-                    
+
                     var tableWritten, rowId, columnName, newValue, textDocument string
                     tableWritten = "debug"
                     rowId = "1"

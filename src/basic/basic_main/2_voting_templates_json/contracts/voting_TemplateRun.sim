@@ -26,8 +26,9 @@ contract voting_TemplateRun{
     }
     
     conditions{
-        $template = DBFind("voting_templates").Where("id=?",$TemplateId).Row()
-        if !$template{
+        var template map
+        template = DBFind("voting_templates").Where("id=?",$TemplateId).Row()
+        if !template{
             warning "Voting template not found"
         }
         if $KeyId != 0{
@@ -43,31 +44,32 @@ contract voting_TemplateRun{
             $EndTime = "23:59"
         }
         
-        $initContract = $template["init_contract"]
-        if $initContract != "" && $initContract != "NULL"{
+        var initContract string
+        initContract = template["init_contract"]
+        if initContract != "" && initContract != "NULL"{
             var initParam map
             initParam["KeyId"] = $KeyId
-            CallContract($initContract, initParam)
+            CallContract(initContract, initParam)
         }
         
-        $voters = $template["voters"]
-        $candidates = $template["candidates"]
-        $votingName = $template["title"]
-        $volume = Int($template["volume"])
-        $quorum = Int($template["quorum"])
-        $voting = Int($template["type_voting"])
-        $participants = Int($template["type_participants"])
-        $decision = Int($template["type_decision"])
-        $vacancies = Int($template["vacancies"])
+        $voters = template["voters"]
+        $candidates = template["candidates"]
+        $votingName = template["title"]
+        $volume = Int(template["volume"])
+        $quorum = Int(template["quorum"])
+        $voting = Int(template["type_voting"])
+        $participants = Int(template["type_participants"])
+        $decision = Int(template["type_decision"])
+        $vacancies = Int(template["vacancies"])
         
-        $desc = Sprintf("%v [template #%v]", $votingName, $TemplateId)
+        $desc = Sprintf("%v template #%v]", $votingName, $TemplateId)
         if $voting < 1 || $voting > 2 {
             warning "Invalid type of voting"
         }
-        $contractAccept = emptyOrValue($template["contract_accept"])
-        $acceptParams = emptyOrValue($template["accept_params"])
-        $contractReject = emptyOrValue($template["contract_reject"])
-        $rejectParams = emptyOrValue($template["reject_params"])
+        $contractAccept = emptyOrValue(template["contract_accept"])
+        $acceptParams = emptyOrValue(template["accept_params"])
+        $contractReject = emptyOrValue(template["contract_reject"])
+        $rejectParams = emptyOrValue(template["reject_params"])
         
         if $decision == 1 || $decision == 2 {
             // role-candidates
@@ -131,34 +133,36 @@ contract voting_TemplateRun{
             $voting_id = Int($voting_id)
         }
         // the default argument for Contract
-        $defaultParams = Sprintf("VotingTemplateId->%v;KeyId->%v;VotingId->%v", $TemplateId, $KeyId, $voting_id)
+        var defaultParams string
+        defaultParams = Sprintf(`{"VotingTemplateId":"%v","KeyId":"%v","VotingId":"%v"}`, $TemplateId, $KeyId, $voting_id)
+        
         if Size($acceptParams) == 0{
-            $acceptParams = $defaultParams
+            $acceptParams = defaultParams
         }
         if Size($rejectParams) == 0{
-            $rejectParams = $defaultParams
+            $rejectParams = defaultParams
         }
         
         if $decision == 1 || $decision == 2{
             // 1. Role candidates with the registration of participants on request
             // 2. Role candidates with manual registration of the participants
             voting_SubjectCandidates("votingID,memberID", $voting_id, $KeyId)
-            voting_SubjectSettings("votingID,roleID,vacancies,contract_accept,accept_params,contract_reject,reject_params", $voting_id, $candidateId, $vacancies, $contractAccept, $acceptParams, $contractReject,$rejectParams)
+            voting_SubjectSettings("votingID,roleID,vacancies,contract_accept,contract_accept_params,contract_reject,contract_reject_params", $voting_id, $candidateId, $vacancies, $contractAccept, $acceptParams, $contractReject,$rejectParams)
         }
         if $decision == 3 {
             // Document approval
-            voting_SubjectDocument("votingID,text_document,contract_accept,accept_params,contract_reject,reject_params", $voting_id,$TextDocument, $contractAccept, $acceptParams, $contractReject, $rejectParams)
+            voting_SubjectDocument("votingID,text_document,contract_accept,contract_accept_params,contract_reject,contract_reject_params", $voting_id,$TextDocument, $contractAccept, $acceptParams, $contractReject, $rejectParams)
         }
         
         if $decision == 4 {
             // Formal decision
-            voting_SubjectFormal("votingID,description,table_to_written,row_id,column_name,written_value,contract_accept,accept_params,contract_reject,reject_params",$voting_id, $desc, $TableWritten, $RowId, $ColumnName, $NewValue, $contractAccept, $acceptParams, $contractReject, $rejectParams)
+            voting_SubjectFormal("votingID,description,table_to_written,row_id,column_name,written_value,contract_accept,contract_accept_params,contract_reject,contract_reject_params",$voting_id, $desc, $TableWritten, $RowId, $ColumnName, $NewValue, $contractAccept, $acceptParams, $contractReject, $rejectParams)
             
         }
         
         if $decision == 5 {
             // Execution of the contract
-            voting_SubjectContract("votingID,contract_accept,accept_params,contract_reject,reject_params",$voting_id,$contractAccept, $acceptParams, $contractReject, $rejectParams)
+            voting_SubjectContract("votingID,contract_accept,contract_accept_params,contract_reject,contract_reject_params",$voting_id,$contractAccept, $acceptParams, $contractReject, $rejectParams)
         }
         if $participants == 3 {
             // participants: "by role"
