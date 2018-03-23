@@ -2,7 +2,15 @@ contract voting_CheckDecision {
     data {
         votingID int
     }
-    
+    func runContract(cont, p string){
+        if Size(cont) > 0 {
+            var params map
+            if Size(p) > 0 {
+                params = JSONToMap(p)
+            }
+            CallContract(cont, params)
+        }
+    }
     conditions {
         $voting_map = DBFind("votings").Columns("voting->name,voting->type,voting->quorum,voting->type_decision,flags->success,progress->number_voters,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params").Where("id=? and (CAST(progress->percent_voters as INTEGER)>=CAST(voting->quorum as INTEGER) or date_ended<now())", $votingID).Row()
         if !$voting_map {
@@ -30,227 +38,149 @@ contract voting_CheckDecision {
     
     action {
         // if notifications have been sent, then close it
-        $ret_notifics = DBFind("notifications").Where("page_name='voting_view' and page_params::jsonb->voting_id=? and closed=0", $votingID)
+        var notes array
+        notes = DBFind("notifications").Where("page_name='voting_view' and page_params::jsonb->voting_id=? and closed=0", $votingID)
         var i int
-        while (i < Len($ret_notifics)) {
-            $vals_notifics = $ret_notifics[i]
-            Notifications_Single_Close("notific_id", Int($vals_notifics["id"]))
+        while i < Len(notes) {
+            var note map
+            note = notes[i]
+            Notifications_Single_Close("notific_id", Int(note["id"]))
             i = i + 1
         }
         
         //if the flag of success = true(enough participants to make a decision)
-        if ($flag_success == 1) {
-            if (($type_decision == 1) || ($type_decision == 2)) {
+        if $flag_success == 1 {
+            if ($type_decision == 1) || ($type_decision == 2) {
                 
                 $number_inserts = 0 // number of candidates who have already been added(for comparison with the number of vacancies)
                 $flag_decision = -1 // none of the candidates has been added yet
                 
-                $ret_subject = DBFind("votings_subject").Columns("number_accept,subject->member_id,subject->member_name,subject->image_id").Where("voting_id=$", $votingID).Order("number_accept DESC")
+                var subjects array
+                subjects = DBFind("votings_subject").Columns("number_accept,subject->member_id,subject->member_name,subject->image_id").Where("voting_id=$", $votingID).Order("number_accept DESC")
                 i = 0
-                while i < Len($ret_subject) {
-                    $vals_subject = $ret_subject[i]
+                while i < Len(subjects) {
+                    var subject map
+                    subject = subjects[i]
                     
                     // if there are still vacancies
                     if $number_inserts < $optional_role_vacancies {
-                        // calculate the percentage to compare it with the quorum
-                        $v_percent = Int($vals_subject["number_accept"]) * 100 / $number_voters
-                        // if percentage >= quorum values, then this candidate must be added to the role
+                        $percent_voters = Int(subject["number_accept"]) * 100 / $number_voters
                         
-                        if $v_percent >= $quorum {
-                            // get role name
-                            $role_map = DBFind("roles").Columns("id,role_type,role_name,image_id").Where("id=$", $optional_role_id).Row()
-                            if $role_map {
+                        if $percent_voters >= $quorum {
+                            // added candidate to the role
+                            var role map
+                            role = DBFind("roles").Columns("id,role_type,role_name,image_id").Where("id=$", $optional_role_id).Row()
+                            if role {
+                                var member, assignedMember map
+                                member["member_id"] = Str(subject["subject.member_id"])
+                                assignedMember = DBFind("roles_participants").Where("member->member_id=? and role->id=? and deleted=0", member["member_id"], role["id"]).Row()
                                 
-                                var role map
-                                role["id"] = Str($role_map["id"])
-                                role["type"] = Str($role_map["role_type"])
-                                role["name"] = Str($role_map["role_name"])
-                                role["image_id"] = Str($role_map["image_id"])
-                                
-                                var member map
-                                member["member_id"] = Str($vals_subject["subject.member_id"])
-                                member["member_name"] = Str($vals_subject["subject.member_name"])
-                                member["image_id"] = Str($vals_subject["subject.image_id"])
-                                
-                                var appointed map
-                                appointed["voting_id"] = Str($votingID)
-                                appointed["voting_name"] = Str($voting_name)
-                                
-                                // add a candidate to the role
-                                DBInsert("roles_participants", "role,member,appointed,timestamp date_created", role, member, appointed, $block_time)
-                                
-                                // increment of the counter of candidates
-                                $number_inserts = $number_inserts + 1
-                                // if at least one of the candidates was added to the role, then the voting decision is considered successful
-                                $flag_decision = 1
+                                if !assignedMember {
+                                    member["member_name"] = Str(subject["subject.member_name"])
+                                    member["image_id"] = Str(subject["subject.image_id"])
+                                    
+                                    var rolePart map
+                                    rolePart["id"] = Str(role["id"])
+                                    rolePart["type"] = Str(role["role_type"])
+                                    rolePart["name"] = Str(role["role_name"])
+                                    rolePart["image_id"] = Str(role["image_id"])
+                                    
+                                    var appointed map
+                                    appointed["voting_id"] = Str($votingID)
+                                    appointed["voting_name"] = Str($voting_name)
+                                    
+                                    // add a candidate to the role
+                                    DBInsert("roles_participants", "role,member,appointed,timestamp date_created", rolePart, member, appointed, $block_time)
+                                    
+                                    // increment of the counter of candidates
+                                    $number_inserts = $number_inserts + 1
+                                    // if at least one of the candidates was added to the role, then the voting decision is considered successful
+                                    $flag_decision = 1
+                                }
                             }
                         }
                     }
                     i = i + 1
                 }
-                
-                DBUpdate("votings", $votingID, "flags->decision", $flag_decision)
-                
-                // starting optional contract
-                if ($flag_decision == 1) {
-                    if (Size($contract_accept) > 0) {
-                        var params map
-                        if (Size($param_accept) > 0) {
-                            params = JSONToMap($param_accept)
-                        }
-                        CallContract($contract_accept, params)
-                    }
-                } else {
-                    if (Size($contract_reject) > 0) {
-                        var params map
-                        if (Size($param_reject) > 0) {
-                            params = JSONToMap($param_reject)
-                        }
-                        CallContract($contract_reject, params)
-                    }
-                }
-                
             }
             
-            if ($type_decision == 3) {
-                $subject_map = DBFind("votings_subject").Columns("id,number_accept").Where("voting_id=$", $votingID).Row()
-                if $subject_map {
-                    $number_accept = Int($subject_map["number_accept"])
+            if $type_decision == 3 {
+                var subject map
+                subject = DBFind("votings_subject").Columns("id,number_accept").Where("voting_id=$", $votingID).Row()
+                if subject {
+                    $number_accept = Int(subject["number_accept"])
                     
-                    // calculate the percentage to compare it with the quorum
-                    $v_percent = $number_accept * 100 / $number_voters
-                    
-                    // if percentage >= quorum values, then this document will be approved
-                    if ($v_percent >= $quorum) {
-                        $flag_decision = 1
-                    }
-                    // otherwise the document will be rejected
-                    else {
-                        $flag_decision = -1
-                    }
-                    
-                    DBUpdate("votings", $votingID, "flags->decision", $flag_decision)
-                    
-                    // starting optional contract
-                    if ($flag_decision == 1) {
-                        if (Size($contract_accept) > 0) {
-                            var params map
-                            if (Size($param_accept) > 0) {
-                                params = JSONToMap($param_accept)
-                            }
-                            CallContract($contract_accept, params)
-                        }
+                    $percent_voters = $number_accept * 100 / $number_voters
+                    if $percent_voters >= $quorum {
+                        $flag_decision = 1 // accepted
                     } else {
-                        if (Size($contract_reject) > 0) {
-                            var params map
-                            if (Size($param_reject) > 0) {
-                                params = JSONToMap($param_reject)
-                            }
-                            CallContract($contract_reject, params)
-                        }
+                        $flag_decision = -1 // rejected
                     }
-                    
                 }
             }
             
-            if ($type_decision == 4) {
-                $subject_map = DBFind("votings_subject").Columns("id,number_accept,subject->table,subject->table_id,subject->column,subject->column_value").Where("voting_id=$", $votingID).Row()
-                if $subject_map {
-                    $number_accept = Int($subject_map["number_accept"])
+            if $type_decision == 4 {
+                var subject map
+                subject = DBFind("votings_subject").Columns("id,number_accept,subject->table,subject->table_id,subject->column,subject->column_value").Where("voting_id=$", $votingID).Row()
+                if subject {
+                    $number_accept = Int(subject["number_accept"])
                     
-                    // calculate the percentage to compare it with the quorum
-                    $v_percent = $number_accept * 100 / $number_voters
-                    
-                    // if percentage >= quorum values, then this document will be approved
-                    if ($v_percent >= $quorum) {
-                        $flag_decision = 1
+                    $percent_voters = $number_accept * 100 / $number_voters
+                    if $percent_voters >= $quorum {
+                        $flag_decision = 1 // accepted
                         
-                        $decisionTable = Str($subject_map["subject.table"])
-                        $decisionId = Int($subject_map["subject.table_id"])
-                        $decisionColumn = Str($subject_map["subject.column"])
-                        $decisionValue = Str($subject_map["subject.column_value"])
+                        $decisionTable = Str(subject["subject.table"])
+                        $decisionId = Int(subject["subject.table_id"])
+                        $decisionColumn = Str(subject["subject.column"])
+                        $decisionValue = Str(subject["subject.column_value"])
                         
                         // type of voting - custom
-                        if ($voting_type == 1) {
+                        if $voting_type == 1 {
                             // ALWAYS CHECK THE PERMISSION
                             DBUpdate($decisionTable, $decisionId, $decisionColumn, $decisionValue)
                         }
                         
                         // type of voting - system
-                        if ($voting_type == 2) {
+                        if $voting_type == 2 {
                             DBUpdateSysParam($decisionColumn, $decisionValue, "")
                         }
-                    }
-                    // otherwise the document will be rejected
-                    else {
-                        $flag_decision = -1
-                    }
-                    
-                    DBUpdate("votings", $votingID, "flags->decision", $flag_decision)
-                    
-                    // starting optional contract
-                    if ($flag_decision == 1) {
-                        if (Size($contract_accept) > 0) {
-                            var params map
-                            if (Size($param_accept) > 0) {
-                                params = JSONToMap($param_accept)
-                            }
-                            CallContract($contract_accept, params)
-                        }
                     } else {
-                        if (Size($contract_reject) > 0) {
-                            var params map
-                            if (Size($param_reject) > 0) {
-                                params = JSONToMap($param_reject)
-                            }
-                            CallContract($contract_reject, params)
-                        }
+                        $flag_decision = -1 // rejected
                     }
-                    
                 }
             }
             
-            if ($type_decision == 5) {
-                $subject_map = DBFind("votings_subject").Columns("id,number_accept,subject->contract_accept,subject->contract_reject,subject->contract_accept_params,subject->contract_reject_params").Where("voting_id=$", $votingID).Row()
-                if $subject_map {
-                    $number_accept = Int($subject_map["number_accept"])
+            if $type_decision == 5 {
+                var subject map
+                subject = DBFind("votings_subject").Columns("id,number_accept,subject->contract_accept,subject->contract_reject,subject->contract_accept_params,subject->contract_reject_params").Where("voting_id=$", $votingID).Row()
+                if subject {
+                    $number_accept = Int(subject["number_accept"])
                     
-                    // calculate the percentage to compare it with the quorum
-                    $v_percent = $number_accept * 100 / $number_voters
+                    $percent_voters = $number_accept * 100 / $number_voters
                     
-                    $con_accept = Str($subject_map["subject.contract_accept"])
-                    $con_reject = Str($subject_map["subject.contract_reject"])
-                    $param_accept = Str($subject_map["subject.contract_accept_params"])
-                    $param_reject = Str($subject_map["subject.contract_reject_params"])
+                    $contract_accept = Str(subject["subject.contract_accept"])
+                    $contract_reject = Str(subject["subject.contract_reject"])
+                    $param_accept = Str(subject["subject.contract_accept_params"])
+                    $param_reject = Str(subject["subject.contract_reject_params"])
                     
-                    // if percentage >= quorum values, then this document will be approved
-                    if ($v_percent >= $quorum) {
-                        $flag_decision = 1
-                        
-                        var params map
-                        if (Size($param_accept) > 0) {
-                            params = JSONToMap($param_accept)
-                        }
-                        CallContract($con_accept, params)
-                    }
-                    // otherwise the document will be rejected
-                    else {
-                        $flag_decision = -1
-                        
-                        var params map
-                        if (Size($param_reject) > 0) {
-                            params = JSONToMap($param_reject)
-                        }
-                        CallContract($con_reject, params)
+                    if $percent_voters >= $quorum {
+                        $flag_decision = 1 // accepted
+                    } else {
+                        $flag_decision = -1 // rejected
                     }
                 }
-                
-                DBUpdate("votings", $votingID, "flags->decision", $flag_decision)
             }
+            
+            if $flag_decision == 1 {
+                runContract($contract_accept, $param_accept)
+            } else {
+                runContract($contract_reject, $param_reject)
+            }
+        } else {
+            // decision can not be made (not enough participants to make a decision)
+            $flag_decision = -2
         }
-        // decision can not be made(not enough participants to make a decision)
-        else {
-            DBUpdate("votings", $votingID, "flags->decision", -2)
-        }
+        
+        DBUpdate("votings", $votingID, "flags->decision", $flag_decision)
     }
 }
