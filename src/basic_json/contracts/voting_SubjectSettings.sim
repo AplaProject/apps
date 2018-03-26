@@ -1,87 +1,77 @@
 contract voting_SubjectSettings {
     data {
         votingID int
-
+        
         roleID int
         vacancies int
-
+        
         contract_accept string "optional"
         contract_accept_params string "optional"
         contract_reject string "optional"
         contract_reject_params string "optional"
     }
-
+    
     conditions {
-        if ($vacancies < 1) {
+        if $vacancies < 1 {
             warning "Number of vacancies can not be less than 1"
         }
-
+        
         $voting_map = DBFind("votings").Where("id=? and date_started > now()", $votingID).Row()
         if !$voting_map {
             warning "Voting already started. Can not edit document"
         }
-
-        // get JSON
-        var flags_json string
+        
+        var flags_json, voting_json string
         flags_json = Str($voting_map["flags"])
-
-        // get MAP
-        var flags map
-        flags = JSONToMap(flags_json)
-
-        // get JSON
-        var voting_json string
         voting_json = Str($voting_map["voting"])
-
-        // get MAP
-        var voting map
+        
+        var flags, voting map
+        flags = JSONToMap(flags_json)
         voting = JSONToMap(voting_json)
-
-        if (Int(flags["full_data"]) == 1 && Int(voting["type"]) == 2) {
+        
+        if Int(flags["full_data"]) == 1 && Int(voting["type"]) == 2 {
             warning "This vote is a system. Change settings not allowed"
         }
-
+        
         $role_map = DBFind("roles").Where("id=? and deleted=0", $roleID).Row()
         if !$role_map {
             warning "Specified role not found"
         }
-
+        
         // not elective or not "Candidate for validators"
         // roles_types: 1. assigned_role, 2. elective_role, 3. system_role, 4. company_role
         if !($role_map["role_type"] == 2 || $role_map["role_type"] == 3) {
             warning "The chosen role is not elective or has been removed"
         }
     }
-
+    
     action {
-
+        
         var accept_params_map map
-        if (Size($contract_accept_params) > 0) {
+        if Size($contract_accept_params) > 0 {
             accept_params_map = JSONToMap($contract_accept_params)
         }
-
+        
         var reject_params_map map
-        if (Size($contract_reject_params) > 0) {
+        if Size($contract_reject_params) > 0 {
             reject_params_map = JSONToMap($contract_reject_params)
         }
-
-        // get JSON
+        
         var optional_json string
         optional_json = Str($voting_map["optional"])
-
-        // get MAP
+        
         var optional map
         optional = JSONToMap(optional_json)
-
+        
         optional["contract_accept"] = Str($contract_accept)
         optional["contract_accept_params"] = accept_params_map
         optional["contract_reject"] = Str($contract_reject)
         optional["contract_reject_params"] = reject_params_map
         optional["role_id"] = Str($roleID)
         optional["role_vacancies"] = Str($vacancies)
-
+        
         DBUpdate("votings", $votingID, "optional", optional)
-
+        
         voting_SubjectCheckFulldata("votingID", $votingID)
     }
 }
