@@ -15,57 +15,58 @@ contract catalog_ecosystems_Add {
         Phone string "optional"
     }
     conditions {
-
-        $founderParam = "founder_account"
-        $delegateParam = "delegate_account"
-        $catalogTbl = "catalog_ecosystems"
-        $meFounder = false
-        $meDelegate = false
-
+        var FOUNDER_ACCOUNT, DELEGATE_ACCOUNT string
+        FOUNDER_ACCOUNT = "founder_account"
+        DELEGATE_ACCOUNT = "delegate_account"
+        
         if Size($Email) > 0 {
-            if !Contains($Email, "@") {
+            var emailParts int
+            emailParts = Split($Email, "@")
+            if Len(emailParts) != 2 {
                 warning "Invalid email"
             }
         }
-
+        
         if Size($Logo) == 0 {
             warning "Required logo"
         }
-
-        $ecoExists = DBFind($catalogTbl).Where("ecosystem_number=? and deleted=0", $Ecosystem_number).Row()
-        if $ecoExists {
+        var ecoExists map
+        ecoExists = DBFind("catalog_ecosystems").Where("ecosystem_number=? and deleted=0", $Ecosystem_number).Row()
+        if ecoExists {
             info "The ecosystem with same number already added"
         }
 
-        $founder = DBFind("parameters").Where("name=?", $founderParam).Ecosystem($Ecosystem_number).Row()
-        $meFounder = $founder["value"] == $key_id
-
-        $delegate = DBFind("parameters").Where("name=?", $delegateParam).Ecosystem($Ecosystem_number).Row()
-        if $delegate {
-            $meDelegate = $delegate["value"] == $key_id
+        var isFounder, isDelegate bool
+        var founder, delegate map
+        founder = DBFind("parameters").Where("name=?", FOUNDER_ACCOUNT).Ecosystem($Ecosystem_number).Row()
+        isFounder = founder["value"] == $key_id
+        
+        delegate = DBFind("parameters").Where("name=?", DELEGATE_ACCOUNT).Ecosystem($Ecosystem_number).Row()
+        if delegate {
+            isDelegate = delegate["value"] == $key_id
         }
-        if !($meFounder || $meDelegate) {
+        if !(isFounder || isDelegate) {
             warning "Sorry, you can not add this ecosystem"
         }
     }
-
+    
     action {
         var ecosystem_info map
-        ecosystem_info["description"] = Str($Description)
-        ecosystem_info["conditions"] = Str($Conditions)
-        ecosystem_info["email"] = Str($Email)
-        ecosystem_info["phone"] = Str($Phone)
-
+        ecosystem_info["description"] = $Description
+        ecosystem_info["conditions"] = $Conditions
+        ecosystem_info["email"] = $Email
+        ecosystem_info["phone"] = $Phone
+        
         var url_address map
-        url_address["web_page"] = Str($Web_page)
-        url_address["web_form_address"] = Str($Web_form_address)
-        url_address["vde_page"] = Str($Vde_page)
-        url_address["vde_form_address"] = Str($Vde_form_address)
-
+        url_address["web_page"] = $Web_page
+        url_address["web_form_address"] = $Web_form_address
+        url_address["vde_page"] = $Vde_page
+        url_address["vde_form_address"] = $Vde_form_address
+        
         var image_id int
-        image_id = DBInsert("binary_data", "binary_data", $Logo)
-
-        DBInsert($catalogTbl, "ecosystem_name,ecosystem_number,ecosystem_type,image_id,ecosystem_info,url_address,flag_free",
-            $Ecosystem_name, $Ecosystem_number, $Ecosystem_type, image_id, ecosystem_info, url_address, $Flag_free)
+        image_id = DBInsert("binary", "binary_data", $Logo)
+        
+        DBInsert("catalog_ecosystems", "ecosystem_name,ecosystem_number,ecosystem_type,image_id,ecosystem_info,url_address,flag_free",
+        $Ecosystem_name, $Ecosystem_number, $Ecosystem_type, image_id, ecosystem_info, url_address, $Flag_free)
     }
 }

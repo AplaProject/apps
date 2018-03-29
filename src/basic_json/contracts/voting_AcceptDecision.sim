@@ -4,7 +4,7 @@ contract voting_AcceptDecision {
     }
     
     conditions {
-        $voting_map = DBFind("votings").Where("id=$", $votingID).Row()
+        $voting_map = DBFind("votings").Columns("id,flags->decision,flags->notifics").Where("id=?", $votingID).Row()
         if !$voting_map {
             warning "Voting is not found"
         }
@@ -21,45 +21,35 @@ contract voting_AcceptDecision {
     }
     
     action {
-        var flags_json string
-        flags_json = $voting_map["flags"]
-        var flags map
-        flags = JSONToMap(flags_json)
-        
         // if notifications have been sent, then close it
-        if flags["notifics"] == 1 {
-            
-            $notific_id = DBFind("notifications").Where("recipient->member_id=$ and page_name=$ and page_params->voting_id=$ and closed=$", $key_id, "voting_view", $votingID, 0).One("id")
-            
-            if $notific_id {
-                Notifications_Single_Close("notific_id", Int($notific_id))
+        if $voting_map["flags.notifics"] == 1 {
+            var noteId string
+            noteId = DBFind("notifications").Where("recipient->member_id=$ and page_name=$ and page_params->voting_id=$ and closed=$", $key_id, "voting_view", $votingID, 0).One("id")
+            if noteId {
+                Notifications_Single_Close("notific_id", Int(noteId))
             }
         }
         
         // check the decision
-        if flags["decision"] == 1 {
+        if $voting_map["flags.decision"] == 1 {
             warning "Decision was taken. Voting is now not possible"
         }
         
         // check start-end of voting time
-        $voting_start = DBFind("votings").Where("id=$ and date_started < now()", $votingID).One("id")
-        $voting_end = DBFind("votings").Where("id=$ and date_ended > now()", $votingID).One("id")
-        if !$voting_start {
+        var voting_start, voting_end string
+        voting_start = DBFind("votings").Where("id=$ and date_started < now()", $votingID).One("id")
+        voting_end = DBFind("votings").Where("id=$ and date_ended > now()", $votingID).One("id")
+        if !voting_start {
             warning "Voting has not yet begun. Try again later, please"
         }
-        if !$voting_end {
+        if !voting_end {
             warning "Voting has expired. Voting is now not possible"
         }
-        
-        //-----------------------------------------------------------------------------------------------
-        
-        // write the result of the voting
+                
         DBUpdate("votings_participants", Int($participant_id), "timestamp decision_date,decision", $block_time, 1)
         
         // increment count of accept
-        $number_accept = Int($subject_map["number_accept"])
-        $number_accept = $number_accept + 1
-        DBUpdate("votings_subject", Int($subject_map["id"]), "number_accept", $number_accept)
+        DBUpdate("votings_subject", Int($subject_map["id"]), "+number_accept", 1)
         
         voting_UpdateDataForGraphs("votingID", $votingID)
     }

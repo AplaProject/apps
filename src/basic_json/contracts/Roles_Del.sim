@@ -2,48 +2,36 @@ contract Roles_Del {
     data {
         role_id int
     }
-
-    conditions {
-
-        // check role
-        $role_map = DBFind("roles").Where("id=$", $role_id).Row()
-        if !$role_map {
+    
+    conditions {        
+        var role map
+        role = DBFind("roles").Columns("id,role_type,creator->member_id").Where("id=?", $role_id).Row()
+        if !role {
             warning "Role not found"
         }
-
-        // system role can not be deleted
-        if Int($role_map["role_type"]) == 3 {
+        
+        if role["role_type"] == 3 {
             warning "System role can not be removed"
         }
-
-        // get JSON
-        var creator_json string
-        creator_json = Str($role_map["creator"])
-
-        // get MAP
-        var creator map
-        creator = JSONToMap(creator_json)
-
-        // check creator of the role
-        if Int(creator["member_id"]) != $key_id {
+        
+        if role["creator.member_id"] != $key_id {
             warning "Sorry, you are not the creator of this role"
         }
     }
-
+    
     action {
-        // get the list of participants
-        $ret_assign = DBFind("roles_participants").Columns("id").Where("role->id = $ and deleted = $", $role_id, 0).Order("id")
-
+        var participants array
+        participants = DBFind("roles_participants").Columns("id").Where("role->id=? and deleted=0", $role_id)
+        
         // delete all participants
-        $len_assign = Len($ret_assign)
-        $i_assign = 0
-        while $i_assign < $len_assign {
-            $vals_assign = $ret_assign[$i_assign]
-            Roles_Unassign("row_id", Int($vals_assign["id"]))
-            $i_assign = $i_assign + 1
+        var i int
+        while i < Len(participants) {
+            var p map
+            p = participants[i]
+            Roles_Unassign("row_id", Int(p["id"]))
+            i = i + 1
         }
-
-        // delete the role
+        
         DBUpdate("roles", $role_id, "deleted,timestamp date_deleted", 1, $block_time)
     }
 }

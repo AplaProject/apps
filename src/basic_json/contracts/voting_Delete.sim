@@ -4,20 +4,13 @@ contract voting_Delete {
     }
 
     conditions {
-        $voting_map = DBFind("votings").Where("id=? and date_started > now()", $votingID).Row()
+        var voting map
+        $voting_map = DBFind("votings").Columns("creator->member_id,date_started,id").Where("id=? and date_started > now()", $votingID).Row()
         if !$voting_map {
             warning "Voting already started. Delete voting impossible"
         }
 
-        // get JSON
-        var creator_json string
-        creator_json = Str($voting_map["creator"])
-
-        // get MAP
-        var creator map
-        creator = JSONToMap(creator_json)
-
-        if Int(creator["member_id"]) != $key_id {
+        if $voting_map["creator.member_id"] != $key_id {
             warning "You are not the creator of the voting"
         }
     }

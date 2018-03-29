@@ -2,123 +2,68 @@ contract voting_SubjectCheckFulldata {
     data {
         votingID int
     }
-
+    func safeJsonToMap(m string) map {
+        var res map
+        if Size(m) > 0 { res = JSONToMap(m) }
+        return res
+    }
+    
     conditions {
-        $voting_map = DBFind("votings").Where("id=?", $votingID).Row()
+        $voting_map = DBFind("votings").Columns("id,optional,voting->type_decision,flags").Where("id=?", $votingID).Row()
         if !$voting_map {
             warning "Voting is not found"
         }
 
-        // get JSON
-        var voting_json string
-        voting_json = Str($voting_map["voting"])
-
-        // get MAP
-        var voting map
-        voting = JSONToMap(voting_json)
-
-        $type_decision = Int(voting["type_decision"])
-
-
+        $type_decision = $voting_map["voting.type_decision"]
+        if $type_decision < 1 || $type_decision > 5 {
+            warning "invalid type of decision"
+        }
+        
         $subject_map = DBFind("votings_subject").Where("voting_id=?", $votingID).Row()
         if !$subject_map {
             warning "Subject of voting is not found"
         }
     }
-
+    
     action {
-        if ($type_decision == 1) || ($type_decision == 2) {
-            // get JSON
-            var optional_json string
-            optional_json = Str($voting_map["optional"])
-
-            // get MAP
+        var flags, subject map
+        flags = safeJsonToMap($voting_map["flags"])
+        if $type_decision > 2 && $type_decision <= 5 {
+            subject = safeJsonToMap($subject_map["subject"])
+        }
+        
+        var fullData string
+        
+        if $type_decision == 1 || $type_decision == 2 {
             var optional map
-            optional = JSONToMap(optional_json)
-
-            if (Int(optional["number_candidates"]) > 0) && (Int(optional["role_vacancies"]) > 0) && (Int(optional["role_id"]) > 0) {
-                // get JSON
-                var flags_json string
-                flags_json = Str($voting_map["flags"])
-
-                // get MAP
-                var flags map
-                flags = JSONToMap(flags_json)
-
-                flags["full_data"] = "1"
-                DBUpdate("votings", $votingID, "flags", flags)
+            optional = safeJsonToMap($voting_map["optional"])
+            
+            if optional["number_candidates"] > 0 && optional["role_vacancies"] > 0 && optional["role_id"] > 0 {
+                fullData = 1
             }
         }
-
+        
         if $type_decision == 3 {
-            // get JSON
-            var subject_json string
-            subject_json = Str($subject_map["subject"])
-
-            // get MAP
-            var subject map
-            subject = JSONToMap(subject_json)
-
-            if Str(subject["text"]) != "" && Str(subject["hash"]) != "" {
-                // get JSON
-                var flags_json string
-                flags_json = Str($voting_map["flags"])
-
-                // get MAP
-                var flags map
-                flags = JSONToMap(flags_json)
-
-                flags["full_data"] = "1"
-                DBUpdate("votings", $votingID, "flags", flags)
+            if subject["text"] != "" && subject["hash"] != "" {
+                fullData = 1
             }
         }
-
+        
         if $type_decision == 4 {
-            // get JSON
-            var subject_json string
-            subject_json = Str($subject_map["subject"])
-
-            // get MAP
-            var subject map
-            subject = JSONToMap(subject_json)
-
-            if (Str(subject["table"]) != "" && Str(subject["table_id"]) != "" &&
-                Str(subject["column"]) != "" && Str(subject["column_value"]) != "") {
-
-                // get JSON
-                var flags_json string
-                flags_json = Str($voting_map["flags"])
-
-                // get MAP
-                var flags map
-                flags = JSONToMap(flags_json)
-
-                flags["full_data"] = "1"
-                DBUpdate("votings", $votingID, "flags", flags)
+            if subject["table"] != "" && subject["table_id"] != "" && subject["column"] != "" && subject["column_value"] != "" {
+                fullData = 1
             }
         }
-
+        
         if $type_decision == 5 {
-            // get JSON
-            var subject_json string
-            subject_json = Str($subject_map["subject"])
-
-            // get MAP
-            var subject map
-            subject = JSONToMap(subject_json)
-
-            if Str(subject["contract_accept"]) != "" && Str(subject["contract_reject"]) != "" {
-                // get JSON
-                var flags_json string
-                flags_json = Str($voting_map["flags"])
-
-                // get MAP
-                var flags map
-                flags = JSONToMap(flags_json)
-
-                flags["full_data"] = "1"
-                DBUpdate("votings", $votingID, "flags", flags)
+            if subject["contract_accept"] != "" && subject["contract_reject"] != "" {
+                fullData = 1
             }
+        }
+        
+        if fullData == 1 {
+            flags["full_data"] = 1
+            DBUpdate("votings", $votingID, "flags", flags)
         }
     }
 }

@@ -2,79 +2,55 @@ contract voting_SubjectDocument {
     data {
         votingID int
         text_document string
-
+        
         contract_accept string "optional"
         contract_accept_params string "optional"
         contract_reject string "optional"
         contract_reject_params string "optional"
     }
-
+    
+    func safeJsonToMap(m string) map {
+        var res map
+        if Size(m) > 0 { res = JSONToMap(m) }
+        return res
+    }
+    
     conditions {
-        $voting_map = DBFind("votings").Where("id=? and date_started > now()", $votingID).Row()
+        $voting_map = DBFind("votings").Columns("id,date_started,flags->full_data,voting->type,optional").Where("id=? and date_started > now()", $votingID).Row()
         if !$voting_map {
             warning "Voting already started. Can not edit document"
         }
-
-        // get JSON
-        var flags_json string
-        flags_json = Str($voting_map["flags"])
-
-        // get MAP
-        var flags map
-        flags = JSONToMap(flags_json)
-
-        // get JSON
-        var voting_json string
-        voting_json = Str($voting_map["voting"])
-
-        // get MAP
-        var voting map
-        voting = JSONToMap(voting_json)
-
-        if Int(flags["full_data"]) == 1 && Int(voting["type"]) == 2 {
+        
+        if $voting_map["flags.full_data"] == 1 && $voting_map["voting.type"] == 2 {
             warning "This vote is a system. Change settings not allowed"
         }
-
-        $hash = Sha256($text_document)
     }
-
+    
     action {
         var subject map
-        subject["text"] = Str($text_document)
-        subject["hash"] = Str($hash)
-
+        subject["text"] = $text_document
+        subject["hash"] = Sha256($text_document)
+        
         $subject_id = DBFind("votings_subject").Where("voting_id = $", $votingID).One("id")
         if !$subject_id {
             DBInsert("votings_subject", "voting_id,subject", $votingID, subject)
         } else {
             DBUpdate("votings_subject", Int($subject_id), "subject", subject)
         }
+        var accept_params, reject_params map
+        accept_params = safeJsonToMap($contract_accept_params)
+        reject_params = safeJsonToMap($contract_reject_params)
 
-        var accept_params_map map
-        if Size($contract_accept_params) > 0 {
-            accept_params_map = JSONToMap($contract_accept_params)
-        }
-
-        var reject_params_map map
-        if Size($contract_reject_params) > 0 {
-            reject_params_map = JSONToMap($contract_reject_params)
-        }
-
-        // get JSON
-        var optional_json string
-        optional_json = Str($voting_map["optional"])
-
-        // get MAP
         var optional map
-        optional = JSONToMap(optional_json)
-
-        optional["contract_accept"] = Str($contract_accept)
-        optional["contract_accept_params"] = accept_params_map
-        optional["contract_reject"] = Str($contract_reject)
-        optional["contract_reject_params"] = reject_params_map
-
+        optional = safeJsonToMap($voting_map["optional"])
+        
+        optional["contract_accept"] = $contract_accept
+        optional["contract_accept_params"] = accept_params
+        optional["contract_reject"] = $contract_reject
+        optional["contract_reject_params"] = reject_params
+        
         DBUpdate("votings", $votingID, "optional", optional)
-
+        
         voting_SubjectCheckFulldata("votingID", $votingID)
     }
 }

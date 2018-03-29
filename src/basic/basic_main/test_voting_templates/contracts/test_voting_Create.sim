@@ -12,27 +12,22 @@ contract test_voting_Create{
         quorum = 50
         vacancies = 1
         
-        var subject, voters, candidates, initContract, contractAccept, paramsAccept, contractReject, paramsReject string
-        subject = "voting template subject"
-        
-        var candidateRole map
-        candidateRole = DBFind("roles").Where("deleted=0 and (role_type=2 or role_type=3)").Row()
-        if !candidateRole{
-            warning "Candidate role not found"
+        var SUBJ, voters, candidates, INIT, ACCEPT, ACCEPT_PARAMS, REJECT, REJECT_PARAMS string
+        candidates = DBFind("roles").Where("deleted=0 and (role_type=2 or role_type=3)").One("id")
+        if !candidates{
+            warning "Candidate role not found. Please create role with type of 2 or 3 for tests"
         }
-        candidates = candidateRole["id"]
         
-        var voterRole map
-        voterRole = DBFind("roles").Where("deleted=0").Row()
-        if !voterRole {
+        voters = DBFind("roles").Where("deleted=0").One("id")
+        if !voters {
             warning "Voter role not found"
         }
-        voters = voterRole["id"]
-        initContract = "test_voting_Init"
-        contractAccept = "test_voting_Accept"
-        paramsAccept = ""
-        contractReject = "test_voting_Reject"
-        paramsReject = ""
+        SUBJ = "voting template subject"
+        INIT = "test_voting_Init"
+        ACCEPT = "test_voting_Accept"
+        ACCEPT_PARAMS = ""
+        REJECT = "test_voting_Reject"
+        REJECT_PARAMS = ""
         
         var p, d, v int // types of participant, decision, voting
         d = 1
@@ -40,16 +35,17 @@ contract test_voting_Create{
             p = 1
             while p <= 3 {
                 if p==2 {
+                    // passed with manually entering participants
                     p=p+1
                     continue
                 }
                 v = 1
                 while v <= 2 {
                     var title string
-                    title = Sprintf("New Voting [d%v:p%v:v%v]", d, p, v)
+                    title = Sprintf("New Voting d%v:p%v:v%v", d, p, v)
                     
                     var templateId, kid int
-                    voting_TemplateStore("Title,TypeParticipants,TypeVoting,TypeDecision,Volume,Quorum,Subject,Voters,Candidates,InitContract,Vacancies,ContractAccept,ParamsAccept,ContractReject,ParamsReject", title,p,v,d,volume,quorum,subject,voters,candidates,initContract,vacancies,contractAccept,paramsAccept,contractReject,paramsReject)
+                    voting_TemplateStore("Title,TypeParticipants,TypeVoting,TypeDecision,Volume,Quorum,Subject,Voters,Candidates,InitContract,Vacancies,ContractAccept,ParamsAccept,ContractReject,ParamsReject", title,p,v,d,volume,quorum,SUBJ,voters,candidates,INIT,vacancies,ACCEPT,ACCEPT_PARAMS,REJECT,REJECT_PARAMS)
                     templateId = $result
                     
                     var tableWritten, rowId, columnName, newValue, textDocument string

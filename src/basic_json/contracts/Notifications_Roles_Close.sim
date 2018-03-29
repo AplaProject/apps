@@ -4,7 +4,7 @@ contract Notifications_Roles_Close {
     }
 
     conditions {
-        $notifications_map = DBFind("notifications").Where("id=$", $notific_id).Row()
+        $notifications_map = DBFind("notifications").Columns("id,date_start_processing,processing_info->member_id,closed").Where("id=$", $notific_id).Row()
         if !$notifications_map {
             warning "Notification not found"
         }
@@ -13,19 +13,11 @@ contract Notifications_Roles_Close {
             warning "Sorry, processing of this notification has not yet begun"
         }
 
-        // get JSON
-        var processing_info_json string
-        processing_info_json = Str($notifications_map["processing_info"])
-
-        // get MAP
-        var processing_info map
-        processing_info = JSONToMap(processing_info_json)
-
-        if Int(processing_info["member_id"]) != $key_id {
+        if $notifications_map["processing_info.member_id"] != $key_id {
             warning "Sorry, processing of this notice began another member"
         }
 
-        if Int($notifications_map["closed"]) > 0 {
+        if $notifications_map["closed"] > 0 {
             warning "Sorry, this notification has already been closed before"
         }
     }
