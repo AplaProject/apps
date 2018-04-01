@@ -24,19 +24,27 @@ contract Roles_Assign {
             warning "This role has been deleted. The appointment of members is impossible"
         }
         
-        if $role_map["role_type"] != 1 && $role_map["role_type"] != 4 {
-            warning "This role is not assignable. The appointment of members is impossible"
-        }
+        var specialRules map
+        specialRules["sysparams_AcceptValidator"] = "Validator"
+        specialRules["sysparams_DelegateRefresh"] = "Delegate"
+        specialRules["sysparams_CandidateValidatorRequest"] = "Candidate for validators"
+        specialRules["sysparams_InvestorRefresh"] = "Investor with voting rights"
         
-        // check creator of the role
-        if $role_map["creator.member_id"] != $key_id {
-            warning "Sorry, you are not the creator of this role. The appointment of members is impossible"
+        if !(specialRules[$original_contract] == $role_map["role_name"]) {
+            if $role_map["role_type"] != 1 && $role_map["role_type"] != 4 {
+                warning "This role is not assignable. The appointment of members is impossible"
+            }
+            // check creator of the role
+            if $role_map["creator.member_id"] != $key_id {
+                warning "Sorry, you are not the creator of this role. The appointment of members is impossible"
+            }
         }
         
         $assign_id = DBFind("roles_participants").Where("role->id=$ and member->member_id=$ and deleted=0", $role_id, $member_id).One("id")
         if $assign_id {
             warning "This member has already been added"
         }
+        
     }
     
     action {
