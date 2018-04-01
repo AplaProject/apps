@@ -5,7 +5,18 @@ contract test_voting_Create{
         StartTime string "datetime"
         EndTime string "datetime"
     }
-    
+    conditions{
+        var v, c string
+        c = DBFind("roles").Where("deleted=0 and (role_type=2 or role_type=3)").One("id")
+        if !c{
+            warning "Candidate role not found. Please create role with type of 2 or 3 for tests"
+        }
+        
+        v = DBFind("roles").Where("deleted=0").One("id")
+        if !v {
+            warning "Voter role not found"
+        }
+    }
     action{
         var volume, quorum, vacancies int
         volume = 50
@@ -14,14 +25,8 @@ contract test_voting_Create{
         
         var SUBJ, voters, candidates, INIT, ACCEPT, ACCEPT_PARAMS, REJECT, REJECT_PARAMS string
         candidates = DBFind("roles").Where("deleted=0 and (role_type=2 or role_type=3)").One("id")
-        if !candidates{
-            warning "Candidate role not found. Please create role with type of 2 or 3 for tests"
-        }
-        
         voters = DBFind("roles").Where("deleted=0").One("id")
-        if !voters {
-            warning "Voter role not found"
-        }
+        
         SUBJ = "voting template subject"
         INIT = "test_voting_Init"
         ACCEPT = "test_voting_Accept"
@@ -45,8 +50,7 @@ contract test_voting_Create{
                     title = Sprintf("New Voting d%v:p%v:v%v", d, p, v)
                     
                     var templateId, kid int
-                    voting_TemplateStore("Title,TypeParticipants,TypeVoting,TypeDecision,Volume,Quorum,Subject,Voters,Candidates,InitContract,Vacancies,ContractAccept,ParamsAccept,ContractReject,ParamsReject", title,p,v,d,volume,quorum,SUBJ,voters,candidates,INIT,vacancies,ACCEPT,ACCEPT_PARAMS,REJECT,REJECT_PARAMS)
-                    templateId = $result
+                    templateId = voting_TemplateStore("Title,TypeParticipants,TypeVoting,TypeDecision,Volume,Quorum,Subject,Voters,Candidates,InitContract,Vacancies,ContractAccept,ParamsAccept,ContractReject,ParamsReject", title,p,v,d,volume,quorum,SUBJ,voters,candidates,INIT,vacancies,ACCEPT,ACCEPT_PARAMS,REJECT,REJECT_PARAMS)
                     
                     var tableWritten, rowId, columnName, newValue, textDocument string
                     tableWritten = "debug"
