@@ -105,11 +105,12 @@ contract voting_TemplateRun{
             }
             
         }
-        var isCreated map
-        isCreated = DBFind("votings").Where("voting->name=? and voting->description=? and deleted=0", $votingName, $desc).Row()
-        if isCreated{
-            // info "Voting already created" // check for duplicate voting
-        }
+        // check duplicated
+        // var isCreated map
+        // isCreated = DBFind("votings").Where("voting->name=? and voting->description=? and deleted=0", $votingName, $desc).Row()
+        // if isCreated{
+        //     info "Voting already created"
+        // }
         
         
         if $participants == 3 {
@@ -124,17 +125,15 @@ contract voting_TemplateRun{
     }
     
     action{
-        
-        $voting_id = 0 // must be installed in voting_CreateNew
-        voting_CreateNew("voting_name,voting_type,description,type_participants,type_decision,now_date,start_time,start_date,end_date,end_time,volume,quorum", $votingName, $voting, $desc, $participants, $decision, $Start, $StartTime, $Start, $End, $EndTime, $volume, $quorum)
-        if $voting_id == 0 {
-            // if unable to set in voting_CreateNew (when/if will be fixed passing of global variables)
-            $voting_id = DBFind("votings").Where("voting->name=? and date_started=?", $votingName, $Start).One("id")
-            $voting_id = Int($voting_id)
+        var votingId int
+        // must be installed in voting_CreateNew
+        votingId = voting_CreateNew("voting_name,voting_type,description,type_participants,type_decision,now_date,start_time,start_date,end_date,end_time,volume,quorum", $votingName, $voting, $desc, $participants, $decision, $Start, $StartTime, $Start, $End, $EndTime, $volume, $quorum)
+        if votingId == 0 {
+            warning "votingId is zero"
         }
         // the default argument for Contract
         var defaultParams string
-        defaultParams = Sprintf(`{"VotingTemplateId":"%v","KeyId":"%v","VotingId":"%v"}`, $TemplateId, $KeyId, $voting_id)
+        defaultParams = Sprintf(`{"VotingTemplateId":"%v","KeyId":"%v","VotingId":"%v"}`, $TemplateId, $KeyId, votingId)
         
         if Size($acceptParams) == 0{
             $acceptParams = defaultParams
@@ -146,27 +145,27 @@ contract voting_TemplateRun{
         if $decision == 1 || $decision == 2{
             // 1. Role candidates with the registration of participants on request
             // 2. Role candidates with manual registration of the participants
-            voting_SubjectCandidates("votingID,memberID", $voting_id, $KeyId)
-            voting_SubjectSettings("votingID,roleID,vacancies,contract_accept,contract_accept_params,contract_reject,contract_reject_params", $voting_id, $candidateId, $vacancies, $contractAccept, $acceptParams, $contractReject,$rejectParams)
+            voting_SubjectCandidates("votingID,memberID", votingId, $KeyId)
+            voting_SubjectSettings("votingID,roleID,vacancies,contract_accept,contract_accept_params,contract_reject,contract_reject_params", votingId, $candidateId, $vacancies, $contractAccept, $acceptParams, $contractReject,$rejectParams)
         }
         if $decision == 3 {
             // Document approval
-            voting_SubjectDocument("votingID,text_document,contract_accept,contract_accept_params,contract_reject,contract_reject_params", $voting_id,$TextDocument, $contractAccept, $acceptParams, $contractReject, $rejectParams)
+            voting_SubjectDocument("votingID,text_document,contract_accept,contract_accept_params,contract_reject,contract_reject_params", votingId,$TextDocument, $contractAccept, $acceptParams, $contractReject, $rejectParams)
         }
         
         if $decision == 4 {
             // Formal decision
-            voting_SubjectFormal("votingID,description,table_to_written,row_id,column_name,written_value,contract_accept,contract_accept_params,contract_reject,contract_reject_params",$voting_id, $desc, $TableWritten, $RowId, $ColumnName, $NewValue, $contractAccept, $acceptParams, $contractReject, $rejectParams)
+            voting_SubjectFormal("votingID,description,table_to_written,row_id,column_name,written_value,contract_accept,contract_accept_params,contract_reject,contract_reject_params",votingId, $desc, $TableWritten, $RowId, $ColumnName, $NewValue, $contractAccept, $acceptParams, $contractReject, $rejectParams)
             
         }
         
         if $decision == 5 {
             // Execution of the contract
-            voting_SubjectContract("votingID,contract_accept,contract_accept_params,contract_reject,contract_reject_params",$voting_id,$contractAccept, $acceptParams, $contractReject, $rejectParams)
+            voting_SubjectContract("votingID,contract_accept,contract_accept_params,contract_reject,contract_reject_params",votingId,$contractAccept, $acceptParams, $contractReject, $rejectParams)
         }
         if $participants == 3 {
             // participants: "by role"
-            voting_Invite("votingID,var_id", $voting_id, $roleId)
+            voting_Invite("votingID,var_id", votingId, $roleId)
         }
         if $participants == 1 {
             // if the participants are "all", the invite has already occurred in "voting_CreateNew"
