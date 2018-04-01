@@ -2,15 +2,11 @@ contract Roles_Create {
     data {
         role_name string
         role_type int
-        icon string "image"
+        icon string "image,optional"
         company_id int "optional"
     }
     
     conditions {
-        if Size($icon) == 0 {
-            warning "Icon was not received"
-        }
-        
         // system role
         if $role_type == 3 {
             warning "System role can not be created"
@@ -41,9 +37,11 @@ contract Roles_Create {
         creator["member_name"] = $member_map["member_name"]
         creator["image_id"] = $member_map["image_id"]
         
-        // binaries index: app_id + member_id + name
         var image_id int
-        image_id = DBInsert("binaries", "data,name,app_id", $icon, $role_name, 0) // app_id is zero for debug
+        if Size($icon) > 0 {
+            // binaries index: app_id + member_id + name
+            image_id = DBInsert("binaries", "data,name,app_id", $icon, $role_name, 0) // TODO: GET app_id for real applications id. is zero for debug
+        }
         
         // insert role
         if $role_type == 4 {
