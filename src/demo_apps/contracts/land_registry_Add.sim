@@ -37,15 +37,25 @@ contract land_registry_Add{
         header = "Department of Legal Affairs: $new_land$"
         body = "$need_your_processing$"
         
+        var keys_map map
+        keys_map = DBFind("keys").Where("id != ?", $key_id).Order("id").Row()
+
+        var key_for_send int
+        if keys_map{
+            key_for_send = Int(keys_map["id"])
+        } else {
+            key_for_send = $key_id
+        }
+
         //notify depart
         params = Sprintf("LandId=%v,admin=1", landId)
         page = "land_registry_edit"
-        Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", $key_id,icon,header,body,page,params)
+        Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", key_for_send,icon,header,body,page,params)
         
         //notify owner
         header = "New Land: need price"
         params = Sprintf("LandId=%v", landId)
         page = "land_registry_edit"
-        Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", $OwnerId,icon,header,body,page,params)
+        Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", key_for_send,icon,header,body,page,params)
     }
 }
