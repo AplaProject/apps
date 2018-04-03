@@ -1,0 +1,34 @@
+{
+    "blocks": [],
+    "contracts": [
+        {
+            "Name": "tests_JsonOperationDB",
+            "Value": "contract tests_JsonOperationDB {\n    data{}\n    \n    action {\n        var TABLE string\n        TABLE = \"tests\"\n        var flag map\n        flag[\"insert\"] = \"ok\"\n        var id int\n        id = DBInsert(TABLE, \"json\", flag)\n        \n        flag[\"update\"] = \"ok\"\n        DBUpdate(TABLE, id, \"json\", flag)\n        \n        var found map\n        found = DBFind(TABLE).Where(\"id=? and json->update='ok'\", id).Row()\n        flag[\"found\"] = \"ok\"\n        DBUpdate(TABLE, Int(found[\"id\"]), \"json\", flag)\n        \n        var result map\n        result = DBFind(TABLE).Where(\"id=?\", found[\"id\"]).Row()\n        \n        if result[\"json\"] == `{\"found\": \"ok\", \"insert\": \"ok\", \"update\": \"ok\"}`{\n            $result = true\n        }else{\n            $result = false\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "tests_Run",
+            "Value": "contract tests_Run {\n    data{\n        Date string \"date\"\n    }\n    conditions {\n        var tests array\n        tests[0] = \"tests_JsonOperationDB\"\n        $tests = tests\n    }\n    action {\n        var i int\n        while i < Len($tests) {\n            var success bool\n            var params map\n            success = CallContract($tests[i], params)\n            if success {\n                DBInsert(\"tests\", \"name,date,result\", $tests[i], $Date, \"ok\")\n            }else{\n                DBInsert(\"tests\", \"name,date,result\", $tests[i], $Date, \"fail\")\n            }\n            i=i+1\n        }\n        \n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        }
+    ],
+    "data": [],
+    "languages": [],
+    "menus": [],
+    "pages": [
+        {
+            "Name": "tests",
+            "Value": "Div(content-wrapper){\n    Div(row){\n        Div(col-sm-6 col-sm-offset-3){\n            Form(panel panel-default){\n                Div(panel-heading){\n                    Input(Name: Date, Type: hidden, Value: Now(\"YYYY-MM-DD HH:MI:SS\"))\n                    Button(Contract: tests_Run, Class: btn btn-primary, Body: run tests, Page: tests, PageParams: \"date=Val(Date)\")\n                }\n                If(GetVar(date)){\n                    Div(panel-body){\n                        DBFind(Name: tests, Source: src).Where(\"date='#date#'\").Order(\"id desc\")\n                        Div(form-group){\n                            ForList(src){\n                                If(#result#==\"fail\"){\n                                    SetVar(hl, text-danger)\n                                }.Else{\n                                    SetVar(hl, text-success)\n                                }\n                                Div(row #hl#){\n                                    Div(col-sm-6){#name#}\n                                    Div(col-sm-5){DateTime(#date#)}\n                                    Div(col-sm-1){#result#}\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Menu": "default_menu"
+        }
+    ],
+    "parameters": [],
+    "tables": [
+        {
+            "Name": "tests",
+            "Columns": "[\n    {\n        \"name\": \"json\",\n        \"type\": \"json\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"name\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"date\",\n        \"type\": \"datetime\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"result\",\n        \"type\": \"varchar\",\n        \"conditions\": \"true\"\n    }\n]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
+        }
+    ]
+}
