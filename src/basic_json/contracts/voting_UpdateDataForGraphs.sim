@@ -8,16 +8,17 @@ contract voting_UpdateDataForGraphs {
         if Size(m) > 0 { res = JSONToMap(m) }
         return res
     }
+  
     func percentPartOfTotal(part, total int) int {
         if total == 0{ total = 1 }
         var percent int
-        percent = (part * 100.0)/total
+        percent = Int((part * 100)/total)
         if percent > 100 { percent = 100 }
-        return Money(percent)
+        return percent
     }
     
     conditions {
-        $voting_map = DBFind("votings").Where("id=?", $votingID).Row()
+        $voting_map = DBFind("votings").Columns("flags,voting,progress").Where("id=?", $votingID).Row()
         if !$voting_map {
             warning "Voting is not found"
         }
@@ -29,24 +30,29 @@ contract voting_UpdateDataForGraphs {
         voting = safeJsonToMap($voting_map["voting"])
         flags = safeJsonToMap($voting_map["flags"])
         
-        var number_voters, flag_success int
+        var flag_success, percent_success, percent_voters, number_voters, quorum int
         // increment count of voters
+        quorum = Int(voting["quorum"])
         number_voters = Int(progress["number_voters"]) + 1
-        
-        progress["percent_voters"] = percentPartOfTotal(number_voters, Int(progress["number_participants"]))
-        progress["percent_success"] = percentPartOfTotal(progress["percent_voters"], Int(voting["volume"]))
+        percent_voters = percentPartOfTotal(number_voters, Int(progress["number_participants"]))
+        percent_success = percentPartOfTotal(percent_voters, Int(voting["volume"]))
         
         // update the flag of success
         if progress["percent_success"] == 100 {
             flag_success = 1
         }
-        
+        progress["percent_voters"] = percent_voters
+        progress["percent_success"] = percent_success
         progress["number_voters"] = number_voters
         flags["success"] = flag_success
         
         DBUpdate("votings", $votingID, "progress,flags", progress, flags)
         
-        if progress["percent_voters"] >= voting["quorum"] {
+        if (percent_voters >= quorum && quorum > 50) || percent_voters == 100 {
+            // if a quorum is more than 50% we can immediately make the decision
+            // OR
+            // if all participants have voted we can not wait until the end of the voting period
+            
             voting_CheckDecision("votingID", $votingID)
         }
     }

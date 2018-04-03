@@ -5,7 +5,7 @@ contract voting_AcceptCandidates {
     }
     
     conditions {
-        $voting_map = DBFind("votings").Columns("id,flags->decision,flags->notifics").Where("id=?", $votingID).Row()
+        $voting_map = DBFind("votings").Columns("id,flags").Where("id=?", $votingID).Row()
         if !$voting_map {
             warning "Voting is not found"
         }
@@ -22,16 +22,10 @@ contract voting_AcceptCandidates {
     }
     
     action {
-        // get JSON
-        var flags_json string
-        flags_json = Str($voting_map["flags"])
-        
-        // get MAP
         var flags map
-        flags = JSONToMap(flags_json)
-        
+        flags = JSONToMap($voting_map["flags"])
         // if notifications have been sent, then close it
-        if $voting_map["flags.notifics"] == 1 {
+        if flags["notifics"] == 1 {
             
             $notific_id = DBFind("notifications").Where("recipient->member_id=$ and page_name=$ and page_params->voting_id=$ and closed=$", $key_id, "voting_view", $votingID, 0).One("id")
             
@@ -41,7 +35,7 @@ contract voting_AcceptCandidates {
         }
         
         // check the decision
-        if $voting_map["flags.decision"] == 1 {
+        if flags["decision"] == 1 {
             warning "Decision was taken. Voting is now not possible"
         }
         
