@@ -16,7 +16,7 @@ contract sysparams_InvestorRefresh {
         var roleId int
         roleId = 4 // Investor with voting rights
         
-        $role = DBFind("roles_list").Where("id=? and delete=0", roleId).Row()
+        $role = DBFind("roles").Where("id=? and delete=0", roleId).Row()
         if !$role{
             warning "Investor role not found"
         }
@@ -27,13 +27,11 @@ contract sysparams_InvestorRefresh {
     }
     
     action{
-        var thisContract string
-        thisContract = "sysparams_InvestorRefresh"
         // get investors ids
         var keysInvestors, assignedInvestors, investorsIds, assignedIds array
         var dIndex, i int
         keysInvestors = DBFind("keys").Order("amount desc, id").Limit($limitInvestors)
-        assignedInvestors = DBFind("roles_assign").Where("role_id=? and delete=0", $role["id"])
+        assignedInvestors = DBFind("roles_participants").Where("role->id=? and deleted=0", $role["id"])
         
         // get ids
         i=0
@@ -56,9 +54,9 @@ contract sysparams_InvestorRefresh {
         while i < Len(assignedIds) {
             if NotInArray(assignedIds[i], investorsIds){
                 var assigned map
-                assigned = DBFind("roles_assign").Where("member_id=? and role_id=?", assignedIds[i], $role["id"]).Row()
+                assigned = DBFind("roles_participants").Where("member->member_id=? and role->id=?", assignedIds[i], $role["id"]).Row()
                 if assigned {
-                    Roles_Unassign("row_id,origin_contract", assigned["id"], thisContract)
+                    Roles_Unassign("row_id", Int(assigned["id"]))
                 }
             }
             i = i+1
@@ -67,10 +65,9 @@ contract sysparams_InvestorRefresh {
         i = 0
         while i < Len(investorsIds) {
             if NotInArray(investorsIds[i], assignedIds){
-                Roles_Assign("role_id,member_id,origin_contract", $role["id"], investorsIds[i], thisContract)
+                Roles_Assign("role_id,member_id", Int($role["id"]), investorsIds[i])
             }
             i = i+1
         }
-        
     }
 }
