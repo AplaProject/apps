@@ -9,11 +9,11 @@ contract voting_SubjectCheckFulldata {
     }
     
     conditions {
-        $voting_map = DBFind("votings").Columns("id,optional,voting->type_decision,flags").Where("id=?", $votingID).Row()
+        $voting_map = DBFind("votings").Columns("id,optional,voting->type,voting->type_decision,flags").Where("id=?", $votingID).Row()
         if !$voting_map {
             warning "Voting is not found"
         }
-
+        
         $type_decision = $voting_map["voting.type_decision"]
         if $type_decision < 1 || $type_decision > 5 {
             warning "invalid type of decision"
@@ -50,8 +50,15 @@ contract voting_SubjectCheckFulldata {
         }
         
         if $type_decision == 4 {
-            if subject["table"] != "" && subject["table_id"] != "" && subject["column"] != "" && subject["column_value"] != "" {
-                fullData = 1
+            if $voting_map["voting.type"] == 1{ // personal
+                if subject["table"] != "" && subject["table_id"] != "" && subject["column"] != "" && subject["column_value"] != "" {
+                    fullData = 1
+                }
+            }
+            if $voting_map["voting.type"] == 2 { // system
+                if subject["column"] != "" && subject["column_value"] != "" {
+                    fullData = 1
+                }
             }
         }
         
