@@ -13,14 +13,16 @@ contract sysparams_RemoveNode{
                     var p, lastSym string
                     p = parts[i]
                     lastSym = Substr(p, Size(p)-1, 1)
-                    if  lastSym != "}"{
+                    if lastSym != "}"{
                         p = Sprintf("%v}", p)
                     }
                     res[i] = JSONToMap(p)
                     i=i+1
                 }
             }else{
-                res[0] = JSONToMap(json)
+                if HasPrefix(json, "{"){
+                    res[0] = JSONToMap(json)
+                }
             }
         }
         return res
@@ -29,6 +31,10 @@ contract sysparams_RemoveNode{
         var json string
         var nodes, res array
         json = SysParamString("full_nodes")
+        if !HasPrefix(json, "[") {
+            // empty string nodes
+            return res
+        }
         nodes = jsonToArray(json)
         var i, i_res int
         while i < Len(nodes){
@@ -60,7 +66,11 @@ contract sysparams_RemoveNode{
         res = Sprintf("[%v]", res)
         return res
     }
-    conditions{}
+    conditions{
+        if $original_contract != "sysparams_ValidatorResign"{
+            warning "Unknown contract"
+        }
+    }
     
     action{
         var nodes array
