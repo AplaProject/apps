@@ -20,24 +20,21 @@ contract sysparams_AcceptValidator{
         roleId = 3 // Validator
         
         candidateId = DBFind("sysparams_candidate").Where("id=?",$Id).One("candidate_key_id")
-        if candidateId == nil{
+        if !candidateId {
             warning "Candidate key id not found"
         }
-        $assignedRow = DBFind("roles_assign").Where("delete=0 and id=? and member_id=?", oldRoleId, candidateId).Row()
+        $rowId = Int(DBFind("roles_participants").Where("deleted=0 and role->id=? and member->member_id=?", oldRoleId, candidateId).One("id"))
         
-        $role = DBFind("roles_list").Where("role_id=? and delete=0", roleId).Row()
-        if !$role {
+        $roleId = Int(DBFind("roles").Where("role->id=? and deleted=0", roleId).One("id"))
+        if $roleId == 0 {
             warning "Validator role not found"
         }
     }
     
     func action{
-        var this_contract string
-        this_contract = "sysparams_AcceptValidator"
-        
-        if $assignedRow {
-            Roles_Unassign("row_id,origin_contract", Int($assignedRow["id"]), this_contract)
+        if $rowId > 0 {
+            Roles_Unassign("row_id", $rowId)
         }
-        Roles_Assign("role_id,member_id,origin_contract", Int($role["id"]), $Id, this_contract)
+        Roles_Assign("role_id,member_id", $roleId, $Id)
     }
 }
