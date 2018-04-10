@@ -13,11 +13,9 @@ contract sysparams_InvestorRefresh {
     conditions{
         MainCondition()
         
-        var roleId int
-        roleId = 4 // Investor with voting rights
-        
-        $role = DBFind("roles").Where("id=? and delete=0", roleId).Row()
-        if !$role{
+        // roles:id == 4 Investor with voting rights
+        $roleId = Int(DBFind("roles").Where("id=4 and deleted=0").One("id"))
+        if !$roleId{
             warning "Investor role not found"
         }
         $limitInvestors = Int(EcosysParam("investors_number"))
@@ -31,7 +29,7 @@ contract sysparams_InvestorRefresh {
         var keysInvestors, assignedInvestors, investorsIds, assignedIds array
         var dIndex, i int
         keysInvestors = DBFind("keys").Order("amount desc, id").Limit($limitInvestors)
-        assignedInvestors = DBFind("roles_participants").Where("role->id=? and deleted=0", $role["id"])
+        assignedInvestors = DBFind("roles_participants").Where("role->id=? and deleted=0", $roleId)
         
         // get ids
         i=0
@@ -54,7 +52,7 @@ contract sysparams_InvestorRefresh {
         while i < Len(assignedIds) {
             if NotInArray(assignedIds[i], investorsIds){
                 var assigned map
-                assigned = DBFind("roles_participants").Where("member->member_id=? and role->id=?", assignedIds[i], $role["id"]).Row()
+                assigned = DBFind("roles_participants").Where("member->member_id=? and role->id=?", assignedIds[i], $roleId).Row()
                 if assigned {
                     Roles_Unassign("row_id", Int(assigned["id"]))
                 }
@@ -65,7 +63,7 @@ contract sysparams_InvestorRefresh {
         i = 0
         while i < Len(investorsIds) {
             if NotInArray(investorsIds[i], assignedIds){
-                Roles_Assign("role_id,member_id", Int($role["id"]), investorsIds[i])
+                Roles_Assign("role_id,member_id", $roleId, investorsIds[i])
             }
             i = i+1
         }
