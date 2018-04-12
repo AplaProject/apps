@@ -7,26 +7,20 @@ contract Import_Upload {
     }
 
     action {
-        var str_raplace string
-		str_raplace = Replace($input_file, "data:;base64,", "")
-        var str_insert string
-		str_insert = DecodeBase64(str_raplace)
+        var encoded, decoded, prefix string
+        encoded = Replace($input_file, "data:application/json;base64,", "")
+        encoded = Replace(encoded, "data:;base64,", "")
+        decoded = DecodeBase64(encoded)
 
         var json map
-        json = JSONToMap(str_insert)
+        json = JSONToMap(decoded)
         var arr_data array
         arr_data = json["data"]
 
-        var pages_arr array
-        var blocks_arr array
-        var menu_arr array
-        var parameters_arr array
-        var languages_arr array
-        var contracts_arr array
-        var tables_arr array
+        var pages_arr, blocks_arr, menu_arr, parameters_arr, languages_arr, contracts_arr, tables_arr array
 
         var i int
-        while(i<Len(arr_data)){
+        while i<Len(arr_data){
             var tmp_object map
             tmp_object = arr_data[i]
 
@@ -74,9 +68,9 @@ contract Import_Upload {
 
         $import_id = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "import").One("id")
         if !$import_id {
-            DBInsert("buffer_data", "member_id,key,value", $key_id, "import", str_insert)
+            DBInsert("buffer_data", "member_id,key,value", $key_id, "import", decoded)
         } else {
-            DBUpdate("buffer_data", Int($import_id), "value", str_insert)
+            DBUpdate("buffer_data", Int($import_id), "value", decoded)
         }
 
         $info_id = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "import_info").One("id")
