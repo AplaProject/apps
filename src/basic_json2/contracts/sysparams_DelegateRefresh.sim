@@ -1,0 +1,90 @@
+contract sysparams_DelegateRefresh{
+    func NotInArray(val string, arr array) bool{
+        var i int
+        // info arr
+        while i< Len(arr){
+            if val == arr[i]{
+                return false
+            }
+            i=i+1
+        }
+        return true
+    }
+    
+    conditions{
+        MainCondition()
+        
+        var ROLE_NAME string
+        var ROLE_ID int
+        ROLE_NAME = "Delegate"
+        ROLE_ID = 5
+        
+        // get role Id and Type
+        $role = DBFind("roles").Where("role_name=? and id=? and delete=0", ROLE_NAME, ROLE_ID).Row()
+        if !$role{
+            warning Sprintf("Role %q not found", ROLE_NAME)
+        }
+        if EcosysParam("last_ecosystem_number") == 0 {
+            warning "last ecosystem number unknown"
+        }
+    }
+    
+    action{
+        var DELEGATE_ACCOUNT string
+        DELEGATE_ACCOUNT = "delegate_account"
+        // get delegates ids
+        var delegateIds, currentDelegates array
+        var dIndex, i int
+        
+        var lastEcosystemNumber int
+        lastEcosystemNumber = Int(EcosysParam("last_ecosystem_number"))
+        
+        i = 1
+        while i <= lastEcosystemNumber {
+            var delegateParam map
+            delegateParam = DBFind("parameters").Where("name=?", DELEGATE_ACCOUNT).Ecosystem(i).Row()
+            if !delegateParam{
+                delegateParam = DBFind("parameters").Where("name='founder_account'").Ecosystem(i).Row()
+            }
+            var delegateValue string
+            delegateValue = delegateParam["value"]
+            if NotInArray(delegateValue, delegateIds){
+                delegateIds[dIndex] = delegateValue
+                dIndex = dIndex + 1
+            }
+            i = i + 1
+        }
+        
+        // remove old role assigns
+        currentDelegates = DBFind("roles_participants").Where("role->id=? and deleted=0", $role["id"])
+        i = 0
+        while i < Len(currentDelegates){
+            var delegate map
+            delegate = currentDelegates[i]
+            if NotInArray(delegate["member_id"], delegateIds){
+                var id int
+                id = Int(delegate["id"])
+                Roles_Unassign("row_id", id)
+            }
+            i = i + 1
+        }
+        
+        // assign new roles
+        i = 0
+        while i < Len(delegateIds) {
+            var delegateId int
+            delegateId = Int(delegateIds[i])
+            var member map
+            member = DBFind("members").Where("id=?",delegateId).Row()
+            if member{
+                // check role dup
+                var assigned map
+                assigned = DBFind("roles_participants").Where("member->member_id=? and role->id=? and deleted=0", delegateId, $role["id"]).Row()
+                if !assigned{
+                    Roles_Assign("role_id,member_id", Int($role["id"]), Int(member["id"]))
+                }
+            }
+            i=i+1
+        }
+    }
+}

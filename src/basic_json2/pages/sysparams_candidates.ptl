@@ -1,0 +1,40 @@
+SetVar(template_id, EcosysParam(voting_validators_template_id))
+SetTitle($sysparams_candidates$)
+
+DBFind(Name:sysparams_candidate, Source: src_candidates).Where("deleted=0").Custom(_actions){
+    If(#template_id#>0){
+        Div(btn-group){
+            Input(Name:KeyId, Type: hidden, Value: #candidate_key_id#)
+            Input(Name:TemplateId, Type: hidden, Value: #template_id#)
+            Button(Body: $voting_start$, Contract: voting_TemplateRun, Page: voting_list, Class: btn btn-success)
+        }
+    }.Else{
+        Button(Class: btn btn-warning icon-question, Page: sysparams_candidates).Alert(Text: $voting_template_not_found$, ConfirmButton: $yes$, CancelButton: $no$, Icon: info)
+    }
+    
+}.Custom(_date){
+    DateTime(DateTime: #date_created#, Format: YYYY-MM-DD HH:MI)
+}
+
+Div(content-wrapper){
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $sysparams_candidates$)
+    }
+    
+    Div(row){
+        Div(col-md-12){
+            Div(panel panel-primary){
+                Form(table-responsive){
+                    Input(Name:Start, Type: hidden, Value: Now("YYYY-MM-DD", +1 days))
+                    Input(Name:StartTime, Type: hidden, Value: Now("HH:MI"))
+                    Input(Name:End, Type: hidden, Value: Now("YYYY-MM-DD", +14 days))
+                    Input(Name:EndTime, Type: hidden, Value: Now("HH:MI"))
+                    Table(Source: src_candidates, Columns: "$id$=id,$host_ip$=host_ip,$commission_address$=commission_address,$description_equipment$=description,$comment$=comment,$date_created$=_date,=_actions")
+                }
+                Div(panel-footer text-right){
+                    Button(Body: $add$, Class: btn btn-primary, Page: sysparams_candidate_validators_form)
+                }
+            }
+        }
+    }
+}

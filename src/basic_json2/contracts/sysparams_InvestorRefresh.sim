@@ -1,0 +1,71 @@
+contract sysparams_InvestorRefresh {
+    func NotInArray(val string, arr array) bool{
+        var i int
+        // info arr
+        while i< Len(arr){
+            if val == arr[i]{
+                return false
+            }
+            i=i+1
+        }
+        return true
+    }
+    conditions{
+        MainCondition()
+        
+        // roles:id == 4 Investor with voting rights
+        $roleId = Int(DBFind("roles").Where("id=4 and deleted=0").One("id"))
+        if !$roleId{
+            warning "Investor role not found"
+        }
+        $limitInvestors = Int(EcosysParam("investors_number"))
+        if $limitInvestors == 0 {
+            warning "Investors number not set"
+        }
+    }
+    
+    action{
+        // get investors ids
+        var keysInvestors, assignedInvestors, investorsIds, assignedIds array
+        var dIndex, i int
+        keysInvestors = DBFind("keys").Order("amount desc, id").Limit($limitInvestors)
+        assignedInvestors = DBFind("roles_participants").Where("role->id=? and deleted=0", $roleId)
+        
+        // get ids
+        i=0
+        while i < Len(keysInvestors) {
+            var inv map
+            inv = keysInvestors[i]
+            investorsIds[i] = inv["id"]
+            i = i + 1
+        }
+        i=0
+        while i < Len(assignedInvestors) {
+            var inv map
+            inv = assignedInvestors[i]
+            assignedIds[i] = inv["member_id"]
+            i = i + 1
+        }
+        
+        // remove old investors
+        i = 0
+        while i < Len(assignedIds) {
+            if NotInArray(assignedIds[i], investorsIds){
+                var assigned map
+                assigned = DBFind("roles_participants").Where("member->member_id=? and role->id=?", assignedIds[i], $roleId).Row()
+                if assigned {
+                    Roles_Unassign("row_id", Int(assigned["id"]))
+                }
+            }
+            i = i+1
+        }
+        // add new investors
+        i = 0
+        while i < Len(investorsIds) {
+            if NotInArray(investorsIds[i], assignedIds){
+                Roles_Assign("role_id,member_id", $roleId, investorsIds[i])
+            }
+            i = i+1
+        }
+    }
+}

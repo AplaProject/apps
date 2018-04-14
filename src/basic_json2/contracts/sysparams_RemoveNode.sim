@@ -1,0 +1,86 @@
+contract sysparams_RemoveNode{
+    data{}
+    func jsonToArray(json string) array {
+        // KOSTYL
+        var res, parts array
+        if Size(json) < 60 {
+            // fastway empty|incorrect detect
+            return res
+        }
+        if HasPrefix(json, "[") {
+            json = Substr(json, 1, Size(json)-2)
+            if Contains(json, "},"){
+                // json have many objects
+                parts = Split(json, "},")
+                var i int
+                while i < Len(parts){
+                    var p, lastSym string
+                    p = parts[i]
+                    lastSym = Substr(p, Size(p)-1, 1)
+                    if lastSym != "}"{
+                        p = Sprintf("%v}", p)
+                    }
+                    res[i] = JSONToMap(p)
+                    i=i+1
+                }
+            }else{
+                if HasPrefix(json, "{"){
+                    res[0] = JSONToMap(json)
+                }
+            }
+        }
+        return res
+    }
+    func nodesRemove(keyId int) array{
+        var json string
+        var nodes, res array
+        json = SysParamString("full_nodes")
+        if !HasPrefix(json, "[") {
+            // empty string nodes
+            return res
+        }
+        nodes = jsonToArray(json)
+        var i, i_res int
+        while i < Len(nodes){
+            var node map
+            node = nodes[i]
+            if node["key_id"] != keyId {
+                res[i_res] = node
+                i_res = i_res+1
+            }
+            i=i+1
+        }
+        return res
+    }
+    func nodesArrayToJson(nodes array) string{
+        var res string
+        var json array
+        if Len(nodes) == 0 {
+            res = "[]"
+            return res
+        }
+        var i int
+        while i < Len(nodes){
+            var node map
+            node = nodes[i]
+            json[i] = Sprintf(`{"tcp_address":"%v", "api_address":"%v", "key_id":"%v", "public_key":"%v"}`, node["tcp_address"], node["api_address"], node["key_id"], node["public_key"])
+            i=i+1
+        }
+        res = Join(json, ",")
+        res = Sprintf("[%v]", res)
+        return res
+    }
+    conditions{
+        if $original_contract != "sysparams_ValidatorResign"{
+            warning "Unknown contract"
+        }
+    }
+    
+    action{
+        var nodes array
+        nodes = nodesRemove($key_id)
+        var fullNodes string
+        fullNodes = nodesArrayToJson(nodes)
+        DBUpdateSysParam("full_nodes", fullNodes, "")
+    }
+}
