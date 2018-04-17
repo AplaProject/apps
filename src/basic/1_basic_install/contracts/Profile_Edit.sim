@@ -4,54 +4,44 @@ contract Profile_Edit {
         member_image string "image"
         information string "optional"
     }
-
+    
     conditions {
         $member_map = DBFind("members").Where("id = $", $key_id).Row()
-
+        
         if !$member_map {
-            // check member_name 
+            // check member_name
             $member_id = DBFind("members").Where("member_name = $", $member_name).One("id")
             if $member_id {
                 warning "This member name is busy. Enter another member name, please"
             }
-
+            
             if Size($member_image) == 0 {
                 warning "Avatar was not received"
             }
         }
     }
-
+    
     action {
+        var imgName string
+        var appId, imageId int
+        var memberInfo map
+        imgName = "avatar"
+
+        if Size($member_image) > 0 {
+            UploadBinary("Name,Data,AppID,MemberID", imgName, $member_image, 0, $key_id)
+            imageId = Int(DBFind("binaries").Where("name=? and app_id=? and member_id=?",imgName, appId, $key_id).One("id"))
+        }
         if $member_map {
-            // update avatar
-            if Size($member_image) > 0 {
-                $binaries_id = DBFind("binaries").Where("id = $", Int($member_map["image_id"])).One("id")
-                var imgName string
-                imgName = "avatar"
-                if $binaries_id {
-                    DBUpdate("binaries", Int($member_map["image_id"]), "data,name,member_id", $member_image, imgName, $key_id)
-                } else {
-                    var image_id int
-                    image_id = DBInsert("binaries", "data,name,member_id", $member_image, imgName, $key_id)
-                    DBUpdate("members", Int($member_map["id"]), "image_id", image_id)
-                }
+            memberInfo = JSONToMap($member_map["member_info"])
+            memberInfo["information"] = $information
+            if imageId > 0{
+                DBUpdate("members", $key_id, "image_id,member_info", imageId, memberInfo)
+            }else{
+                DBUpdate("members", $key_id, "member_info", memberInfo)
             }
-
-            var member_info map
-            member_info = JSONToMap($member_map["member_info"])
-            member_info["information"] = $information
-
-            DBUpdate("members", Int($member_map["id"]), "member_info", member_info)
         } else {
-            // new image
-            var image_id int
-            image_id = DBInsert("binaries", "data", $member_image)
-
-            // new information
-            var member_info map
-            member_info["information"] = $information
-
-            DBInsert("members", "id,member_name,image_id,member_info", $key_id, $member_name, image_id, member_info)
+            memberInfo["information"] = $information
+            DBInsert("members", "id,member_name,image_id,member_info", $key_id, $member_name, imageId, memberInfo)
         }
     }
 }
