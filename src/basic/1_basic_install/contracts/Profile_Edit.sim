@@ -4,44 +4,42 @@ contract Profile_Edit {
         member_image string "image"
         information string "optional"
     }
-    
+
     conditions {
+        var app_name string
+        app_name = "Basic application" 
+
         $member_map = DBFind("members").Where("id = $", $key_id).Row()
-        
+        $app_id = DBFind("applications").Where("name = $ AND deleted = 0", app_name).One("id")
+
         if !$member_map {
-            // check member_name
+            // check member_name 
             $member_id = DBFind("members").Where("member_name = $", $member_name).One("id")
             if $member_id {
                 warning "This member name is busy. Enter another member name, please"
             }
-            
+
+            // check avatar 
             if Size($member_image) == 0 {
                 warning "Avatar was not received"
             }
-        }
+        } 
     }
-    
-    action {
-        var imgName string
-        var appId, imageId int
-        var memberInfo map
-        imgName = "avatar"
 
-        if Size($member_image) > 0 {
-            UploadBinary("Name,Data,AppID,MemberID", imgName, $member_image, 0, $key_id)
-            imageId = Int(DBFind("binaries").Where("name=? and app_id=? and member_id=?",imgName, appId, $key_id).One("id"))
-        }
+    action {
+        var image_id int
+        var image_name string
+        image_name = "avatar" 
+
         if $member_map {
-            memberInfo = JSONToMap($member_map["member_info"])
-            memberInfo["information"] = $information
-            if imageId > 0{
-                DBUpdate("members", $key_id, "image_id,member_info", imageId, memberInfo)
-            }else{
-                DBUpdate("members", $key_id, "member_info", memberInfo)
+            image_id = Int($member_map["image_id"]) 
+            if Size($member_image) > 0 {
+                image_id = UploadBinary("Name,Data,AppID,MemberID", image_name, $member_image, Int($app_id), $key_id)
             }
+            DBUpdate("members", Int($member_map["id"]), "member_info->information,image_id", $information, image_id)
         } else {
-            memberInfo["information"] = $information
-            DBInsert("members", "id,member_name,image_id,member_info", $key_id, $member_name, imageId, memberInfo)
+            image_id = UploadBinary("Name,Data,AppID,MemberID", image_name, $member_image, Int($app_id), $key_id)
+            DBInsert("members", "id,member_name,image_id,member_info->information", $key_id, $member_name, image_id, $information)
         }
     }
 }
