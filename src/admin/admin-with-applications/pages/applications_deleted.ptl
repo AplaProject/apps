@@ -1,0 +1,61 @@
+Div(Class: content-wrapper){
+
+	SetTitle($deleted_applications$)
+    DBFind(applications, src_application).Where("id=#id#").Limit(1).Vars("app")
+    Div(Class: breadcrumb){
+        LinkPage(LangRes(applications), applications_list)
+        Span(/).Style(margin-right: 10px; margin-left: 10px;)
+        Span(Class: text-muted, Body: $deleted_applications$)
+    }
+
+    If(GetVar(isSearch) == 1){
+        SetVar(Name: v_Where, Value: "name='#v_Search#' and delete=1")
+    }.Else{
+        SetVar(Name: v_Where, Value: "deleted=1")
+        SetVar(Name: v_Search, Value: "")
+    }
+
+    DBFind(applications, src_applications).Where(#v_Where#).Order(id desc).Custom(custom_actions){
+		Span(){
+			Button(Class: btn btn-primary, Body: Em(Class: fa fa-eye), Page: application_pages, PageParams: "app_id=#id#")
+			Button(Class: btn btn-primary, Body: Em(Class: fa fa-arrow-up), Contract: RestoreApplication, Params: "ApplicationId=#id#", Page: applications_deleted)
+		}
+	}
+
+    Div(Class: panel panel-primary md-8){
+		Div(Class: panel-heading, Body: $applications$)
+        Form(){
+            Div(Class: list-group-item){
+                Div(Class: row df f-valign){
+                    Div(Class: col-md-1 mt-sm text-right){
+                        Label(For: Search){
+                            Span(Body: LangRes(name))
+                        }
+                    }
+                    Div(Class: col-md-11 mc-sm){
+                        Div(Class: input-group){
+                            Input(Class: form-control, Type: text, Name: Search, Value: #v_Search#)
+                            Div(Class: input-group-btn){
+                                Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: applications_list, PageParams: "isSearch=1,v_Search=Val(Search)")
+                            }
+                        }
+                    }
+                }  
+            }
+            Div(Class: list-group-item){ 
+                Table(Source: src_applications, Columns: "$name$=name,Conditions=conditions,=custom_actions").Style("tr  > *:first-child {padding-left:0px;} tr  > *:last-child {text-align:right; padding-right:0px;}")
+                If(GetVar(isSearch) == 1){
+                    Div(Class: text-center){  
+                        Button(Body: $view_all$, Class: btn btn-primary, Page: applications_list, PageParams: "isSearch=0")
+                    }
+                }
+            }
+			Div(Class: panel-footer clearfix){
+				Div(Class: pull-right){
+					Button(Body: Create Application, Class: btn btn-primary, Page: application_create)
+				}
+			}
+        }           
+    }
+
+}

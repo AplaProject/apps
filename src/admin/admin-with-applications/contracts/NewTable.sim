@@ -1,0 +1,54 @@
+contract NewTable {
+	data {
+		Name       string "optional"
+		Columns      string "optional"
+		Permissions string	 "optional"
+		TableName string "optional"
+    	Id array "optional"
+    	Shareholding array "optional"
+    	Insert_con string "optional"
+    	Update_con string "optional"
+    	New_column_con string "optional"
+        ApplicationId int "optional"
+	}
+	conditions {
+		
+	}
+	
+	action {
+		if (Size($Name) > 0   &&   Size($Columns) > 0  &&  Size($Permissions) > 0){
+			CreateTable($Name, $Columns, $Permissions, $ApplicationId)
+		} else {
+			var i,len,lenshar int
+        	var res,columns string
+        	len = Len($Id)
+        	lenshar = Len($Shareholding)
+			while i < len {
+            	if (i + 1 == len){
+                	res = res + Sprintf(`{"name":%q,"type":%q,"conditions":"true"}`,$Id[i],$Shareholding[i])
+                	i = i + 1
+            	}
+            	else {
+            		res = res + Sprintf(`{"name":%q,"type":%q,"conditions":"true"},`,$Id[i],$Shareholding[i])
+            		i = i + 1
+            	}
+			}
+    		columns = Sprintf("["+"%v"+"]", res)
+        
+        	var permissions string
+        	permissions = Sprintf(`{"insert":%q,"update":%q,"new_column":%q}`,$Insert_con,$Update_con,$New_column_con)
+
+			$Name = $TableName
+			$Columns = columns
+			$Permissions = permissions
+			
+			CreateTable($Name, $Columns, $Permissions, $ApplicationId)
+		}
+	}
+	func rollback() {
+			RollbackTable($Name)
+	}
+	func price() int {
+		return  SysParamInt("table_price")
+	}
+}

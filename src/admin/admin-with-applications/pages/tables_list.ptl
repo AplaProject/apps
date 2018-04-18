@@ -1,0 +1,63 @@
+DBFind(applications, src_app).Where("id=#app_id#").Limit(1).Vars("app")
+
+Div(Class: content-wrapper){
+	SetTitle(#app_name#: Tables)
+	Div(breadcrumb){
+		Span(Class: text-muted, Body: Tables)
+	}
+
+    If(GetVar(sort)==""){
+        SetVar(sort, "id")
+    }
+
+    If(GetVar(width)==""){
+        SetVar(width, 6)
+    }
+
+    Div(Class: pull-right clearfix){
+        LinkPage(Body: Em(Class: icon icon-plus) Create, Page: table_create, PageParams: "app_id=#app_id#", Class: ml btn-tool)
+    }.Style(
+        height: 45px;
+        padding-top: 10px;
+        a {
+            float: right;
+        }
+    )
+
+    Div(Class: clearfix){
+        Button(Body: 1, Class: btn btn-primary pull-left, Page: tables_list, PageParams: "app_id=#app_id#,sort=name,width=12")
+        Button(Body: 2, Class: btn btn-primary pull-left, Page: tables_list, PageParams: "app_id=#app_id#,sort=name,width=6")
+        Button(Body: 3, Class: btn btn-primary pull-left, Page: tables_list, PageParams: "app_id=#app_id#,sort=name,width=4")
+        Button(Body: Sort by ID, Class: btn btn-primary pull-left, Page: tables_list, PageParams: "app_id=#app_id#,sort=id")
+        Button(Body: Sort by Name, Class: btn btn-primary pull-left, Page: tables_list, PageParams: "app_id=#app_id#,sort=name")
+    }
+
+    DBFind(tables, src_tables).Where(app_id = #app_id#).Order(#sort# desc)
+
+    Div(Class: panel panel-default){
+        Form(){
+            Div(Class: row){
+                ForList(src_tables){
+                    Div(Class: col-md-#width# col-sm-12){
+                        Div(Class: row mb-sm){
+                            Div(Class: col-md-4){
+                                #name#
+                            }
+                            Div(Class: col-md-4){
+                                SetVar(table_last_row_id, 0)
+                                DBFind(#name#).Columns("id").Order(id desc).Limit(1).Vars("table_last_row")
+                                Div(){
+                                    #table_last_row_id#
+                                } 
+                            }
+                            Div(Class: col-md-4){
+                                Button(Class: btn btn-default pull-right, Body: Em(Class: fa fa-eye), PageParams: "table_name=#name#,app_id=#app_id#", Page: table_view)
+                                Button(Class: btn btn-default pull-right, Body: Em(Class: fa fa-edit), PageParams: "tabl_id=#id#,app_id=#app_id#", Page: edit_table)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
