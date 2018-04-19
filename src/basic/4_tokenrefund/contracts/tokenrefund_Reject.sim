@@ -4,22 +4,30 @@ contract tokenrefund_Reject{
     }
     
     func unblockAccounts(victimId, attackerId string){
-        //todo: РАЗБЛОКИРОВКА АККАУНТОВ
-        Debug("Value", Sprintf("РАЗБЛОКИРОВКА АККАУНТОВ (%v, %v)", victimId, attackerId))
+        if victimId==0 {
+            error "unblockAccounts. invalid victim key"
+        }
+        if attackerId==0{
+            error "unblockAccounts. invalid attacker key"
+        }
+        DBUpdate("keys", Int(victimId), "block", 0)
+        DBUpdate("keys", Int(attackerId), "block", 0)
+        Println(Sprintf("РАЗБЛОКИРОВКА АККАУНТОВ (%v, %v)", victimId, attackerId))
     }
     
     conditions{
-        Debug("Value", "tokenrefund_Reject")
+        Println($this_contract, "conditions")
         $tokenrefund = DBFind("tokenrefund").Where("id=?", $Id).Row()
         if !$tokenrefund{
-            Debug("Value", "tokenrefund не найден")
-            return
+            Println("tokenrefund не найден")
+            error "tokenrefund не найден"
         }
     }
     
     action{
+        Println($this_contract, "action")
         unblockAccounts($tokenrefund["victim_key_id"],$tokenrefund["attacker_key_id"])
-        // статус 3: закрыто; результат 1: возврат отменен
+        // status 3: closed; 1: return cancelled
         DBUpdate("tokenrefund", Int($tokenrefund["id"]), "status,result", 3,1)
     }
 }

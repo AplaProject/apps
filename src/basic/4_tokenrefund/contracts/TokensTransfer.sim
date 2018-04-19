@@ -6,6 +6,10 @@ contract TokensTransfer {
     }
     
     conditions {
+        if !($SenderId == $key_id || (Size($SenderId) > 0 && $original_contract == "voting_AcceptDecision")) {
+            Println($SenderId, $original_contract)
+            error "sender id error"
+        }
         var addressLen int
         addressLen = 24
         
@@ -17,17 +21,15 @@ contract TokensTransfer {
             error "TokensTransfer. Amount less than or equal to zero"
         }
         
-        if !HasPrefix($SenderId, "-"){
-            if Contains($SenderId, "-"){
-                $SenderId = Sprintf("%v", AddressToId($SenderId))
-                info $SenderId
-            }
+        if !HasPrefix($SenderId, "-") && Contains($SenderId, "-"){
+            // is address. convert to key id
+            $SenderId = Sprintf("%v", AddressToId($SenderId))
         }
-        if !HasPrefix($RecipientId, "-"){
-            if Contains($RecipientId, "-"){
-                $RecipientId = Sprintf("%v", AddressToId($RecipientId))
-            }
+        if !HasPrefix($RecipientId, "-") && Contains($RecipientId, "-"){
+            // is address. convert to key id
+            $RecipientId = Sprintf("%v", AddressToId($RecipientId))
         }
+        
         if Size($SenderId) > addressLen{
             $SenderId = Sprintf("%v", PubToID($SenderId))
         }
@@ -41,21 +43,17 @@ contract TokensTransfer {
         if !sender{
             error "TokensTransfer. Sender is invalid"
         }
-        // if sender["amount"] < $amount{
-        //     error Sprintf("The number of tokens of the sender (%v) is not enough", sender["amount"])
-        // }
-        // var recipient map
-        // recipient = DBFind("keys").Where("id=?", $RecipientId).Row()
-        // if !recipient{
-        //     error "TokensTransfer. Recipient is invalid"
-        // }
-
+        if sender["block"] == 1{
+            error "Sender blocked"
+        }
+        if sender["amount"] < $amount{
+            error Sprintf("The number of tokens of the sender (%v) is not enough", sender["amount"])
+        }
     }
     
     action {
         DBUpdate("keys", Int($SenderId),"-amount", $amount)
         DBUpdate("keys", Int($RecipientId),"+amount", $amount)
-        DBInsert("history", "sender_id,recipient_id,amount,block_id,txhash",
-        $SenderId, $RecipientId, $amount, $block, $txhash)
+        DBInsert("history", "sender_id,recipient_id,amount,block_id,txhash", $SenderId, $RecipientId, $amount, $block, $txhash)
     }
 }
