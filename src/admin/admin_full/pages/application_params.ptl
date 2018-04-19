@@ -1,0 +1,91 @@
+DBFind(Name: buffer_data, Source: src_buffer).Columns("value->app_id,value->app_name,value->menu_name,value->menu_id,value->count_menu").Where("key='export'and member_id=#key_id#").Vars(buffer)
+
+If(#buffer_value_app_id# >-1){
+    DBFind(applications, src_app).Where("id=#buffer_value_app_id#").Limit(1).Vars("app")
+
+    Div(content-wrapper){
+        SetTitle($app_params$: #app_name#)
+        AddToolButton(Title: $create$, Page: application_newParam, Icon: icon-plus, PageParams: "app_id=#app_id#")
+
+        If(#sort#==1){
+            SetVar(sort_name, "id asc")
+        }.ElseIf(#sort#==2){
+            SetVar(sort_name, "id desc")
+        }.ElseIf(#sort#==3){
+            SetVar(sort_name, "name asc")
+        }.ElseIf(#sort#==4){
+            SetVar(sort_name, "name desc")
+        }.Else{
+            SetVar(sort, "1")
+            SetVar(sort_name, "id asc") 
+        }
+
+        If(Or(#width#==12,#width#==6,#width#==4)){
+        }.Else{
+            SetVar(width, "12")
+        }
+
+        Div(clearfix){
+            Div(pull-left){
+                If(#width#==12){
+                    Span(Button(Body: Em(Class: fa fa-bars), Class: btn bg-gray-lighter, Page: application_params, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=#sort#,width=12")).Style(margin-left:10px;)
+                }.Else{
+                    Span(Button(Body: Em(Class: fa fa-bars), Class: btn bg-gray, Page: application_params, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=#sort#,width=12")).Style(margin-left:10px;)
+                }
+                If(#width#==6){
+                    Span(Button(Body: Em(Class: fa fa-th-large), Class: btn bg-gray-lighter, Page: application_params, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=#sort#,width=6")).Style(margin-left:5px;)
+                }.Else{
+                    Span(Button(Body: Em(Class: fa fa-th-large), Class: btn bg-gray, Page: application_params, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=#sort#,width=6")).Style(margin-left:5px;)
+                }
+                If(#width#==4){
+                    Span(Button(Body: Em(Class: fa fa-th), Class: btn bg-gray-lighter, Page: application_params, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=#sort#,width=4")).Style(margin-left:5px;)
+                }.Else{
+                    Span(Button(Body: Em(Class: fa fa-th), Class: btn bg-gray, Page: application_params, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=#sort#,width=4")).Style(margin-left:5px;)
+                }
+            }
+            Div(pull-right){
+                If(#sort#==1){
+                    Span(Button(Body: Em(Class: fa fa-long-arrow-down) Sort by ID, Class: btn bg-gray-lighter, Page: application_params, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=2,width=#width#")).Style(margin-right:5px;)
+                }.ElseIf(#sort#==2){
+                    Span(Button(Body: Em(Class: fa fa-long-arrow-up) Sort by ID, Class: btn bg-gray-lighter, Page: application_params, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=1,width=#width#")).Style(margin-right:5px;)
+                }.Else{
+                    Span(Button(Body: Sort by ID, Class: btn bg-gray, Page: application_params, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=1,width=#width#")).Style(margin-right:5px;)
+                }
+
+                If(#sort#==3){
+                    Span(Button(Body: Em(Class: fa fa-long-arrow-down) Sort by Name, Class: btn bg-gray-lighter, Page: application_params, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=4,width=#width#")).Style(margin-right:10px;)
+                }.ElseIf(#sort#==4){
+                    Span(Button(Body: Em(Class: fa fa-long-arrow-up) Sort by Name, Class: btn bg-gray-lighter, Page: application_params, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=3,width=#width#")).Style(margin-right:10px;)
+                }.Else{
+                    Span(Button(Body: Sort by Name, Class: btn bg-gray, Page: application_params, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=3,width=#width#")).Style(margin-right:10px;)
+                }
+            }
+        }
+
+        DBFind(app_param, src_appparameters).Limit(250).Order(#sort_name#).Where("app_id=#buffer_value_app_id#")
+
+        Form(panel panel-primary){
+            Div(panel-body){
+                Div(row){
+                    ForList(src_appparameters){
+                        Div(col-md-#width# col-sm-12){
+                            Div(list-group-item){
+                                Div(row){
+                                    Div(col-md-4){
+                                        Span(Class: h5 text-bold, Body: "#id#").Style(margin-right: 10px;)
+                                        LinkPage(Page: #name#, Class: h5, Body: "#name#")
+                                    }
+                                    Div(col-md-8){
+                                        Div(pull-right){
+                                            Span(LinkPage(Body: Em(Class: fa fa-edit), Class: text-default h4, Page: application_editParam, PageParams: "id=#id#,app_id=#app_id#"))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

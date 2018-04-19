@@ -1,0 +1,84 @@
+contract Import_Upload {
+	data {
+        input_file string
+    }
+
+    conditions {
+    }
+
+    action {
+        var encoded, decoded, prefix string
+        encoded = Replace($input_file, "data:application/json;base64,", "")
+        encoded = Replace(encoded, "data:;base64,", "")
+        decoded = DecodeBase64(encoded)
+
+        var json map
+        json = JSONToMap(decoded)
+        var arr_data array
+        arr_data = json["data"]
+
+        var pages_arr, blocks_arr, menu_arr, parameters_arr, languages_arr, contracts_arr, tables_arr array
+
+        var i int
+        while i<Len(arr_data){
+            var tmp_object map
+            tmp_object = arr_data[i]
+
+            if (tmp_object["Type"] == "page"){
+                pages_arr[Len(pages_arr)] = Str(tmp_object["Name"])
+            }
+            if (tmp_object["Type"] == "block"){
+                blocks_arr[Len(blocks_arr)] = Str(tmp_object["Name"])
+            }
+            if (tmp_object["Type"] == "menu"){
+                menu_arr[Len(menu_arr)] = Str(tmp_object["Name"])
+            }
+            if (tmp_object["Type"] == "parameter"){
+                parameters_arr[Len(parameters_arr)] = Str(tmp_object["Name"])
+            }
+            if (tmp_object["Type"] == "language"){
+                languages_arr[Len(languages_arr)] = Str(tmp_object["Name"])
+            }
+            if (tmp_object["Type"] == "contract"){
+                contracts_arr[Len(contracts_arr)] = Str(tmp_object["Name"])
+            }
+            if (tmp_object["Type"] == "table"){
+                tables_arr[Len(tables_arr)] = Str(tmp_object["Name"])
+            }
+
+            i = i + 1
+        }
+
+        var info_map map
+		info_map["app_name"] = json["name"]
+        info_map["pages"] = Join(pages_arr, ", ")
+        info_map["pages_count"] = Len(pages_arr)
+        info_map["blocks"] = Join(blocks_arr, ", ")
+        info_map["blocks_count"] = Len(blocks_arr)
+        info_map["menu"] = Join(menu_arr, ", ")
+        info_map["menu_count"] = Len(menu_arr)
+        info_map["parameters"] = Join(parameters_arr, ", ")
+        info_map["parameters_count"] = Len(parameters_arr)
+        info_map["languages"] = Join(languages_arr, ", ")
+        info_map["languages_count"] = Len(languages_arr)
+        info_map["contracts"] = Join(contracts_arr, ", ")
+        info_map["contracts_count"] = Len(contracts_arr)
+        info_map["tables"] = Join(tables_arr, ", ")
+        info_map["tables_count"] = Len(tables_arr)
+
+        $import_id = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "import").One("id")
+        if !$import_id {
+            DBInsert("buffer_data", "member_id,key,value", $key_id, "import", decoded)
+        } else {
+            DBUpdate("buffer_data", Int($import_id), "value", decoded)
+        }
+
+        $info_id = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "import_info").One("id")
+        if !$info_id {
+            DBInsert("buffer_data", "member_id,key,value", $key_id, "import_info", info_map)
+        } else {
+            DBUpdate("buffer_data", Int($info_id), "value", info_map)
+        }
+
+    }
+}

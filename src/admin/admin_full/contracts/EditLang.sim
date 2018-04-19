@@ -1,0 +1,51 @@
+contract EditLang {
+	data {
+		Name  string
+		Localiz array
+		IdLang array
+		//добавить app_id и в DBUpdate
+	}
+	conditions {
+		var j,len int
+		
+		len = Len($IdLang)
+		while j < len {
+			if ($IdLang[j] == ""){
+				info("Locale empty")
+			}
+			if ($Localiz[j] == ""){
+				info("Value empty")
+			}
+			j = j + 1
+		}
+		EvalCondition("parameters", "changing_language", "value")
+		
+	}
+	action {
+		
+		var oldRes string
+		oldRes = DBFind("languages").Where("name = ?", $Name).One("res")
+		
+		var i,langLen int
+		var res string
+
+		res = Substr(oldRes, 1, Size(oldRes) - 2)
+		res = res + ", "
+
+		langLen = Len($IdLang)
+		while i < langLen {
+			if (i + 1 == langLen){
+				res = res + Sprintf(`%q: %q`,$IdLang[i],$Localiz[i])
+				i = i + 1
+			}
+			else {
+				res = res + Sprintf(`%q: %q, `,$IdLang[i],$Localiz[i])
+				i = i + 1
+			}
+		}
+
+		res = Sprintf("{"+"%v"+"}", res)
+		DBUpdateExt("languages", "name", $Name, "res", res )
+		UpdateLang($Name, res)
+	}
+}

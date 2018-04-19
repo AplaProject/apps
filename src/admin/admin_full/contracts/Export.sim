@@ -1,0 +1,447 @@
+contract Export {
+
+    func ReplaceValue(s string) string {
+		s = Replace(s, `\`, `\\`)
+        s = Replace(s, `	`, `\t`)
+        s = Replace(s, "\n", `\n`)
+        s = Replace(s, "\r", `\r`)
+        s = Replace(s, `"`, `\"`)
+        return s
+    }
+
+    func AssignAll(app_name string, all_blocks string, all_contracts string, all_data string, all_languages string, all_menus string, all_pages string, all_parameters string, all_tables string) string {
+
+        var res_str string
+        res_str = res_str + all_blocks
+
+        if ( Size(res_str)>0 && Size(all_contracts)>0 ){
+            res_str = res_str + ","
+        }
+        res_str = res_str + all_contracts
+
+        if ( Size(res_str)>0 && Size(all_data)>0 ){
+            res_str = res_str + ","
+        }
+        res_str = res_str + all_data
+
+        if ( Size(res_str)>0 && Size(all_languages)>0 ){
+            res_str = res_str + ","
+        }
+        res_str = res_str + all_languages
+
+        if ( Size(res_str)>0 && Size(all_menus)>0 ){
+            res_str = res_str + ","
+        }
+        res_str = res_str + all_menus
+
+        if ( Size(res_str)>0 && Size(all_pages)>0 ){
+            res_str = res_str + ","
+        }
+        res_str = res_str + all_pages
+
+        if ( Size(res_str)>0 && Size(all_parameters)>0 ){
+            res_str = res_str + ","
+        }
+        res_str = res_str + all_parameters
+
+        if ( Size(res_str)>0 && Size(all_tables)>0 ){
+            res_str = res_str + ","
+        }
+        res_str = res_str + all_tables
+
+        res_str = Sprintf(`{
+    "name": "%v",
+    "data": [%v
+    ]
+}`, app_name, res_str)
+
+        return res_str
+    }
+
+    func AddPage(page_name string, page_value string, page_conditions string, page_menu string) string {
+        var s string
+        s = Sprintf(`        {
+            "Type": "page",
+            "Name": "%v",
+            "Value": "%v",
+            "Conditions": "%v",
+            "Menu": "%v"
+        }`, page_name, page_value, page_conditions, page_menu)
+        return s
+    }
+
+    func AddMenu(menu_name string, menu_value string, menu_conditions string) string {
+        var s string
+        s = Sprintf(`        {
+            "Type": "menu",
+            "Name": "%v",
+            "Value": "%v",
+            "Conditions": "%v"
+        }`, menu_name, menu_value, menu_conditions)
+        return s
+    }
+
+    func AddContract(contract_name string, contract_value string, contract_conditions string) string {
+        var s string
+        s = Sprintf(`        {
+            "Type": "contract",
+            "Name": "%v",
+            "Value": "%v",
+            "Conditions": "%v"
+        }`, contract_name, contract_value, contract_conditions)
+        return s
+    }
+
+    func AddBlock(block_name string, block_value string, block_conditions string) string {
+        var s string
+        s = Sprintf(`        {
+            "Type": "block",
+            "Name": "%v",
+            "Value": "%v",
+            "Conditions": "%v"
+        }`, block_name, block_value, block_conditions)
+        return s
+    }
+
+    func AddLanguage(language_name string, language_conditions string, language_trans string) string {
+        var s string
+        s = Sprintf(`        {
+            "Type": "language",
+            "Name": "%v",
+            "Conditions": "%v",
+            "Trans": "%v"
+        }`, language_name, language_conditions, language_trans)
+        return s
+    }
+
+    func AddParameter(parameter_name string, parameter_value string, parameter_conditions string) string {
+        var s string
+        s = Sprintf(`        {
+            "Type": "parameter",
+            "Name": "%v",
+            "Value": "%v",
+            "Conditions": "%v"
+        }`, parameter_name, parameter_value, parameter_conditions)
+        return s
+    }
+
+    func AddTable(table_name string, table_columns string, table_permissions string) string {
+        var s string
+        s = Sprintf(`        {
+            "Type": "table",
+            "Name": "%v",
+            "Columns": "%v",
+            "Permissions": "%v"
+        }`, table_name, table_columns, table_permissions)
+        return s
+    }
+
+    func AddTypeForColumns(table_name string, table_columns string) string {
+		var result string
+
+		table_columns = Replace(table_columns, "{", "")
+		table_columns = Replace(table_columns, "}", "")
+		table_columns = Replace(table_columns, " ", "")
+
+		var columns_arr array
+		columns_arr = Split(table_columns, ",")
+
+		var i int
+		while (i < Len(columns_arr)){
+			var s_split string
+			s_split = Str(columns_arr[i])
+
+			if Size(s_split) > 0 {
+				var clm array
+				clm = Split(s_split, ":")
+
+				var s string
+
+				if (Len(clm) == 2){
+					var col_name string
+					var col_cond string
+					var col_type string
+
+					col_name = Replace(Str(clm[0]), `"`, "")
+					col_cond = Str(clm[1])
+					col_type = GetColumnType(table_name, col_name)
+
+					s = Sprintf(`{"name":"%v","type":"%v","conditions":%v}`, col_name, col_type, col_cond)
+				}
+
+                if (Size(result) > 0) {
+                    result = result + ","
+				}
+				result = result + s
+			}
+			i = i + 1
+		}
+
+		result = Sprintf("[%v]", result)
+		return result
+    }
+
+
+    data {}
+
+    conditions {
+        var buffer_map map
+        buffer_map = DBFind("buffer_data").Columns("id,value->app_id,value->app_name").Where("member_id=$ and key=$", $key_id, "export").Row()
+        if !buffer_map{
+            warning "Application not found"
+        }
+        $ApplicationID = Int(buffer_map["value.app_id"])
+        $ApplicationName = Str(buffer_map["value.app_name"])
+    }
+
+    action {
+        //warning $ApplicationID
+
+        var full_result string
+        var i int
+
+        var all_blocks string
+        var all_contracts string
+        var all_data string
+        var all_languages string
+        var all_menus string
+        var all_pages string
+        var all_parameters string
+        var all_tables string
+
+        //=====================================================================================================
+        //------------------------------------Export pages-----------------------------------------------------
+        var string_for_menu string
+
+        i = 0
+        var pages_array array
+        pages_array = DBFind("pages").Limit(250).Where("app_id=?", $ApplicationID)
+        while i < Len(pages_array) {
+            var page_map map
+            page_map = pages_array[i]
+
+            var page_name string
+            var page_value string
+            var page_conditions string
+            var page_menu string
+
+            page_name = ReplaceValue(Str(page_map["name"]))
+            page_value = ReplaceValue(Str(page_map["value"]))
+            page_conditions = ReplaceValue(Str(page_map["conditions"]))
+            page_menu = ReplaceValue(Str(page_map["menu"]))
+
+            if (Size(all_pages) > 0) {
+                all_pages = all_pages + ",\r\n"
+            } else {
+                all_pages = all_pages + "\r\n"
+            }
+
+            if (Size(string_for_menu) > 0) {
+                string_for_menu = string_for_menu + ","
+            }
+            string_for_menu = string_for_menu + Sprintf("'%v'", page_menu)           
+
+            all_pages = all_pages + AddPage(page_name, page_value, page_conditions, page_menu)
+            i = i + 1
+        }
+
+        //=====================================================================================================
+        //------------------------------------Export menus-----------------------------------------------------
+        if (Size(string_for_menu) > 0) {
+
+            var where_for_menu string
+            where_for_menu = Sprintf("name in (%v)", string_for_menu)
+            //warning where_for_menu 
+
+            i = 0
+            var menus_array array
+            menus_array = DBFind("menu").Limit(250).Where(where_for_menu)
+            while i < Len(menus_array) {
+                var menu_map map
+                menu_map = menus_array[i]
+
+                var menu_name string
+                var menu_value string
+                var menu_conditions string
+
+                menu_name = ReplaceValue(Str(menu_map["name"]))
+                menu_value = ReplaceValue(Str(menu_map["value"]))
+                menu_conditions = ReplaceValue(Str(menu_map["conditions"]))
+
+                if (Size(all_menus) > 0) {
+                    all_menus = all_menus + ",\r\n"
+                } else {
+                    all_menus = all_menus + "\r\n"
+                }
+
+                all_menus = all_menus + AddMenu(menu_name, menu_value, menu_conditions)
+                i = i + 1
+            }
+
+        }
+
+        //=====================================================================================================
+        //------------------------------------Export contracts-------------------------------------------------
+
+        i = 0
+        var contracts_array array
+        contracts_array = DBFind("contracts").Limit(250).Where("app_id=?", $ApplicationID)
+        while i < Len(contracts_array) {
+            var contract_map map
+            contract_map = contracts_array[i]
+
+            var contract_name string
+            var contract_value string
+            var contract_conditions string
+
+            contract_name = ReplaceValue(Str(contract_map["name"]))
+            contract_value = ReplaceValue(Str(contract_map["value"]))
+            contract_conditions = ReplaceValue(Str(contract_map["conditions"]))
+
+            if (Size(all_contracts) > 0) {
+                all_contracts = all_contracts + ",\r\n"
+            } else {
+                all_contracts = all_contracts + "\r\n"
+            }
+
+            all_contracts = all_contracts + AddContract(contract_name, contract_value, contract_conditions)
+            i = i + 1
+        }
+
+        //=====================================================================================================
+        //------------------------------------Export blocks----------------------------------------------------
+
+        i = 0
+        var blocks_array array
+        blocks_array = DBFind("blocks").Limit(250).Where("app_id=?", $ApplicationID)
+        while i < Len(blocks_array) {
+            var block_map map
+            block_map = blocks_array[i]
+
+            var block_name string
+            var block_value string
+            var block_conditions string
+
+            block_name = ReplaceValue(Str(block_map["name"]))
+            block_value = ReplaceValue(Str(block_map["value"]))
+            block_conditions = ReplaceValue(Str(block_map["conditions"]))
+
+            if (Size(all_blocks) > 0) {
+                all_blocks = all_blocks + ",\r\n"
+            } else {
+                all_blocks = all_blocks + "\r\n"
+            }
+
+            all_blocks = all_blocks + AddBlock(block_name, block_value, block_conditions)
+            i = i + 1
+        }
+
+        //=====================================================================================================
+        //------------------------------------Export languages-------------------------------------------------
+
+        i = 0
+        var languages_array array
+        languages_array = DBFind("languages").Limit(250).Where("app_id=?", $ApplicationID)
+        while i < Len(languages_array) {
+            var language_map map
+            language_map = languages_array[i]
+
+            var language_name string
+            var language_conditions string
+            var language_trans string
+
+            language_name = ReplaceValue(Str(language_map["name"]))
+            language_conditions = ReplaceValue(Str(language_map["conditions"]))
+            language_trans = ReplaceValue(Str(language_map["res"]))
+
+            if (Size(all_languages) > 0) {
+                all_languages = all_languages + ",\r\n"
+            } else {
+                all_languages = all_languages + "\r\n"
+            }
+
+            all_languages = all_languages + AddLanguage(language_name, language_conditions, language_trans)
+            i = i + 1
+        }
+
+        //=====================================================================================================
+        //------------------------------------Export params----------------------------------------------------
+
+        i = 0
+        var parameters_array array
+        parameters_array = DBFind("app_param").Limit(250).Where("app_id=?", $ApplicationID)
+        while i < Len(parameters_array) {
+            var parameter_map map
+            parameter_map = parameters_array[i]
+
+            var parameter_name string
+            var parameter_value string
+            var parameter_conditions string
+
+            parameter_name = ReplaceValue(Str(parameter_map["name"]))
+            parameter_value = ReplaceValue(Str(parameter_map["value"]))
+            parameter_conditions = ReplaceValue(Str(parameter_map["conditions"]))
+
+            if (Size(all_parameters) > 0) {
+                all_parameters = all_parameters + ",\r\n"
+            } else {
+                all_parameters = all_parameters + "\r\n"
+            }
+
+            all_parameters = all_parameters + AddParameter(parameter_name, parameter_value, parameter_conditions)
+            i = i + 1
+        }
+
+        //=====================================================================================================
+        //------------------------------------Export tables----------------------------------------------------
+
+        i = 0
+        var tables_array array
+        tables_array = DBFind("tables").Limit(250).Where("app_id=?", $ApplicationID)
+        while i < Len(tables_array) {
+            var table_map map
+            table_map = tables_array[i]
+
+            var table_name string
+            var table_columns string
+            var table_permissions string
+
+            table_name = Str(table_map["name"])
+            table_columns = Str(table_map["columns"])
+			table_permissions = Str(table_map["permissions"])
+
+			table_columns = AddTypeForColumns(table_name, table_columns)
+            
+			table_name = ReplaceValue(table_name)
+			table_columns = ReplaceValue(table_columns)
+			table_permissions = ReplaceValue(table_permissions)
+
+            if (Size(all_tables) > 0) {
+                all_tables = all_tables + ",\r\n"
+            } else {
+                all_tables = all_tables + "\r\n"
+            }
+
+            all_tables = all_tables + AddTable(table_name, table_columns, table_permissions)
+            i = i + 1
+        }
+
+        //=====================================================================================================
+
+        full_result = AssignAll($ApplicationName, all_blocks, all_contracts, all_data, all_languages, all_menus, all_pages, all_parameters, all_tables)
+        full_result = full_result
+
+        $binaries_id = DBFind("binaries").Where("member_id=$ and name=$", $key_id, "export").One("id")
+        if !$binaries_id {
+            DBInsert("binaries", "member_id,name,data", $key_id, "export", full_result)
+        } else {
+            DBUpdate("binaries", Int($binaries_id), "data", full_result)
+        }
+        $binaries2_id = DBFind("binaries2").Where("member_id=$ and name=$", $key_id, "export").One("id")
+        if !$binaries2_id {
+            DBInsert("binaries2", "member_id,name,data", $key_id, "export", full_result)
+        } else {
+            DBUpdate("binaries2", Int($binaries2_id), "data", full_result)
+        }
+    }
+}

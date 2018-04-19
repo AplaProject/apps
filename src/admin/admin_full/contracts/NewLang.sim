@@ -1,0 +1,48 @@
+contract NewLang {
+	data {
+		Name  string
+		Localiz array
+		IdLang array
+		ApplicationId int "optional"
+	}
+	conditions {
+		var j,len int
+		len = Len($IdLang)
+		while j < len {
+			if ($IdLang[j] == ""){
+				info("Locale empty")
+			}
+			if ($Localiz[j] == ""){
+				info("Value empty")
+			}
+			j = j + 1
+		}
+		EvalCondition("parameters", "changing_language", "value")
+
+		var row map
+		row = DBRow("languages").Columns("id").Where("name = ?", $Name)
+
+		if row {
+			error Sprintf("The language resource %s already exists", $Name)
+		}
+	}
+	action {
+		var i,len,lenshar int
+		var res,langarr string
+		len = Len($IdLang)
+		lenshar = Len($Localiz)
+		while i < len {
+			if (i + 1 == len){
+				res = res + Sprintf(`%q: %q`,$IdLang[i],$Localiz[i])
+				i = i + 1
+			}
+			else {
+				res = res + Sprintf(`%q: %q, `,$IdLang[i],$Localiz[i])
+				i = i + 1
+			}
+		}
+		langarr = Sprintf("{"+"%v"+"}", res)
+		DBInsert("languages", "name,res,app_id", $Name, langarr, $ApplicationId )
+		UpdateLang($Name, langarr)
+	}
+}
