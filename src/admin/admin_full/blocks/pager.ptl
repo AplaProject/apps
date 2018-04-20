@@ -1,68 +1,76 @@
-DBFind(#pager_table#, src_last).Order(id desc).Limit(1).Vars("last")
+DBFind(#pager_table#, src_records).Where(#pager_where#).Count(records_count)
 	
-	SetVar(previous_page, Calculate(Exp: #current_page# - 1, Type: int))
-	SetVar(next_page, Calculate(Exp: #current_page# + 1, Type: int))
-	SetVar(last_page, Calculate(Exp: (#last_id# / 10) + 1, Type: int))
-	
-	Div(){
+SetVar(previous_page, Calculate(Exp: #current_page# - 1, Type: int))
+SetVar(next_page, Calculate(Exp: #current_page# + 1, Type: int))
+SetVar(last_page, Calculate(Exp: (#records_count# / 10) + 1, Type: int))
+SetVar(last_page_plus_one, Calculate(Exp: #last_page# + 1, Type: int))
 
-		SetVar(delta_last_page, Calculate(Exp: #last_page# - #current_page#))
-	
-		Div(){		
-			
-			SetVar(range_l, Calculate(Exp: (#current_page# - 5) * 10, Type: int))
-			SetVar(range_r, Calculate(Exp: (#current_page# + 5) * 10, Type: int))
-			SetVar(range_l_max, Calculate(Exp: (#last_page# - 10) * 10, Type: int))
-			
-			If(#current_page# < 5){
-				DBFind(#pager_table#, src_pages).Where("mod(id, 10) = 1 and id < 101")
-			}.ElseIf(#delta_last_page# < 5){
-				DBFind(#pager_table#, src_pages).Where("mod(id, 10) = 1 and id > #range_l_max#")
-			}.Else{
-				DBFind(#pager_table#, src_pages).Where("mod(id, 10) = 1 and id > #range_l# and id < #range_r#")
-			}
 
-			
-			
-			Div(){
-				If(#current_page# == 1){
-					Button(Body: Em(Class: fa fa-angle-double-left), Class: btn btn-default disabled)
-				}.Else{
-					Button(Body: Em(Class: fa fa-angle-double-left), Class: btn btn-default, Page: #pager_page#, PageParams: "current_page=1")
-				}
-			}.Style(float: left;)
-			Div(){
-				If(#current_page# == 1){
-					Button(Body: Em(Class: fa fa-angle-left), Class: btn btn-default disabled)
-				}.Else{
-					Button(Body: Em(Class: fa fa-angle-left), Class: btn btn-default, Page: #pager_page#, PageParams: "current_page=#previous_page#")
-				}
-			}.Style(float: left;)
-			ForList(src_pages){
-				SetVar(page_num, Calculate(Exp: (#id# / 10) + 1, Type: int))
-				Div(){
-				  If(#page_num# == #current_page#){
-				  	Button(Class: btn btn-primary, Page: #pager_page#, PageParams: "current_page=#page_num#", Body: #page_num#)
-				  }.Else{
-				  	Button(Class: btn btn-default, Page: #pager_page#, PageParams: "current_page=#page_num#", Body: #page_num#)
-				  }
-				}.Style("float: left;")
-			}
-			Div(){
-				If(#current_page# == #last_page#){
-					Button(Body: Em(Class: fa fa-angle-right), Class: btn btn-default disabled)
-				}.Else{
-					Button(Body: Em(Class: fa fa-angle-right), Class: btn btn-default, Page: #pager_page#, PageParams: "current_page=#next_page#")
-				}
-			}.Style(float: left;)
-			Div(){
-				If(#current_page# == #last_page#){
-					Button(Body: Em(Class: fa fa-angle-double-right), Class: btn btn-default disabled)
-				}.Else{
-					Button(Body: Em(Class: fa fa-angle-double-right), Class: btn btn-default, Page: #pager_page#, PageParams: "current_page=#last_page#")
-				}
-			}.Style(float: left;)
-		
-		}
-	
-	}
+SetVar(delta_last_page, Calculate(Exp: #last_page# - #current_page#))	
+    
+SetVar(range_l, Calculate(Exp: #current_page# - 4, Type: int))
+SetVar(range_r, Calculate(Exp: #current_page# + 6, Type: int))
+SetVar(range_l_max, Calculate(Exp: #last_page_plus_one# - 10, Type: int))
+
+If(#current_page# < 5){
+    If(#last_page# >= 10){
+        Range(src_pages, 1, 11)
+    }.Else{
+        Range(src_pages, 1, #last_page_plus_one#) 
+    }
+}.ElseIf(#delta_last_page# < 6){
+    If(#range_l_max# > 0){
+        Range(src_pages, #range_l_max#, #last_page_plus_one#)
+    }.Else{
+        Range(src_pages, 1, #last_page_plus_one#)
+    }
+}.Else{
+    Range(src_pages, #range_l#, #range_r#)
+}
+
+
+Div(){
+    Div(){
+        If(#current_page# == 1){
+            Button(Body: Em(Class: fa fa-angle-double-left), Class: btn btn-default disabled)
+        }.Else{
+            Button(Body: Em(Class: fa fa-angle-double-left), Class: btn btn-default, Page: #pager_page#, PageParams: "current_page=1,sort=#sort#,width=#width#")
+        }
+    }
+
+
+
+    Div(){
+        If(#current_page# == 1){
+            Button(Body: Em(Class: fa fa-angle-left), Class: btn btn-default disabled)
+        }.Else{
+            Button(Body: Em(Class: fa fa-angle-left), Class: btn btn-default, Page: #pager_page#, PageParams: "current_page=#previous_page#,sort=#sort#,width=#width#")
+        }
+    }
+
+    ForList(src_pages){
+        Div(){
+            If(#id# == #current_page#){
+                Button(Class: btn btn-primary float-left, Page: #pager_page#, PageParams: "current_page=#id#,sort=#sort#,width=#width#", Body: #id#)
+            }.Else{
+                Button(Class: btn btn-default float-left, Page: #pager_page#, PageParams: "current_page=#id#,sort=#sort#,width=#width#", Body: #id#)
+            }
+        }
+    }
+
+    Div(){
+        If(#current_page# == #last_page#){
+            Button(Body: Em(Class: fa fa-angle-right), Class: btn btn-default disabled)
+        }.Else{
+            Button(Body: Em(Class: fa fa-angle-right), Class: btn btn-default, Page: #pager_page#, PageParams: "current_page=#next_page#,sort=#sort#,width=#width#")
+        }
+    }
+
+    Div(){
+        If(#current_page# == #last_page#){
+            Button(Body: Em(Class: fa fa-angle-double-right), Class: btn btn-default disabled)
+        }.Else{
+            Button(Body: Em(Class: fa fa-angle-double-right), Class: btn btn-default, Page: #pager_page#, PageParams: "current_page=#last_page#,sort=#sort#,width=#width#")
+        }
+    }
+}.Style("div { float: left; }")
