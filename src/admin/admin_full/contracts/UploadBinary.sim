@@ -1,12 +1,14 @@
 contract UploadBinary {
     data {
-        Name  string
-        Data  string
+        Name string
+        Data string
         AppID int
     }
+
     conditions {
         $Id = Int(DBFind("binaries").Columns("id").Where("app_id = ? AND member_id = ? AND name = ?", $AppID, $key_id, $Name).One("id"))
     }
+    
     action {
         var hash string
         hash = MD5($Data)
@@ -14,7 +16,8 @@ contract UploadBinary {
         if $Id != 0 {
             DBUpdate("binaries", $Id, "data,hash", $Data, hash)
         } else {
-            DBInsert("binaries", "app_id,member_id,name,data,hash", $AppID, $key_id, $Name, $Data, hash)
+            $Id = DBInsert("binaries", "app_id,member_id,name,data,hash", $AppID, $key_id, $Name, $Data, hash)
         }
+        $result = $Id 
     }
 }
