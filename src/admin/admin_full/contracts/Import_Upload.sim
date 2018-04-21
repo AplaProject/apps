@@ -7,13 +7,8 @@ contract Import_Upload {
     }
 
     action {
-        var encoded, decoded, prefix string
-        encoded = Replace($input_file, "data:application/json;base64,", "")
-        encoded = Replace(encoded, "data:;base64,", "")
-        decoded = DecodeBase64(encoded)
-
         var json map
-        json = JSONToMap(decoded)
+        json = JSONToMap($input_file)
         var arr_data array
         arr_data = json["data"]
 
@@ -68,9 +63,9 @@ contract Import_Upload {
 
         $import_id = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "import").One("id")
         if !$import_id {
-            DBInsert("buffer_data", "member_id,key,value", $key_id, "import", decoded)
+            DBInsert("buffer_data", "member_id,key,value", $key_id, "import", $input_file)
         } else {
-            DBUpdate("buffer_data", Int($import_id), "value", decoded)
+            DBUpdate("buffer_data", Int($import_id), "value", $input_file)
         }
 
         $info_id = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "import_info").One("id")
