@@ -7,62 +7,20 @@ If(#buffer_value_app_id# > 0){
         SetTitle($binary$: #app_name#)
         AddToolButton(Title: Upload Binary, Page: application_addBinary, Icon: icon-plus, PageParams: "app_id=#app_id#")
 
-        If(#sort#==1){
-            SetVar(sort_name, "id asc")
-        }.ElseIf(#sort#==2){
-            SetVar(sort_name, "id desc")
-        }.ElseIf(#sort#==3){
-            SetVar(sort_name, "name asc")
-        }.ElseIf(#sort#==4){
-            SetVar(sort_name, "name desc")
+        If(#current_page# > 0){
         }.Else{
-            SetVar(sort, "1")
-            SetVar(sort_name, "id asc") 
+            SetVar(current_page, 1)
         }
+        SetVar(admin_page, application_binary)
+        Include(admin_link)
 
-        If(Or(#width#==12,#width#==6,#width#==4)){
-        }.Else{
-            SetVar(width, "12")
-        }
+        Include(pager_header)
+        SetVar(pager_table, binaries)
+        SetVar(pager_where, "app_id=#buffer_value_app_id#")
+        SetVar(pager_page, application_binary)
+        SetVar(pager_limit, 50)
 
-        Div(clearfix){
-            Div(pull-left){
-                If(#width#==12){
-                    Span(Button(Body: Em(Class: fa fa-bars), Class: btn bg-gray-lighter, Page: application_binary, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=#sort#,width=12")).Style(margin-left:10px;)
-                }.Else{
-                    Span(Button(Body: Em(Class: fa fa-bars), Class: btn bg-gray, Page: application_binary, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=#sort#,width=12")).Style(margin-left:10px;)
-                }
-                If(#width#==6){
-                    Span(Button(Body: Em(Class: fa fa-th-large), Class: btn bg-gray-lighter, Page: application_binary, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=#sort#,width=6")).Style(margin-left:5px;)
-                }.Else{
-                    Span(Button(Body: Em(Class: fa fa-th-large), Class: btn bg-gray, Page: application_binary, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=#sort#,width=6")).Style(margin-left:5px;)
-                }
-                If(#width#==4){
-                    Span(Button(Body: Em(Class: fa fa-th), Class: btn bg-gray-lighter, Page: application_binary, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=#sort#,width=4")).Style(margin-left:5px;)
-                }.Else{
-                    Span(Button(Body: Em(Class: fa fa-th), Class: btn bg-gray, Page: application_binary, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=#sort#,width=4")).Style(margin-left:5px;)
-                }
-            }
-            Div(pull-right){
-                If(#sort#==1){
-                    Span(Button(Body: Em(Class: fa fa-long-arrow-down) Sort by ID, Class: btn bg-gray-lighter, Page: application_binary, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=2,width=#width#")).Style(margin-right:5px;)
-                }.ElseIf(#sort#==2){
-                    Span(Button(Body: Em(Class: fa fa-long-arrow-up) Sort by ID, Class: btn bg-gray-lighter, Page: application_binary, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=1,width=#width#")).Style(margin-right:5px;)
-                }.Else{
-                    Span(Button(Body: Sort by ID, Class: btn bg-gray, Page: application_binary, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=1,width=#width#")).Style(margin-right:5px;)
-                }
-
-                If(#sort#==3){
-                    Span(Button(Body: Em(Class: fa fa-long-arrow-down) Sort by Name, Class: btn bg-gray-lighter, Page: application_binary, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=4,width=#width#")).Style(margin-right:10px;)
-                }.ElseIf(#sort#==4){
-                    Span(Button(Body: Em(Class: fa fa-long-arrow-up) Sort by Name, Class: btn bg-gray-lighter, Page: application_binary, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=3,width=#width#")).Style(margin-right:10px;)
-                }.Else{
-                    Span(Button(Body: Sort by Name, Class: btn bg-gray, Page: application_binary, PageParams: "buffer_value_app_id=#buffer_value_app_id#,sort=3,width=#width#")).Style(margin-right:10px;)
-                }
-            }
-        }
-
-        DBFind(binaries, src_binparameters).Limit(250).Order(#sort_name#).Where("app_id=#buffer_value_app_id#")
+        DBFind(binaries, src_binparameters).Limit(50).Order(#sort_name#).Offset(#pager_offset#).Where("app_id=#buffer_value_app_id#")
 
         Form(panel panel-primary){
             Div(panel-body){
@@ -84,6 +42,11 @@ If(#buffer_value_app_id# > 0){
                             }
                         }
                     }
+                }
+            }
+            Div(Class: panel-footer){
+                Div(Class: clearfix){
+                    Include(pager)
                 }
             }
         }
