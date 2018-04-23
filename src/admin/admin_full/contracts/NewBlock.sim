@@ -1,26 +1,24 @@
 contract NewBlock {
-	data {
-		ApplicationId int "optional"
-		Name string
-		Value string
-		Conditions string
-	}
-	
-	conditions {
-		ValidateCondition($Conditions, $ecosystem_id)
+    data {
+        ApplicationId int "optional"
+        Name string
+        Value string
+        Conditions string
+    }
 
-		if $ApplicationId == 0 {
-			warning "Application id cannot equal 0"
-		}
-		
-		var block_id int
-		block_id = DBFind("blocks").Columns("id").Where("name = ?", $Name).One("id")
-		if block_id {
-			warning Sprintf( "Block %s already exists", $Name)
-		}
-	}
-	
-	action {
-		DBInsert("blocks", "name,value,conditions,app_id", $Name, $Value, $Conditions, $ApplicationId )
-	}
+    conditions {
+        ValidateCondition($Conditions, $ecosystem_id)
+
+        if $ApplicationId == 0 {
+            warning "Application id cannot equal 0"
+        }
+
+        if DBFind("blocks").Columns("id").Where("name = ?", $Name).One("id") {
+            warning Sprintf( "Block %s already exists", $Name)
+        }
+    }
+
+    action {
+        DBInsert("blocks", "name,value,conditions,app_id", $Name, $Value, $Conditions, $ApplicationId)
+    }
 }
