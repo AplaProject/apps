@@ -1,10 +1,19 @@
 Div(Class: fullscreen){
-    DBFind(app_params, src_params).Where("id = #id#").Limit(1).Vars("param")
-    SetTitle(Edit Application Parameter)
-    Div(Class: breadcrumb){
-        LinkPage(Application Parameters, app_params)
-        Span(/).Style(margin-right: 10px; margin-left: 10px;)
-        Span(Class: text-muted, Body: #param_name#)
+    If(#create# == create){
+        SetTitle(New Application Parameter)
+        Div(Class: breadcrumb){
+            LinkPage(Application Parameters, app_params)
+            Span(/).Style(margin-right: 10px; margin-left: 10px;)
+            Span(Class: text-muted, Body: New Application Parameter)
+        }
+    }.Else{
+        DBFind(app_params, src_params).Where("id = #id#").Limit(1).Vars("param")
+        SetTitle(Edit Application Parameter)
+        Div(Class: breadcrumb){
+            LinkPage(Application Parameters, app_params)
+            Span(/).Style(margin-right: 10px; margin-left: 10px;)
+            Span(Class: text-muted, Body: #param_name#)
+        }
     }
     Div(Class: fullscreen-wrapper){
         Form(){
@@ -12,19 +21,35 @@ Div(Class: fullscreen){
                 Label(For: name){
                     Span(Body: Name)
                 }
-                Input(Name: name, Class: form-control, Value: #param_name#)
+                If(#create# == create){
+                    Input(Name: name, Class: form-control)
+                }.Else{
+                    Input(Name: name, Class: form-control, Value: #param_name#, Disabled: "true")
+                }
             }
             Div(Class: form-group){
-                Input(Type: textarea, Name: value, Value: "#param_value#" ).Style(height: 500px !important;)
+                If(#create# == create){
+                    Input(Type: textarea, Name: value).Style(height: 500px !important;)
+                }.Else{
+                    Input(Type: textarea, Name: value, Value: "#param_value#" ).Style(height: 500px !important;)
+                }
             }
             Div(Class: mb0 form-group){
                 Label(For: conditions){
                     Span(Body: Change Conditions)
                 }
-                Input(Name: conditions, Class: form-control, Value: #param_conditions#)
+                If(#create# == create){
+                    Input(Name: conditions, Class: form-control)
+                }.Else{
+                    Input(Name: conditions, Class: form-control, Value: #param_conditions#)
+                }
             }
             Div(Class: mt-lg){
-                Button(Class: btn btn-primary, Body: Save, Contract:EditAppParam, Params: "Id=#id#,Value=Val(value),Conditions=Val(conditions)", Page: app_params)
+                If(#create# == create){
+                    Button(Class: btn btn-primary, Body: Save, Contract: NewAppParam, Params: "Name=Val(name),Value=Val(value),Conditions=Val(conditions),ApplicationId=#app_id#",Page: app_params)
+                }.Else{
+                    Button(Class: btn btn-primary, Body: Save, Contract:EditAppParam, Params: "Id=#id#,Value=Val(value),Conditions=Val(conditions)", Page: app_params)
+                }
             }
         }
     }
