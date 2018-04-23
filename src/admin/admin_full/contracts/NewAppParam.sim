@@ -1,22 +1,26 @@
 contract NewAppParam {
-		data {
-			ApplicationId int
-			Name string
-			Value string
-			Conditions string
+	data {
+		ApplicationId int
+		Name string
+		Value string
+		Conditions string
+	}
+	
+	conditions {
+		ValidateCondition($Conditions, $ecosystem_id)
+		
+		if $ApplicationId == 0 {
+			warning "Application id cannot equal 0"
 		}
-		conditions {
-			ValidateCondition($Conditions, $ecosystem_id)
-			/*if $ApplicationId == 0 {
-				warning "Application id cannot equal 0"
-			}*/
-			var row map
-			row = DBRow("app_params").Columns("id").Where("app_id = ? and name = ?", $ApplicationId, $Name)
-			if row {
-				warning Sprintf( "Application parameter %s already exists", $Name)
-			}
-		}
-		action {
-			DBInsert("app_params", "app_id,name,value,conditions", $ApplicationId, $Name, $Value, $Conditions )
+		
+		var param_id int
+		param_id = DBFind("app_params").Columns("id").Where("name = ?", $Name).One("id")
+		if param_id {
+			warning Sprintf( "Application parameter %s already exists", $Name)
 		}
 	}
+	
+	action {
+		DBInsert("app_params", "app_id,name,value,conditions", $ApplicationId, $Name, $Value, $Conditions )
+	}
+}

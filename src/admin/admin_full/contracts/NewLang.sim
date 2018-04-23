@@ -1,11 +1,12 @@
 contract NewLang {
   data {
+		ApplicationId int
 		Name  string
 		Trans string "optional"
 		Value array "optional"
 		IdLanguage array "optional"
-		ApplicationId int "optional"
 	}
+	
 	conditions {
     	if (Len($IdLanguage) > 0){
 			var j,len int
@@ -22,12 +23,11 @@ contract NewLang {
     	}
 		EvalCondition("parameters", "changing_language", "value")
 
-		var row map
-		row = DBRow("languages").Columns("id").Where("name = ?", $Name)
-
-		if row {
+		var lan_id int
+		lan_id = DBFind("languages").Columns("id").Where("name = ?", $Name).One("id")
+		if lan_id {
 			error Sprintf("The language resource %s already exists", $Name)
-		}		
+		}	
 	}
 
 	action {
