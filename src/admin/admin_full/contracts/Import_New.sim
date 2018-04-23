@@ -1,18 +1,18 @@
 contract Import_New {
-	data {
-        Type string 
-        Name string "optional" 
-        Value string "optional" 
-        Conditions string "optional" 
-        Menu string "optional" 
-        Trans string "optional" 
-        Columns string "optional" 
+    data {
+        Type string
+        Name string "optional"
+        Value string "optional"
+        Conditions string "optional"
+        Menu string "optional"
+        Trans string "optional"
+        Columns string "optional"
         Permissions string "optional"
         Title string "optional"
     }
 
     conditions {
-		Println("Import: " + $Name)
+        Println("Import: " + $Name)
         $ApplicationId = 0
 
         var app_map map
@@ -28,109 +28,59 @@ contract Import_New {
     }
 
     action {
-        var idata map
+        var idata, editors, creators, tables map
+        idata["Value"] = $Value
+        idata["Conditions"] = $Conditions
+        idata["ApplicationId"] = $ApplicationId
+        idata["Name"] = $Name
+        idata["Title"] = $Title
+        idata["Trans"] = $Trans
+        idata["Menu"] = $Menu
+        idata["Columns"] = $Columns
+        idata["Permissions"] = $Permissions
 
-        if $Type == "page" {
-            $page_id = DBFind("pages").Where("name=?", $Name).One("id")
-            if $page_id {
-                idata["Id"] = Int($page_id)
-                idata["Value"] = $Value
-                idata["Menu"] = $Menu
-                idata["Conditions"] = $Conditions
-                CallContract("EditPage", idata)
-            } else {
-                idata["ApplicationId"] = $ApplicationId
-                idata["Name"] = $Name
-                idata["Value"] = $Value
-                idata["Menu"] = $Menu
-                idata["Conditions"] = $Conditions
-                CallContract("NewPage", idata)
-            }
+        editors["page"] = "EditPage"
+        editors["block"] = "EditBlock"
+        editors["menu"] = "EditMenu"
+        editors["parameter"] = "EditAppParam"
+        editors["language"] = "EditLang"
+        editors["contract"] = "EditContract"
+        editors["table"] = "" // nothing
+
+        creators["page"] = "NewPage"
+        creators["block"] = "NewBlock"
+        creators["menu"] = "NewMenu"
+        creators["parameter"] = "NewAppParam"
+        creators["language"] = "NewLang"
+        creators["contract"] = "NewContract"
+        creators["table"] = "NewTable"
+
+        tables["page"] = "pages"
+        tables["block"] = "blocks"
+        tables["menu"] = "menu"
+        tables["parameter"] = "parameters"
+        tables["language"] = "languages"
+        tables["contract"] = "contracts"
+        tables["table"] = "tables"
+
+        var contractName string
+        $item_id = DBFind(tables[$Type]).Where("name=?", $Name).One("id")
+        if $item_id {
+            idata["Id"] = Int($item_id)
+            contractName = editors[$Type]
+        } else {
+            contractName = creators[$Type]
         }
-        if $Type == "block" {
-            $block_id = DBFind("blocks").Where("name=?", $Name).One("id")
-            if $block_id {
-                idata["Id"] = Int($block_id)
-                idata["Value"] = $Value
-                idata["Conditions"] = $Conditions
-                CallContract("EditBlock", idata)
-            } else {
-                idata["ApplicationId"] = $ApplicationId
-                idata["Name"] = $Name
-                idata["Value"] = $Value
-                idata["Conditions"] = $Conditions
-                CallContract("NewBlock", idata)
-            }
-        }
+        
         if $Type == "menu" {
             $menu = DBFind("menu").Where("name=?", $Name).Row()
             if $menu {
-                idata["Id"] = Int($menu["id"])
                 idata["Value"] = $menu["value"] + "\n" + $Value
-                idata["Title"] = $Title
-                idata["Conditions"] = $Conditions
-                CallContract("EditMenu", idata)
-            } else {
-                idata["Name"] = $Name
-                idata["Value"] = $Value
-                idata["Title"] = $Title
-                idata["Conditions"] = $Conditions
-                CallContract("NewMenu", idata)
             }
         }
-        if $Type == "parameter" {
-            $param_id = DBFind("app_params").Where("name=?", $Name).One("id")
-            if $param_id {
-                idata["Id"] = Int($param_id)
-                idata["Value"] = $Value
-                idata["Conditions"] = $Conditions
-                CallContract("EditAppParam", idata)
-            } else {
-                idata["ApplicationId"] = $ApplicationId
-                idata["Name"] = $Name
-                idata["Value"] = $Value
-                idata["Conditions"] = $Conditions
-                CallContract("NewAppParam", idata)
-            }
-        }
-        if $Type == "language" {
-            $lang_id = DBFind("languages").Where("name=?", $Name).One("id")
-            if $lang_id {
-                idata["Name"] = $Name
-                idata["Trans"] = $Trans
-                CallContract("EditLang", idata)
-            } else {
-                idata["ApplicationId"] = $ApplicationId
-                idata["Name"] = $Name
-                idata["Trans"] = $Trans
-                CallContract("NewLang", idata)
-            }
-        }
-        if $Type == "contract" {
-            $contract_id = GetContractByName($Name)
-            if $contract_id > 0 {
-                idata["Id"] = $contract_id
-                idata["Value"] = $Value
-                idata["Conditions"] = $Conditions
-                CallContract("EditContract", idata)
-            } else {
-                idata["ApplicationId"] = $ApplicationId
-                idata["Value"] = $Value
-                idata["Conditions"] = $Conditions
-                CallContract("NewContract", idata)
-            }
-        }
-        if $Type == "table" {
-            $table_id = DBFind("tables").Where("name=?", $Name).One("id")
-            if $table_id {
-                //nothing
-            } else {
-                idata["ApplicationId"] = $ApplicationId
-                idata["Name"] = $Name
-                idata["Columns"] = $Columns
-                idata["Permissions"] = $Permissions
-                CallContract("NewTable", idata)
-            }
+     
+        if contractName != ""{
+            CallContract(contractName, idata)
         }
     }
 }
