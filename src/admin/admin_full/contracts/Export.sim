@@ -70,14 +70,15 @@ contract Export {
         return s
     }
 
-    func AddMenu(menu_name string, menu_value string, menu_conditions string) string {
+    func AddMenu(menu_name string, menu_value string, menu_title string, menu_conditions string) string {
         var s string
         s = Sprintf(`        {
             "Type": "menu",
             "Name": "%v",
             "Value": "%v",
+            "Title": "%v",
             "Conditions": "%v"
-        }`, menu_name, menu_value, menu_conditions)
+        }`, menu_name, menu_value, menu_title, menu_conditions)
         return s
     }
 
@@ -262,10 +263,12 @@ contract Export {
 
                 var menu_name string
                 var menu_value string
+                var menu_title string
                 var menu_conditions string
 
                 menu_name = ReplaceValue(Str(menu_map["name"]))
                 menu_value = ReplaceValue(Str(menu_map["value"]))
+                menu_title = ReplaceValue(Str(menu_map["title"]))
                 menu_conditions = ReplaceValue(Str(menu_map["conditions"]))
 
                 if (Size(all_menus) > 0) {
@@ -274,7 +277,7 @@ contract Export {
                     all_menus = all_menus + "\r\n"
                 }
 
-                all_menus = all_menus + AddMenu(menu_name, menu_value, menu_conditions)
+                all_menus = all_menus + AddMenu(menu_name, menu_value, menu_title, menu_conditions)
                 i = i + 1
             }
 
@@ -369,7 +372,7 @@ contract Export {
 
         i = 0
         var parameters_array array
-        parameters_array = DBFind("app_param").Limit(250).Where("app_id=?", $ApplicationID)
+        parameters_array = DBFind("app_params").Limit(250).Where("app_id=?", $ApplicationID)
         while i < Len(parameters_array) {
             var parameter_map map
             parameter_map = parameters_array[i]
@@ -429,19 +432,6 @@ contract Export {
         //=====================================================================================================
 
         full_result = AssignAll($ApplicationName, all_blocks, all_contracts, all_data, all_languages, all_menus, all_pages, all_parameters, all_tables)
-        full_result = full_result
-
-        $binaries_id = DBFind("binaries").Where("member_id=$ and name=$", $key_id, "export").One("id")
-        if !$binaries_id {
-            DBInsert("binaries", "member_id,name,data", $key_id, "export", full_result)
-        } else {
-            DBUpdate("binaries", Int($binaries_id), "data", full_result)
-        }
-        $binaries2_id = DBFind("binaries2").Where("member_id=$ and name=$", $key_id, "export").One("id")
-        if !$binaries2_id {
-            DBInsert("binaries2", "member_id,name,data", $key_id, "export", full_result)
-        } else {
-            DBUpdate("binaries2", Int($binaries2_id), "data", full_result)
-        }
+        UploadBinary("Name,Data,AppID,DataMimeType", "export", full_result, 1, "application/json")
     }
 }

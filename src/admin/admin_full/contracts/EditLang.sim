@@ -1,42 +1,52 @@
 contract EditLang {
-		data {
-			Name  string
-			Trans string "optional"
-            Value array
-            IdLanguage array
-		}
-		conditions {
+	data {
+		Name string
+		Trans string "optional"
+		Value array "optional"
+		IdLanguage array "optional"
+	}
+	
+	conditions {
+		if (Len($IdLanguage) > 0){
 			var j,len int
-        	len = Len($IdLanguage)
+			len = Len($IdLanguage)
 			while j < len {
-            	if ($IdLanguage[j] == ""){
-                	info("Locale empty")
-            	}
+				if ($IdLanguage[j] == ""){
+					info("Locale empty")
+				}
 				if ($Value[j] == ""){
-                	info("Value empty")
-            	}
-                j = j + 1
+					info("Value empty")
+				}
+				j = j + 1
 			}
-			EvalCondition("parameters", "changing_language", "value")
 		}
-		action {
-            var i,len,lenshar int
-        	var res,langarr string
-        	len = Len($IdLanguage)
-        	lenshar = Len($Value)
+		EvalCondition("parameters", "changing_language", "value")
+	}
+	
+	action {
+		if (Len($IdLanguage) > 0){
+			var i,len,lenshar int
+			var res,langarr string
+			len = Len($IdLanguage)
+			lenshar = Len($Value)
 			while i < len {
-            	if (i + 1 == len){
-                	res = res + Sprintf(`%q: %q`,$IdLanguage[i],$Value[i])
-                	i = i + 1
-            	}
-            	else {
-            		res = res + Sprintf(`%q: %q, `,$IdLanguage[i],$Value[i])
-            		i = i + 1
-            	}
+				if (i + 1 == len){
+					res = res + Sprintf(`%q: %q`,$IdLanguage[i],$Value[i])
+					i = i + 1
+				}
+				else {
+					res = res + Sprintf(`%q: %q, `,$IdLanguage[i],$Value[i])
+					i = i + 1
+				}
 			}
-    		langarr = Sprintf("{"+"%v"+"}", res)
-            $Trans = langarr
-			DBUpdateExt("languages", "name", $Name, "res", $Trans )
+			langarr = Sprintf("{"+"%v"+"}", res)
+			$Trans = langarr
+			DBUpdateExt("languages", "name", $Name, "res", $Trans)
+			UpdateLang($Name, $Trans)
+		}
+		else {
+			DBUpdateExt("languages", "name", $Name, "res", $Trans)
 			UpdateLang($Name, $Trans)
 		}
 	}
+}
