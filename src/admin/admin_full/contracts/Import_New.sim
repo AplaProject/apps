@@ -22,7 +22,7 @@ contract Import_New {
             app_id = DBFind("applications").Columns("id").Where("name=$", Str(app_map["value.app_name"])).One("id")
 
             if app_id {
-                $ApplicationId = app_id
+                $ApplicationId = Int(app_id)
             }
         }
     }
@@ -64,21 +64,19 @@ contract Import_New {
         tables["table"] = "tables"
 
         var contractName string
-        $item_id = DBFind(tables[$Type]).Where("name=?", $Name).One("id")
-        if $item_id {
-            idata["Id"] = Int($item_id)
+        var item map
+        item = DBFind(tables[$Type]).Where("name=?", $Name).Row()
+        if item {
             contractName = editors[$Type]
+            idata["Id"] = Int(item["id"])
+            if $Type == "menu" {
+                idata["Value"] = item["value"] + "\n" + $Value
+            }
         } else {
             contractName = creators[$Type]
         }
-        
-        if $Type == "menu" {
-            $menu = DBFind("menu").Where("name=?", $Name).Row()
-            if $menu {
-                idata["Value"] = $menu["value"] + "\n" + $Value
-            }
-        }
-     
+
+
         if contractName != ""{
             CallContract(contractName, idata)
         }
