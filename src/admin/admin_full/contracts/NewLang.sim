@@ -1,59 +1,55 @@
 contract NewLang {
-  data {
-		ApplicationId int "optional"
-		Name  string
-		Trans string "optional"
-		Value array "optional"
-		IdLanguage array "optional"
-	}
-	
-	conditions {
-    	if (Len($IdLanguage) > 0){
-			var j,len int
-			len = Len($IdLanguage)
-			while j < len {
-				if ($IdLanguage[j] == ""){
-					info("Locale empty")
-				}
-				if ($Value[j] == ""){
-					info("Value empty")
-				}
-				j = j + 1
-			}
-    	}
-		EvalCondition("parameters", "changing_language", "value")
+    data {
+        ApplicationId int "optional"
+        Name string
+        Trans string "optional"
+        Value array "optional"
+        IdLanguage array "optional"
+    }
 
-		var lan_id int
-		lan_id = DBFind("languages").Columns("id").Where("name = ?", $Name).One("id")
-		if lan_id {
-			error Sprintf("The language resource %s already exists", $Name)
-		}	
-	}
+    conditions {
+        if Len($IdLanguage) > 0 {
+            var j,len int
+            len = Len($IdLanguage)
+            while j < len {
+                if $IdLanguage[j] == "" {
+                    info("Locale empty")
+                }
+                if $Value[j] == "" {
+                    info("Value empty")
+                }
+                j = j + 1
+            }
+        }
+        EvalCondition("parameters", "changing_language", "value")
 
-	action {
-		if (Len($IdLanguage) > 0){
-			var i,len,lenshar int
-			var res,langarr string
-			len = Len($IdLanguage)
-			lenshar = Len($Value)
-			while i < len {
-				if (i + 1 == len){
-					res = res + Sprintf(`%q: %q`,$IdLanguage[i],$Value[i])
-					i = i + 1
-				}
-				else {
-					res = res + Sprintf(`%q: %q, `,$IdLanguage[i],$Value[i])
-					i = i + 1
-				}
-			}
-			langarr = Sprintf("{"+"%v"+"}", res)
-			$Trans = langarr
-			DBInsert("languages", "name,res,app_id", $Name, $Trans, $ApplicationId )
-			UpdateLang($Name, $Trans)
-		} 
-		else {
-			DBInsert("languages", "name,res,app_id", $Name, $Trans, $ApplicationId )
-			UpdateLang($Name, $Trans)
-		}
-  	}
+        if DBFind("languages").Columns("id").Where("name = ?", $Name).One("id") {
+            error Sprintf("The language resource %s already exists", $Name)
+        }
+    }
+
+    action {
+        if Len($IdLanguage) > 0 {
+            var i,len,lenshar int
+            var res,langarr string
+            len = Len($IdLanguage)
+            lenshar = Len($Value)
+            while i < len {
+                if i + 1 == len {
+                    res = res + Sprintf(`%q: %q`,$IdLanguage[i],$Value[i])
+                    i = i + 1
+                } else {
+                    res = res + Sprintf(`%q: %q, `,$IdLanguage[i],$Value[i])
+                    i = i + 1
+                }
+            }
+            langarr = Sprintf("{"+"%v"+"}", res)
+            $Trans = langarr
+            DBInsert("languages", "name,res,app_id", $Name, $Trans, $ApplicationId)
+            UpdateLang($Name, $Trans)
+        } else {
+            DBInsert("languages", "name,res,app_id", $Name, $Trans, $ApplicationId)
+            UpdateLang($Name, $Trans)
+        }
+    }
 }
