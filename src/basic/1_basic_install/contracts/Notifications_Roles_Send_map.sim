@@ -1,6 +1,6 @@
 contract Notifications_Roles_Send_map {
     data {
-        role_id int
+        rid int
         closure_type int
         sender int
         icon_name string
@@ -11,12 +11,12 @@ contract Notifications_Roles_Send_map {
     }
     
     conditions {
-        $roles_map = DBFind("roles").Where("id = $", $role_id).Row()
+        $roles_map = DBFind("roles").Where("id = $", $rid).Row()
         if !$roles_map {
             warning "Role not found"
         }
         
-        $participant_id = DBFind("roles_participants").Where("role->id=$ and deleted=$", $role_id, 0).One("id")
+        $participant_id = DBFind("roles_participants").Where("role->id=$ and deleted=0", $rid).One("id")
         if !$participant_id {
             warning "Role does not contain members"
         }
@@ -70,7 +70,7 @@ contract Notifications_Roles_Send_map {
         //closure_type - Multiple
         else {
             var participants array
-            participants = DBFind("roles_participants").Columns("member->member_id").Where("role->id = $ and deleted=0", $role_id)
+            participants = DBFind("roles_participants").Columns("member->member_id").Where("role->id = $ and deleted=0", $rid)
             
             var i int
             while i < Len(participants) {
