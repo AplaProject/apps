@@ -1,10 +1,10 @@
 contract Import_Upload {
-	data {
+    data {
         input_file string "file"
     }
 
     conditions {
-		$input_file = BytesToString($input_file)
+        $input_file = BytesToString($input_file)
     }
 
     action {
@@ -46,7 +46,7 @@ contract Import_Upload {
         }
 
         var info_map map
-		info_map["app_name"] = json["name"]
+        info_map["app_name"] = json["name"]
         info_map["pages"] = Join(pages_arr, ", ")
         info_map["pages_count"] = Len(pages_arr)
         info_map["blocks"] = Join(blocks_arr, ", ")
@@ -62,6 +62,10 @@ contract Import_Upload {
         info_map["tables"] = Join(tables_arr, ", ")
         info_map["tables_count"] = Len(tables_arr)
 
+        if 0 == Len(pages_arr) + Len(blocks_arr) + Len(menu_arr) + Len(parameters_arr) + Len(languages_arr) + Len(contracts_arr) + Len(tables_arr) {
+            warning "Invalid or empty import file"
+        }
+        
         $import_id = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "import").One("id")
         if !$import_id {
             DBInsert("buffer_data", "member_id,key,value", $key_id, "import", $input_file)
