@@ -5,6 +5,25 @@ contract Import_Upload {
 
     conditions {
         $input_file = BytesToString($input_file)
+
+        // init buffer_data, cleaning old buffer
+        var initJson string
+        initJson = "{}"
+        $import_id = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "import").One("id")
+        if $import_id {
+            $import_id = Int($import_id)
+            DBUpdate("buffer_data", $import_id, "value", initJson)
+        } else {
+            $import_id = DBInsert("buffer_data", "member_id,key,value", $key_id, "import", initJson)
+        }
+
+        $info_id = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "import_info").One("id")
+        if $info_id {
+            $info_id = Int($info_id)
+            DBUpdate("buffer_data", $info_id, "value", initJson)
+        } else {
+            $info_id = DBInsert("buffer_data", "member_id,key,value", $key_id, "import_info", initJson)
+        }
     }
 
     action {
@@ -65,20 +84,9 @@ contract Import_Upload {
         if 0 == Len(pages_arr) + Len(blocks_arr) + Len(menu_arr) + Len(parameters_arr) + Len(languages_arr) + Len(contracts_arr) + Len(tables_arr) {
             warning "Invalid or empty import file"
         }
-        
-        $import_id = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "import").One("id")
-        if !$import_id {
-            DBInsert("buffer_data", "member_id,key,value", $key_id, "import", $input_file)
-        } else {
-            DBUpdate("buffer_data", Int($import_id), "value", $input_file)
-        }
 
-        $info_id = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "import_info").One("id")
-        if !$info_id {
-            DBInsert("buffer_data", "member_id,key,value", $key_id, "import_info", info_map)
-        } else {
-            DBUpdate("buffer_data", Int($info_id), "value", info_map)
-        }
+        DBUpdate("buffer_data", $import_id, "value", $input_file)
+        DBUpdate("buffer_data", $info_id, "value", info_map)
 
         var app_id int
         app_id = DBFind("applications").Columns("id").Where("name=$", Str(json["name"])).One("id")
