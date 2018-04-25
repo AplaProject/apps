@@ -3,7 +3,7 @@ contract voting_TemplateRun{
         TemplateId int
         Start string "date"
         End string "date"
-        
+
         EndTime string "date,optional"
         StartTime string "date,optional"
         KeyId int "optional"
@@ -24,21 +24,26 @@ contract voting_TemplateRun{
         }
         return value
     }
-    
+
     conditions{
         var template map
         template = DBFind("voting_templates").Where("id=?",$TemplateId).Row()
         if !template{
             warning "Voting template not found"
         }
-       
+        if $KeyId != 0{
+            $keyFind = DBFind("keys").Where("id=?", $KeyId).Row()
+            if !$keyFind{
+                warning "Key id not found"
+            }
+        }
         if $StartTime == ""{
             $StartTime = "00:00"
         }
         if $EndTime == ""{
             $EndTime = "23:59"
         }
-        
+
         var initContract string
         initContract = template["init_contract"]
         if initContract != "" && initContract != "NULL"{
@@ -55,7 +60,7 @@ contract voting_TemplateRun{
         $participants = Int(template["type_participants"])
         $decision = Int(template["type_decision"])
         $vacancies = Int(template["vacancies"])
-        
+
         $desc = Sprintf("%v template #%v", $votingName, $TemplateId)
         if $type_voting < 1 || $type_voting > 2 {
             warning "Invalid type of voting"
@@ -64,7 +69,7 @@ contract voting_TemplateRun{
         $acceptParams = emptyOrValue(template["accept_params"])
         $contractReject = emptyOrValue(template["contract_reject"])
         $rejectParams = emptyOrValue(template["reject_params"])
-        
+
         if $decision == 1 || $decision == 2 {
             // role-candidates
             checkInput($candidates, "Candidate role")
@@ -75,12 +80,12 @@ contract voting_TemplateRun{
             }
             $candidateId = Int(candidate["id"])
         }
-        
+
         if $decision == 3 {
             // document approval
             checkInput($TextDocument, "TextDocument")
         }
-        
+
         if $decision == 4 {
             // formal decision
             // in the system vote need only a field and a value
@@ -89,7 +94,7 @@ contract voting_TemplateRun{
             if $type_voting == 2{
                 $desc = Sprintf("%v [template #%v] %v", $votingName, $TemplateId, $ColumnName)
             }
-            
+
             if $type_voting == 1{
                 checkInput($TableWritten, "TableWritten")
                 checkInput($RowId, "RowId")
@@ -98,16 +103,16 @@ contract voting_TemplateRun{
             if $RowId == "" || $RowId == "NULL"{
                 $RowId = 0
             }
-            
+
         }
         // check duplicated
         // var isCreated map
         // isCreated = DBFind("votings").Where("voting->name=? and voting->description=? and deleted=0", $votingName, $desc).Row()
         // if isCreated{
-        //     info "Voting already created"
+        // info "Voting already created"
         // }
-        
-        
+
+
         if $participants == 3 {
             // if the type of the participants "in role" - check the role
             var role map
@@ -118,7 +123,7 @@ contract voting_TemplateRun{
             $roleId = Int(role["id"])
         }
     }
-    
+
     action{
         var votingId int
         // must be installed in voting_CreateNew
@@ -129,14 +134,14 @@ contract voting_TemplateRun{
         // the default argument for Contract
         var defaultParams string
         defaultParams = Sprintf(`{"VotingTemplateId":"%v","KeyId":"%v","VotingId":"%v"}`, $TemplateId, $KeyId, votingId)
-        
+
         if Size($acceptParams) == 0{
             $acceptParams = defaultParams
         }
         if Size($rejectParams) == 0{
             $rejectParams = defaultParams
         }
-        
+
         if $decision == 1 || $decision == 2{
             // 1. Role candidates with the registration of participants on request
             // 2. Role candidates with manual registration of the participants
@@ -147,13 +152,13 @@ contract voting_TemplateRun{
             // Document approval
             voting_SubjectDocument("votingID,text_document,contract_accept,contract_accept_params,contract_reject,contract_reject_params", votingId,$TextDocument, $contractAccept, $acceptParams, $contractReject, $rejectParams)
         }
-        
+
         if $decision == 4 {
             // Formal decision
             voting_SubjectFormal("votingID,description,table_to_written,row_id,column_name,written_value,contract_accept,contract_accept_params,contract_reject,contract_reject_params",votingId, $desc, $TableWritten, $RowId, $ColumnName, $NewValue, $contractAccept, $acceptParams, $contractReject, $rejectParams)
-            
+
         }
-        
+
         if $decision == 5 {
             // Execution of the contract
             voting_SubjectContract("votingID,contract_accept,contract_accept_params,contract_reject,contract_reject_params",votingId,$contractAccept, $acceptParams, $contractReject, $rejectParams)
