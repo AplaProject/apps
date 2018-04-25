@@ -3,11 +3,6 @@
     "contracts": [
         {
             "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract sysparams_AcceptVES{\n    data {\n        KeyId string\n    }\n    conditions {\n        if !($original_contract==\"voting_CheckDecision\" || $original_contract==\"voting_UpdateDataForGraphs\"){\n            warning \"You can't run the contract directly\"\n        }\n        $Id = Int($KeyId)\n\n        if !DBFind(\"ecosystems\").Where(\"id=?\", $Id).Row() {\n            Println(\"Ecosystem not found\")\n            warning \"Ecosystem not found\"\n        }\n    }\n\n    action {\n        DBUpdate(\"ecosystems\", $Id, \"is_valued\", 1)\n    }\n}",
-            "Name": "sysparams_AcceptVES"
-        },
-        {
-            "Conditions": "ContractConditions(\"MainCondition\")",
             "Value": "contract sysparams_AcceptValidator{\n    data{\n        VotingTemplateId string\n        KeyId string\n        VotingId string\n    }\n    func conditions{\n        var app_id int\n        app_id = Int(DBFind(\"applications\").Columns(\"name,id\").Where(\"name='Basic application'\").One(\"id\"))\n        var templateId int\n        templateId = Int(AppParam(app_id,\"voting_validators_template_id\"))\n        \n        var params map\n        params = DBFind(\"voting_templates\").Where(\"id=?\", templateId).Row()\n        if params{\n            warning \"Voting params not found\"\n        }\n\n        $Id = Int($KeyId)\n        var candidateId, oldRoleId, roleId int\n        oldRoleId = 2 // Candidate for validators\n        roleId = 3 // Validator\n        \n        candidateId = DBFind(\"sysparams_candidate\").Where(\"id=?\",$Id).One(\"candidate_key_id\")\n        if !candidateId {\n            warning \"Candidate key id not found\"\n        }\n        $rowId = Int(DBFind(\"roles_participants\").Where(\"deleted=0 and role->id=? and member->member_id=?\", oldRoleId, candidateId).One(\"id\"))\n        \n        $roleId = Int(DBFind(\"roles\").Where(\"role->id=? and deleted=0\", roleId).One(\"id\"))\n        if $roleId == 0 {\n            warning \"Validator role not found\"\n        }\n    }\n    \n    func action{\n        if $rowId > 0 {\n            Roles_Unassign(\"row_id\", $rowId)\n        }\n        Roles_Assign(\"rid,member_id\", $roleId, $Id)\n    }\n}",
             "Name": "sysparams_AcceptValidator"
         },
@@ -115,18 +110,18 @@
                 [
                     "75",
                     "sysparams_InvestorRefresh",
-                    "sysparams_AcceptVES",
+                    "",
                     "",
                     "Voting for Valued Ecosystem",
                     "0",
-                    "4",
+                    "0",
                     "",
-                    "5",
-                    "2",
+                    "4",
+                    "1",
                     "3",
                     "50",
                     "4",
-                    "System param",
+                    "Valued ecosystem",
                     ""
                 ]
             ]
@@ -158,6 +153,10 @@
             "Trans": "{\"en\":\"Candidate for validators\",\"ru\":\"Кандидаты в валидаторы\"}"
         },
         {
+            "Name": "sysparams_ecos",
+            "Trans": "{\"en\":\"Ecosystems list\",\"ru\":\"Список экосистем\"}"
+        },
+        {
             "Name": "sysparams_list",
             "Trans": "{\"en\":\"System parameters list\",\"ru\":\"Список системных параметров\"}"
         },
@@ -181,7 +180,7 @@
     "menus": [
         {
             "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "MenuGroup(Title:$admin$, Icon:\"fa icon-settings\"){\n    MenuItem(Title: $sysparams_list$,Page:sysparams_list, Icon:\"fa icon-settings\")\n    MenuItem(Title:$sysparams_candidates$, Page:sysparams_candidates, Icon:\"icon-list\")\n}",
+            "Value": "MenuGroup(Title:$admin$, Icon:\"fa icon-settings\"){\n    MenuItem(Title: $sysparams_list$,Page:sysparams_list, Icon:\"fa icon-settings\")\n    MenuItem(Title:$sysparams_candidates$, Page:sysparams_candidates, Icon:\"icon-list\")\n    MenuItem(Title:$sysparams_ecos$, Page:sysparams_ecos, Icon:\"icon-list\")\n}",
             "Name": "default_menu"
         }
     ],
@@ -196,6 +195,12 @@
             "Conditions": "ContractAccess(\"@1EditPage\")",
             "Value": "DBFind(Name:applications, Source:src_app).Columns(\"name,id\").Where(\"name='Basic application'\").Vars(app)\nSetVar(template_id, AppParam(App:#app_id#, Name: voting_validators_template_id))\nSetTitle($sysparams_candidates$)\n\nDBFind(Name:sysparams_candidate, Source: src_candidates).Where(\"deleted=0\").Custom(_actions){\n    If(#template_id#>0){\n        Div(btn-group){\n            Input(Name:KeyId, Type: hidden, Value: #candidate_key_id#)\n            Input(Name:TemplateId, Type: hidden, Value: #template_id#)\n            Button(Body: $voting_start$, Contract: voting_TemplateRun, Page: voting_list, Class: btn btn-success)\n        }\n    }.Else{\n        Button(Class: btn btn-warning icon-question, Page: sysparams_candidates).Alert(Text: $voting_template_not_found$, ConfirmButton: $yes$, CancelButton: $no$, Icon: info)\n    }\n    \n}.Custom(_date){\n    DateTime(DateTime: #date_created#, Format: YYYY-MM-DD HH:MI)\n}\n\nDiv(content-wrapper){\n    Div(breadcrumb){\n        Span(Class: text-muted, Body: $sysparams_candidates$)\n    }\n    \n    Div(row){\n        Div(col-md-12){\n            Div(panel panel-primary){\n                Form(table-responsive){\n                    Input(Name:Start, Type: hidden, Value: Now(\"YYYY-MM-DD\", +1 days))\n                    Input(Name:StartTime, Type: hidden, Value: Now(\"HH:MI\"))\n                    Input(Name:End, Type: hidden, Value: Now(\"YYYY-MM-DD\", +14 days))\n                    Input(Name:EndTime, Type: hidden, Value: Now(\"HH:MI\"))\n                    Table(Source: src_candidates, Columns: \"$id$=id,$host_ip$=host_ip,$commission_address$=commission_address,$description_equipment$=description,$comment$=comment,$date_created$=_date,=_actions\")\n                }\n                Div(panel-footer text-right){\n                    Button(Body: $add$, Class: btn btn-primary, Page: sysparams_candidate_validators_form)\n                }\n            }\n        }\n    }\n}",
             "Name": "sysparams_candidates",
+            "Menu": "default_menu"
+        },
+        {
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Value": "DBFind(Name:applications, Source:src_app).Columns(\"name,id\").Where(\"name='Basic application'\").Vars(app)\nSetVar(template_id, AppParam(App:#app_id#, Name: voting_ves_template_id))\n\nSetTitle($sysparams_ecos$)\nDBFind(Name: ecosystems, Source:ecos).Order(id).Custom(_actions){\n    If(#template_id#>0){\n        If(#is_valued#==0){\n            Input(Name: RowId, Type: hidden, Value: #id#)\n            Input(Name: NewValue, Type: hidden, Value: 1)\n            Button(Body: $start_voting_ves$, Class: btn btn-block btn-primary, Page: sysparams_ecos, Contract: voting_TemplateRun)\n        }\n    }.Else{\n        Span(voting id template not found in parameters, text-muted)\n    }\n}.Custom(_valued){\n    If(#is_valued#==1){\n        is valued\n    }\n}\nDiv(content-wrapper){\n    Div(row){\n        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){\n            Form(panel panel-primary){\n                Div(panel-body){\n                    Form(table-responsive){\n                        Input(Name: TableWritten, Type: hidden, Value: ecosystems)\n                        Input(Name: ColumnName, Type: hidden, Value: is_valued)\n                        Input(Name: Start, Type: hidden, Value: Now(\"YYYY-MM-DD\"))\n                        Input(Name: End, Type: hidden, Value: Now(\"YYYY-MM-DD\", 3 days))\n                        Input(Name: StartTime, Type: hidden, Value: Now(\"HH:MI\", +5 minute))\n                        Input(Name: EndTime, Type: hidden, Value: Now(\"HH:MI\", +5 minute))\n                        Input(Name: TemplateId, Type: hidden, Value: #template_id#)\n                        Table(ecos, \"$name$=name,=_valued,=_actions\")\n                    }\n                }\n            }\n        }\n    }\n}",
+            "Name": "sysparams_ecos",
             "Menu": "default_menu"
         },
         {
@@ -231,6 +236,11 @@
             "Conditions": "ContractConditions(\"MainCondition\")",
             "Value": "0",
             "Name": "voting_validators_template_id"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "0",
+            "Name": "voting_ves_template_id"
         }
     ],
     "tables": [
