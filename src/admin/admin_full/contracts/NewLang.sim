@@ -8,48 +8,48 @@ contract NewLang {
     }
 
     conditions {
-        if Len($IdLanguage) > 0 {
-            var j,len int
-            len = Len($IdLanguage)
-            while j < len {
-                if $IdLanguage[j] == "" {
-                    info("Locale empty")
-                }
-                if $Value[j] == "" {
-                    info("Value empty")
-                }
-                j = j + 1
-            }
+        if $ApplicationId == 0 {
+            warning "Application id cannot equal 0"
         }
-        EvalCondition("parameters", "changing_language", "value")
 
         if DBFind("languages").Columns("id").Where("name = ?", $Name).One("id") {
-            error Sprintf("The language resource %s already exists", $Name)
+            warning Sprintf( "Language resource %s already exists", $Name)
         }
+	
+		var j int
+		while j < Len($IdLanguage) {
+			if $IdLanguage[j] == "" {
+				info("Locale empty")
+			}
+			if $Value[j] == "" {
+				info("Value empty")
+			}
+			j = j + 1
+		}
+        EvalCondition("parameters", "changing_language", "value")
     }
 
     action {
-        if Len($IdLanguage) > 0 {
-            var i,len,lenshar int
-            var res,langarr string
-            len = Len($IdLanguage)
-            lenshar = Len($Value)
-            while i < len {
-                if i + 1 == len {
-                    res = res + Sprintf(`%q: %q`,$IdLanguage[i],$Value[i])
-                    i = i + 1
-                } else {
-                    res = res + Sprintf(`%q: %q, `,$IdLanguage[i],$Value[i])
-                    i = i + 1
-                }
-            }
+		var i,len,lenshar int
+		var res,langarr string
+		len = Len($IdLanguage)
+		lenshar = Len($Value)	
+		while i < len {
+			if i + 1 == len {
+				res = res + Sprintf(`%q: %q`,$IdLanguage[i],$Value[i])
+			} else {
+				res = res + Sprintf(`%q: %q, `,$IdLanguage[i],$Value[i])
+			}
+			i = i + 1
+		}
+		if len > 0 {
             langarr = Sprintf("{"+"%v"+"}", res)
             $Trans = langarr
-            DBInsert("languages", "name,res,app_id", $Name, $Trans, $ApplicationId)
-            //UpdateLang($Name, $Trans)
+            $Id = DBInsert("languages", "name,res,app_id", $Name, $Trans, $ApplicationId)
+            //UpdateLang($Id, $Trans)
         } else {
-            DBInsert("languages", "name,res,app_id", $Name, $Trans, $ApplicationId)
-            //UpdateLang($Name, $Trans)
+            $Id = DBInsert("languages", "name,res,app_id", $Name, $Trans, $ApplicationId)
+            //UpdateLang($Id, $Trans)
         }
     }
 }

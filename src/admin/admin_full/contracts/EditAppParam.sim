@@ -1,8 +1,8 @@
 contract EditAppParam {
 	data {
 		Id int
-		Value string
-		Conditions string
+		Value string "optional"
+		Conditions string "optional"
 	}
 	func onlyConditions() bool {
 		return $Conditions && !$Value
@@ -10,10 +10,23 @@ contract EditAppParam {
 	
 	conditions {
 		RowConditions("app_params", $Id, onlyConditions())
-		ValidateCondition($Conditions, $ecosystem_id)
+		if $Conditions {
+			ValidateCondition($Conditions, $ecosystem_id)
+		}
 	}
 	
 	action {
-		DBUpdate("app_params", $Id, "value,conditions", $Value, $Conditions )
+		var pars, vals array
+		if $Value {
+			pars[0] = "value"
+			vals[0] = $Value
+		}
+		if $Conditions {
+			pars[Len(pars)] = "conditions"
+			vals[Len(vals)] = $Conditions
+		}
+		if Len(vals) > 0 {
+			DBUpdate("app_params", $Id, Join(pars, ","), vals...)
+		}
 	}
 }

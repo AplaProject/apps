@@ -1,15 +1,27 @@
 contract EditApplication {
     data {
         ApplicationId int
-        Conditions string
+        Conditions string "optional"
     }
+	func onlyConditions() bool {
+		return $Conditions && false
+	}
 
     conditions {
-		ValidateCondition($Conditions, $ecosystem_id)
-		RowConditions("applications", $ApplicationId, false)
+		RowConditions("applications", $ApplicationId, onlyConditions())
+		if $Conditions {
+			ValidateCondition($Conditions, $ecosystem_id)
+		}
     }
 
     action {
-        DBUpdate("applications", $ApplicationId, "conditions", $Conditions)
+		var pars, vals array
+		if $Conditions {
+			pars[0] = "conditions"
+			vals[0] = $Conditions
+		}
+		if Len(vals) > 0 {	
+			DBUpdate("applications", $ApplicationId, Join(pars, ","), vals...)
+		}
     }
 }
