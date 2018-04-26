@@ -11,35 +11,33 @@ contract NewTable {
         Update_con string "optional"
         New_column_con string "optional"
     }
-    conditions {}
+    conditions {
+        if $ApplicationId == 0 {
+            warning "Application id cannot equal 0"
+        }
+	}
     
     action {
         if Size($Name) > 0 && Size($Columns) > 0 && Size($Permissions) > 0{
             CreateTable($Name, $Columns, $Permissions, $ApplicationId)
         } else {
-            var i,len,lenshar int
-            var res,columns string
+            var i,len int
+            var res string
             len = Len($Id)
-            lenshar = Len($Shareholding)
+			
             while i < len {
                 if i + 1 == len {
                     res = res + Sprintf(`{"name":%q,"type":%q,"conditions":"true"}`,$Id[i],$Shareholding[i])
-                    i = i + 1
                 }
                 else {
                     res = res + Sprintf(`{"name":%q,"type":%q,"conditions":"true"},`,$Id[i],$Shareholding[i])
-                    i = i + 1
                 }
+				i = i + 1
             }
-            columns = Sprintf("["+"%v"+"]", res)
-            
-            var permissions string
-            permissions = Sprintf(`{"insert":%q,"update":%q,"new_column":%q}`,$Insert_con,$Update_con,$New_column_con)
-            
+
             $Name = $TableName
-            $Columns = columns
-            $Permissions = permissions
-            
+            $Columns = Sprintf("["+"%v"+"]", res)
+            $Permissions = Sprintf(`{"insert":%q,"update":%q,"new_column":%q}`,$Insert_con,$Update_con,$New_column_con)
             CreateTable($Name, $Columns, $Permissions, $ApplicationId)
         }
     }
