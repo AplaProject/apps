@@ -1,0 +1,50 @@
+contract NewTable {
+    data {
+        ApplicationId int "optional"
+        Name string "optional"
+        Columns string "optional"
+        Permissions string "optional"
+        TableName string "optional"
+        Id array "optional"
+        Shareholding array "optional"
+        Insert_con string "optional"
+        Update_con string "optional"
+        New_column_con string "optional"
+    }
+    conditions {
+        if $ApplicationId == 0 {
+            warning "Application id cannot equal 0"
+        }
+	}
+    
+    action {
+        if Size($Name) > 0 && Size($Columns) > 0 && Size($Permissions) > 0{
+            CreateTable($Name, $Columns, $Permissions, $ApplicationId)
+        } else {
+            var i,len int
+            var res string
+            len = Len($Id)
+			
+            while i < len {
+                if i + 1 == len {
+                    res = res + Sprintf(`{"name":%q,"type":%q,"conditions":"true"}`,$Id[i],$Shareholding[i])
+                }
+                else {
+                    res = res + Sprintf(`{"name":%q,"type":%q,"conditions":"true"},`,$Id[i],$Shareholding[i])
+                }
+				i = i + 1
+            }
+
+            $Name = $TableName
+            $Columns = Sprintf("["+"%v"+"]", res)
+            $Permissions = Sprintf(`{"insert":%q,"update":%q,"new_column":%q}`,$Insert_con,$Update_con,$New_column_con)
+            CreateTable($Name, $Columns, $Permissions, $ApplicationId)
+        }
+    }
+    func rollback() {
+        RollbackTable($Name)
+    }
+    func price() int {
+        return SysParamInt("table_price")
+    }
+}
