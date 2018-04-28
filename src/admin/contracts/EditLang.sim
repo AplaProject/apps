@@ -1,47 +1,43 @@
 contract EditLang {
-	data {
+    data {
         Id int
-		Trans string "optional"
-		Value array "optional"
-		IdLanguage array "optional"
-	}
-	
-	conditions {
-		var j int
-		while j < Len($IdLanguage) {
-			if ($IdLanguage[j] == ""){
-				info("Locale empty")
-			}
-			if ($Value[j] == ""){
-				info("Value empty")
-			}
-			j = j + 1
-		}
-		EvalCondition("parameters", "changing_language", "value")
-	}
-	
-	action {
-		var i,len int
-		var res,langarr string
-		len = Len($IdLanguage)
-		while i < len {
-			if (i + 1 == len){
-				res = res + Sprintf(`%q: %q`,$IdLanguage[i],$Value[i])
-			}
-			else {
-				res = res + Sprintf(`%q: %q, `,$IdLanguage[i],$Value[i])
-			}
-			i = i + 1
-		}
-		if (len > 0){
-			langarr = Sprintf("{"+"%v"+"}", res)
-			$Trans = langarr
+        Trans string "optional"
+        Value array "optional"
+        IdLanguage array "optional"
+    }
+
+    conditions {
+        var j int
+        while j < Len($IdLanguage) {
+            if ($IdLanguage[j] == ""){
+                info("Locale empty")
+            }
+            if ($Value[j] == ""){
+                info("Value empty")
+            }
+            j = j + 1
+        }
+        EvalCondition("parameters", "changing_language", "value")
+    }
+
+    action {
+        var trans map
+        var i int
+        while i < Len($IdLanguage) {
+            var lang, val string
+            lang = $IdLanguage[i]
+            val = $Value[i]
+            trans[lang] = val
+
+            i = i + 1
+        }
+        if Len($IdLanguage) > 0 {
+            $Trans = trans
             DBUpdate("languages", $Id, "res", $Trans)
-			//UpdateLang($Id, $Trans)
-		}
-		else {
-			DBUpdate("languages", $Id, "res", $Trans)
-			//UpdateLang($Id, $Trans)
-		}
-	}
+            //UpdateLang($Id, $Trans)
+        } else {
+            DBUpdate("languages", $Id, "res", $Trans)
+            //UpdateLang($Id, $Trans)
+        }
+    }
 }
