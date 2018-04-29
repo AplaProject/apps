@@ -1,0 +1,76 @@
+contract ajman_UserRegistration {
+    data {
+        Username string
+        Password string
+        FirstNameAr string
+        LastNameAr string
+        FirstNameEn string
+        LastNameEn string
+        Nationality string //int
+        EmirateNumber string
+        EmirateIdExpieryDate string "date"
+        EmirateIdImage bytes "optional"
+        PassportId string
+        PassportExpieryDate string "date"
+        PassportIdImage bytes "optional"
+        DateOfBirth string "date"
+        ProfileImage bytes "optional"
+        Gender string //int
+        Email string
+        Mobile string
+        Phone string "optional"
+        Fax string "optional"
+        PostOffice string "optional"
+        Address string "optional"
+        Communication string //int
+        Language string //int
+    }
+    conditions {
+        $member = DBFind("members").Where("id=?", $key_id).Row()
+        if !$member{
+            warning "Member not found"
+        }
+        $ApplicationId = Int(DBFind("applications").Where("name='Ajman property'").One("id"))
+        if $ApplicationId == 0 {
+            warning "Application ID not found"
+        }
+
+    }
+    action {
+        var imageUploadGood bool
+        var emirateIdImage, passportIdImage, profileImage int
+        if imageUploadGood {
+            emirateIdImage = UploadBinary("Name,Data,ApplicationId,DataMimeType", "EmirateIdImage", $EmirateIdImage, $ApplicationId, "")
+            passportIdImage = UploadBinary("Name,Data,ApplicationId,DataMimeType", "PassportIdImage", $PassportIdImage, $ApplicationId, "")
+            profileImage = UploadBinary("Name,Data,ApplicationId,DataMimeType", "ProfileImage", $ProfileImage, $ApplicationId, "")
+        }
+        var inform map
+        inform = JSONDecode($member["member_info"])
+        inform["Username"] = $Username
+        inform["Password"] = $Password
+        inform["FirstNameAr"] = $FirstNameAr
+        inform["LastNameAr"] = $LastNameAr
+        inform["FirstNameEn"] = $FirstNameEn
+        inform["LastNameEn"] = $LastNameEn
+        inform["Nationality"] = $Nationality
+        inform["EmirateNumber"] = $EmirateNumber
+        inform["EmirateIdExpieryDate"] = $EmirateIdExpieryDate
+        inform["EmirateIdImage"] = emirateIdImage
+        inform["PassportId"] = $PassportId
+        inform["PassportExpieryDate"] = $PassportExpieryDate
+        inform["PassportIdImage"] = passportIdImage
+        inform["DateOfBirth"] = $DateOfBirth
+        inform["ProfileImage"] = profileImage
+        inform["Gender"] = $Gender
+        inform["Email"] = $Email
+        inform["Mobile"] = $Mobile
+        inform["Phone"] = $Phone
+        inform["Fax"] = $Fax
+        inform["PostOffice"] = $PostOffice
+        inform["Address"] = $Address
+        inform["Communication"] = $Communication
+        inform["Language"] = $Language
+        inform["Status"] = 0
+        DBUpdate("members", $key_id, "member_info", inform)
+    }
+}
