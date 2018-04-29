@@ -5,10 +5,10 @@ contract Import_Upload {
 
     conditions {
         $input_file = BytesToString($input_file)
+        $limit = 1 // data piece size of import
 
         // init buffer_data, cleaning old buffer
-        var initJson string
-        initJson = "{}"
+        var initJson map
         $import_id = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "import").One("id")
         if $import_id {
             $import_id = Int($import_id)
@@ -27,13 +27,14 @@ contract Import_Upload {
     }
 
     action {
-        var json map
-        json = JSONToMap($input_file)
+        var input map
+        input = JSONDecode($input_file)
         var arr_data array
-        arr_data = json["data"]
+        arr_data = input["data"]
 
         var pages_arr, blocks_arr, menu_arr, parameters_arr, languages_arr, contracts_arr, tables_arr array
-
+        
+        // import info
         var i int
         while i<Len(arr_data){
             var tmp_object map
@@ -65,7 +66,7 @@ contract Import_Upload {
         }
 
         var info_map map
-        info_map["app_name"] = json["name"]
+        info_map["app_name"] = input["name"]
         info_map["pages"] = Join(pages_arr, ", ")
         info_map["pages_count"] = Len(pages_arr)
         info_map["blocks"] = Join(blocks_arr, ", ")
@@ -85,14 +86,34 @@ contract Import_Upload {
             warning "Invalid or empty import file"
         }
 
-        DBUpdate("buffer_data", $import_id, "value", $input_file)
+        // import data
+        i=0
+        var sliced array
+        var arr_data_len int
+        arr_data_len = Len(arr_data)
+        while i <arr_data_len{
+            var part array
+            var l int
+            while l < $limit && (i+l < arr_data_len) {
+                part[l] = arr_data[i+l]
+                l=l+1
+            }
+            var batch map
+            batch["Data"] = JSONEncode(part)
+            sliced[Len(sliced)] = batch
+            i=i+$limit
+        }
+        input["data"] = sliced
+
+        // storing
+        DBUpdate("buffer_data", $import_id, "value", input)
         DBUpdate("buffer_data", $info_id, "value", info_map)
 
         var app_id int
-        app_id = DBFind("applications").Columns("id").Where("name=$", Str(json["name"])).One("id")
+        app_id = DBFind("applications").Columns("id").Where("name=$", Str(input["name"])).One("id")
 
         if !app_id {
-            DBInsert("applications", "name,conditions", Str(json["name"]), "true")
+            DBInsert("applications", "name,conditions", Str(input["name"]), "true")
         }
     }
 }

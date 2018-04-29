@@ -1,18 +1,9 @@
 contract Import {
     data {
-        Type string
-        Name string "optional"
-        Value string "optional"
-        Conditions string "optional"
-        Menu string "optional"
-        Trans string "optional"
-        Columns string "optional"
-        Permissions string "optional"
-        Title string "optional"
+        Data string
     }
 
     conditions {
-        Println(Sprintf("import: %v, type: %v, time: %v", $Name, $Type, $time))
         $ApplicationId = 0
 
         var app_map map
@@ -27,17 +18,7 @@ contract Import {
     }
 
     action {
-        var cdata, editors, creators, item map
-        cdata["Value"] = $Value
-        cdata["Conditions"] = $Conditions
-        cdata["ApplicationId"] = $ApplicationId
-        cdata["Name"] = $Name
-        cdata["Title"] = $Title
-        cdata["Trans"] = $Trans
-        cdata["Menu"] = $Menu
-        cdata["Columns"] = $Columns
-        cdata["Permissions"] = $Permissions
-
+        var editors, creators map
         editors["pages"] = "EditPage"
         editors["blocks"] = "EditBlock"
         editors["menu"] = "EditMenu"
@@ -54,26 +35,40 @@ contract Import {
         creators["contracts"] = "NewContract"
         creators["tables"] = "NewTable"
 
-        item = DBFind($Type).Where("name=?", $Name).Row()
+        var dataImport array
+        dataImport = JSONDecode($Data)
+        var i int
+        while i<Len(dataImport){
+            var item, cdata map
+            cdata = dataImport[i]
+            cdata["ApplicationId"] = $ApplicationId
+            $Type = cdata["Type"]
+            $Name = cdata["Name"]
 
-        var contractName string
-        if item {
-            contractName = editors[$Type]
-            cdata["Id"] = Int(item["id"])
-            if $Type == "menu"{ 
-                if Contains(item["value"], $Value) { 
-                    // ignore repeated
-                    contractName = ""
-                }else{
-                    cdata["Value"] = item["value"] + "\n" + $Value
+            Println(Sprintf("import %v: %v",  $Type, cdata["Name"]))
+
+            item = DBFind($Type).Where("name=?", $Name).Row()
+            var contractName string
+            if item {
+                contractName = editors[$Type]
+                cdata["Id"] = Int(item["id"])
+                if $Type == "menu"{
+                    if Contains(item["value"], cdata["Value"]) {
+                        // ignore repeated
+                        contractName = ""
+                    }else{
+                        cdata["Value"] = item["value"] + "\n" + cdata["Value"]
+                    }
                 }
+            } else {
+                contractName = creators[$Type]
             }
-        } else {
-            contractName = creators[$Type]
-        }
 
-        if contractName != ""{
-            CallContract(contractName, cdata)
+            if contractName != ""{
+                CallContract(contractName, cdata)
+            }
+            i=i+1
         }
+        Println(Sprintf("> time: %v", $time))
     }
 }
