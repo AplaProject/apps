@@ -89,13 +89,13 @@ contract sysparams_StartNodeAdd{
             warning "Key id not found"
         }
     }
-    func getNodesString() string{
+    func getNodesJSON() string{
         // kostyl
         // return json-like string from full_nodes trimmed "[" and "]"
         var nodes string
         nodes = SysParamString("full_nodes")
-        if HasPrefix(nodes, "[") {
-            nodes = Substr(nodes, 1, Size(nodes)-2)
+        if Size(nodes) < 80 {
+            nodes = "[]"
         }
         return nodes
     }
@@ -112,16 +112,16 @@ contract sysparams_StartNodeAdd{
         checkApiAddress($ApiAddress)
         checkTcpAddress($TcpAddress)
     }
-    
+
     action{
-        var sep, nodes, value int
-        sep = ","
-        nodes = getNodesString()
-        if Size(nodes) == 0{
-            sep = ""
-        }
-        value = Sprintf(`{"tcp_address":"%v", "api_address":"%v", "key_id":"%v", "public_key":"%v"}`, $TcpAddress, $ApiAddress, $KeyId, $PubKey)
-        nodes = Sprintf("[%v%v%v]", nodes, sep, value)
-        voting_TemplateRun("TemplateId,Start,End,EndTime,StartTime,KeyId,TableWritten,RowId,ColumnName,NewValue,TextDocument", $TemplateId, $Start, $End, $EndTime, $StartTime, 0, "", "", "full_nodes", nodes, "")
+        var nodes array
+        var node map
+        nodes = JSONDecode(getNodesJSON())
+        node["tcp_address"] = $TcpAddress
+        node["api_address"] = $ApiAddress
+        node["key_id"] = Str($KeyId)
+        node["public_key"] = $PubKey
+        nodes[Len(nodes)] = node
+        voting_TemplateRun("TemplateId,Start,End,EndTime,StartTime,KeyId,TableWritten,RowId,ColumnName,NewValue,TextDocument", $TemplateId, $Start, $End, $EndTime, $StartTime, 0, "", "", "full_nodes", JSONEncode(nodes), "")
     }
 }
