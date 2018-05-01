@@ -1,0 +1,88 @@
+DBFind(applications).Where("name='Business'").Vars(application)
+Div(container){
+    AppParam(App: #application_id#, Name: object_types, Source: src_objects)
+    DBFind(Name:roles, Source: src_roles).Where("deleted=0").Order(id).Columns("id,role_name").Custom(name){#role_name#}
+    If(#Id#>0){
+        DBFind(Name:business_models, src_models).Where("id=#Id#").Vars(model)
+        SetVar(Action, update).(heading, $business_manager$: $model$ $edit$ ##Id#)
+        JsonToSource(src_results, #model_result#)
+        Data(model, "Name,Type,Src,Value"){
+            EventId,number,,#model_event_id#
+            ObjectType,select,src_objects,#model_object_type#
+            Title,text,,#model_title#
+            RoleId,select,src_roles,#model_role_id#
+            TextBody,textarea,,#model_text_body#
+            NeedComment,checkbox,,#model_need_comment#
+            Condition,text,,#model_condition#
+            Result,result,src_results,
+        }
+    }.Else{
+        AppParam(App: #application_id#, Name: results, Source: src_results)
+        SetVar(Action, create).(heading, $business_manager$: $create$)
+        Data(model, "Name,Type,Src"){
+            EventId,number,
+            ObjectType,select,src_objects
+            Title,text,
+            RoleId,select,src_roles
+            TextBody,textarea,
+            NeedComment,checkbox,
+            Condition,text,
+            Result,result,src_results
+        }
+        SetVar(Value,)
+    }
+    Div(row){
+        Div(col-sm-10 col-sm-offset-1){
+            Form(panel panel-primary){
+                Div(panel-heading){#heading#}
+                Div(panel-body){
+                    ForList(model){
+                        Div(row form-group){
+                            Div(col-sm-3 text-right pt-sm){
+                                Label(For:#Name#){LangRes(#Name#)}
+                            }
+                            Div(col-sm-9){
+                                If(#Type#==result){
+                                    ForList(#Src#){
+                                        Div(col-sm-4){
+                                            If(#Id#>0){
+                                                If(#value#==1){
+                                                    SetVar(bool,true)
+                                                }.Else{
+                                                    SetVar(bool,false)
+                                                }
+                                                Input(Name: #key#, Type:checkbox, Value: #bool#)
+                                                #key#
+                                            }.Else{
+                                                Input(Name: #name#, Type:checkbox)
+                                                #name#
+                                            }
+                                        }.Style(div {display:inline-block;})
+                                    }
+                                }.ElseIf(#Type#==select){
+                                    Select(Name: #Name#, Source:#Src#, NameColumn: name, ValueColumn: id, Value:#Value#)
+                                }.ElseIf(#Type#==checkbox){
+                                    If(#Value#==1){
+                                        SetVar(bool,true)
+                                    }.Else{
+                                        SetVar(bool,false)
+                                    }
+                                    Input(Name: #Name#, Type:#Type#, Value: #bool#)
+                                }.Else{
+                                    Input(Name: #Name#, Type:#Type#, Value: #Value#)
+                                }
+                            }
+                        }
+                    }
+                }
+                Div(panel-footer text-right){
+                    Div(pull-left){
+                        Button(Class: icon-arrow-left btn btn-default, Page: business_manager)
+                    }
+                    Input(Name:Action, Value:#Action#, Type: hidden)
+                    Button(Body:LangRes(#Action#), Class: btn btn-primary, Page: business_manager, Contract: business_Manager)
+                }
+            }
+        }
+    }
+}

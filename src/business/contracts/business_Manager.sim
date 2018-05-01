@@ -1,0 +1,72 @@
+contract business_Manager {
+    data {
+        Action string
+        Id string "optional"
+        EventId string "optional"
+        ObjectType string "optional"
+        Title string "optional"
+        RoleId string "optional"
+        TextBody string "optional"
+        NeedComment string "optional"
+        Condition string "optional"
+        Submit string "optional"
+        SentBack string "optional"
+        Accept string "optional"
+        Escalation string "optional"
+        Reject string "optional"
+        Inform string "optional"
+    }
+    func strToInt(s string) int {
+        if s {
+            return 1
+        }
+        return 0
+    }
+    conditions {
+        $Id = Int($Id)
+        if $Action == "create" || $Action == "update"{
+            $ObjectType = Int($ObjectType)
+            $RoleId = Int($RoleId)
+            $EventId = Int($EventId)
+            $NeedComment = strToInt($NeedComment)
+            $Submit = strToInt($Submit)
+            $SentBack = strToInt($SentBack)
+            $Accept = strToInt($Accept)
+            $Escalation = strToInt($Escalation)
+            $Reject = strToInt($Reject)
+            $Inform = strToInt($Inform)
+            var result map
+            result["Submit"] = $Submit
+            result["SentBack"] = $SentBack
+            result["Accept"] = $Accept
+            result["Escalation"] = $Escalation
+            result["Reject"] = $Reject
+            result["Inform"] = $Inform
+            $Result = JSONEncode(result)
+            Println("Action",$Action,"Id",$Id,"EventId",$EventId,"ObjectType",$ObjectType,"Title",$Title,"RoleId",$RoleId,"TextBody",$TextBody,"NeedComment",$NeedComment,"Condition",$Condition,"result",$Result)
+        }
+
+        $ApplicationId = Int(DBFind("applications").Where("name='Business'").One("id"))
+        if $ApplicationId == 0 {
+            warning "Application ID not found"
+        }
+
+    }
+    action {
+        if $Action == "create"{
+            DBInsert("business_models", "event_id,object_type,title,role_id,text_body,need_comment,condition,result", $EventId,$ObjectType,$Title,$RoleId,$TextBody,$NeedComment,$Condition,$Result)
+        }
+        if $Id == 0 {
+            return
+        }
+        if $Action == "update" {
+            DBUpdate("business_models", $Id, "event_id,object_type,title,role_id,text_body,need_comment,condition,result", $EventId,$ObjectType,$Title,$RoleId,$TextBody,$NeedComment,$Condition,$Result)
+        }
+        if $Action == "delete" {
+            DBUpdate("business_models", $Id, "deleted", 1)
+        }
+        if $Action == "restore" {
+            DBUpdate("business_models", $Id, "deleted", 0)
+        }
+    }
+}
