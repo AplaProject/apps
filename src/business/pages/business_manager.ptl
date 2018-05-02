@@ -1,11 +1,11 @@
 DBFind(applications).Where("name='Business'").Vars(application)
 If(#Mode#==deleted){
-    SetVar(Where,"deleted=1")
+    SetVar(Where,"deleted=1").(panel,panel-default)
 }.Else{
-    SetVar(Where,"deleted=0")
+    SetVar(Where,"deleted=0").(Mode,actived).(panel,panel-primary)
 }
 DBFind(roles, src_roles).Columns("id,role_name")
-DBFind(business_models, models).Where(#Where#).Custom(_actions){
+DBFind(business_models, src_models).Where(#Where#).Custom(_actions){
     Div(text-right btn-group){
         Button(Class: icon-settings btn btn-primary, Page: business_model, PageParams: "Id=#id#")
         If(#deleted#==1){
@@ -22,28 +22,41 @@ DBFind(business_models, models).Where(#Where#).Custom(_actions){
             #role_name#
         }
     }
+}.Custom(_cond){
+    Div(){#condition#}.Style(max-width:200px; word-break: break-word;)
+}.Custom(_res){
+    Div(){#condition#}.Style(max-width:200px; word-break: break-word;)
 }
-Div(content-wrapper bg-white){
-    Div(container){
-        SetTitle($business_manager$)
-        Div(row){
-            Div(col-md-12){
-                Div(text-right form-group){
-                    If(#Mode#==deleted){
-                        Button(Page: business_manager, Class: btn btn-warning, PageParams: "Mode=actived"){
-                            Span($actived$)
+SetVar(has_models,0)
+ForList(src_models){
+    SetVar(has_models,1)
+}
+Div(container){
+    SetTitle($business_manager$)
+    Div(row){
+        Div(col-sm-10 col-sm-offset-1){
+            Div(panel #panel#){
+                Div(panel-heading clearfix){
+                    #Mode# models
+                    Div(pull-right){
+                        If(#Mode#==deleted){
+                            LinkPage(Page: business_manager, PageParams: "Mode=actived", Body: $actived$)
+                        }.Else{
+                            LinkPage(Page: business_manager, PageParams: "Mode=deleted", Class: text-danger, Body: $deleted$)
+                            AddToolButton(Page: business_model, Class: btn btn-warning, Title: $create$, Icon: icon-plus)
                         }
-                    }.Else{
-                        Button(Page: business_manager, Class: btn btn-warning, PageParams: "Mode=deleted"){
-                            Span($deleted$)
-                        }
-                    }
-                    Button(Page: business_model, Class: btn btn-primary){
-                        Span($create$, icon-plus)
                     }
                 }
-                Div( table-responsive){
-                    Table(models,"$EventId$=event_id,$ObjectType$=_obj,$Title$=title,$RoleId$=_role,$TextBody$=text_body,$NeedComment$=need_comment,$Condition$=condition,$Result$=result,=_actions")
+                Div(panel-body){
+                    If(#has_models#==1){
+                        Div(table-responsive){
+                            Table(src_models,"$EventId$=event_id,$ObjectType$=_obj,$Title$=title,$RoleId$=_role,$TextBody$=text_body,$NeedComment$=need_comment,$Condition$=_cond,$Result$=_res,=_actions")
+                        }
+                    }.Else{
+                        Div(h3 text-center){
+                            #Mode# models not found
+                        }
+                    }
                 }
             }
         }

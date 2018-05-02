@@ -6,6 +6,7 @@ Div(container){
         DBFind(Name:business_models, src_models).Where("id=#Id#").Vars(model)
         SetVar(Action, update).(heading, $business_manager$: $model$ $edit$ ##Id#)
         JsonToSource(src_results, #model_result#)
+        JsonToSource(src_condition, #model_condition#)
         Data(model, "Name,Type,Src,Value"){
             EventId,number,,#model_event_id#
             ObjectType,select,src_objects,#model_object_type#
@@ -13,7 +14,7 @@ Div(container){
             RoleId,select,src_roles,#model_role_id#
             TextBody,textarea,,#model_text_body#
             NeedComment,checkbox,,#model_need_comment#
-            Condition,text,,#model_condition#
+            Condition,condition,src_condition,#model_condition#
             Result,result,src_results,
         }
     }.Else{
@@ -26,7 +27,7 @@ Div(container){
             RoleId,select,src_roles
             TextBody,textarea,
             NeedComment,checkbox,
-            Condition,text,
+            Condition,condition,src_results
             Result,result,src_results
         }
         SetVar(Value,)
@@ -43,21 +44,46 @@ Div(container){
                             }
                             Div(col-sm-9){
                                 If(#Type#==result){
-                                    ForList(#Src#){
-                                        Div(col-sm-4){
-                                            If(#Id#>0){
-                                                If(#value#==1){
-                                                    SetVar(bool,true)
+                                    Div(row){
+                                        ForList(#Src#){
+                                            Div(col-sm-4){
+                                                If(#Id#>0){
+                                                    If(#value#==1){
+                                                        SetVar(bool,true)
+                                                    }.Else{
+                                                        SetVar(bool,false)
+                                                    }
+                                                    Input(Name: #key#, Type:checkbox, Value: #bool#) #key#
                                                 }.Else{
-                                                    SetVar(bool,false)
+                                                    Input(Name: #name#, Type:checkbox) #name#
                                                 }
-                                                Input(Name: #key#, Type:checkbox, Value: #bool#)
-                                                #key#
-                                            }.Else{
-                                                Input(Name: #name#, Type:checkbox)
-                                                #name#
-                                            }
-                                        }.Style(div {display:inline-block;})
+                                            }.Style(div {display:inline-block;})
+                                        }
+                                    }
+                                }.ElseIf(#Type#==condition){
+                                    Div(row){
+                                        Div(col-sm-3 text-right pt-sm){
+                                            LangRes(EventId)
+                                        }
+                                        Div(col-sm-9){
+                                            Input(Name: #Name#, Value: #Value#)
+                                        }
+                                    }
+                                    Div(row){
+                                        ForList(#Src#){
+                                            Div(col-sm-4){
+                                                If(#Id#>0){
+                                                    If(#value#==1){
+                                                        SetVar(bool,true)
+                                                    }.Else{
+                                                        SetVar(bool,false)
+                                                    }
+                                                    Input(Name: #key#, Type:checkbox, Value: #bool#) #key#
+                                                }.Else{
+                                                    Input(Name: #Name##name#, Type:checkbox) #name#
+                                                }
+                                            }.Style(div {display:inline-block;})
+                                        }
                                     }
                                 }.ElseIf(#Type#==select){
                                     Select(Name: #Name#, Source:#Src#, NameColumn: name, ValueColumn: id, Value:#Value#)
