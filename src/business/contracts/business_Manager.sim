@@ -9,13 +9,14 @@ contract business_Manager {
         TextBody string "optional"
         NeedComment string "optional"
         // condition
-        Condition string "optional"
-        ConditionSubmit string "optional"
-        ConditionSentBack string "optional"
-        ConditionAccept string "optional"
-        ConditionEscalation string "optional"
-        ConditionReject string "optional"
-        ConditionInform string "optional"
+        ConditionId array "optional"
+        ConditionEventId array "optional"
+        ConditionSubmit array "optional"
+        ConditionSentBack array "optional"
+        ConditionAccept array "optional"
+        ConditionEscalation array "optional"
+        ConditionReject array "optional"
+        ConditionInform array "optional"
         // result
         Submit string "optional"
         SentBack string "optional"
@@ -24,39 +25,53 @@ contract business_Manager {
         Reject string "optional"
         Inform string "optional"
     }
-    func strToChar(s string) int {
+    func boolChar(s string) int {
         if s {
-            return "1"
+            return 1
         }
-        return "0"
+        return 0
+    }
+    func safeGet(a array, i int) int {
+        if Len(a) > i{
+            return Int(a[i])
+        }
+        return 0
+    }
+    func safeGetBoolChar(a array, i int) int {
+        if Len(a) > i{
+            return boolChar(a[i])
+        }
+        return 0
+    }
+    func getCondArray(cond map) array {
+        Println("getPretty:", cond)
+        var res array
+        // Int() for fixed "interface conversion: interface {} is nil, not decimal.Decimal"
+        if Int(cond["EventId"]) > 0{
+            res[0] = Sprintf("%v", cond["EventId"])
+        }
+        if Int(cond["Submit"]) == 1{
+            res[Len(res)] = "Submit"
+        }
+        if Int(cond["SentBack"]) == 1{
+            res[Len(res)] = "SentBack"
+        }
+        if Int(cond["Accept"]) == 1{
+            res[Len(res)] = "Accept"
+        }
+        if Int(cond["Escalation"]) == 1{
+            res[Len(res)] = "Escalation"
+        }
+        if Int(cond["Reject"]) == 1{
+            res[Len(res)] = "Reject"
+        }
+        if Int(cond["Inform"]) == 1{
+            res[Len(res)] = "Inform"
+        }
+        return res
     }
     conditions {
         $Id = Int($Id)
-        if $Action == "create" || $Action == "update"{
-            $ObjectType = Int($ObjectType)
-            $RoleId = Int($RoleId)
-            $EventId = Int($EventId)
-            $NeedComment = strToChar($NeedComment)
-            var condition map
-            condition["Condition"] = Int($Condition)
-            condition["Submit"] = strToChar($ConditionSubmit)
-            condition["SentBack"] = strToChar($ConditionSentBack)
-            condition["Accept"] = strToChar($ConditionAccept)
-            condition["Escalation"] = strToChar($ConditionEscalation)
-            condition["Reject"] = strToChar($ConditionReject)
-            condition["Inform"] = strToChar($ConditionInform)
-            $Condition = JSONEncode(condition)
-            var result map
-            result["Submit"] = strToChar($Submit)
-            result["SentBack"] = strToChar($SentBack)
-            result["Accept"] = strToChar($Accept)
-            result["Escalation"] = strToChar($Escalation)
-            result["Reject"] = strToChar($Reject)
-            result["Inform"] = strToChar($Inform)
-            $Result = JSONEncode(result)
-            Println("Action",$Action,"Id",$Id,"EventId",$EventId,"ObjectType",$ObjectType,"Title",$Title,"RoleId",$RoleId,"TextBody",$TextBody,"NeedComment",$NeedComment,"Condition",$Condition,"result",$Result)
-        }
-
         $ApplicationId = Int(DBFind("applications").Where("name='Business'").One("id"))
         if $ApplicationId == 0 {
             warning "Application ID not found"
@@ -64,20 +79,73 @@ contract business_Manager {
 
     }
     action {
+        if $Action == "create" || $Action == "update"{
+            $ObjectType = Int($ObjectType)
+            $RoleId = Int($RoleId)
+            $EventId = Int($EventId)
+            $NeedComment = boolChar($NeedComment)
+            var condition map
+            var conditionPretty array
+            var i int
+            Println("$ConditionEventId",$ConditionEventId)
+            while i<Len($ConditionEventId){
+                var cond map
+                cond["EventId"] = safeGet($ConditionEventId, i)
+                cond["Submit"] = safeGetBoolChar($ConditionSubmit, i)
+                cond["SentBack"] = safeGetBoolChar($ConditionSentBack, i)
+                cond["Accept"] = safeGetBoolChar($ConditionAccept, i)
+                cond["Escalation"] = safeGetBoolChar($ConditionEscalation, i)
+                cond["Reject"] = safeGetBoolChar($ConditionReject, i)
+                cond["Inform"] = safeGetBoolChar($ConditionInform, i)
+                var conditionId int
+                if Len($ConditionId) > i{
+                    conditionId = Int($ConditionId[i])
+                    DBUpdate("business_conditions", Int($ConditionId[i]), "event_id,submit,sent_back,accept,escalation,reject,inform", cond["EventId"], cond["Submit"], cond["SentBack"], cond["Accept"], cond["Escalation"], cond["Reject"], cond["Inform"])
+                }else{
+                    conditionId = DBInsert("business_conditions", "event_id,submit,sent_back,accept,escalation,reject,inform", cond["EventId"], cond["Submit"], cond["SentBack"], cond["Accept"], cond["Escalation"], cond["Reject"], cond["Inform"])
+                }
+                condition[Str(i)] = conditionId
+                conditionPretty[i] = Join(getCondArray(cond), ", ")
+                i=i+1
+            }
+            $Condition = JSONEncode(condition)
+            $conditionPretty = Join(conditionPretty, " OR ")
+            Println("conditionPretty:",$conditionPretty)
+
+            var result map
+            result["Submit"] = boolChar($Submit)
+            result["SentBack"] = boolChar($SentBack)
+            result["Accept"] = boolChar($Accept)
+            result["Escalation"] = boolChar($Escalation)
+            result["Reject"] = boolChar($Reject)
+            result["Inform"] = boolChar($Inform)
+            $Result = JSONEncode(result)
+            $resultPretty = Join(getCondArray(result), ", ")
+            Println("resultPretty:",$resultPretty)
+            Println("Action",$Action,"Id",$Id,"EventId",$EventId,"ObjectType",$ObjectType,"Title",$Title,"RoleId",$RoleId,"TextBody",$TextBody,"NeedComment",$NeedComment,"Condition",$Condition,"result",$Result,"conditionPretty",$conditionPretty,"resultPretty",$resultPretty)
+        }
+
         if $Action == "create"{
-            DBInsert("business_models", "event_id,object_type,title,role_id,text_body,need_comment,condition,result", $EventId,$ObjectType,$Title,$RoleId,$TextBody,$NeedComment,$Condition,$Result)
+            DBInsert("business_models", "event_id,object_type,title,role_id,text_body,need_comment,condition,result,condition_pretty,result_pretty", $EventId,$ObjectType,$Title,$RoleId,$TextBody,$NeedComment,$Condition,$Result,$conditionPretty,$resultPretty)
         }
         if $Id == 0 {
             return
         }
         if $Action == "update" {
-            DBUpdate("business_models", $Id, "event_id,object_type,title,role_id,text_body,need_comment,condition,result", $EventId,$ObjectType,$Title,$RoleId,$TextBody,$NeedComment,$Condition,$Result)
+            DBUpdate("business_models", $Id, "event_id,object_type,title,role_id,text_body,need_comment,condition,result,condition_pretty,result_pretty", $EventId,$ObjectType,$Title,$RoleId,$TextBody,$NeedComment,$Condition,$Result,$conditionPretty,$resultPretty)
         }
         if $Action == "delete" {
             DBUpdate("business_models", $Id, "deleted", 1)
         }
         if $Action == "restore" {
             DBUpdate("business_models", $Id, "deleted", 0)
+        }
+        if $Action == "delete_condition" {
+            var condId int
+            condId = Int($ConditionId[0])
+            if condId > 0{
+                DBUpdate("business_conditions", condId, "deleted", "1")
+            }
         }
     }
 }

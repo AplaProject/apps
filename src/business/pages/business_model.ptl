@@ -2,33 +2,35 @@ DBFind(applications).Where("name='Business'").Vars(application)
 Div(container){
     AppParam(App: #application_id#, Name: object_types, Source: src_objects)
     DBFind(Name:roles, Source: src_roles).Where("deleted=0").Order(id).Columns("id,role_name").Custom(name){#role_name#}
+    If(#condition_count#>0){}.Else{
+        If(#Id#>0){
+            SetVar(condition_count,0).(min_count,0)
+        }.Else{
+            SetVar(condition_count,1).(min_count,1)
+        }
+    }
     If(#Id#>0){
         DBFind(Name:business_models, src_models).Where("id=#Id#").Vars(model)
-        SetVar(Action, update).(heading, $business_manager$: $model$ $edit$ ##Id#)
-        JsonToSource(src_results, #model_result#)
-        JsonToSource(src_condition, #model_condition#)
-        Data(model, "Name,Type,Src,Value"){
+        SetVar(Action, update).(heading,"$business_manager$: $model$ $edit$ ##Id#")
+        JsonToSource(src_results,#model_result#).(src_condition,#model_condition#)
+        Data(forms, "Name,Type,Src,Value"){
             EventId,number,,#model_event_id#
             ObjectType,select,src_objects,#model_object_type#
             Title,text,,#model_title#
             RoleId,select,src_roles,#model_role_id#
             TextBody,textarea,,#model_text_body#
             NeedComment,checkbox,,#model_need_comment#
-            Condition,condition,src_condition,#model_condition#
-            Result,result,src_results,
         }
     }.Else{
         AppParam(App: #application_id#, Name: results, Source: src_results)
-        SetVar(Id,0).(Action, create).(heading, "$business_manager$: $create$")
-        Data(model, "Name,Type,Src"){
+        SetVar(Id,0).(Action,create).(heading,"$business_manager$: $create$")
+        Data(forms, "Name,Type,Src"){
             EventId,number,
             ObjectType,select,src_objects
             Title,text,
             RoleId,select,src_roles
             TextBody,textarea,
             NeedComment,checkbox,
-            Condition,condition,src_results
-            Result,result,src_results
         }
         SetVar(Value,)
     }
@@ -37,61 +39,13 @@ Div(container){
             Form(panel panel-primary){
                 Div(panel-heading){#heading#}
                 Div(panel-body){
-                    ForList(model){
+                    ForList(forms){
                         Div(row form-group){
                             Div(col-sm-3 text-right pt-sm){
                                 Label(For:#Name#){LangRes(#Name#)}
                             }
                             Div(col-sm-9){
-                                If(#Type#==result){
-                                    Div(row){
-                                        ForList(#Src#){
-                                            Div(col-sm-4){
-                                                If(#Id#>0){
-                                                    If(#value#==1){
-                                                        SetVar(bool,true)
-                                                    }.Else{
-                                                        SetVar(bool,false)
-                                                    }
-                                                    Input(Name: #key#, Type:checkbox, Value: #bool#) #key#
-                                                }.Else{
-                                                    Input(Name: #name#, Type:checkbox) #name#
-                                                }
-                                            }.Style(div {display:inline-block;})
-                                        }
-                                    }
-                                }.ElseIf(#Type#==condition){
-                                    Div(row){
-                                        Div(col-sm-3 text-right pt-sm){
-                                            LangRes(EventId)
-                                        }
-                                        ForList(#Src#){
-                                            If(#key#==Condition){
-                                                Div(col-sm-9){
-                                                    Input(Name: #Name#, Value: #value#)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    Div(row){
-                                        ForList(#Src#){
-                                            If(#key#!=Condition){
-                                                Div(col-sm-4){
-                                                    If(#Id#>0){
-                                                        If(#value#==1){
-                                                            SetVar(bool,true)
-                                                        }.Else{
-                                                            SetVar(bool,false)
-                                                        }
-                                                        Input(Name: #key#, Type:checkbox, Value: #bool#) #key#
-                                                    }.Else{
-                                                        Input(Name: #Name##name#, Type:checkbox) #name#
-                                                    }
-                                                }.Style(div {display:inline-block;})
-                                            }
-                                        }
-                                    }
-                                }.ElseIf(#Type#==select){
+                                If(#Type#==select){
                                     Select(Name: #Name#, Source:#Src#, NameColumn: name, ValueColumn: id, Value:#Value#)
                                 }.ElseIf(#Type#==checkbox){
                                     If(#Value#==1){
@@ -102,6 +56,107 @@ Div(container){
                                     Input(Name: #Name#, Type:#Type#, Value: #bool#)
                                 }.Else{
                                     Input(Name: #Name#, Type:#Type#, Value: #Value#)
+                                }
+                            }
+                        }
+                    }
+                    Div(row form-group){
+                        Div(col-sm-3 text-right pt-sm){
+                            Label(For:Result){LangRes(Result)}
+                        }
+                        Div(col-sm-9){
+                            Div(row){
+                                ForList(src_results){
+                                    Div(col-sm-4){
+                                        If(#Id#>0){
+                                            If(#value#==1){
+                                                SetVar(bool,true)
+                                            }.Else{
+                                                SetVar(bool,false)
+                                            }
+                                            Input(Name: #key#, Type:checkbox, Value: #bool#) #key#
+                                        }.Else{
+                                            Input(Name: #name#, Type:checkbox) #name#
+                                        }
+                                    }.Style(div {display:inline-block;})
+                                }
+                            }
+                        }
+                    }
+                    Div(row form-group){
+                        Div(col-sm-3 text-right pt-sm){
+                            Label(For:Condition){LangRes(Condition)}
+                            Div(row){
+                                Div(col-sm-12 text-right){
+                                    SetVar(condition_plus,Calculate(#condition_count#+1)).(condition_minus,Calculate(#condition_count#-1))
+                                    If(#condition_count#>#min_count#){
+                                        Button(Page:business_model, PageParams:"Mode=#Mode#,condition_count=#condition_minus#,Id=#Id#", Class: btn btn-default fa fa-minus)
+                                    }
+                                    Button(Page:business_model, PageParams:"Mode=#Mode#,condition_count=#condition_plus#,Id=#Id#", Class: btn btn-default fa fa-plus)
+                                }
+                            }
+                        }
+                        Div(col-sm-9){
+                            If(#Id#>0){
+                                ForList(src_condition){
+                                    DBFind(business_conditions,condition_item).Where("id=#value# and deleted='0'").Vars(item)
+                                    If(#item_id#>0){
+                                        Data(items,"name,val"){
+                                            Submit,#item_submit#
+                                            SentBack,#item_sent_back#
+                                            Accept,#item_accept#
+                                            Escalation,#item_escalation#
+                                            Reject,#item_reject#
+                                            Inform,#item_inform#
+                                        }
+                                        Div(row form-group){
+                                            ForList(items){
+                                                Div(col-sm-4){
+                                                    If(#val#==1){
+                                                        SetVar(bool,true)
+                                                    }.Else{
+                                                        SetVar(bool,false)
+                                                    }
+                                                    Input(Name: Condition#name#, Type:checkbox, Value: #bool#) #name#
+                                                }.Style(div {display:inline-block;})
+                                            }
+                                        }
+                                        Div(row form-group){
+                                            Div(col-sm-3 text-right pt-sm){
+                                                LangRes(EventId)
+                                            }
+                                            Div(col-sm-6){
+                                                Input(Name: ConditionId, Value: #item_id#, Type:hidden)
+                                                Input(Name: ConditionEventId, Value: #item_event_id#, Type:number)
+                                            }
+                                            Div(col-sm-3 text-right){
+                                                Button(Class: icon-trash btn btn-danger, Page:business_model, PageParams:"Mode=#Mode#,condition_count=#condition_count#,Id=#Id#", Contract: business_Manager,Params: "Id=#Id#,ConditionId=#item_id#,Action=delete_condition")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Range(Source:condition_range,From:0,To:#condition_count#)
+                            ForList(condition_range){
+                                Div(row form-group){
+                                    ForList(src_results){
+                                        Div(col-sm-4){
+                                            If(#Id#>0){
+                                                Input(Name: Condition#key#, Type:checkbox) #key#
+                                            }.Else{
+                                                Input(Name: Condition#name#, Type:checkbox) #name#
+
+                                            }
+                                        }.Style(div {display:inline-block;})
+                                    }
+                                }
+                                Div(row){
+                                    Div(col-sm-3 text-right pt-sm){
+                                        LangRes(EventId)
+                                    }
+                                    Div(col-sm-9){
+                                        Input(Name: ConditionEventId, Type:number)
+                                    }
                                 }
                             }
                         }
