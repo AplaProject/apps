@@ -6,8 +6,12 @@ contract business_Process {
         ObjectType int
         ObjectId int
         Comment string "optional"
+        NotificId string "optional"
     }
+
     conditions {
+        Println($this_contract, Sprintf("ModelId:%v,EventId:%v,ResultId:%v,ObjectType:%v,ObjectId:%v,Comment:%v,NotificId:%v", $ModelId,$EventId,$ResultId,$ObjectType,$ObjectId,$Comment,$NotificId))
+        
         $ApplicationId = Int(DBFind("applications").Where("name='Business'").One("id"))
         if $ApplicationId == 0 {
             warning "Application ID not found"
@@ -19,6 +23,7 @@ contract business_Process {
             error "Business condition not found"
         }
         $condition = JSONDecode($conditionModel["condition"])
+        $NotificId = Int($NotificId)
     }
     action {
         DBInsert("business_events", "event_id,object_type,object_id,key_id,result_id,comment,num_submitted,created_at", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId, $Comment, $numSubmitted, "Now()")
@@ -34,7 +39,25 @@ contract business_Process {
             i=i+1
         }
         if isNextFound {
-            // TODO: отправить Notifications_Roles_Send с переходом на страницу business_process
+            if $NotificId > 0{
+                Println("Try closing notific id:", $NotificId)
+                Notifications_Roles_Close("notific_id", $NotificId)
+            }
+            var roleId closureType sender int
+            roleId = model["role_id"]
+            closureType = 2 // multiple
+            sender = 2 // from admin?
+            var icon header body page string
+            icon = "icon-envelope"
+            header = "Business process: Next step"
+            body = model["text_body"]
+            page = "business_process"
+            var params map
+            params["ModelId"] = model["id"]
+            params["ObjectId"] = $ObjectId
+            Println(Sprintf("Try sending notific: rid:%v, closure_type:%v, sender:%v, icon_name:%v, text_header:%v, text_body:%v, page_name:%v, params_map:%v", roleId, closureType, sender, icon, header, body, page, params))
+            Notifications_Roles_Send_map("rid,closure_type,sender,icon_name,text_header,text_body,page_name,params_map", roleId, closureType, sender, icon, header, body, page, params)
+
         }else{
             warning "Next step not found"
         }
