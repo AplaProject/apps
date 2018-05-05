@@ -9,6 +9,7 @@ Div(container){
             SetVar(condition_count,1).(min_count,1)
         }
     }
+    AppParam(App: #application_id#, Name: results, Source: app_results)
     If(#Id#>0){
         DBFind(Name:business_models, src_models).Where("id=#Id#").Vars(model)
         SetVar(Action, update).(heading,"$business_manager$: $model$ $edit$ ##Id#")
@@ -22,7 +23,6 @@ Div(container){
             NeedComment,checkbox,,#model_need_comment#
         }
     }.Else{
-        AppParam(App: #application_id#, Name: results, Source: src_results)
         SetVar(Id,0).(Action,create).(heading,"$business_manager$: $create$")
         Data(forms, "Name,Type,Src"){
             EventId,number,
@@ -85,7 +85,7 @@ Div(container){
                     }
                     Div(row form-group){
                         Div(col-sm-3 text-right pt-sm){
-                            Label(For:Condition){LangRes(Condition)}
+                            Label(For:Condition){LangRes(Conditions)}
                             Div(row){
                                 Div(col-sm-12 text-right){
                                     SetVar(condition_plus,Calculate(#condition_count#+1)).(condition_minus,Calculate(#condition_count#-1))
@@ -99,42 +99,25 @@ Div(container){
                         Div(col-sm-9){
                             If(#Id#>0){
                                 ForList(src_condition){
-                                    DBFind(business_conditions,condition_item).Where("id=#value# and deleted='0'").Vars(item)
-                                    If(#item_id#>0){
-                                        Data(items,"name,val"){
-                                            Submit,#item_submit#
-                                            SentBack,#item_sent_back#
-                                            Accept,#item_accept#
-                                            Escalation,#item_escalation#
-                                            Reject,#item_reject#
-                                            Inform,#item_inform#
-                                        }
-                                        Div(list-group-item){
-                                            Div(row form-group){
-                                                Div(col-sm-10){
-                                                    ForList(items){
-                                                        Div(col-sm-4){
-                                                            If(#val#==1){
-                                                                SetVar(bool,true)
-                                                            }.Else{
-                                                                SetVar(bool,false)
-                                                            }
-                                                            Input(Name: Condition#name#, Type:checkbox, Value: #bool#) #name#
-                                                        }.Style(div {display:inline-block;})
-                                                    }
-                                                }
-                                                Div(col-sm-2 text-right){
-                                                    Button(Class: icon-trash btn btn-danger, Page:business_model, PageParams:"Mode=#Mode#,condition_count=#condition_count#,Id=#Id#", Contract: business_Manager,Params: "Id=#Id#,ConditionId=#item_id#,Action=delete_condition")
-                                                }
+                                    Div(list-group-item){
+                                        Div(row form-group){
+                                            Div(col-sm-3 text-right pt-sm){
+                                                LangRes(EventId)
                                             }
-                                            Div(row form-group){
-                                                Div(col-sm-3 text-right pt-sm){
-                                                    LangRes(EventId)
-                                                }
-                                                Div(col-sm-9){
-                                                    Input(Name: ConditionId, Value: #item_id#, Type:hidden)
-                                                    Input(Name: ConditionEventId, Value: #item_event_id#, Type:number)
-                                                }
+                                            Div(col-sm-7){
+                                                Input(Name: ConditionEventId, Value: #key#, Type:number)
+                                            }
+                                            Div(col-sm-2){
+                                                Input(Name: ConditionDelete, Type:checkbox)
+                                                Div(icon-trash text-danger)
+                                            }.Style(div {display:inline-block;})
+                                        }
+                                        Div(row){
+                                            Div(col-sm-3 text-right pt-sm){
+                                                LangRes(Condition)
+                                            }
+                                            Div(col-sm-7){
+                                                Select(Name:ConditionResult, NameColumn:name, ValueColumn:id, Source: app_results, Value:#value#)
                                             }
                                         }
                                     }
@@ -144,23 +127,19 @@ Div(container){
                             ForList(condition_range){
                                 Div(list-group-item){
                                     Div(row form-group){
-                                        ForList(src_results){
-                                            Div(col-sm-4){
-                                                If(#Id#>0){
-                                                    Input(Name: Condition#key#, Type:checkbox) #key#
-                                                }.Else{
-                                                    Input(Name: Condition#name#, Type:checkbox) #name#
-
-                                                }
-                                            }.Style(div {display:inline-block;})
+                                        Div(col-sm-3 text-right pt-sm){
+                                            LangRes(EventId)
+                                        }
+                                        Div(col-sm-7){
+                                            Input(Name: ConditionEventId, Type:number)
                                         }
                                     }
                                     Div(row){
                                         Div(col-sm-3 text-right pt-sm){
-                                            LangRes(EventId)
+                                            LangRes(Condition)
                                         }
-                                        Div(col-sm-9){
-                                            Input(Name: ConditionEventId, Type:number)
+                                        Div(col-sm-7){
+                                            Select(Name:ConditionResult, NameColumn:name, ValueColumn:id, Source: app_results)
                                         }
                                     }
                                 }
