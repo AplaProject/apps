@@ -1,104 +1,63 @@
 DBFind(applications).Where("name='Business'").Vars(application)
 If(#notific_id#>0){
-    DBFind(notifications,src_note).WhereId(#notific_id#).Vars(note)
+    DBFind(notifications,src_note).WhereId(#notific_id#).Columns("page_params->object_id,page_params->model_id").Vars(note)
     JsonToSource(src_params, #note_page_params#)
-    SetVar(ModelId,0).(ObjectId,0)
-    ForList(src_params){
-        If(#key#==ModelId){
-            SetVar(ModelId,#value#)
-        }
-        If(#key#==ObjectId){
-            SetVar(ObjectId,#value#)
-        }
-    }
+    SetVar(model_id,#note_page_params_model_id#).(object_id,#note_page_params_object_id#)
 }
 Div(container){
-    If(And(#ModelId#>0, #ObjectId#>0)){
-        DBFind(Name:business_models, src_model).Where("id=#ModelId#").Vars(model)
-        SetVar(heading,"$business_manager$: $model$ $info$ ##Id#")
-        JsonToSource(src_results,#model_result#).(src_condition,#model_condition#)
+    If(And(#model_id#>0, #object_id#>0)){
+        DBFind(Name:business_models, src_model).Where("id=#model_id#").Vars(model)
+        JsonToSource(results,#model_result#)
         DBFind(roles).Where("deleted=0 and id=#model_role_id#").Columns("id,role_name").Vars(role)
-        Table(src_model)
-        Data(forms, "Name,Type,Value,Src"){
-            EventId,text,#model_event_id#,
-            ObjectType,select,#model_object_type#,src_objects
-            ObjectId,text,#ObjectId#,
-            RoleId,text,#role_role_name#,
-            Title,text,#model_title#,
-            TextBody,text,#model_text_body#,
-            NeedComment,checkbox,#model_need_comment#,
-            Comment,textarea,#model_need_comment#,
-            Result,result,,src_results
-            Conditions,condition,,src_condition
-        }
+        SetVar(heading,#model_title#)
+        AppParam(App: #application_id#, Name: results, Source: app_results)
+        SetVar(object,"AppParam(App: #application_id#, Name: object_types, Index: #model_object_type#)")
+        SetTitle(#role_role_name# : #object# : #object_id#)
         Form(panel panel-primary){
             Div(panel-heading){#heading#}
             Div(panel-body){
-                ForList(forms){
+                Div(row form-group){
+                    Div(col-sm-10 col-sm-offset-1){
+                        #model_text_body#
+                    }
+                }
+                If(#model_need_comment#==1){
                     Div(row form-group){
-                        Div(col-sm-4 text-right){
-                            Strong(LangRes(#Name#))
-                        }
-                        Div(col-sm-8){
-                            If(#Type#==condition){
-                                ForList(#Src#){
-                                    Div(col-sm-3){
-                                        #key#:AppParam(App: #application_id#, Name: results, Index: #value#)
-                                    }
-                                }
-                            }.ElseIf(#Type#==result){
-                                ForList(#Src#){
-                                    If(#value#==1){
-                                        Div(col-sm-3){#key#}
-                                    }
-                                }
-                            }.ElseIf(#Type#==select){
-                                ForList(#Src#){
-                                    If(#id#==#Value#){
-                                        #name#
-                                    }
-                                }
-                            }.ElseIf(#Type#==checkbox){
-                                If(#Value#==1){
-                                    SetVar(bool,true)
-                                }.Else{
-                                    SetVar(bool,false)
-                                }
-                                Input(Name: #Name#, Type:#Type#, Value: #bool#, Disabled: 1)
-                            }.ElseIf(#Type#==number){
-                                Input(Name:#Name#, Type:#Type#)
-                            }.ElseIf(#Type#==textarea){
-                                If(#Value#==1){
-                                    Input(Name:#Name#, Type:#Type#)
-                                }.Else{
-                                    Input(Name:#Name#, Type:hidden)
-                                }
-                            }.Else{
-                                #Value#
-                            }
+                        Div(col-sm-10 col-sm-offset-1){
+                            Label(For:Comment){LangRes(Comment)}
+                            Input(Name:Comment, Type:textarea)
                         }
                     }
                 }
             }
             Div(panel-footer text-right){
-                Input(Name:ModelId, Type:hidden, Value:#model_id#)
-                Input(Name:EventId, Type:hidden, Value:#model_event_id#)
-                Input(Name:ResultId, Type:hidden, Value:1)
-                Input(Name:ObjectType, Type:hidden, Value:#model_object_type#)
-                Input(Name:NotificId, Type:hidden, Value:#notific_id#)
                 If(#notific_id#>0){
-                    Button(Body:LangRes(Submit), Class: btn btn-primary, Page: business_process, Contract: business_Process)
+                    Input(Name:ModelId, Type:hidden, Value:#model_id#)
+                    Input(Name:ObjectId, Type:hidden, Value:#object_id#)
+                    Input(Name:EventId, Type:hidden, Value:#model_event_id#)
+                    Input(Name:ObjectType, Type:hidden, Value:#model_object_type#)
+                    Input(Name:NotificId, Type:hidden, Value:#notific_id#)
+                    Div(){
+                        ForList(app_results){
+                            ForList(results){
+                                If(And(#name#==#key#,#value#==1)){
+                                    SetVar(class,AppParam(App: #application_id#, Name: class_results, Index: #id#))
+                                    Button(Body:LangRes(#name#), Class: btn #class#, Page: business_process, Contract: business_Process, Params:"ResultId=#id#")
+                                }
+                            }
+                        }
+                    }.Style(div {display:inline-block;})
                 }.Else{
                     Div(text-warning){
                         Notification not found. Action impossible
                     }
-                    Button(Body:LangRes(Submit), Class: disabled btn btn-primary)
                 }
             }
         }
     }.Else{
-        Div(md-12 alert alert-danger text-center){
-            Span(Body: LangRes(attention))
+        DBFind(business_events,src_events).Order("id desc")
+        Div(table-responsive){
+            Table(src_events)
         }
     }
 }
