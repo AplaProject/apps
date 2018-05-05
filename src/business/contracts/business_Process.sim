@@ -11,16 +11,19 @@ contract business_Process {
 
     conditions {
         Println($this_contract, Sprintf("ModelId:%v,EventId:%v,ResultId:%v,ObjectType:%v,ObjectId:%v,Comment:%v,NotificId:%v", $ModelId,$EventId,$ResultId,$ObjectType,$ObjectId,$Comment,$NotificId))
-        
+
         $ApplicationId = Int(DBFind("applications").Where("name='Business'").One("id"))
         if $ApplicationId == 0 {
             warning "Application ID not found"
         }
-        $numSubmitted = Int(DBFind("business_events").Where("event_id=? and object_type=? and object_id=? and key_id and result_id=?", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId).Order("num_submitted desc").One("num_submitted")) + 1
-        $models = DBFind("business_models").Where("object_type=?", $ObjectType)
-        $conditionModel = DBFind("business_models").Where("id=?", $ModelId).One("condition")
+        $numSubmitted = Int(DBFind("business_events").Where("event_id=? and object_type=? and object_id=? and key_id=? and result_id=?", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId).Order("num_submitted desc").One("num_submitted")) + 1
+        $models = DBFind("business_models").Order("event_id").Where("deleted='0' and object_type=?", $ObjectType)
+        $conditionModel = DBFind("business_models").Where("deleted='0' and id=?", $ModelId).Row()
         if !$conditionModel{
             error "Business condition not found"
+        }
+        if $conditionModel["need_comment"] == 1 && Size($Comment) < 1 {
+            warning "Need comment"
         }
         $condition = JSONDecode($conditionModel["condition"])
         $NotificId = Int($NotificId)
@@ -34,17 +37,17 @@ contract business_Process {
             model = $models[i]
             var cond map
             cond = JSONDecode(model["condition"])
-            if cond[Str($EventId)] == $Result {
+            if cond[Str($EventId)] == $ResultId {
                 isNextFound = true
                 break
             }
             i=i+1
         }
+        if $NotificId > 0{
+            Println("Try closing notific id:", $NotificId)
+            Notifications_Roles_Close("notific_id", $NotificId)
+        }
         if isNextFound {
-            if $NotificId > 0{
-                Println("Try closing notific id:", $NotificId)
-                Notifications_Roles_Close("notific_id", $NotificId)
-            }
             var roleId closureType sender int
             roleId = model["role_id"]
             closureType = 2 // multiple
@@ -52,7 +55,7 @@ contract business_Process {
             var icon header body page string
             icon = "icon-envelope"
             header = "Business process: Next step"
-            body = model["text_body"]
+            body = model["title"]
             page = "business_process"
             var params map
             params["ModelId"] = model["id"]
@@ -61,7 +64,7 @@ contract business_Process {
             Notifications_Roles_Send_map("rid,closure_type,sender,icon_name,text_header,text_body,page_name,params_map", roleId, closureType, sender, icon, header, body, page, params)
 
         }else{
-            warning "Next step not found"
+            Println("Next step not found")
         }
     }
 }
