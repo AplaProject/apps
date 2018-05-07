@@ -6,6 +6,7 @@ Div(container){
             DBFind(Name:business_models, src_models).Where("id=#Id#").Vars(model)
             SetVar(heading,"$business_manager$: $model$ $info$ ##Id#")
             JsonToSource(src_results,#model_result#).(src_condition,#model_condition#)
+            AppParam(App: #application_id#, Name: results, Source: app_results)
             DBFind(roles).Where("deleted=0 and id=#model_role_id#").Columns("id,role_name").Vars(role)
             Data(forms, "Name,Type,Value,Src"){
                 EventId,text,#model_event_id#,
@@ -71,14 +72,22 @@ Div(container){
                 Div(panel-footer text-right){
                     Input(Name:ModelId, Type:hidden, Value:#model_id#)
                     Input(Name:EventId, Type:hidden, Value:#model_event_id#)
-                    Input(Name:ResultId, Type:hidden, Value:1)
                     Input(Name:ObjectType, Type:hidden, Value:#model_object_type#)
                     Input(Name:NotificId, Type:hidden)
                     Div(pull-left){
                         Button(Class: icon-arrow-left btn btn-default, Page: business_manager)
                     }
                     Input(Name:Id, Value:#Id#, Type: hidden)
-                    Button(Body:LangRes(Submit), Class: btn btn-primary, Page: business_process, Contract: business_Process)
+                    Div(){
+                        ForList(app_results){
+                            ForList(src_results){
+                                If(And(#name#==#key#,#value#==1)){
+                                    SetVar(class,AppParam(App: #application_id#, Name: class_results, Index: #id#))
+                                    Button(Body:LangRes(#name#), Class: btn #class#, Page: business_process, Contract: business_Process, Params:"ResultId=#id#")
+                                }
+                            }
+                        }
+                    }.Style(div {display:inline-block;})
                 }
             }
         }.Else{
