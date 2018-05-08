@@ -1,46 +1,117 @@
 DBFind(applications).Where("name='Ajman property'").Vars(application)
+
 AppParam(App: #application_id#, Name:gender, Source: src_gender)
 AppParam(App: #application_id#, Name:communication, Source: src_comm)
 AppParam(App: #application_id#, Name:language, Source: src_lang)
 SetVar(nationality, AppParam(App: #application_id#, Name:nationality))
 JsonToSource(Source:src_nationality, #nationality#)
-Data(basic, "name,type,req,src"){
-    BasicData,title,,
-    Username,input,*,
-    Password,password,*,
-    FirstNameAr,input,*,
-    LastNameAr,input,*,
-    FirstNameEn,input,*,
-    LastNameEn,input,*,
-    Nationality,json_select,*,src_nationality
-    EmirateNumber,input,*,
-    EmirateIdExpieryDate,datetime,*,
-    EmirateIdImage,file,*,
-    PassportId,input,*,
-    PassportExpieryDate,datetime,*,
-    PassportIdImage,file,*,
-    DateOfBirth,datetime,*,
-    ProfileImage,file,*,
-    Gender,radio,*,src_gender
-    CommunicateData,title,,
-    Email,input,*,
-    Mobile,input,*,
-    Phone,input,,
-    Fax,input,,
-    PostOffice,input,,
-    Address,input,,
-    Communication,radio,*,src_comm
-    Language,radio,*,src_lang
-}
-
-SetTitle($ajman_user_registration$)
 Div(container){
+    If(#notific_id#>0){
+        DBFind(notifications,src_note).WhereId(#notific_id#).Columns("page_params->member_id").Vars(note)
+        SetVar(member_id,#note_page_params_member_id#).(manager_role_id,AppParam(App:#application_id#, Name:manager_role_id))
+
+        DBFind(members).Where("id=#member_id#").Columns("member_info->status").Vars(m)
+        If(And(Or(#m_member_info_status#==1,#m_member_info_status#==2),#member_id#==#key_id#)){
+            SetTitle($registration_result$)
+            SetVar(form_info,$ajman_manager_response$)
+            If(#m_member_info_status#==1){
+                SetVar(form_info,$ajman_manager_rejected_request$)
+            }.ElseIf(#m_member_info_status#==2){
+                SetVar(form_info,$ajman_manager_approved_request$)
+            }.Else{
+                SetVar(form_info,"the decision is still pending")
+            }
+            Data(actions, "name,page,contr,params,class"){
+                $ok$,default_page,Notifications_Single_Close,"notific_id=#notific_id#",btn-primary
+            }
+
+        }.ElseIf(And(#m_member_info_status#==0,"#role_id#"=="#manager_role_id#")){
+            SetTitle($manager_check$)
+            DBFind(members).Where("id=#member_id#").Columns("member_info->username,member_info->password,member_info->first_name_ar,member_info->last_name_ar,member_info->first_name_en,member_info->last_name_en,member_info->nationality,member_info->emirate_number,member_info->emirate_id_expiery_date,member_info->emirate_id_image,member_info->passport_id,member_info->passport_expiery_date,member_info->passport_id_image,member_info->date_of_birth,member_info->profile_image,member_info->gender,member_info->email,member_info->mobile,member_info->phone,member_info->fax,member_info->post_office,member_info->address,member_info->communication,member_info->language,member_info->status").Vars(m)
+            SetVar(form_info,"new user information:").(disabled,true).(nat_value,)
+            ForList(src_nationality){
+                If(#m_member_info_nationality#==#value#){
+                    SetVar(nat_value,#key#)
+                }
+            }
+            Data(basic, "name,type,value"){
+                BasicData,title,
+                Username,input,#m_member_info_username#
+                Password,password,#m_member_info_password#
+                FirstNameAr,input,#m_member_info_first_name_ar#
+                LastNameAr,input,#m_member_info_last_name_ar#
+                FirstNameEn,input,#m_member_info_first_name_en#
+                LastNameEn,input,#m_member_info_last_name_en#
+                Nationality,text,#nat_value#
+                EmirateNumber,input,#m_member_info_emirate_number#
+                EmirateIdExpieryDate,datetime,#m_member_info_emirate_id_expiery_date#
+                EmirateIdImage,file,#m_member_info_emirate_id_image#
+                PassportId,input,#m_member_info_passport_id#
+                PassportExpieryDate,datetime,#m_member_info_passport_expiery_date#
+                PassportIdImage,file,#m_member_info_passport_id_image#
+                DateOfBirth,datetime,#m_member_info_date_of_birth#
+                ProfileImage,file,#m_member_info_profile_image#
+                Gender,text,"AppParam(App: #application_id#, Name:gender, Index:#m_member_info_gender#)"
+                CommunicateData,title,
+                Email,input,#m_member_info_email#
+                Mobile,input,#m_member_info_mobile#
+                Phone,input,#m_member_info_phone#
+                Fax,input,#m_member_info_fax#
+                PostOffice,input,#m_member_info_post_office#
+                Address,input,#m_member_info_address#
+                Communication,text,"AppParam(App: #application_id#, Name:communication, Index:#m_member_info_communication#)"
+                Language,text,"AppParam(App: #application_id#, Name:communication, Index:#m_member_info_language#)"
+            }
+            Data(actions, "name,page,contr,params,class"){
+                $approve$,default_page,ajman_ManagerActionURP,"Action=approve,MemberId=#member_id#,NotificId=#notific_id#",btn-primary
+                $reject$,default_page,ajman_ManagerActionURP,"Action=reject,MemberId=#member_id#,NotificId=#notific_id#",btn-danger
+            }
+
+        }.Else{
+            SetVar(form_info,"you can not read this")
+        }
+
+    }.Else{
+        SetTitle($ajman_user_registration$)
+        SetVar(form_info,LangRes(ajman_registration_info)).(now,Now("YYYY-MM-DD")).(disabled,)
+        Data(basic, "name,type,req,src,value"){
+            BasicData,title,,,
+            Username,input,*,,Username
+            Password,password,*,,"Password"
+            FirstNameAr,input,*,,"FirstNameAr"
+            LastNameAr,input,*,,"LastNameAr"
+            FirstNameEn,input,*,,"FirstNameEn"
+            LastNameEn,input,*,,"LastNameEn"
+            Nationality,json_select,*,src_nationality,0
+            EmirateNumber,input,*,,"EmirateNumber"
+            EmirateIdExpieryDate,datetime,*,,#now#
+            EmirateIdImage,file,*,,
+            PassportId,input,*,,"PassportId"
+            PassportExpieryDate,datetime,*,,#now#
+            PassportIdImage,file,*,,
+            DateOfBirth,datetime,*,,#now#
+            ProfileImage,file,*,,
+            Gender,radio,*,src_gender,0
+            CommunicateData,title,,,
+            Email,input,*,,"email@email.email"
+            Mobile,input,*,,"Mobile"
+            Phone,input,,,"Phone"
+            Fax,input,,,"Fax"
+            PostOffice,input,,,"PostOffice"
+            Address,input,,,"Address"
+            Communication,radio,*,src_comm,0
+            Language,radio,*,src_lang,0
+        }
+        Data(actions, "name,page,contr,params,class"){
+            $send$,default_page,ajman_UserRegistration,,btn-primary
+        }
+    }
     Form(panel panel-primary){
         Div(panel-heading){$ajman_register_new_user$}
         Div(panel-body){
             Div(row){
                 Div(col-md-10 col-md-offset-1){
-                    P(LangRes( ajman_registration_info))
+                    P(#form_info#)
                 }
             }
             Div(row){
@@ -51,30 +122,44 @@ Div(container){
                         }
                     }.Else{
                         Div(col-md-6 form-group){
-                            Label(For: #name#){LangRes(#name#)}
+                            If(#value#!=""){}.Else{SetVar(#value#,)}
+                            If(#name#!=""){
+                                Label(For: #name#){LangRes(#name#)}
+                            }
                             If(#req#==*){
                                 Span(*,text-warning)
                             }
                             If(#type#==input){
-                                Input(Name:#name#, Value:#name#)
+                                Input(Name:#name#, Value:#value#, Disabled: #disabled#)
                             }
                             If(#type#==password){
-                                Input(Name:#name#, Type:password, Value:#name#)
+                                Input(Name:#name#, Type:password, Value:#value#, Disabled: #disabled#)
                             }
                             If(#type#==datetime){
-                                Input(Name:#name#, Type:date, Value: Now("YYYY-MM-DD"))
+                                Input(Name:#name#, Type:date, Value: #value#, Disabled: #disabled#)
                             }
                             If(#type#==file){
-                                Input(Name:#name#, Type:file)
+                                If(#disabled#==true){
+                                    DBFind(binaries,src_bin).WhereId(#value#).Columns(data)
+                                    Table(src_bin, "=data")
+                                    Div(col-sm-12){
+                                        Image(Src: Binary().ById(#value#)).Style(max-width:100%;)
+                                    }
+                                }.Else{
+                                    Input(Name:#name#, Type:file)
+                                }
                             }
                             If(#type#==radio){
-                                RadioGroup(Name:#name#, Source: #src#, NameColumn:name, ValueColumn: id).Style(display:inline-block;margin-right:20px;)
+                                RadioGroup(Name:#name#, Source: #src#, NameColumn:name, ValueColumn: id, Value: #value#, Disabled: #disabled#).Style(display:inline-block;margin-right:20px;)
                             }
                             If(#type#==select){
-                                Select(Name:#name#, Source: #src#, NameColumn:name, ValueColumn: id)
+                                Select(Name:#name#, Source: #src#, NameColumn:name, ValueColumn: id, Value: #value#, Disabled: #disabled#)
                             }
                             If(#type#==json_select){
-                                Select(Name:#name#, Source: #src#, NameColumn:value, ValueColumn: key)
+                                Select(Name:#name#, Source: #src#, NameColumn:value, ValueColumn: key, Value: #value#, Disabled: #disabled#)
+                            }
+                            If(#type#==text){
+                                Span(Body:": #value#")
                             }
                         }
                     }
@@ -82,7 +167,9 @@ Div(container){
             }
         }
         Div(panel-footer text-right){
-            Button(Body: $send$, Class:btn btn-primary, Contract:ajman_UserRegistration)
+            ForList(actions){
+                Button(Body: #name#, Class:btn #class#, Contract:#contr#, Page: #page#, Params:"#params#")
+            }
         }
     }
 }

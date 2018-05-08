@@ -40,42 +40,57 @@ contract ajman_UserRegistration {
         if $ApplicationId == 0 {
             warning "Application ID not found"
         }
-
+        $managerRoleId = AppParam($ApplicationId, "manager_role_id")
     }
     action {
-        var imageUploadGood bool
         var emirateIdImage, passportIdImage, profileImage int
         emirateIdImage = UploadBinary("Name,Data,ApplicationId,DataMimeType", "EmirateIdImage", $EmirateIdImage, $ApplicationId, $EmirateIdImageMimeType)
         passportIdImage = UploadBinary("Name,Data,ApplicationId,DataMimeType", "PassportIdImage", $PassportIdImage, $ApplicationId, $PassportIdImageMimeType)
         profileImage = UploadBinary("Name,Data,ApplicationId,DataMimeType", "ProfileImage", $ProfileImage, $ApplicationId, $ProfileImageMimeType)
 
         var inform map
-        inform = JSONDecode($member["member_info"])
-        inform["Username"] = $Username
-        inform["Password"] = $Password
-        inform["FirstNameAr"] = $FirstNameAr
-        inform["LastNameAr"] = $LastNameAr
-        inform["FirstNameEn"] = $FirstNameEn
-        inform["LastNameEn"] = $LastNameEn
-        inform["Nationality"] = $Nationality
-        inform["EmirateNumber"] = $EmirateNumber
-        inform["EmirateIdExpieryDate"] = $EmirateIdExpieryDate
-        inform["EmirateIdImage"] = emirateIdImage
-        inform["PassportId"] = $PassportId
-        inform["PassportExpieryDate"] = $PassportExpieryDate
-        inform["PassportIdImage"] = passportIdImage
-        inform["DateOfBirth"] = $DateOfBirth
-        inform["ProfileImage"] = profileImage
-        inform["Gender"] = $Gender
-        inform["Email"] = $Email
-        inform["Mobile"] = $Mobile
-        inform["Phone"] = $Phone
-        inform["Fax"] = $Fax
-        inform["PostOffice"] = $PostOffice
-        inform["Address"] = $Address
-        inform["Communication"] = $Communication
-        inform["Language"] = $Language
-        inform["Status"] = 0
+        if $member["member_info"] != "" {
+            inform = JSONDecode($member["member_info"])
+        }
+        inform["username"] = $Username
+        inform["password"] = Sha256($Password)
+        inform["first_name_ar"] = $FirstNameAr
+        inform["last_name_ar"] = $LastNameAr
+        inform["first_name_en"] = $FirstNameEn
+        inform["last_name_en"] = $LastNameEn
+        inform["nationality"] = $Nationality
+        inform["emirate_number"] = $EmirateNumber
+        inform["emirate_id_expiery_date"] = $EmirateIdExpieryDate
+        inform["emirate_id_image"] = emirateIdImage
+        inform["passport_id"] = $PassportId
+        inform["passport_expiery_date"] = $PassportExpieryDate
+        inform["passport_id_image"] = passportIdImage
+        inform["date_of_birth"] = $DateOfBirth
+        inform["profile_image"] = profileImage
+        inform["gender"] = $Gender
+        inform["email"] = $Email
+        inform["mobile"] = $Mobile
+        inform["phone"] = $Phone
+        inform["fax"] = $Fax
+        inform["post_office"] = $PostOffice
+        inform["address"] = $Address
+        inform["communication"] = $Communication
+        inform["language"] = $Language
+        inform["status"] = 0 // 0:registrated, 1:rejected, 2:approved
         DBUpdate("members", $key_id, "member_info", inform)
+
+        // managers notification
+        var roleId closureType sender int
+        roleId = $managerRoleId
+        closureType = 2 // multiple
+        sender = 2 // from admin?
+        var icon header body page string
+        icon = "icon-envelope"
+        header = "Ajman URP: New user"
+        body = $Username
+        page = "ajman_user_registration"
+        var params map
+        params["member_id"] = $key_id
+        Notifications_Roles_Send_map("rid,closure_type,sender,icon_name,text_header,text_body,page_name,params_map", roleId, closureType, sender, icon, header, body, page, params)
     }
 }
