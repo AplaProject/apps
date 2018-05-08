@@ -3,7 +3,7 @@ DBFind(applications).Where("name='Ajman property'").Vars(application)
 AppParam(App: #application_id#, Name:gender, Source: src_gender)
 AppParam(App: #application_id#, Name:communication, Source: src_comm)
 AppParam(App: #application_id#, Name:language, Source: src_lang)
-SetVar(nationality, AppParam(App: #application_id#, Name:nationality))
+SetVar(heading,$ajman_user_registration$).(nationality, AppParam(App: #application_id#, Name:nationality))
 JsonToSource(Source:src_nationality, #nationality#)
 Div(container){
     If(#notific_id#>0){
@@ -12,8 +12,7 @@ Div(container){
 
         DBFind(members).Where("id=#member_id#").Columns("member_info->status").Vars(m)
         If(And(Or(#m_member_info_status#==1,#m_member_info_status#==2),#member_id#==#key_id#)){
-            SetTitle($registration_result$)
-            SetVar(form_info,$ajman_manager_response$)
+            SetVar(heading,#heading# : $registration_result$).(form_info,$ajman_manager_response$)
             If(#m_member_info_status#==1){
                 SetVar(form_info,$ajman_manager_rejected_request$)
             }.ElseIf(#m_member_info_status#==2){
@@ -22,13 +21,12 @@ Div(container){
                 SetVar(form_info,"the decision is still pending")
             }
             Data(actions, "name,page,contr,params,class"){
-                $ok$,default_page,Notifications_Single_Close,"notific_id=#notific_id#",btn-primary
+                $ok$,default_page,Notifications_Single_Close,"notific_id=#notific_id#",ajman-color
             }
 
         }.ElseIf(And(#m_member_info_status#==0,"#role_id#"=="#manager_role_id#")){
-            SetTitle($manager_check$)
             DBFind(members).Where("id=#member_id#").Columns("member_info->username,member_info->password,member_info->first_name_ar,member_info->last_name_ar,member_info->first_name_en,member_info->last_name_en,member_info->nationality,member_info->emirate_number,member_info->emirate_id_expiery_date,member_info->emirate_id_image,member_info->passport_id,member_info->passport_expiery_date,member_info->passport_id_image,member_info->date_of_birth,member_info->profile_image,member_info->gender,member_info->email,member_info->mobile,member_info->phone,member_info->fax,member_info->post_office,member_info->address,member_info->communication,member_info->language,member_info->status").Vars(m)
-            SetVar(form_info,"new user information:").(disabled,true).(nat_value,)
+            SetVar(heading,#heading# : $manager_check$).(form_info,"new user information:").(disabled,true).(nat_value,)
             ForList(src_nationality){
                 If(#m_member_info_nationality#==#value#){
                     SetVar(nat_value,#key#)
@@ -37,7 +35,6 @@ Div(container){
             Data(basic, "name,type,value"){
                 BasicData,title,
                 Username,input,#m_member_info_username#
-                Password,password,#m_member_info_password#
                 FirstNameAr,input,#m_member_info_first_name_ar#
                 LastNameAr,input,#m_member_info_last_name_ar#
                 FirstNameEn,input,#m_member_info_first_name_en#
@@ -63,7 +60,7 @@ Div(container){
                 Language,text,"AppParam(App: #application_id#, Name:communication, Index:#m_member_info_language#)"
             }
             Data(actions, "name,page,contr,params,class"){
-                $approve$,default_page,ajman_ManagerActionURP,"Action=approve,MemberId=#member_id#,NotificId=#notific_id#",btn-primary
+                $approve$,default_page,ajman_ManagerActionURP,"Action=approve,MemberId=#member_id#,NotificId=#notific_id#",ajman-color
                 $reject$,default_page,ajman_ManagerActionURP,"Action=reject,MemberId=#member_id#,NotificId=#notific_id#",btn-danger
             }
 
@@ -72,16 +69,14 @@ Div(container){
         }
 
     }.Else{
-        SetTitle($ajman_user_registration$)
-        SetVar(form_info,LangRes(ajman_registration_info)).(now,Now("YYYY-MM-DD")).(disabled,)
+        SetVar(form_info,LangRes(ajman_registration_info)).(now,Now("YYYY-MM-DD")).(disabled,).(heading,#heading# : $ajman_register_new_user$)
         Data(basic, "name,type,req,src,value"){
             BasicData,title,,,
             Username,input,*,,Username
-            Password,password,*,,"Password"
-            FirstNameAr,input,*,,"FirstNameAr"
-            LastNameAr,input,*,,"LastNameAr"
-            FirstNameEn,input,*,,"FirstNameEn"
-            LastNameEn,input,*,,"LastNameEn"
+            FirstNameAr,input,*,,"الاسم الاول"
+            LastNameAr,input,*,,"الكنية"
+            FirstNameEn,input,*,,"FirstName"
+            LastNameEn,input,*,,"LastName"
             Nationality,json_select,*,src_nationality,0
             EmirateNumber,input,*,,"EmirateNumber"
             EmirateIdExpieryDate,datetime,*,,#now#
@@ -103,11 +98,13 @@ Div(container){
             Language,radio,*,src_lang,0
         }
         Data(actions, "name,page,contr,params,class"){
-            $send$,default_page,ajman_UserRegistration,,btn-primary
+            $send$,default_page,ajman_UserRegistration,,ajman-color
         }
     }
-    Form(panel panel-primary){
-        Div(panel-heading){$ajman_register_new_user$}
+    Form(panel){
+        Div(panel-heading ajman-color){
+            Div(ajman-color-h1){#heading#}
+        }
         Div(panel-body){
             Div(row){
                 Div(col-md-10 col-md-offset-1){
@@ -131,9 +128,6 @@ Div(container){
                             }
                             If(#type#==input){
                                 Input(Name:#name#, Value:#value#, Disabled: #disabled#)
-                            }
-                            If(#type#==password){
-                                Input(Name:#name#, Type:password, Value:#value#, Disabled: #disabled#)
                             }
                             If(#type#==datetime){
                                 Input(Name:#name#, Type:date, Value: #value#, Disabled: #disabled#)
