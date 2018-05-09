@@ -1,0 +1,99 @@
+DBFind(applications).Where("name='Ajman property'").Vars(application)
+AppParam(App: #application_id#, Name: "contract_status", Source: src_contract_status)
+SetVar(exp_mode, "").(exp_type, "").(exp_request_id, "").(exp_request_status, "").(exp_tenant_id, "").(exp_date_start, "").(exp_date_end, "")
+If(#mode# == my){
+    SetVar(exp_mode, " and (tenant_id = #key_id# or owner_id = #key_id#)")
+    SetVar(Title, $my_contracts$)
+}
+If(GetVar(contract_type) != ""){
+    SetVar(exp_type, " and type = #contract_type#")
+}
+If(GetVar(request_id) > 0){
+    SetVar(exp_request_id, " and id = #request_id#")
+}
+If(GetVar(request_status) > 0){
+    SetVar(exp_request_status, " and status = #request_status#")
+}
+If(GetVar(tenant_id) > 0){
+    SetVar(exp_tenant_id, " and tenant_id = #tenant_id#")
+}
+If(GetVar(start_date) != ""){
+    SetVar(exp_date_start, " and date_create >= '#start_date#'")
+}
+If(GetVar(end_date) != ""){
+    SetVar(exp_date_end, " and date_create <= '#end_date#'")
+}
+SetVar(c_Where, "remove = 0 #exp_mode# #exp_type# #exp_request_id# #exp_request_status# #exp_tenant_id# #exp_date_start# #exp_date_end#")
+DBFind(Source: src_contracts, Name: "property_contracts").Where(#c_Where#).Columns("id,status,tenant_id,date_create").Custom(custom_status){
+    AppParam(App: #application_id#, Name: "contract_status", Index: #status#)
+}.Custom(custom_tenant){
+    DBFind(src_tenant, Name: "members").WhereId(#tenant_id#).Vars(tenant)
+    Span(#tenant_name_english#)
+}.Custom(custom_actions){
+    LinkPage(Page: ajman_contract_list, PageParams: "actions=1,contract_id=#id#", Body: "Actions")
+}
+SetTitle(#Title#)
+If(#actions# == 1){
+    Div(text-center){
+        Div(){Please select action:}
+        Div(){LinkPage(Page: ajman_contract_add, PageParams: "id=#contract_id#,view=view", Body: "View")}
+        Div(){LinkPage(Page: ajman_contract_add, PageParams: "id=#contract_id#", Body: "Edit")}
+    }.Style("position:fixed;z-index:1000;top:50%;left:50%;background:#fcfcfc;width:300px;height:150px;margin-top:-75px;margin-left:-150px;border-radius:10px;padding:10px 30px;")
+}
+Data(src_contract_type, "id,name"){
+    0,Residential Contract
+    1,Commercial Contract
+}
+Data(basic, "name,type,src,value"){
+    contract_type,select,src_contract_type,GetVar(contract_type)
+    tenant_id,input,,GetVar(tenant_id)
+    request_id,input,,GetVar(request_id)
+    request_status,select,src_contract_status,GetVar(request_status)
+    start_date,datetime,,GetVar(start_date)
+    end_date,datetime,,GetVar(end_date)
+}
+
+Form(panel){
+    Div(panel-heading){
+        Span(Search:)
+    }
+    Div(panel-body){
+        Div(row){
+            ForList(basic){
+                Div(col-md-4 form-group){
+                    Label(For: #name#){LangRes(#name#)}
+                    If(#type#==input){
+                        Input(Name:#name#, Value:#value#)
+                    }
+                    If(#type#==datetime){
+                        SetVar(date, DateTime(#value#, "YYYY-MM-DD"))
+                        Input(Name:#name#, Type:date, Value: #date#)
+                    }
+                    If(#type#==checkbox){
+                        If(#value# == 1){
+                            SetVar(checked, true)
+                        }
+                        Input(Name:#name#, Type:checkbox, Value: #checked#)
+                    }
+                    If(#type#==radio){
+                        RadioGroup(Name:#name#, Source: #src#, NameColumn:name, ValueColumn: id, Value: #value#).Style(display:inline-block;margin-right:20px;)
+                    }
+                    If(#type#==select){
+                        Select(Name:#name#, Source: #src#, NameColumn:name, ValueColumn: id, Value: #value#)
+                    }
+                    If(#type#==json_select){
+                        Select(Name:#name#, Source: #src#, NameColumn:value, ValueColumn: key, Value: #value#)
+                    }
+                    If(#type#==view){
+                        Div(Class: text-primary, Body: #value#)
+                    }
+                }
+            }
+        }
+    }
+    Div(panel-footer){
+        Button(Class: btn btn-success, Body: Search, Page: ajman_contract_list, PageParams: "mode=#mode#,contract_type=Val(contract_type),tenant_id=Val(tenant_id),request_id=Val(request_id),request_status=Val(request_status),start_date=Val(start_date),end_date=Val(end_date)")
+    }
+}
+
+Table(src_contracts, "Request ID=id,Request Status=custom_status,Tenant=custom_tenant,Request Date=date_create,Actions=custom_actions")
