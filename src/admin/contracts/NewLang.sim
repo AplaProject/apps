@@ -2,9 +2,7 @@ contract NewLang {
     data {
         ApplicationId int
         Name string
-        Trans string "optional"
-        Value array "optional"
-        IdLanguage array "optional"
+        Trans string
     }
 
     conditions {
@@ -16,30 +14,10 @@ contract NewLang {
             warning Sprintf( "Language resource %s already exists", $Name)
         }
 
-        var j int
-        while j < Len($IdLanguage) {
-            if $IdLanguage[j] == "" {
-                info("Locale empty")
-            }
-            if $Value[j] == "" {
-                info("Value empty")
-            }
-            j = j + 1
-        }
         EvalCondition("parameters", "changing_language", "value")
     }
 
     action {
-        if Len($IdLanguage) > 0 {
-            var trans map
-            var i int
-            while i < Len($IdLanguage) {
-                trans[$IdLanguage[i]] = $Value[i]
-                i = i + 1
-            }
-            $Id = DBInsert("languages", "name,res,app_id", $Name, trans, $ApplicationId)
-        } else {
-            $Id = DBInsert("languages", "name,res,app_id", $Name, $Trans, $ApplicationId)
-        }
+        DBInsert("languages", "name,res,app_id", $Name, $Trans, $ApplicationId)
     }
 }

@@ -1,44 +1,55 @@
 contract NewTable {
     data {
         ApplicationId int
-        Name string "optional"
+        Name string
+
         Columns string "optional"
         Permissions string "optional"
-        TableName string "optional"
-        Id array "optional"
-        Shareholding array "optional"
-        Insert_con string "optional"
-        Update_con string "optional"
-        New_column_con string "optional"
+        ColumnsArr array "optional"
+        TypesArr array "optional"
+        InsertPerm string "optional"
+        UpdatePerm string "optional"
+        NewColumnPerm string "optional"
     }
+    func ReplaceValue(s string) string {
+		s = Replace(s, `["{`, `[{`)
+        s = Replace(s, `}"]`, `}]`)
+        s = Replace(s, `\"`, `"`)
+        s = Replace(s, `}","{`, `},{`)
+        return s
+    }
+
     conditions {
-        if $ApplicationId == 0 {
-            warning "Application id cannot equal 0"
-        }
-	}
-    
+    }
+
     action {
-        if Size($Name) > 0 && Size($Columns) > 0 && Size($Permissions) > 0{
+        if Size($Columns) > 0 && Size($Permissions) > 0 {
             CreateTable($Name, $Columns, $Permissions, $ApplicationId)
         } else {
-            var i,len int
-            var res string
-            len = Len($Id)
-			
-            while i < len {
-                if i + 1 == len {
-                    res = res + Sprintf(`{"name":%q,"type":%q,"conditions":"true"}`,$Id[i],$Shareholding[i])
-                }
-                else {
-                    res = res + Sprintf(`{"name":%q,"type":%q,"conditions":"true"},`,$Id[i],$Shareholding[i])
-                }
-				i = i + 1
+            var i int
+            var col_arr array
+            while i < Len($ColumnsArr) {
+                var col_map map
+                col_map["name"] = $ColumnsArr[i]
+                col_map["type"] = $TypesArr[i]
+                col_map["conditions"] = "true"
+                col_arr[i] = JSONEncode(col_map)
+                i = i + 1
             }
 
-            $Name = $TableName
-            $Columns = Sprintf("["+"%v"+"]", res)
-            $Permissions = Sprintf(`{"insert":%q,"update":%q,"new_column":%q}`,$Insert_con,$Update_con,$New_column_con)
-            CreateTable($Name, $Columns, $Permissions, $ApplicationId)
+            var Permissions map
+            Permissions["insert"] = $InsertPerm 
+            Permissions["update"] = $UpdatePerm
+            Permissions["new_column"] = $NewColumnPerm
+            
+            var params map
+            params["ApplicationId"] = $ApplicationId 
+            params["Name"] = $Name
+            params["Columns"] = ReplaceValue(JSONEncode(col_arr))
+            params["Permissions"] = JSONEncode(Permissions)
+
+            //warning params["Columns"] 
+            CreateTable(params["Name"], params["Columns"], params["Permissions"], params["ApplicationId"])
         }
     }
     func rollback() {
@@ -48,3 +59,31 @@ contract NewTable {
         return SysParamInt("table_price")
     }
 }
+
+
+/*
+contract NewTable {
+    data {
+        ApplicationId int
+        Name string
+        Columns string
+        Permissions string
+    }
+    conditions {
+        if $ApplicationId == 0 {
+            warning "Application id cannot equal 0"
+        }
+		TableConditions($Name, $Columns, $Permissions)
+	}
+    
+    action {
+		CreateTable($Name, $Columns, $Permissions, $ApplicationId)
+    }
+    func rollback() {
+        RollbackTable($Name)
+    }
+    func price() int {
+        return SysParamInt("table_price")
+    }
+}
+*/
