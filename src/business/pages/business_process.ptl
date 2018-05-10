@@ -1,15 +1,16 @@
 DBFind(applications).Where("name='Business'").Vars(application)
 If(#notific_id#>0){
-    DBFind(notifications,src_note).WhereId(#notific_id#).Columns("page_params->object_id,page_params->model_id").Vars(note)
-    SetVar(model_id,#note_page_params_model_id#).(object_id,#note_page_params_object_id#)
+    DBFind(notifications,src_note).WhereId(#notific_id#).Columns("page_params->object_id,page_params->id,page_params->comment").Vars(note)
+    SetVar(model_id,#note_page_params_id#).(object_id,#note_page_params_object_id#).(comment,#note_page_params_comment#)
 }
 Div(container){
     If(And(#model_id#>0, #object_id#>0)){
         DBFind(Name:business_models, src_model).Where("id=#model_id#").Vars(model)
-        JsonToSource(results,#model_result#)
+        JsonToSource(model_results,#model_result#)
         DBFind(roles).Where("deleted=0 and id=#model_role_id#").Columns("id,role_name").Vars(role)
         SetVar(heading,#model_title#)
         AppParam(App: #application_id#, Name: results, Source: app_results)
+        AppParam(App: #application_id#, Name: object_blocks, Source: app_blocks)
         SetVar(object,"AppParam(App: #application_id#, Name: object_types, Index: #model_object_type#)")
         SetTitle(#role_role_name# : #object# : #object_id#)
         Form(panel panel-primary){
@@ -20,6 +21,14 @@ Div(container){
                         #model_text_body#
                     }
                 }
+
+                If(#comment#!=""){
+                    Div(row form-group){
+                        Div(col-sm-10 col-sm-offset-1){
+                            #comment#
+                        }
+                    }
+                }
                 If(#model_need_comment#==1){
                     Div(row form-group){
                         Div(col-sm-10 col-sm-offset-1){
@@ -28,19 +37,39 @@ Div(container){
                         }
                     }
                 }
+
+                ForList(app_blocks){
+                    If(#id#==#model_object_type#){
+                        Include(#name#)
+                    }
+                }
             }
             Div(panel-footer text-right){
                 If(#notific_id#>0){
-                    Input(Name:ModelId, Type:hidden, Value:#model_id#)
+                    Input(Name:Id, Type:hidden, Value:#model_id#)
+                    Input(Name:ModelId, Type:hidden, Value:#model_model_id#)
                     Input(Name:ObjectId, Type:hidden, Value:#object_id#)
                     Input(Name:EventId, Type:hidden, Value:#model_event_id#)
                     Input(Name:ObjectType, Type:hidden, Value:#model_object_type#)
                     Input(Name:NotificId, Type:hidden, Value:#notific_id#)
                     Div(){
                         ForList(app_results){
-                            ForList(results){
+                            ForList(model_results){
                                 If(And(#name#==#key#,#value#==1)){
-                                    SetVar(class,AppParam(App: #application_id#, Name: class_results, Index: #id#))
+                                    SetVar(n,Calculate(#id#/5,Type:int)).(mod,Calculate(#id#-#id#*#n#))
+                                    If(Or(#name#==Submit,#mod#==1)){
+                                        SetVar(class,btn-primary)
+                                    }.ElseIf(Or(#name#=="Sent Back",#mod#==2)){
+                                        SetVar(class,btn-info)
+                                    }.ElseIf(Or(#name#==Accept,#mod#==3)){
+                                        SetVar(class,btn-success)
+                                    }.ElseIf(Or(#name#==Escalation,#mod#==4)){
+                                        SetVar(class,btn-warning)
+                                    }.ElseIf(Or(#name#==Reject,#mod#==5)){
+                                        SetVar(class,btn-danger)
+                                    }.Else{
+                                        SetVar(class,btn-default)
+                                    }
                                     Button(Body:LangRes(#name#), Class: btn #class#, Page: business_process, Contract: business_Process, Params:"ResultId=#id#")
                                 }
                             }

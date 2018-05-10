@@ -1,6 +1,7 @@
 contract business_Process {
     data {
-        ModelId int // business_models id
+        Id int // business_models:id
+        ModelId int // business_models:model_id
         EventId int
         ResultId int
         ObjectType int
@@ -10,33 +11,32 @@ contract business_Process {
     }
 
     conditions {
-        // Println($this_contract, Sprintf("ModelId:%v,EventId:%v,ResultId:%v,ObjectType:%v,ObjectId:%v,Comment:%v,NotificId:%v", $ModelId,$EventId,$ResultId,$ObjectType,$ObjectId,$Comment,$NotificId))
-
         $ApplicationId = Int(DBFind("applications").Where("name='Business'").One("id"))
         if $ApplicationId == 0 {
             warning "Application ID not found"
         }
-        $numSubmitted = Int(DBFind("business_events").Where("event_id=? and object_type=? and object_id=? and key_id=? and result_id=?", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId).Order("num_submitted desc").One("num_submitted")) + 1
-        $models = DBFind("business_models").Order("event_id").Where("deleted='0' and object_type=?", $ObjectType)
-        $conditionModel = DBFind("business_models").Where("deleted='0' and id=?", $ModelId).Row()
-        if !$conditionModel{
-            error "Business condition not found"
+        $numSubmitted = Int(DBFind("business_events").Where("event_id=? and object_type=? and object_id=? and key_id=? and result_id=? and model_id=?", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId, $ModelId).Order("num_submitted desc").One("num_submitted")) + 1
+        $models = DBFind("business_models").Order("event_id").Where("deleted='0' and model_id=?", $ModelId)
+        
+        var currentModel map
+        currentModel = DBFind("business_models").Where("deleted='0' and id=?", $Id).Row()
+        if !currentModel{
+            error "Business model not found"
         }
-        if $conditionModel["need_comment"] == 1 && Size($Comment) < 1 {
+        if currentModel["need_comment"] == 1 && Size($Comment) < 1 {
             warning "Need comment"
         }
-        $condition = JSONDecode($conditionModel["condition"])
         $NotificId = Int($NotificId)
     }
     action {
-        DBInsert("business_events", "event_id,object_type,object_id,key_id,result_id,comment,num_submitted,created_at", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId, $Comment, $numSubmitted, "Now()")
+        DBInsert("business_events", "event_id,object_type,object_id,key_id,result_id,comment,num_submitted,created_at,model_id", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId, $Comment, $numSubmitted, "Now()", $ModelId)
         var i int
-        var model map
+        var nextModel map
         var isNextFound bool
         while i<Len($models){
-            model = $models[i]
+            nextModel = $models[i]
             var cond map
-            cond = JSONDecode(model["condition"])
+            cond = JSONDecode(nextModel["condition"])
             if cond["0"] == $ResultId || cond[Str($EventId)] == $ResultId {
                 isNextFound = true
                 break
@@ -44,24 +44,23 @@ contract business_Process {
             i=i+1
         }
         if $NotificId > 0{
-            // Println("Try closing notific id:", $NotificId)
             Notifications_Roles_Processing("notific_id", $NotificId)
             Notifications_Roles_Close("notific_id", $NotificId)
         }
         if isNextFound {
             var roleId closureType sender int
-            roleId = model["role_id"]
+            roleId = nextModel["role_id"]
             closureType = 2 // multiple
             sender = 2 // from admin?
             var icon header body page string
             icon = "icon-envelope"
             header = "Business process: Next step"
-            body = model["title"]
+            body = nextModel["title"]
             page = "business_process"
             var params map
-            params["model_id"] = model["id"]
+            params["id"] = nextModel["id"]
             params["object_id"] = $ObjectId
-            // Println(Sprintf("Try sending notific: rid:%v, closure_type:%v, sender:%v, icon_name:%v, text_header:%v, text_body:%v, page_name:%v, params_map:%v", roleId, closureType, sender, icon, header, body, page, params))
+            params["comment"] = $Comment
             Notifications_Roles_Send_map("rid,closure_type,sender,icon_name,text_header,text_body,page_name,params_map", roleId, closureType, sender, icon, header, body, page, params)
 
         }else{
