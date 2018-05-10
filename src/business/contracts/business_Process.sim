@@ -9,15 +9,59 @@ contract business_Process {
         Comment string "optional"
         NotificId string "optional"
     }
+    func stringInArray(s string, a array) bool{
+        var i int
+        while i<Len(a){
+            if a[i] == s{
+                return true
+            }
+            i=i+1
+        }
+        return false
+    }
+
+    func updateObjectStatus(){
+        var tables results manager_ids array
+        tables = Split(AppParam($ApplicationId, "object_status_tables"), ",")
+        results = Split(AppParam($ApplicationId, "results"), ",")
+        manager_ids = Split(AppParam($ApplicationId, "manager_role_ids"), ",")
+        if Len(tables) >= $ObjectType{
+            var table string
+            table = Replace(tables[$ObjectType-1], " ", "")
+            if Size(table) > 1{
+                if DBFind(table).WhereId($ObjectId).One("status"){
+                    var res string
+                    res = results[$ResultId-1]
+                    if res == "Accept" && stringInArray(Str($role_id), manager_ids){
+                        res = "AM Accept"
+                    }
+                    DBUpdate(table, $ObjectId, "status", $STATUSES[res])
+                }else{
+                    warning "Status not found"
+                }
+            }
+        }
+    }
 
     conditions {
+        var statuses map
+        statuses["Submit"] = 1 //"Submitted"
+        statuses["Sent Back"] = 2 //"Send Back"
+        statuses["Accept"] = 3 //"Accepted"
+        statuses["Escalate"] = 4 //"Escalated"
+        statuses["Reject"] = 5 //"Rejected"
+        statuses["Inform"] = 6 //"Informed"
+        statuses["AM Accept"] = 7 // "AM Approved"
+        statuses["Pay"] = 8 // "Paid"
+        $STATUSES = statuses
+
         $ApplicationId = Int(DBFind("applications").Where("name='Business'").One("id"))
         if $ApplicationId == 0 {
             warning "Application ID not found"
         }
         $numSubmitted = Int(DBFind("business_events").Where("event_id=? and object_type=? and object_id=? and key_id=? and result_id=? and model_id=?", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId, $ModelId).Order("num_submitted desc").One("num_submitted")) + 1
         $models = DBFind("business_models").Order("event_id").Where("deleted='0' and model_id=?", $ModelId)
-        
+
         var currentModel map
         currentModel = DBFind("business_models").Where("deleted='0' and id=?", $Id).Row()
         if !currentModel{
@@ -30,6 +74,9 @@ contract business_Process {
     }
     action {
         DBInsert("business_events", "event_id,object_type,object_id,key_id,result_id,comment,num_submitted,created_at,model_id", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId, $Comment, $numSubmitted, "Now()", $ModelId)
+
+        updateObjectStatus()
+
         var i int
         var nextModel map
         var isNextFound bool

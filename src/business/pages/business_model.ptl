@@ -1,12 +1,14 @@
 DBFind(applications).Where("name='Business'").Vars(application)
 Div(container){
     AppParam(App: #application_id#, Name: object_types, Source: src_objects)
+    AppParam(App: #application_id#, Name: results, Source: app_results)
+    SetVar(result_col_class,col-sm-3)
+
     If(#Mode#=="play"){
         If(#Id#>0){
             DBFind(Name:business_models, src_models).Where("id=#Id#").Vars(model)
             SetVar(heading,"$business_manager$: $model$ $info$ ##Id#")
             JsonToSource(src_results,#model_result#).(src_condition,#model_condition#)
-            AppParam(App: #application_id#, Name: results, Source: app_results)
             DBFind(roles).Where("deleted=0 and id=#model_role_id#").Columns("id,role_name").Vars(role)
             Data(forms, "Name,Type,Value,Src"){
                 EventId,text,#model_event_id#,
@@ -39,7 +41,7 @@ Div(container){
                                 }.ElseIf(#Type#==result){
                                     ForList(#Src#){
                                         If(#value#==1){
-                                            Div(col-sm-4){#key#}
+                                            Div(#result_col_class#){#key#}
                                         }
                                     }
                                 }.ElseIf(#Type#==select){
@@ -71,7 +73,7 @@ Div(container){
                     }
                 }
                 Div(panel-footer text-right){
-                    Input(Name:Id,  Type: hidden, Value:#Id#)
+                    Input(Name:Id, Type: hidden, Value:#Id#)
                     Input(Name:ModelId, Type:hidden, Value:#model_model_id#)
                     Input(Name:EventId, Type:hidden, Value:#model_event_id#)
                     Input(Name:ObjectType, Type:hidden, Value:#model_object_type#)
@@ -98,7 +100,6 @@ Div(container){
         }
     }.Else{
         DBFind(Name:roles, Source: src_roles).Where("deleted=0").Order(id).Columns("id,role_name").Custom(name){#role_name#}
-        AppParam(App: #application_id#, Name: results, Source: app_results)
         If(#Id#>0){
             DBFind(Name:business_models, src_models).Where("id=#Id#").Vars(model)
             SetVar(Action, update).(heading,"$business_manager$: $model$ $edit$ ##Id#")
@@ -148,7 +149,7 @@ Div(container){
                                     If(#Type#==result){
                                         Div(row){
                                             ForList(#Src#){
-                                                Div(col-sm-4){
+                                                Div(#result_col_class#){
                                                     If(#Id#>0){
                                                         If(#value#==1){
                                                             SetVar(bool,true)
