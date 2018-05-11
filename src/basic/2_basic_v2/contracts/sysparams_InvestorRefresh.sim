@@ -1,9 +1,8 @@
 contract sysparams_InvestorRefresh {
     func NotInArray(val string, arr array) bool{
         var i int
-        // info arr
         while i< Len(arr){
-            if val == arr[i]{
+            if val == Str(arr[i]){
                 return false
             }
             i=i+1
@@ -12,7 +11,7 @@ contract sysparams_InvestorRefresh {
     }
     conditions{
         MainCondition()
-        
+
         // roles:id == 4 Investor with voting rights
         $roleId = Int(DBFind("roles").Where("id=4 and deleted=0").One("id"))
         if !$roleId{
@@ -22,19 +21,18 @@ contract sysparams_InvestorRefresh {
         appId = Int(DBFind("applications").Columns("name,id").Where("name='Basic application'").One("id"))
         $limitInvestors = Int(AppParam(appId,"investors_number"))
         if $limitInvestors == 0 {
-            warning "Investors number not set"
+            warning "Investors number not set in application params"
         }
     }
-    
+
     action{
         // get investors ids
-        var keysInvestors, assignedInvestors, investorsIds, assignedIds array
-        var dIndex, i int
+        var keysInvestors assignedInvestors investorsIds assignedIds array
         keysInvestors = DBFind("keys").Order("amount desc, id").Limit($limitInvestors)
-        assignedInvestors = DBFind("roles_participants").Where("role->id=? and deleted=0", $roleId)
-        
+        assignedInvestors = DBFind("roles_participants").Columns("member->member_id").Where("role->id=? and deleted=0", $roleId)
+
         // get ids
-        i=0
+        var i int
         while i < Len(keysInvestors) {
             var inv map
             inv = keysInvestors[i]
@@ -45,12 +43,12 @@ contract sysparams_InvestorRefresh {
         while i < Len(assignedInvestors) {
             var inv map
             inv = assignedInvestors[i]
-            assignedIds[i] = inv["member_id"]
+            assignedIds[i] = inv["member.member_id"]
             i = i + 1
         }
-        
+
         // remove old investors
-        i = 0
+        i=0
         while i < Len(assignedIds) {
             if NotInArray(assignedIds[i], investorsIds){
                 var assigned map
@@ -62,10 +60,10 @@ contract sysparams_InvestorRefresh {
             i = i+1
         }
         // add new investors
-        i = 0
+        i=0
         while i < Len(investorsIds) {
             if NotInArray(investorsIds[i], assignedIds){
-                Roles_Assign("rid,member_id", $roleId, investorsIds[i])
+                Roles_Assign("rid,member_id", $roleId, Int(investorsIds[i]))
             }
             i = i+1
         }
