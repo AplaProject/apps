@@ -10,53 +10,44 @@ contract sysparams_DelegateRefresh{
         }
         return true
     }
-    
+
     conditions{
         MainCondition()
-        
+
         var ROLE_NAME string
         var ROLE_ID int
         ROLE_NAME = "Delegate"
         ROLE_ID = 5
-        
+
         // get role Id and Type
         $role = DBFind("roles").Where("role_name=? and id=? and delete=0", ROLE_NAME, ROLE_ID).Row()
         if !$role{
             warning Sprintf("Role %q not found", ROLE_NAME)
         }
-        
-        $app_id = Int(DBFind("applications").Columns("name,id").Where("name='Basic application'").One("id"))
-        if AppParam($app_id, "last_ecosystem_number") == 0 {
-            warning "last ecosystem number unknown"
-        }
     }
-    
+
     action{
         var DELEGATE_ACCOUNT string
         DELEGATE_ACCOUNT = "delegate_account"
         // get delegates ids
-        var delegateIds, currentDelegates array
-        var dIndex, i int
-        
-        var lastEcosystemNumber int
-        lastEcosystemNumber = Int(AppParam($app_id,"last_ecosystem_number"))
-        
-        i = 1
-        while i <= lastEcosystemNumber {
-            var delegateParam map
-            delegateParam = DBFind("parameters").Where("name=?", DELEGATE_ACCOUNT).Ecosystem(i).Row()
+        var delegateIds currentDelegates ecosystems array
+        ecosystems = DBFind("ecosystems").Columns("id").Ecosystem(1)
+        var i ecoId int
+        while i < Len(ecosystems) {
+            var eco delegateParam map
+            eco = ecosystems[i]
+            ecoId = Int(eco["id"])
+            delegateParam = DBFind("parameters").Where("name=?", DELEGATE_ACCOUNT).Ecosystem(ecoId).Row()
             if !delegateParam{
-                delegateParam = DBFind("parameters").Where("name='founder_account'").Ecosystem(i).Row()
+                delegateParam = DBFind("parameters").Where("name='founder_account'").Ecosystem(ecoId).Row()
             }
-            var delegateValue string
-            delegateValue = delegateParam["value"]
-            if NotInArray(delegateValue, delegateIds){
-                delegateIds[dIndex] = delegateValue
-                dIndex = dIndex + 1
+
+            if NotInArray(delegateParam["value"], delegateIds){
+                delegateIds[Len(delegateIds)] = delegateParam["value"]
             }
             i = i + 1
         }
-        
+
         // remove old role assigns
         currentDelegates = DBFind("roles_participants").Where("role->id=? and deleted=0", $role["id"])
         i = 0
@@ -70,7 +61,7 @@ contract sysparams_DelegateRefresh{
             }
             i = i + 1
         }
-        
+
         // assign new roles
         i = 0
         while i < Len(delegateIds) {
