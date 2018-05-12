@@ -33,27 +33,23 @@ contract tokenrefund_Start{
 
     conditions{
         if $Amount <= 0{
-            info "Amount not valid"
+            error "Amount not valid"
         }
         var victim attacker int
         victim = getKeyId($VictimAccount)
         attacker = getKeyId($SuspectAccount)
         if victim == 0{
-            info "Victim address not valid"
+            error "Victim address not valid"
         }
         if attacker == 0{
-            info "Suspect address not valid"
+            error "Suspect address not valid"
         }
         if Size($Note) == 0{
-            info "Please add description"
+            error "Please add description"
         }
         $victimId = victim
         $attackerId = attacker
 
-        if !DBFind("roles_participants").Where("role->name='Validator' and role->type='3' and deleted=0 and member->member_id=?", $key_id).Row(){
-            // commented out for debug
-            // warning "You not Validator. You can not to run this"
-        }
         var app_id int
         app_id = Int(DBFind("applications").Columns("name,id").Where("name='Basic application'").One("id"))
         var template_id int
@@ -61,16 +57,9 @@ contract tokenrefund_Start{
         if template_id <= 0 {
             warning "Template id not found"
         }
-        // template_id = DBFind("laws").Where("name='tokenrefund'").One("voting_template_id")
-        // if !template_id {
-        // template_id = DBFind("voting_templates").Where("type='law' and type_id=1").One("id")
-        // if !template_id{
-        // info "Template not found"
-        // }
-        // }
 
         $template = DBFind("voting_templates").Where("id=?", template_id).Row()
-        $votersRoleId = Int($template["voters"]) // default it is Investors
+        $votersRoleId = Int($template["voters"])
         $votingName = $template["title"]
         $typeParticipants = 3 // add participants by role
         $typeDecision = 5 // the launch of the contract
@@ -79,9 +68,11 @@ contract tokenrefund_Start{
         $quorum = Int($template["quorum"])
         $contractAccept = $template["contract_accept"]
         $contractReject = $template["contract_reject"]
-        if $votersRoleId == 4{
+        var initContract string
+        initContract = $template["init_contract"]
+        if Size(initContract) > 4 { // greater then "NULL"
             var m map
-            CallContract("sysparams_InvestorRefresh", m)
+            CallContract(initContract, m)
         }
         $desc = Sprintf("%v (victim: %v, attacker: %v, amount: %v)", $votingName, $victimId, $attackerId, $Amount)
 
@@ -97,8 +88,8 @@ contract tokenrefund_Start{
     action{
         blockAccounts($victimId,$attackerId)
 
-        var votingId, status, result, tokenrefundId, closure, sender int
-        var icon, header, body, page, params, jsonParams string
+        var votingId status result tokenrefundId closure sender int
+        var icon header body page params jsonParams string
 
         votingId = voting_CreateNew("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,now_date,start_time,end_time,start_date,end_date", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $volume, $quorum, $DateNow, $TimeNow, $TimeNow, $DateStart, $DateEnd)
 
