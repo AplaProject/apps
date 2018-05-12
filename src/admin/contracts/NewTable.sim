@@ -2,70 +2,6 @@ contract NewTable {
     data {
         ApplicationId int
         Name string
-
-        Columns string "optional"
-        Permissions string "optional"
-        ColumnsArr array "optional"
-        TypesArr array "optional"
-        InsertPerm string "optional"
-        UpdatePerm string "optional"
-        NewColumnPerm string "optional"
-    }
-    func ReplaceValue(s string) string {
-		s = Replace(s, `["{`, `[{`)
-        s = Replace(s, `}"]`, `}]`)
-        s = Replace(s, `\"`, `"`)
-        s = Replace(s, `}","{`, `},{`)
-        return s
-    }
-
-    conditions {
-    }
-
-    action {
-        if Size($Columns) > 0 && Size($Permissions) > 0 {
-            CreateTable($Name, $Columns, $Permissions, $ApplicationId)
-        } else {
-            var i int
-            var col_arr array
-            while i < Len($ColumnsArr) {
-                var col_map map
-                col_map["name"] = $ColumnsArr[i]
-                col_map["type"] = $TypesArr[i]
-                col_map["conditions"] = "true"
-                col_arr[i] = JSONEncode(col_map)
-                i = i + 1
-            }
-
-            var Permissions map
-            Permissions["insert"] = $InsertPerm 
-            Permissions["update"] = $UpdatePerm
-            Permissions["new_column"] = $NewColumnPerm
-            
-            var params map
-            params["ApplicationId"] = $ApplicationId 
-            params["Name"] = $Name
-            params["Columns"] = ReplaceValue(JSONEncode(col_arr))
-            params["Permissions"] = JSONEncode(Permissions)
-
-            //warning params["Columns"] 
-            CreateTable(params["Name"], params["Columns"], params["Permissions"], params["ApplicationId"])
-        }
-    }
-    func rollback() {
-        RollbackTable($Name)
-    }
-    func price() int {
-        return SysParamInt("table_price")
-    }
-}
-
-
-/*
-contract NewTable {
-    data {
-        ApplicationId int
-        Name string
         Columns string
         Permissions string
     }
@@ -86,4 +22,3 @@ contract NewTable {
         return SysParamInt("table_price")
     }
 }
-*/
