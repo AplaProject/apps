@@ -62,6 +62,11 @@ contract business_Process {
         if $ApplicationId == 0 {
             warning "Application ID not found"
         }
+        $ownerRoleId = Int(AppParam($ApplicationId,"owner_role_id"))
+        if $ownerRoleId == 0 {
+            info "Application parameter owner_role_id not found"
+        }
+
         $numSubmitted = Int(DBFind("business_events").Where("event_id=? and object_type=? and object_id=? and key_id=? and result_id=? and model_id=?", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId, $ModelId).Order("num_submitted desc").One("num_submitted")) + 1
         $models = DBFind("business_models").Order("event_id").Where("deleted='0' and model_id=?", $ModelId)
 
@@ -104,15 +109,25 @@ contract business_Process {
             sender = 2 // from admin?
             var icon header body page string
             icon = "icon-envelope"
-            header = "Business process: Next step"
-            body = nextModel["title"]
+            header = Sprintf("Business process: %v", nextModel["title"])
+            body = Sprintf("Next step for object id #%v", $ObjectId)
             page = "business_process"
             var params map
             params["id"] = nextModel["id"]
             params["object_id"] = $ObjectId
             params["comment"] = $Comment
-            Notifications_Roles_Send_map("rid,closure_type,sender,icon_name,text_header,text_body,page_name,params_map", roleId, closureType, sender, icon, header, body, page, params)
-
+            if roleId == $ownerRoleId {
+                var initiator int
+                initiator = Int(DBFind("business_events").Where("object_type=? and object_id=? and result_id=? and model_id=?", $ObjectType, $ObjectId, $STATUSES["Submit"], $ModelId).Order("event_id asc, id desc").One("key_id"))
+                if initiator {
+                    // if the role is Owner send alert to the initiating user (submit event)
+                    Notifications_Single_Send_map("member_id,sender,icon_name,text_header,text_body,page_name,params_map", initiator, sender, icon, header, body, page, params)
+                }else{
+                    warning "Initiator process not found"
+                }
+            }else{
+                Notifications_Roles_Send_map("rid,closure_type,sender,icon_name,text_header,text_body,page_name,params_map", roleId, closureType, sender, icon, header, body, page, params)
+            }
         }else{
             Println("Next step not found")
         }
