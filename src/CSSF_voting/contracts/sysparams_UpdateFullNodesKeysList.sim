@@ -1,0 +1,36 @@
+contract sysparams_UpdateFullNodesKeysList{
+    data{
+        Param string
+    }
+    conditions{
+        $FULL_NODES_KEYS = "full_nodes_keys"
+        $FULL_NODES = "full_nodes"
+        $paramId = DBFind("parameters").Where("name=?", $FULL_NODES_KEYS).One("id")
+    }
+    
+    action{
+        if $Param != $FULL_NODES {
+            return
+        }
+        var nodesJson string
+        nodesJson = SysParamString($FULL_NODES)
+        var nodes, keys array
+        nodes = JSONDecode(nodesJson)
+        
+        var i int
+        while i<Len(nodes){
+            var node map
+            node = nodes[i]
+            keys[i] = node["key_id"]
+            i=i+1
+        }
+        var keysList, cond string
+        keysList = Join(keys, ",")
+        cond = `ContractConditions("MainCondition")`
+        if $paramId {
+            DBUpdate("parameters", Int($paramId), "value,conditions", keysList, cond)
+        }else{
+            DBInsert("parameters", "name,value,conditions", $FULL_NODES_KEYS, keysList, cond)
+        }
+    }
+}
