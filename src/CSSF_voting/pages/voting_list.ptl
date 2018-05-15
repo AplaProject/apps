@@ -1,7 +1,7 @@
 Div(content-wrapper){
-    DBFind(Name:applications, Source:src_app).Columns("name,id").Where("name='Basic application'").Vars(app)
-    SetTitle($voting$)
-    AddToolButton(Title: $create$, Page: voting_create, Icon: icon-plus)
+    DBFind(applications,src_app).Columns("name,id").Where("name='Basic application'").Vars(application)
+    SetTitle("List of votings")
+    If(){AddToolButton(Title: $create$, Page: voting_create, Icon: icon-plus)}
 
     If(GetVar(isSearch) == 1){
         SetVar(Name: v_Where, Value: "voting->name='#v_Search#' and deleted=0")
@@ -10,11 +10,22 @@ Div(content-wrapper){
         SetVar(Name: v_Search, Value: "")
     }
 
-    DBFind(Name: votings, Source: src_voting).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->notifics,flags->success,flags->decision,progress->percent_success,creator->member_id,creator->member_name,date_started,date_ended,deleted").Custom(custom_id){
+    DBFind(votings,src_voting).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->success,flags->decision,progress->percent_success,creator->member_id,creator->member_name,date_started,date_ended,deleted").Custom(custom_id){
         Span(Class: h5, Body: #id#)
-        SetVar(Name: vDateNow, Value: Now("YYYY-MM-DD HH:MI"))
-        SetVar(Name: vStartDate, Value: DateTime(DateTime: #date_started#, Format: "YYYY-MM-DD HH:MI"))
-        SetVar(Name: vEndDate, Value: DateTime(#date_ended#, "YYYY-MM-DD HH:MI"))
+
+        DBFind(votings).Columns("date_started").Where("id=#id# and date_started > now()").Vars(started)
+        DBFind(votings).Columns("date_ended").Where("id=#id# and date_ended > now()").Vars(ended)
+
+        If(#started_id#>0){
+            SetVar(vCmpStartDate,1)
+        }.Else{
+            SetVar(vCmpStartDate,-1)
+        }
+        If(#ended_id#>0){
+            SetVar(vCmpEndDate,1)
+        }.Else{
+            SetVar(vCmpEndDate,-1)
+        }
         SetVar(Name: vCmpStartDate, Value: CmpTime(#vStartDate#,#vDateNow#))
         SetVar(Name: vCmpEndDate, Value: CmpTime(#vEndDate#,#vDateNow#))
     }.Custom(custom_name){
@@ -23,50 +34,40 @@ Div(content-wrapper){
         }
     }.Custom(custom_subject){
         If(Or(#vCmpStartDate#<=0,#voting.type#==2)){
-            Span(Class: h6, Body: AppParam(App:#app_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
+            Span(Class: h6, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
         }.Else{
             If(#voting.type_decision# == 1){
                 LinkPage(Page: voting_decision_candidates, PageParams: "vID=#id#"){
-                    Span(Class: h6 text-bold, Body: AppParam(App:#app_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
+                    Span(Class: h6 text-bold, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
                 }
             }
             If(#voting.type_decision# == 2){
                 LinkPage(Page: voting_decision_election, PageParams: "vID=#id#"){
-                    Span(Class: h6 text-bold, Body: AppParam(App:#app_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
+                    Span(Class: h6 text-bold, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
                 }
             }
             If(#voting.type_decision# == 3){
                 LinkPage(Page: voting_decision_document, PageParams: "vID=#id#"){
-                    Span(Class: h6 text-bold, Body: AppParam(App:#app_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
+                    Span(Class: h6 text-bold, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
                 }
             }
             If(#voting.type_decision# == 4){
                 LinkPage(Page: voting_decision_formal, PageParams: "vID=#id#"){
-                    Span(Class: h6 text-bold, Body: AppParam(App:#app_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
+                    Span(Class: h6 text-bold, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
                 }
             }
             If(#voting.type_decision# == 5){
                 LinkPage(Page: voting_decision_contract, PageParams: "vID=#id#"){
-                    Span(Class: h6 text-bold, Body: AppParam(App:#app_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
+                    Span(Class: h6 text-bold, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
                 }
             }
         }
     }.Custom(custom_participants){
         If(Or(#vCmpStartDate#<=0,#voting.type#==2)){
-            Span(Class: h6, Body: AppParam(App:#app_id#, Name: type_voting_participants, Index: #voting.type_participants#))
+            Span(Class: h6, Body: AppParam(App:#application_id#, Name: type_voting_participants, Index: #voting.type_participants#))
         }.Else{
             LinkPage(Page: voting_invite, PageParams: "vID=#id#"){
-                Span(Class: h6 text-bold, Body: AppParam(App:#app_id#, Name: type_voting_participants, Index: #voting.type_participants#))
-            }
-        }
-    }.Custom(custom_notifics){
-        If(#flags.notifics# == 1){
-            Div(Class: text-center text-bold, Body: LangRes(yes))
-        }.Else{
-            If(And(#flags.success#!=1,#vCmpEndDate#>0,#vCmpStartDate#<0,#creator.member_id#==#key_id#)){
-                Div(Class: text-center, Body: Button(Body: LangRes(send), Class: btn btn-primary, Contract: voting_SendNotifics, Params: "votingID=#id#", Page: voting_list))
-            }.Else{
-                Div(Class: text-center text-bold, Body: LangRes(no))
+                Span(Class: h6 text-bold, Body: AppParam(App:#application_id#, Name: type_voting_participants, Index: #voting.type_participants#))
             }
         }
     }.Custom(custom_creator){
@@ -85,7 +86,7 @@ Div(content-wrapper){
             Div(Class: text-bold, Body: DateTime(DateTime: #date_ended#, Format: "DD.MM.YYYY HH:MI"))
         }
     }.Custom(custom_type){
-        Span(Class: h6, Body: AppParam(App:#app_id#, Name: type_voting, Index: #voting.type#))
+        Span(Class: h6, Body: AppParam(App:#application_id#, Name: type_voting, Index: #voting.type#))
     }.Custom(custom_progress){
         Div(Class: text-center h5 text-bold, Body: #progress.percent_success# %)
     }.Custom(custom_decision){
@@ -106,20 +107,20 @@ Div(content-wrapper){
             Div(Class: text-danger text-center, Body: LangRes(rejected))
         }
     }.Custom(custom_status){
-        If(#flags.success# == 1){
-            Div(Class: text-success text-center, Body: LangRes(success))
-        }.Else{
-            If(#vCmpEndDate# < 0){
-                Div(Class: text-muted text-center, Body: LangRes(finished))
+        Div(text-center){
+            If(#flags.success# == 1){
+                Span(Class: text-success, Body: LangRes(success))
             }.Else{
-                If(#vCmpStartDate# < 0){
-                    Div(text-center){
+                If(#vCmpEndDate# < 0){
+                    Span(Class: text-muted, Body: LangRes(finished))
+                }.Else{
+                    If(#vCmpStartDate# < 0){
                         Button(Class: btn btn-link, Page: voting_view, PageParams: "vID=#id#"){
                             Span(Class: h4, Body: Em(Class: fa icon-eye))
                         }
+                    }.Else{
+                        Span(Class: text-warning, Body: LangRes(waiting))
                     }
-                }.Else{
-                    Div(Class: text-warning text-center, Body: LangRes(waiting))
                 }
             }
         }
@@ -150,7 +151,7 @@ Div(content-wrapper){
             }
             Div(row){
                 Div(col-md-12){
-                    Table(src_voting, "$id$=custom_id,$name$=custom_name,$type$=custom_type,$subject_voting$=custom_subject,$participants$=custom_participants,$date_start$/$date_end$=custom_date,$creator$=custom_creator,$notifications$=custom_notifics,$progress$=custom_progress,$decision$=custom_decision,$status$=custom_status,=actions")
+                    Table(src_voting, "$id$=custom_id,$name$=custom_name,$type$=custom_type,$subject_voting$=custom_subject,$participants$=custom_participants,$date_start$/$date_end$=custom_date,$creator$=custom_creator,$progress$=custom_progress,$decision$=custom_decision,$status$=custom_status,=actions")
                 }
             }
             If(GetVar(isSearch) == 1){
