@@ -21,9 +21,8 @@ contract business_Process {
     }
 
     func updateObjectStatus(){
-        var tables results manager_ids array
+        var tables manager_ids array
         tables = Split(AppParam($ApplicationId, "object_status_tables"), ",")
-        results = Split(AppParam($ApplicationId, "results"), ",")
         manager_ids = Split(AppParam($ApplicationId, "manager_role_ids"), ",")
         if Len(tables) >= $ObjectType{
             var table string
@@ -31,7 +30,7 @@ contract business_Process {
             if Size(table) > 1{
                 if DBFind(table).WhereId($ObjectId).One("status"){
                     var res status string
-                    res = results[$ResultId-1]
+                    res = $results[$ResultId-1]
                     if res == "Accept" && stringInArray(Str($role_id), manager_ids){
                         res = "AM Accept"
                     }
@@ -47,6 +46,16 @@ contract business_Process {
     }
 
     conditions {
+        $ApplicationId = Int(DBFind("applications").Where("name='Business'").One("id"))
+        if $ApplicationId == 0 {
+            warning "Application ID not found"
+        }
+        $ownerRoleId = Int(AppParam($ApplicationId,"owner_role_id"))
+        if $ownerRoleId == 0 {
+            info "Application parameter owner_role_id not found"
+        }
+        // Submit,Send Back,Accept,Escalation,Reject,Inform,Pay
+        $results = Split(AppParam($ApplicationId, "results"), ",")
         var statuses map
         //0 Not Submitted
         statuses["Submit"] = 1 //"Submitted"
@@ -58,14 +67,6 @@ contract business_Process {
         statuses["Reject"] = 7 //"Rejected"
         $STATUSES = statuses
 
-        $ApplicationId = Int(DBFind("applications").Where("name='Business'").One("id"))
-        if $ApplicationId == 0 {
-            warning "Application ID not found"
-        }
-        $ownerRoleId = Int(AppParam($ApplicationId,"owner_role_id"))
-        if $ownerRoleId == 0 {
-            info "Application parameter owner_role_id not found"
-        }
 
         $numSubmitted = Int(DBFind("business_events").Where("event_id=? and object_type=? and object_id=? and key_id=? and result_id=? and model_id=?", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId, $ModelId).Order("num_submitted desc").One("num_submitted")) + 1
         $models = DBFind("business_models").Order("event_id").Where("deleted='0' and model_id=?", $ModelId)
@@ -75,8 +76,10 @@ contract business_Process {
         if !currentModel{
             error "Business model not found"
         }
-        if currentModel["need_comment"] == 1 && Size($Comment) < 1 {
-            warning "Need comment"
+        if $results[$ResultId-1] == "Submit" || $results[$ResultId-1] == "Send Back"{
+            if currentModel["need_comment"] == 1 && Size($Comment) < 1 {
+                warning "Need comment"
+            }
         }
         $NotificId = Int($NotificId)
     }
