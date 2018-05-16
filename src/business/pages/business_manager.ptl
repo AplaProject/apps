@@ -1,91 +1,106 @@
-DBFind(applications).Where("name='Business'").Vars(application)
-If(#Mode#==deleted){
-    SetVar(Where,"deleted='1'").(panel,"panel-warning")
-}.Else{
-    SetVar(Where,"deleted='0'").(Mode,actived).(panel,"panel-primary")
-}
-DBFind(roles, src_roles).Columns("id,role_name")
-DBFind(business_models, src_models).Where(#Where#).Order("model_id,event_id").Limit(250).Custom(_actions){
-    Div(pull-right btn-group){
-        Button(Class: icon-settings btn btn-primary, Page: business_model, PageParams: "Id=#id#,Mode=#Mode#")
-        If(#deleted#==1){
-            Button(Class: fa fa-undo btn btn-success, Page: business_manager, Contract: business_Manager,Params: "Id=#id#,Action=restore", PageParams: "Mode=#Mode#")
-        }.Else{
-            Button(Class: icon-trash btn btn-danger, Page: business_manager, Contract: business_Manager,Params: "Id=#id#,Action=delete", PageParams: "Mode=#Mode#")
-            Button(Class: icon-control-play btn btn-success, Page: business_model, PageParams: "Id=#id#,Mode=play")
-        }
-    }.Style(min-width:150px;display:flex;)
-}.Custom(_obj){
-    AppParam(App: #application_id#, Name: object_types, Index: #object_type#)
-}.Custom(_role){
-    ForList(src_roles){
-        If(#role_id#==#id#){
-            #role_name#
-        }
-    }
-}.Custom(_cond){
-    Div(){#condition_pretty#}.Style(min-width:150px; word-break: break-word;)
-}.Custom(_res){
-    Div(){#result_pretty#}.Style(min-width:150px; word-break: break-word;)
-}.Custom(_com){
-    Div(){
-        If(#need_comment#==1){
-            $yes$
-        }.Else{
-            $no$
-        }
-    }.Style(max-width:50px;)
-}.Custom(_text){
-    Strong(#title#)
-    Div(){
-        #text_body#
-    }.Style(min-width:150px; word-break: break-word;)
-}
-SetVar(has_models,0)
-ForList(src_models){
-    SetVar(has_models,1)
-}
-Div(content-wrapper){
-    SetTitle($business_manager$)
+Div(fullscreen-wrapper ajman_content){
     Div(row){
-        Div(col-sm-12){
-            Div(panel #panel#){
-                Div(panel-heading clearfix){
-                    #Mode# models
-                    Div(text-right){
-                        Data(model_range, "id"){
-                            1
-                            2
-                            3
-                            4
-                        }
-                        Form(input-group pull-left col-sm-3){
-                            Label(For:mid, Class: input-group-addon){Model ID}
-                            Select(Source: model_range, Name: mid, NameColumn: id, ValueColumn: id)
-                            Div(input-group-btn){
-                                Button(Class: btn btn-default fa fa-check, Page: business_manager, PageParams: "Mode=#Mode#,mid=Val(mid)")
-                            }
-                        }
-                        If(#Mode#==deleted){
-                            LinkPage(Page: business_manager, PageParams: "Mode=actived", Body: $actived$)
-                        }.Else{
-                            LinkPage(Page: business_manager, PageParams: "Mode=deleted", Class: text-danger, Body: $deleted$)
-                            AddToolButton(Page: business_model, Class: btn btn-warning, Title: $create$, Icon: icon-plus)
-                        }
+        Div(col-md-6 pull-left){Image(Binary().ById(18), Class: pull-left)}
+        Div(col-md-6 pull-right){Image(Binary().ById(19), Class: pull-right)}
+    }.Style(padding-bottom: 10px;)
+    Div(row){
+        DBFind(applications).Where("name='Business'").Vars(application)
+        If(#Mode#==deleted){
+            SetVar(Where,"deleted='1'").(panel,"panel-warning")
+        }.Else{
+            SetVar(Where,"deleted='0'").(Mode,actived)
+        }
+        If(GetVar(mid)){
+            SetVar(Where,#Where# and model_id=#mid#)
+        }
+        Div(col-md-12){
+            Div(Class: panel-heading text-center){
+                Span(Class: ajman-color-h1, Body: $business_manager$: LangRes(#Mode#))
+            }
+        }.Style(height: 50px; background-color: #0f789c)
+
+        Div(col-sm-12 content){
+            DBFind(roles, src_roles).Columns("id,role_name")
+            DBFind(business_models, src_models).Where(#Where#).Order("model_id,event_id").Limit(250).Custom(_actions){
+                Div(text-right btn-group){
+                    Button(Class: icon-settings btn ajman_text_blue, Page: business_model, PageParams: "Id=#id#,Mode=#Mode#")
+                    If(#deleted#==1){
+                        Button(Class: fa fa-undo btn ajman_text_blue, Page: business_manager, Contract: business_Manager,Params: "Id=#id#,Action=restore", PageParams: "Mode=#Mode#")
+                    }.Else{
+                        Button(Class: icon-trash btn ajman_text_red, Page: business_manager, Contract: business_Manager,Params: "Id=#id#,Action=delete", PageParams: "Mode=#Mode#")
+                        Button(Class: icon-control-play btn ajman_text_darkgreen, Page: business_model, PageParams: "Id=#id#,Mode=play")
+                    }
+                }.Style(display:flex;)
+            }.Custom(_obj){
+                AppParam(App: #application_id#, Name: object_types, Index: #object_type#)
+            }.Custom(_role){
+                ForList(src_roles){
+                    If(#role_id#==#id#){
+                        #role_name#
                     }
                 }
-                Div(panel-body){
-                    If(#has_models#==1){
-                        Div(table-responsive){
-                            Table(src_models,"$ModelId$=model_id,$EventId$=event_id,$ObjectType$=_obj,$RoleId$=_role,$NeedComment$=_com,$Condition$=_cond,$Result$=_res,$text$=_text,=_actions")
-                        }
+            }.Custom(_cond){
+                Div(){#condition_pretty#}.Style(min-width:150px; word-break: break-word;)
+            }.Custom(_res){
+                Div(){#result_pretty#}.Style(min-width:150px; word-break: break-word;)
+            }.Custom(_com){
+                Div(){
+                    If(#need_comment#==1){
+                        $yes$
                     }.Else{
-                        Div(h3 text-center){
-                            #Mode# models not found
+                        $no$
+                    }
+                }.Style(max-width:50px;)
+            }.Custom(_text){
+                Strong(#title#)
+                Div(){
+                    #text_body#
+                }.Style(min-width:150px; word-break: break-word;)
+            }
+            SetVar(has_models,0)
+            ForList(src_models){
+                SetVar(has_models,1)
+            }
+            Div(content-wrapper){
+                Div(row){
+                    Div(col-sm-12){
+                        Div(text-right form-group){
+                            Data(model_range, "id"){
+                                1
+                                2
+                                3
+                                4
+                            }
+                            Form(input-group pull-left col-sm-3){
+                                Label(For:mid, Class: input-group-addon){Model ID}
+                                Select(Source: model_range, Name: mid, NameColumn: id, ValueColumn: id)
+                                Div(input-group-btn){
+                                    Button(Class: btn btn-default fa fa-check, Page: business_manager, PageParams: "Mode=#Mode#,mid=Val(mid)")
+                                }
+                            }
+                            If(#Mode#==deleted){
+                                LinkPage(Page: business_manager, PageParams: "Mode=actived", Body: $show_actived$)
+                            }.Else{
+                                LinkPage(Page: business_manager, PageParams: "Mode=deleted", Body: $show_deleted$).Style(margin-right:15px;)
+                                Button(Page: business_model, Class: btn ajman_button_darkgreen, Body: $create$)
+                            }
+                        }
+                        Div(panel){
+                            Div(panel-body){
+                                If(#has_models#==1){
+                                    Div(table-responsive){
+                                        Table(src_models,"$ModelId$=model_id,$EventId$=event_id,$ObjectType$=_obj,$RoleId$=_role,$NeedComment$=_com,$Condition$=_cond,$Result$=_res,$text$=_text,=_actions")
+                                    }
+                                }.Else{
+                                    Div(h3 text-center){
+                                        LangRes(#Mode#) $models_not_found$
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
-}
+}.Style(background-color: #f7f7f7)

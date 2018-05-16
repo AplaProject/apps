@@ -4,108 +4,112 @@ If(#notific_id#>0){
     SetVar(business_model_id,#note_page_params_id#).(business_object_id,#note_page_params_object_id#).(comment,#note_page_params_comment#)
 }
 Div(content-wrapper ajman_content){
-    Div(container){
-        If(And(#business_model_id#>0, #business_object_id#>0)){
-            DBFind(business_models).Where("id=#business_model_id#").Vars(business_model)
-            JsonToSource(business_model_results,#business_model_result#)
-            DBFind(roles).Where("deleted=0 and id=#business_model_role_id#").Columns("id,role_name").Vars(business_role)
-            AppParam(App: #application_id#, Name: results, Source: app_results)
-            AppParam(App: #application_id#, Name: object_blocks, Source: app_blocks)
-            SetVar(business_object,"AppParam(App: #application_id#, Name: object_types, Index: #business_model_object_type#)")
+    Div(row){
+        Div(col-md-6 pull-left){Image(Binary().ById(18), Class: pull-left)}
+        Div(col-md-6 pull-right){Image(Binary().ById(19), Class: pull-right)}
+    }.Style(padding-bottom: 10px;)
+    
+    If(And(#business_model_id#>0, #business_object_id#>0)){
+        DBFind(business_models).Where("id=#business_model_id#").Vars(business_model)
+        JsonToSource(business_model_results,#business_model_result#)
+        DBFind(roles).Where("deleted=0 and id=#business_model_role_id#").Columns("id,role_name").Vars(business_role)
+        AppParam(App: #application_id#, Name: results, Source: app_results)
+        AppParam(App: #application_id#, Name: object_blocks, Source: app_blocks)
+        SetVar(business_object,"AppParam(App: #application_id#, Name: object_types, Index: #business_model_object_type#)")
+        Div(row){
+            Div(col-sm-12 form-group text-center){
+                Span(#business_model_title# : #business_object# : #business_object_id#, ajman-color-h1)
+            }.Style(height: 50px; background-color: #0f789c!important;)
+        }
+        Form(container){
+            Div(form-group){
+                Div(row form-group){
+                    Div(col-sm-12){
+                        #business_model_text_body#
+                    }
+                }
 
-            Form(panel panel-primary){
-                Div(panel-heading text-center){
-                    Span(#business_model_title# : #business_object# : #business_object_id#, ajman-color-h1)
-                }.Style(height: 50px; background-color: #0f789c!important;)
-                Div(panel-body){
+                If(#comment#!=""){
+                    Div(row form-group){
+                        Div(col-sm-12){#comment#}
+                    }
+                }
+                If(#business_model_need_comment#==1){
                     Div(row form-group){
                         Div(col-sm-12){
-                            #business_model_text_body#
-                        }
-                    }
-
-                    If(#comment#!=""){
-                        Div(row form-group){
-                            Div(col-sm-12){#comment#}
-                        }
-                    }
-                    If(#business_model_need_comment#==1){
-                        Div(row form-group){
-                            Div(col-sm-12){
-                                Label(For:Comment){LangRes(Comment)}
-                                Input(Name:Comment, Type:textarea)
-                            }
-                        }
-                    }
-
-                    ForList(app_blocks){
-                        If(#id#==#business_model_object_type#){
-                            SetVar(id,#business_object_id#)
-                            Include(#name#)
+                            Label(For:Comment){LangRes(Comment)}
+                            Input(Name:Comment, Type:textarea)
                         }
                     }
                 }
-                Div(panel-footer text-right){
-                    If(#notific_id#>0){
-                        Input(Name:Id, Type:hidden, Value:#business_model_id#)
-                        Input(Name:ModelId, Type:hidden, Value:#business_model_model_id#)
-                        Input(Name:ObjectId, Type:hidden, Value:#business_object_id#)
-                        Input(Name:EventId, Type:hidden, Value:#business_model_event_id#)
-                        Input(Name:ObjectType, Type:hidden, Value:#business_model_object_type#)
-                        Input(Name:NotificId, Type:hidden, Value:#notific_id#)
-                        Div(){
-                            ForList(app_results){
-                                ForList(business_model_results){
-                                    If(And(#name#==#key#,#value#==1)){
-                                        SetVar(n,Calculate(#id#/5,Type:int)).(mod,Calculate(#id#-#id#*#n#))
-                                        If(Or(#name#==Submit,#mod#==1)){
-                                            SetVar(business_class,btn-primary)
-                                        }.ElseIf(Or(#name#=="Sent Back",#mod#==2)){
-                                            SetVar(business_class,btn-info)
-                                        }.ElseIf(Or(#name#==Accept,#mod#==3)){
-                                            SetVar(business_class,btn-success)
-                                        }.ElseIf(Or(#name#==Escalation,#mod#==4)){
-                                            SetVar(business_class,btn-warning)
-                                        }.ElseIf(Or(#name#==Reject,#mod#==5)){
-                                            SetVar(business_class,btn-danger)
-                                        }.Else{
-                                            SetVar(business_class,btn-default)
-                                        }
-                                        Button(Body:LangRes(#name#), Class: btn #business_class#, Page: business_process, Contract: business_Process, Params:"ResultId=#id#")
+
+                ForList(app_blocks){
+                    If(#id#==#business_model_object_type#){
+                        SetVar(id,#business_object_id#)
+                        Include(#name#)
+                    }
+                }
+            }
+            Div(row){
+                If(#notific_id#>0){
+                    Input(Name:Id, Type:hidden, Value:#business_model_id#)
+                    Input(Name:ModelId, Type:hidden, Value:#business_model_model_id#)
+                    Input(Name:ObjectId, Type:hidden, Value:#business_object_id#)
+                    Input(Name:EventId, Type:hidden, Value:#business_model_event_id#)
+                    Input(Name:ObjectType, Type:hidden, Value:#business_model_object_type#)
+                    Input(Name:NotificId, Type:hidden, Value:#notific_id#)
+                    Div(col-sm-12 text-right){
+                        ForList(app_results){
+                            ForList(business_model_results){
+                                If(And(#name#==#key#,#value#==1)){
+                                    SetVar(n,Calculate(#id#/5,Type:int)).(mod,Calculate(#id#-#id#*#n#))
+                                    If(Or(#name#==Submit,#mod#==1)){
+                                        SetVar(business_class,btn-primary)
+                                    }.ElseIf(Or(#name#=="Sent Back",#mod#==2)){
+                                        SetVar(business_class,btn-info)
+                                    }.ElseIf(Or(#name#==Accept,#mod#==3)){
+                                        SetVar(business_class,btn-success)
+                                    }.ElseIf(Or(#name#==Escalation,#mod#==4)){
+                                        SetVar(business_class,btn-warning)
+                                    }.ElseIf(Or(#name#==Reject,#mod#==5)){
+                                        SetVar(business_class,btn-danger)
+                                    }.Else{
+                                        SetVar(business_class,btn-default)
                                     }
+                                    Button(Body:LangRes(#name#), Class: btn #business_class#, Page: business_process, Contract: business_Process, Params:"ResultId=#id#")
                                 }
                             }
-                        }.Style(div {display:inline-block;})
-                    }.Else{
-                        Div(text-warning){
-                            Notification not found. Action impossible
                         }
+                    }.Style(div {display:inline-block;})
+                }.Else{
+                    Div(text-warning){
+                        Notification not found. Action impossible
                     }
                 }
             }
-        }.Else{
-            AppParam(App: #application_id#, Name: object_types, Source: app_objects)
-            AppParam(App: #application_id#, Name: results, Source: app_results)
-            DBFind(business_events,src_events).Order("id desc").Custom(_obj){
-                ForList(app_objects){
-                    If(#id#==#object_type#){
-                        #name# (#object_type#)
-                    }
-                }
-            }.Custom(_res){
-                ForList(app_results){
-                    If(#id#==#result_id#){
-                        #name#
-                    }
+        }
+    }.Else{
+        AppParam(App: #application_id#, Name: object_types, Source: app_objects)
+        AppParam(App: #application_id#, Name: results, Source: app_results)
+        DBFind(business_events,src_events).Order("id desc").Custom(_obj){
+            ForList(app_objects){
+                If(#id#==#object_type#){
+                    #name# (#object_type#)
                 }
             }
-            Form(panel panel-primary){
-                Div(panel-heading text-center){
-                    Span($business_events$, ajman-color-h1)
-                }.Style(height: 50px; background-color: #0f789c!important;)
-                Div(panel-body){
-                    Table(src_events, "$ModelId$=model_id,$EventId$=event_id,$object$=_obj,$ObjectId$=object_id,$wallet$=key_id,$result$=_res,$comment$=comment,$num_submitted$=num_submitted,$created$=created_at")
+        }.Custom(_res){
+            ForList(app_results){
+                If(#id#==#result_id#){
+                    #name#
                 }
+            }
+        }
+        Form(row){
+            Div(col-sm-12 form-group text-center){
+                Span($business_events$, ajman-color-h1)
+            }.Style(height: 50px; background-color: #0f789c!important;)
+            Div(col-sm-12){
+                Table(src_events, "$ModelId$=model_id,$EventId$=event_id,$object$=_obj,$ObjectId$=object_id,$wallet$=key_id,$result$=_res,$comment$=comment,$num_submitted$=num_submitted,$created$=created_at")
             }
         }
     }
