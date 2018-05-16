@@ -20,42 +20,107 @@ contract business_Process {
         return false
     }
 
-    func updateObjectStatus(){
-        var tables manager_ids array
-        tables = Split(AppParam($ApplicationId, "object_status_tables"), ",")
-        manager_ids = Split(AppParam($ApplicationId, "manager_role_ids"), ",")
-        if Len(tables) >= $ObjectType{
-            var table string
-            table = Replace(tables[$ObjectType-1], " ", "")
-            if Size(table) > 1{
-                if DBFind(table).WhereId($ObjectId).One("status"){
-                    var res status string
-                    res = $results[$ResultId-1]
-                    if res == "Accept" && stringInArray(Str($role_id), manager_ids){
-                        res = "AM Accept"
-                    }
-                    status = $STATUSES[res]
-                    if status {
-                        DBUpdate(table, $ObjectId, "status", status)
-                    }
+    func updateObject(){
+        if Size($objectTable) > 1{
+            if $resultStr == "Accept" && stringInArray(Str($role_id), $managerRoleIds){
+                $resultStr = "AM Accept"
+            }
+            var status string
+            status = $STATUSES[$resultStr]
+            if status{
+                if DBFind($objectTable).WhereId($ObjectId).One("status"){
+                    DBUpdate($objectTable, $ObjectId, "status", status)
                 }else{
                     warning "Status not found"
                 }
             }
+            if $objectTable == "property_contracts" && ($resultStr == "Accept" || $resultStr == "AM Accept") {
+                var obj map
+                obj = DBFind($objectTable).Where("id=?",$ObjectId).Row()
+                if obj {
+                    var unitId propertyId startDate endDate string
+                    unitId = obj["unit_id"]
+                    propertyId = obj["property_id"]
+                    startDate = obj["start_date"]
+                    endDate = obj["end_date"]
+                    if unitId > 0{
+                        DBUpdate("units", Int(unitId), "rented,start_date,end_date", $ObjectId, obj["start_date"], obj["end_date"])
+                    }
+                    if propertyId > 0{
+                        DBUpdate("properties", Int(propertyId), "rented,start_date,end_date", $ObjectId, obj["start_date"], obj["end_date"])
+                    }
+                }
+            }
         }
     }
-
-    conditions {
-        $ApplicationId = Int(DBFind("applications").Where("name='Business'").One("id"))
-        if $ApplicationId == 0 {
-            warning "Application ID not found"
+    func getAppParamArray(name string, min int) array{
+        var res array
+        res = Split(AppParam($ApplicationId, name), ",")
+        if Len(res) < min {
+            warning Sprintf("%v invalid", name)
         }
-        $ownerRoleId = Int(AppParam($ApplicationId,"owner_role_id"))
-        if $ownerRoleId == 0 {
-            info "Application parameter owner_role_id not found"
+        return res
+    }
+    func trim(s string)string{
+        while HasPrefix(s, " "){
+            s = Substr(s, 1, Size(s))
         }
-        // Submit,Send Back,Accept,Escalation,Reject,Inform,Pay
-        $results = Split(AppParam($ApplicationId, "results"), ",")
+        while " " == Substr(s, Size(s)-1, 1){
+            s = Substr(s, 0, Size(s)-1)
+        }
+        return s
+    }
+    func getNextModel()map{
+        var nextModel model map
+        var i int
+        while i<Len($models){
+            model = $models[i]
+            var cond map
+            cond = JSONDecode(model["condition"])
+            if cond["0"] == $ResultId || cond[Str($EventId)] == $ResultId {
+                nextModel = model
+                break
+            }
+            i=i+1
+        }
+        return nextModel
+    }
+    func closeNotify(){
+        if $NotificId > 0{
+            Notifications_Roles_Processing("notific_id", $NotificId)
+            Notifications_Roles_Close("notific_id", $NotificId)
+        }
+    }
+    func sendNext(model map){
+        if model {
+            var roleId closureType sender int
+            roleId = model["role_id"]
+            closureType = 2 // multiple
+            sender = 2 // from admin?
+            var icon header body page string
+            icon = "icon-envelope"
+            header = Sprintf("Business process: %v", model["title"])
+            body = Sprintf("Next step for object id #%v", $ObjectId)
+            page = "business_process"
+            var params map
+            params["id"] = model["id"]
+            params["object_id"] = $ObjectId
+            params["comment"] = $Comment
+            if roleId == $ownerRoleId {
+                var initiator string
+                initiator = DBFind("business_events").Where("object_id=? and result_id=? and model_id=?", $ObjectId, $STATUSES["Submit"], $ModelId).Order("event_id asc, id desc").One("key_id")
+                if initiator {
+                    // if the role is Owner send alert to the initiating user (submit event)
+                    Notifications_Single_Send_map("member_id,sender,icon_name,text_header,text_body,page_name,params_map", Int(initiator), sender, icon, header, body, page, params)
+                }else{
+                    warning "Initiator process not found"
+                }
+            }else{
+                Notifications_Roles_Send_map("rid,closure_type,sender,icon_name,text_header,text_body,page_name,params_map", roleId, closureType, sender, icon, header, body, page, params)
+            }
+        }
+    }
+    func getStatuses()map{
         var statuses map
         //0 Not Submitted
         statuses["Submit"] = 1 //"Submitted"
@@ -65,7 +130,26 @@ contract business_Process {
         statuses["Pay"] = 5 // "Paid"
         statuses["AM Accept"] = 6 // "AM Approved"
         statuses["Reject"] = 7 //"Rejected"
-        $STATUSES = statuses
+        return statuses
+    }
+    conditions {
+        $ApplicationId = Int(DBFind("applications").Where("name='Business'").One("id"))
+        if $ApplicationId == 0 {
+            warning "Application ID not found"
+        }
+        $ownerRoleId = Int(AppParam($ApplicationId,"owner_role_id"))
+        if $ownerRoleId == 0 {
+            info "Application parameter owner_role_id not found"
+        }
+        $results = getAppParamArray("results", $ResultId)
+        $objectTypes = getAppParamArray("object_types", $ObjectType)
+        $managerRoleIds = getAppParamArray("manager_role_ids", 1)
+        $objectTables = getAppParamArray("object_status_tables", $ObjectType)
+
+        $objectTable = trim($objectTables[$ObjectType-1])
+        $resultStr = trim($results[$ResultId-1])
+        $objectStr = trim($objectTypes[$ObjectType-1])
+        $STATUSES = getStatuses()
 
 
         $numSubmitted = Int(DBFind("business_events").Where("event_id=? and object_type=? and object_id=? and key_id=? and result_id=? and model_id=?", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId, $ModelId).Order("num_submitted desc").One("num_submitted")) + 1
@@ -76,7 +160,7 @@ contract business_Process {
         if !currentModel{
             error "Business model not found"
         }
-        if $results[$ResultId-1] == "Submit" || $results[$ResultId-1] == "Send Back"{
+        if $resultStr == "Submit" || $resultStr == "Send Back"{
             if currentModel["need_comment"] == 1 && Size($Comment) < 1 {
                 warning "Need comment"
             }
@@ -85,54 +169,8 @@ contract business_Process {
     }
     action {
         DBInsert("business_events", "event_id,object_type,object_id,key_id,result_id,comment,num_submitted,created_at,model_id", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId, $Comment, $numSubmitted, "Now()", $ModelId)
-
-        updateObjectStatus()
-
-        var i int
-        var nextModel map
-        var isNextFound bool
-        while i<Len($models){
-            nextModel = $models[i]
-            var cond map
-            cond = JSONDecode(nextModel["condition"])
-            if cond["0"] == $ResultId || cond[Str($EventId)] == $ResultId {
-                isNextFound = true
-                break
-            }
-            i=i+1
-        }
-        if $NotificId > 0{
-            Notifications_Roles_Processing("notific_id", $NotificId)
-            Notifications_Roles_Close("notific_id", $NotificId)
-        }
-        if isNextFound {
-            var roleId closureType sender int
-            roleId = nextModel["role_id"]
-            closureType = 2 // multiple
-            sender = 2 // from admin?
-            var icon header body page string
-            icon = "icon-envelope"
-            header = Sprintf("Business process: %v", nextModel["title"])
-            body = Sprintf("Next step for object id #%v", $ObjectId)
-            page = "business_process"
-            var params map
-            params["id"] = nextModel["id"]
-            params["object_id"] = $ObjectId
-            params["comment"] = $Comment
-            if roleId == $ownerRoleId {
-                var initiator int
-                initiator = DBFind("business_events").Where("object_id=? and result_id=? and model_id=?", $ObjectId, $STATUSES["Submit"], $ModelId).Limit(250).Order("event_id asc, id desc").One("key_id")
-                if initiator {
-                    // if the role is Owner send alert to the initiating user (submit event)
-                    Notifications_Single_Send_map("member_id,sender,icon_name,text_header,text_body,page_name,params_map", Int(initiator), sender, icon, header, body, page, params)
-                }else{
-                    warning "Initiator process not found"
-                }
-            }else{
-                Notifications_Roles_Send_map("rid,closure_type,sender,icon_name,text_header,text_body,page_name,params_map", roleId, closureType, sender, icon, header, body, page, params)
-            }
-        }else{
-            Println("Next step not found")
-        }
+        updateObject()
+        sendNext(getNextModel())
+        closeNotify()
     }
 }
