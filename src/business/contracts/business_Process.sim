@@ -19,35 +19,47 @@ contract business_Process {
         }
         return false
     }
-
+    func resultToStatusId(r string)int{
+        // Ecosystem param property_statuses
+        var statuses map
+        statuses[$SUBMIT] = 1 // submited
+        statuses[$ESCALATE] = 2 // escalated
+        statuses[$SENDBACK] = 3 // sendback
+        statuses[$ACCEPT] = 4 // accepted
+        statuses[$REJECT] = 5 // rejected
+        statuses[$AMACCEPT] = 6 // am_accepted
+        var status int
+        if statuses[r] {
+            status = statuses[r]
+        }
+        return status
+    }
     func updateObject(){
         if Size($objectTable) > 1{
-            if $resultStr == "Accept" && stringInArray(Str($role_id), $managerRoleIds){
-                $resultStr = "AM Accept"
+            if $resultStr == $ACCEPT && stringInArray(Str($role_id), $managerRoleIds){
+                $resultStr = $AMACCEPT
             }
-            var status string
-            status = $STATUSES[$resultStr]
-            if status{
+            var status int
+            status = resultToStatusId($resultStr)
+            if status > 0{
                 if DBFind($objectTable).WhereId($ObjectId).One("status"){
                     DBUpdate($objectTable, $ObjectId, "status", status)
                 }else{
                     warning "Status not found"
                 }
             }
-            if $objectTable == "property_contracts" && ($resultStr == "Accept" || $resultStr == "AM Accept") {
+            if $objectTable == "property_contracts" && ($resultStr == $ACCEPT || $resultStr == $AMACCEPT) {
                 var obj map
                 obj = DBFind($objectTable).Where("id=?",$ObjectId).Row()
                 if obj {
-                    var unitId propertyId startDate endDate string
-                    unitId = obj["unit_id"]
-                    propertyId = obj["property_id"]
-                    startDate = obj["start_date"]
-                    endDate = obj["end_date"]
+                    var unitId propertyId int
+                    unitId = Int(obj["unit_id"])
+                    propertyId = Int(obj["property_id"])
                     if unitId > 0{
-                        DBUpdate("units", Int(unitId), "rented,start_date,end_date", $ObjectId, obj["start_date"], obj["end_date"])
+                        DBUpdate("units", unitId, "rented,start_date,end_date,tenant_id", $ObjectId, obj["start_date"], obj["end_date"], obj["tenant_id"])
                     }
                     if propertyId > 0{
-                        DBUpdate("properties", Int(propertyId), "rented,start_date,end_date", $ObjectId, obj["start_date"], obj["end_date"])
+                        DBUpdate("properties", propertyId, "rented,start_date,end_date,tenant_id", $ObjectId, obj["start_date"], obj["end_date"], obj["tenant_id"])
                     }
                 }
             }
@@ -108,7 +120,7 @@ contract business_Process {
             params["comment"] = $Comment
             if roleId == $ownerRoleId {
                 var initiator string
-                initiator = DBFind("business_events").Where("object_id=? and result_id=? and model_id=?", $ObjectId, $STATUSES["Submit"], $ModelId).Order("event_id asc, id desc").One("key_id")
+                initiator = DBFind("business_events").Where("object_id=? and result_id=1 and model_id=?", $ObjectId, $ModelId).Order("event_id asc, id desc").One("key_id")
                 if initiator {
                     // if the role is Owner send alert to the initiating user (submit event)
                     Notifications_Single_Send_map("member_id,sender,icon_name,text_header,text_body,page_name,params_map", Int(initiator), sender, icon, header, body, page, params)
@@ -120,18 +132,6 @@ contract business_Process {
             }
         }
     }
-    func getStatuses()map{
-        var statuses map
-        //0 Not Submitted
-        statuses["Submit"] = 1 //"Submitted"
-        statuses["Escalate"] = 2 //"Escalated"
-        statuses["Send Back"] = 3 //"Send Back"
-        statuses["Accept"] = 4 //"Accepted"
-        statuses["Pay"] = 5 // "Paid"
-        statuses["AM Accept"] = 6 // "AM Approved"
-        statuses["Reject"] = 7 //"Rejected"
-        return statuses
-    }
     conditions {
         $ApplicationId = Int(DBFind("applications").Where("name='Business'").One("id"))
         if $ApplicationId == 0 {
@@ -141,6 +141,13 @@ contract business_Process {
         if $ownerRoleId == 0 {
             info "Application parameter owner_role_id not found"
         }
+        $SUBMIT = "Submit"
+        $ESCALATE = "Escalate"
+        $SENDBACK = "Send Back"
+        $ACCEPT = "Accept"
+        $REJECT = "Reject"
+        $AMACCEPT = "AM Accept"
+
         $results = getAppParamArray("results", $ResultId)
         $objectTypes = getAppParamArray("object_types", $ObjectType)
         $managerRoleIds = getAppParamArray("manager_role_ids", 1)
@@ -149,8 +156,6 @@ contract business_Process {
         $objectTable = trim($objectTables[$ObjectType-1])
         $resultStr = trim($results[$ResultId-1])
         $objectStr = trim($objectTypes[$ObjectType-1])
-        $STATUSES = getStatuses()
-
 
         $numSubmitted = Int(DBFind("business_events").Where("event_id=? and object_type=? and object_id=? and key_id=? and result_id=? and model_id=?", $EventId, $ObjectType, $ObjectId, $key_id, $ResultId, $ModelId).Order("num_submitted desc").One("num_submitted")) + 1
         $models = DBFind("business_models").Order("event_id").Where("deleted='0' and model_id=?", $ModelId)
