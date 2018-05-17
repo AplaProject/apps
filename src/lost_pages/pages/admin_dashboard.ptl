@@ -24,48 +24,59 @@ Div(container){
             }
         }
     }
-    ForList(tables){
-        If(Or(#table#==menu,#table#==parameters)){
-            DBFind(#table#, src_table).Limit(250).Columns(#cols#).Order(#order#)
-        }.Else{
-            DBFind(#table#, src_table).Limit(250).Columns(#cols#).Order(#order#).Where(#where#)
-        }
-        Div(row form-group){
-            Span(#table#,h3)
-            If(Or(#table#==contracts,#table#==pages,#table#==blocks,#table#==menu)){
-                Form(col-sm-2 input-group form-group pull-right){
-                    Input(Name:appId, Type:number, Placeholder:app id, Value:#appId#)
-                    Div(input-group-btn){
-                        Button(Page: editor, Class: btn btn-default, PageParams: "create=#link#,appId=Val(appId)", Body: create)
+    Div( form-group){
+        ForList(tables){
+            If(Or(#table#==menu,#table#==parameters)){
+                DBFind(#table#, src_table).Limit(250).Columns(#cols#).Order(#order#).Count(table_count)
+            }.Else{
+                DBFind(#table#, src_table).Limit(250).Columns(#cols#).Order(#order#).Where(#where#).Count(table_count)
+            }
+            If(#table_count#>0){
+                Div(row){
+                    Div(h3){
+                        #table#
+                        If(Or(#table#==contracts,#table#==pages,#table#==blocks,#table#==menu)){
+                            Form(col-sm-2 input-group form-group pull-right){
+                                Input(Name:aid, Type:number, Placeholder:app id, Value:GetVar(appId))
+                                Div(input-group-btn){
+                                    Button(Page: editor, Class: btn btn-default, PageParams: "create=#link#,appId=Val(aid)", Body: create)
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        }
-        Div(row form-group){
-            SetVar(value,)
-            ForList(src_table){
-                Div(col-sm-4){
-                    If(#app_id#>0){
-                        Span(#app_id#,text-muted).Style(margin-right:10px;)
-                    }
-                    If(#table#==pages){
-                        LinkPage(Page: #name#, Class: fa fa-eye text-muted).Style(margin-right:10px;)
-                    }
-                    If(#table#==languages){
-                        LinkPage(Body: #name#, Page: langres_edit, PageParams: "lang_id=#id#")
-                    }.ElseIf(#table#==tables){
-                        LinkPage(Body: #name#, Page: table_view, PageParams: "tabl_id=#id#")
-                    }.ElseIf(#table#==app_params){
-                        LinkPage(Body: #name#, Page: app_params_edit, PageParams: "id=#id#")
-                    }.ElseIf(#table#==parameters){
-                        LinkPage(Body: #name#, Page: params_edit, PageParams: "id=#id#")
-                    }.ElseIf(#link#!=""){
-                        LinkPage(Body: #name#, Page: editor, PageParams: "open=#link#,name=#name#")
-                    }.Else{
-                        #name#
-                    }
-                    If(`#value#`!=""){
-                        :Div(text-muted){`#value#`}.Style(max-height:3em;overflow:hidden;)
+                Div(row list-group-item){
+                    SetVar(value,)
+                    ForList(src_table){
+                        Div(col-sm-4){
+                            If(#app_id#>0){
+                                Span(#app_id#,text-muted).Style(margin-right:10px;)
+                            }
+                            If(#table#==pages){
+                                LinkPage(Page: #name#, Class: fa fa-eye text-muted).Style(margin-right:10px;)
+                            }
+                            If(#table#==languages){
+                                LinkPage(Body: #name#, Page: langres_edit, PageParams: "lang_id=#id#")
+                            }.ElseIf(#table#==tables){
+                                If(#name#==delayed_contracts){
+                                    SetVar(count,*)
+                                }.Else{
+                                    DBFind("#name#").Count(count)
+                                }
+                                LinkPage(Body: "#name# (#count#)", Page: table_view, PageParams: "tabl_id=#id#")
+                            }.ElseIf(#table#==app_params){
+                                LinkPage(Body: #name#, Page: app_params_edit, PageParams: "id=#id#")
+                            }.ElseIf(#table#==parameters){
+                                LinkPage(Body: #name#, Page: params_edit, PageParams: "id=#id#")
+                            }.ElseIf(#link#!=""){
+                                LinkPage(Body: #name#, Page: editor, PageParams: "open=#link#,name=#name#")
+                            }.Else{
+                                #name#
+                            }
+                            If(`#value#`!=""){
+                                :Div(text-muted){`#value#`}.Style(max-height:3em;overflow:hidden;)
+                            }
+                        }
                     }
                 }
             }
