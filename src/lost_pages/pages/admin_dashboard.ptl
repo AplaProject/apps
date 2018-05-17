@@ -8,23 +8,45 @@ Data(tables, "table,link,cols,order"){
     app_params,,"id,app_id,name,value","app_id,name"
     parameters,,"id,name,value","name"
 }
-DBFind(applications,src_apps)
+DBFind(applications,src_apps).Count(apps_count)
+SetVar(this_page,admin_dashboard)
 If(#appId#>0){
     SetVar(where,"app_id=#appId#")
 }.Else{
     SetVar(where,"id>0").(appId,)
 }
 Div(container){
-    Div(row){
-        Form(col-sm-4 input-group form-group){
-            Select(Name:appId, Source:src_apps, NameColumn: name, ValueColumn: id, Value:#appId#)
-            Div(input-group-btn){
-                Button(Page: admin_dashboard, Class: btn btn-info, PageParams: "appId=Val(appId)", Body: show)
-                Button(Page: admin_dashboard, Class: btn btn-default, PageParams: "appId=0", Body:reset)
+    If(#apps_count#>8){
+        Div(row){
+            Form(col-sm-4 input-group form-group){
+                Select(Name:appId, Source:src_apps, NameColumn: name, ValueColumn: id, Value:#appId#)
+                Div(input-group-btn){
+                    Button(Page: #this_page#, Class: btn btn-info, PageParams: "appId=Val(appId)", Body: show)
+                    Button(Page: #this_page#, Class: btn btn-default, PageParams: "appId=0", Body:reset)
+                }
+            }
+        }
+    }.Else{
+        Div(row){
+            Div(col-sm-12 btn-group){
+                ForList(src_apps){
+                    If(#id#==1){
+                        If(#appId#==""){
+                            Button(Class: btn btn-info disabled, Body: Span(Class:fa fa-recycle))
+                        }.Else{
+                            Button(Page: #this_page#, Class: btn btn-default, PageParams: "appId=0", Body: Span(Class:fa fa-recycle))
+                        }
+                    }
+                    If(#appId#==#id#){
+                        Button(Class: btn btn-info disabled, Body:"#id#:#name#")
+                    }.Else{
+                        Button(Page: #this_page#, Class: btn btn-default, PageParams: "appId=#id#", Body:"#id#:#name#")
+                    }
+                }
             }
         }
     }
-    Div( form-group){
+    Div(form-group){
         ForList(tables){
             If(Or(#table#==menu,#table#==parameters)){
                 DBFind(#table#, src_table).Limit(250).Columns(#cols#).Order(#order#).Count(table_count)
