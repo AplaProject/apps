@@ -1,0 +1,132 @@
+DBFind(applications).Where("name='Properties'").Vars(application)
+
+If(#id#>0){
+    DBFind(properties).Where("remove=0 and id=#id#").Vars(property)
+}.Else{
+    property id not found
+}
+Data(prop_type_listing, "id,name"){
+    0,Please select
+    1,Factory
+    2,Shabra
+    3,Labour Camp
+    4,Land
+    5,Villa
+    6,Building
+    7,Mall
+}
+Data(reg_listing, "id,name"){
+    0,Please select
+    1,Submited
+    2,Escalated
+    3,Sent Back
+    4,Accepted
+    5,Paid
+    6,AM Approved
+    7,Rejected
+}
+
+If(#mode#==edit){
+    Data(basic, "title,type,req,src,val,disable"){
+        name_english,input,,,#property_name_english#,
+        name_arabic,input,,,#property_name_arabic#,
+        property_type,select,,prop_type_listing,#property_property_type#,
+        coordinates,input,,,#property_coordinates#,
+        area,input,,,#property_area#,
+        rooms,input,,,#property_rooms#,
+        floors,input,,,#property_floors#,
+        number_of_units,input,,,#property_number_of_units#,
+        lease_unit,input,,,#property_lease_unit#,
+        makani_id,input,,,#property_makani_id#,
+        have_parking,checkbox,,,#property_have_parking#,
+        status,select,,reg_listing,#property_status#,
+        rented,checkbox,,,#property_rented#,
+        total_rent_amount,input,,,#property_total_rent_amount#,
+        no_of_installments,input,,,#property_no_of_installments#,
+        security_deposit,vinputiew,,,#property_security_deposit#,
+        start_date,datetime,*,,#property_start_date#,
+        end_date,datetime,*,,#property_end_date#,
+    }
+}.Else{
+    SetVar(start_date, DateTime(#property_start_date#, "YYYY-MM-DD"))
+    SetVar(end_date, DateTime(#property_end_date#, "YYYY-MM-DD"))
+    Data(basic, "title,type,src,val,disable"){
+        name_english,view,,#property_name_english#,1
+        name_arabic,view,,#property_name_arabic#,1
+        property_type,view_select,prop_type_listing,#property_property_type#,1
+        coordinates,view_json,,#property_coordinates#,1
+        area,view,,#property_area#,1
+        rooms,view,,#property_rooms#,1
+        floors,view,,#property_floors#,1
+        number_of_units,view,,#property_number_of_units#,1
+        lease_unit,view,,#property_lease_unit#,1
+        makani_id,view,,#property_makani_id#,1
+        have_parking,checkbox,,#property_have_parking#,1
+        status,view_select,reg_listing,#property_status#,1
+        rented,checkbox,,#property_rented#,1
+        total_rent_amount,view,,#property_total_rent_amount#,1
+        no_of_installments,view,,#property_no_of_installments#,1
+        security_deposit,view,,#property_security_deposit#,1
+        start_date,view,,#start_date#,1
+        end_date,view,,#end_date#,1
+    }
+}
+
+ForList(basic){
+    Div(row){
+        Div(col-md-2 text-right){
+            Label(For: #title#){LangRes(#title#)}
+        }
+        SetVar(add_class,col-md-5)
+        If(Or(#type#==textarea,#type#==view,#type#==view_json)){
+            SetVar(add_class,col-md-6)
+        }
+        Div(#add_class#){
+            If(#type#==input){
+                Input(Name:#title#, Value:#val#, Disabled: #disable#)
+            }
+            If(#type#==textarea){
+                Input(Name:#title#, Type:textarea, Value:#val#, Disabled: #disable#)
+            }
+            If(#type#==password){
+                Input(Name:#title#, Type:password, Value:#val#, Disabled: #disable#)
+            }
+            If(#type#==datetime){
+                SetVar(date, DateTime(#val#, "YYYY-MM-DD"))
+                Input(Name:#title#, Type:date, Value: #date#, Disabled: #disable#)
+            }
+            If(#type#==file){
+                Input(Name:#title#, Type:file, Disabled: #disable#)
+            }
+            If(#type#==checkbox){
+                If(#val# == 1){
+                    SetVar(checked, true)
+                }
+                Input(Name:#title#, Type:checkbox, Value: #checked#, Disabled: #disable#)
+            }
+            If(#type#==radio){
+                RadioGroup(Name:#title#, Source: #src#, NameColumn:name, ValueColumn: id, Value: #val#, Disabled: #disable#)
+            }
+            If(#type#==select){
+                Select(Name:#title#, Source: #src#, NameColumn:name, ValueColumn: id, Value: #val#, Disabled: #disable#)
+            }
+            If(#type#==json_select){
+                Select(Name:#title#, Source: #src#, NameColumn:value, ValueColumn: key, Value: #val#, Disabled: #disable#)
+            }
+            If(#type#==view){
+                Span(#val#)
+            }
+            If(#type#==view_json){
+                JsonToSource(val,`#val#`)
+                Table(val,"=key,=value")
+            }
+            If(#type#==view_select){
+                ForList(#src#){
+                    If(#id#==#val#){
+                        LangRes(#name#)
+                    }
+                }
+            }
+        }
+    }
+}
