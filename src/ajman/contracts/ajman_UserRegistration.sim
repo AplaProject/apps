@@ -40,8 +40,12 @@ contract ajman_UserRegistration {
         }
     }
     func validateUsername(n string){
-        if DBFind("members").Where("member_name=?", n).One("id"){
-            warning "This user name is already taken. Please specify a different name"
+        var mid map
+        mid = DBFind("members").Where("member_name=?", n).One("id")
+        if mid{
+            if mid != $key_id{
+                warning "This user name is already taken. Please specify a different name"
+            }
         }
     }
 
@@ -65,18 +69,22 @@ contract ajman_UserRegistration {
         validateStr($PassportId, "Passport Id")
         validateStr($Mobile, "Mobile")
 
-        if DBFind("members").Where("id=?", $key_id).Row(){
-            warning "This member is already registered"
-        }
+        $member = DBFind("members").Where("id=?", $key_id).Row()
         $managerRoleId = AppParam($ApplicationId, "manager_role_id")
     }
     action {
-        var emirateIdImage, passportIdImage, profileImage int
+        var inform map
+        if $member {
+            $Username = $member["member_name"]
+            if $member["member_info"]{
+                inform = JSONDecode($member["member_info"])
+            }
+        }
+        var emirateIdImage passportIdImage profileImage int
         emirateIdImage = UploadBinary("Name,Data,ApplicationId,DataMimeType", "EmirateIdImage", $EmirateIdImage, $ApplicationId, $EmirateIdImageMimeType)
         passportIdImage = UploadBinary("Name,Data,ApplicationId,DataMimeType", "PassportIdImage", $PassportIdImage, $ApplicationId, $PassportIdImageMimeType)
         profileImage = UploadBinary("Name,Data,ApplicationId,DataMimeType", "ProfileImage", $ProfileImage, $ApplicationId, $ProfileImageMimeType)
 
-        var inform map
         inform["username"] = $Username
         inform["first_name_ar"] = $FirstNameAr
         inform["last_name_ar"] = $LastNameAr
@@ -101,17 +109,22 @@ contract ajman_UserRegistration {
         inform["communication"] = $Communication
         inform["language"] = $Language
         inform["status"] = 0 // 0:registrated, 1:rejected, 2:approved
-        
-        DBInsert("members", "id,member_name,member_info", $key_id, $Username, inform)
+
+        var icon header body page string
+        if $member {
+            DBUpdate("members", $key_id, "member_info", inform)
+            header = "Ajman URP: Update user"
+        }else{
+            DBInsert("members", "id,member_name,member_info", $key_id, $Username, inform)
+            header = "Ajman URP: New user"
+        }
 
         // managers notification
         var roleId closureType sender int
         roleId = $managerRoleId
         closureType = 2 // multiple
-        sender = 2 // from admin?
-        var icon header body page string
+        sender = 2 // from admin
         icon = "icon-envelope"
-        header = "Ajman URP: New user"
         body = $Username
         page = "ajman_user_registration"
         var params map
