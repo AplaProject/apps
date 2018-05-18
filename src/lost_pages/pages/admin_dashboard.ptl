@@ -11,24 +11,24 @@ Data(tables, "table,link,cols,order"){
     parameters,,"id,name,value","name"
 }
 DBFind(applications,src_apps).Count(apps_count)
-SetVar(this_page,admin_dashboard)
-If(#appId#>0){
-    SetVar(where,"app_id=#appId#")
+SetVar(this_page,admin_dashboard).(active_btn,"btn btn-info")
+If(GetVar(appid)){
+    SetVar(where,"app_id=#appid#")
 }.Else{
     If(#buffer_value_app_id#>0){
-        SetVar(where,"id=#buffer_value_app_id#").(appId,#buffer_value_app_id#)
+        SetVar(appid,#buffer_value_app_id#).(where,"app_id=#appid#")
     }.Else{
-        SetVar(where,"id>0").(appId,)
+        SetVar(where,"id>0").(appid,)
     }
 }
 Div(container){
     If(#apps_count#>8){
         Div(row){
             Form(col-sm-4 input-group form-group){
-                Select(Name:appId, Source:src_apps, NameColumn: name, ValueColumn: id, Value:#appId#)
+                Select(Name:appid, Source:src_apps, NameColumn: name, ValueColumn: id, Value:#appid#)
                 Div(input-group-btn){
-                    Button(Page: #this_page#, Class: btn btn-info, PageParams: "appId=Val(appId)", Body: show)
-                    Button(Page: #this_page#, Class: btn btn-default, PageParams: "appId=0", Body:reset)
+                    Button(Page: #this_page#, Class: #active_btn#, PageParams: "appid=Val(appid)", Body: show)
+                    Button(Page: #this_page#, Class: btn btn-default, PageParams: "appid=0", Body:reset)
                 }
             }
         }
@@ -37,16 +37,16 @@ Div(container){
             Div(col-sm-12 btn-group){
                 ForList(src_apps){
                     If(#id#==1){
-                        If(#appId#==""){
-                            Button(Class: btn btn-info disabled, Body: Span(Class:fa fa-recycle))
+                        If(#appid#==""){
+                            Button(Class: #active_btn# disabled, Body: Span(Class:fa fa-refresh))
                         }.Else{
-                            Button(Page: #this_page#, Class: btn btn-default, PageParams: "appId=0", Body: Span(Class:fa fa-recycle))
+                            Button(Page: #this_page#, Class: btn btn-default, PageParams: "appid=0", Body: Span(Class:fa fa-refresh))
                         }
                     }
-                    If(#appId#==#id#){
-                        Button(Class: btn btn-info disabled, Body:"#id#:#name#")
+                    If(#appid#==#id#){
+                        Button(Class: #active_btn# disabled, Body:"#id#:#name#")
                     }.Else{
-                        Button(Page: #this_page#, Class: btn btn-default, PageParams: "appId=#id#", Body:"#id#:#name#")
+                        Button(Page: #this_page#, Class: btn btn-default, PageParams: "appid=#id#", Body:"#id#:#name#")
                     }
                 }
             }
@@ -65,9 +65,9 @@ Div(container){
                         LangRes(#table#)
                         If(Or(#table#==contracts,#table#==pages,#table#==blocks,#table#==menu)){
                             Form(col-sm-2 input-group form-group pull-right){
-                                Input(Name:aid, Type:number, Placeholder:app id, Value:GetVar(appId))
+                                Input(Name:aid, Type:number, Placeholder:app id, Value:GetVar(appid))
                                 Div(input-group-btn){
-                                    Button(Page: editor, Class: btn btn-default, PageParams: "create=#link#,appId=Val(aid)", Body: create)
+                                    Button(Page: editor, Class: btn btn-default, PageParams: "create=#link#,appid=Val(aid)", Body: create)
                                 }
                             }
                         }
@@ -77,9 +77,6 @@ Div(container){
                     SetVar(value,)
                     ForList(src_table){
                         Div(col-sm-4){
-                            If(#app_id#>0){
-                                Span(#app_id#,text-muted).Style(margin-right:10px;)
-                            }
                             If(#table#==pages){
                                 LinkPage(Page: #name#, Class: fa fa-eye text-muted).Style(margin-right:10px;)
                             }
