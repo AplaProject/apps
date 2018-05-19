@@ -6,6 +6,179 @@ AppParam(App: #application_id#, Name:language, Source: src_lang)
 SetVar(heading,$ajman_user_registration$).(nationality, AppParam(App: #application_id#, Name:nationality))
 SetVar(redirect_page,ajamal_enter_user_role)
 JsonToSource(Source:src_nationality, #nationality#)
+If(#notific_id#>0){
+    DBFind(notifications,src_note).WhereId(#notific_id#).Columns("page_params->member_id").Vars(note)
+    SetVar(member_id,#note_page_params_member_id#).(manager_role_id,AppParam(App:#application_id#, Name:manager_role_id))
+
+    DBFind(members).Where("id=#member_id#").Columns("member_info->status").Vars(m)
+    If(And(Or(#m_member_info_status#==1,#m_member_info_status#==2),#member_id#==#key_id#)){
+        SetVar(heading,#heading# : $registration_result$).(form_info,$ajman_manager_response$)
+        If(#m_member_info_status#==1){
+            SetVar(form_info,$ajman_manager_rejected_request$)
+        }.ElseIf(#m_member_info_status#==2){
+            SetVar(form_info,$ajman_manager_approved_request$)
+        }.Else{
+            SetVar(form_info,"the decision is still pending")
+        }
+        Data(actions, "name,page,contr,params,class"){
+            Ok,#redirect_page#,Notifications_Single_Close,"notific_id=#notific_id#",ajman-color
+        }
+
+    }.ElseIf(#m_member_info_status#==0){
+        DBFind(members).Where("id=#member_id#").Columns("member_info").Vars(m)
+        SetVar(username,).(first_name_ar,).(last_name_ar,).(first_name_en,).(last_name_en,).(nation,).(emirate_number,).(emirate_id_expiery_date,).(emirate_id_image,).(passport_id,).(passport_expiery_date,).(passport_id_image,).(date_of_birth,).(profile_image,).(gender,).(email,).(mobile,).(phone,).(fax,).(post_office,).(address,).(communication,).(language,).(status,)
+        JsonToSource(src_member,#m_member_info#)
+        ForList(src_member){
+            If(#key#==username){
+                SetVar(username,#value#)
+            }
+            If(#key#==first_name_ar){
+                SetVar(first_name_ar,#value#)
+            }
+            If(#key#==last_name_ar){
+                SetVar(last_name_ar,#value#)
+            }
+            If(#key#==first_name_en){
+                SetVar(first_name_en,#value#)
+            }
+            If(#key#==last_name_en){
+                SetVar(last_name_en,#value#)
+            }
+            If(#key#==nationality){
+                SetVar(nation,#value#)
+            }
+            If(#key#==emirate_number){
+                SetVar(emirate_number,#value#)
+            }
+            If(#key#==emirate_id_expiery_date){
+                SetVar(emirate_id_expiery_date,#value#)
+            }
+            If(#key#==emirate_id_image){
+                SetVar(emirate_id_image,#value#)
+            }
+            If(#key#==passport_id){
+                SetVar(passport_id,#value#)
+            }
+            If(#key#==passport_expiery_date){
+                SetVar(passport_expiery_date,#value#)
+            }
+            If(#key#==passport_id_image){
+                SetVar(passport_id_image,#value#)
+            }
+            If(#key#==date_of_birth){
+                SetVar(date_of_birth,#value#)
+            }
+            If(#key#==profile_image){
+                SetVar(profile_image,#value#)
+            }
+            If(#key#==gender){
+                SetVar(gender,"AppParam(App: #application_id#, Name:gender, Index:#value#)")
+            }
+            If(#key#==email){
+                SetVar(email,#value#)
+            }
+            If(#key#==mobile){
+                SetVar(mobile,#value#)
+            }
+            If(#key#==phone){
+                SetVar(phone,#value#)
+            }
+            If(#key#==fax){
+                SetVar(fax,#value#)
+            }
+            If(#key#==post_office){
+                SetVar(post_office,#value#)
+            }
+            If(#key#==address){
+                SetVar(address,#value#)
+            }
+            If(#key#==communication){
+                SetVar(communication,"AppParam(App: #application_id#, Name:communication, Index:#value#)")
+            }
+            If(#key#==language){
+                SetVar(language,"AppParam(App: #application_id#, Name:language, Index:#value#)")
+            }
+            If(#key#==status){
+                SetVar(status,#value#)
+            }
+        }
+        SetVar(heading,#heading# : $manager_check$).(form_info,).(disabled,true).(nat_value,)
+        ForList(src_nationality){
+            If("#key#"=="#nation#"){
+                SetVar(nat_value,"#value#")
+            }
+        }
+        Data(basic, "name,type,value"){
+            BasicData,title,
+            Username,input,#username#
+            FirstNameAr,input,#first_name_ar#
+            LastNameAr,input,#last_name_ar#
+            FirstNameEn,input,#first_name_en#
+            LastNameEn,input,#last_name_en#
+            Nationality,input,#nat_value#
+            EmirateNumber,input,#emirate_number#
+            EmirateIdExpieryDate,datetime,#emirate_id_expiery_date#
+            PassportId,input,#passport_id#
+            PassportExpieryDate,datetime,#passport_expiery_date#
+            DateOfBirth,datetime,#date_of_birth#
+            Gender,input,#gender#
+            CommunicateData,title,
+            Email,input,#email#
+            Mobile,input,#mobile#
+            Phone,input,#phone#
+            Fax,input,#fax#
+            PostOffice,input,#post_office#
+            Address,input,#address#
+            Communication,input,#communication#
+            Language,input,#language#
+            Attachments,title,
+            EmirateIdImage,file,#emirate_id_image#
+            PassportIdImage,file,#passport_id_image#
+            ProfileImage,file,#profile_image#
+        }
+        Data(actions, "name,page,contr,params,class"){
+            Reject,#redirect_page#,ajman_ManagerActionURP,"Action=reject,MemberId=#member_id#,NotificId=#notific_id#",btn-danger
+            Approve,#redirect_page#,ajman_ManagerActionURP,"Action=approve,MemberId=#member_id#,NotificId=#notific_id#",ajman-color
+        }
+
+    }.Else{
+        SetVar(form_info,"you can not read this")
+    }
+
+}.Else{
+    SetVar(form_info,LangRes(ajman_registration_info)).(now,Now("YYYY-MM-DD")).(disabled,).(heading,#heading# : $ajman_register_new_user$)
+    Data(basic, "name,type,req,src"){
+        BasicData,title,,
+        Username,input,*,
+        FirstNameAr,input,*,
+        LastNameAr,input,*,
+        FirstNameEn,input,*,
+        LastNameEn,input,*,
+        Nationality,json_select,*,src_nationality
+        EmirateNumber,input,*,
+        EmirateIdExpieryDate,datetime,*,
+        EmirateIdImage,file,*,
+        PassportId,input,*,
+        PassportExpieryDate,datetime,*,
+        PassportIdImage,file,*,
+        DateOfBirth,datetime,*,
+        ProfileImage,file,*,
+        Gender,radio,*,src_gender
+        CommunicateData,title,,
+        Email,input,*,
+        Mobile,input,*,
+        Phone,input,,
+        Fax,input,,
+        PostOffice,input,,
+        Address,input,,
+        Communication,radio,*,src_comm
+        Language,radio,*,src_lang
+    }
+    Data(actions, "name,page,contr,params,class"){
+        Send,#redirect_page#,ajman_UserRegistration,,ajman-color
+    }
+    SetVar(value,)
+}
 Div(fullscreen-wrapper ajman_content){
     Div(row){
         Div(col-md-6 pull-left){Image(Binary().ById(18), Class: pull-left)}
@@ -17,195 +190,6 @@ Div(fullscreen-wrapper ajman_content){
                 Span(Class: ajman-color-h1, Body: $ajman_user_registration$)
             }
         }.Style(height: 50px; background-color: #0f789c)
-        Div(col-md-12 crumb){
-            Div(crumbs){
-                Span(Class: text-muted active, Body: Owner Details){
-                    LinkPage($user_info$, profile_view)
-                }
-                Span(Class: text-muted, Body: Location){
-                    LinkPage($user_info$, profile_view)
-                }
-                Span(Class: text-muted, Body: Property and Units){
-                    LinkPage($user_info$, profile_view)
-                }
-                Span(Class: text-muted, Body: Attachments){
-                    LinkPage($user_info$, profile_view)
-                }
-            }
-        }.Style(padding-top:10px; padding-bottom:15px)
-        If(#notific_id#>0){
-            DBFind(notifications,src_note).WhereId(#notific_id#).Columns("page_params->member_id").Vars(note)
-            SetVar(member_id,#note_page_params_member_id#).(manager_role_id,AppParam(App:#application_id#, Name:manager_role_id))
-
-            DBFind(members).Where("id=#member_id#").Columns("member_info->status").Vars(m)
-            If(And(Or(#m_member_info_status#==1,#m_member_info_status#==2),#member_id#==#key_id#)){
-                SetVar(heading,#heading# : $registration_result$).(form_info,$ajman_manager_response$)
-                If(#m_member_info_status#==1){
-                    SetVar(form_info,$ajman_manager_rejected_request$)
-                }.ElseIf(#m_member_info_status#==2){
-                    SetVar(form_info,$ajman_manager_approved_request$)
-                }.Else{
-                    SetVar(form_info,"the decision is still pending")
-                }
-                Data(actions, "name,page,contr,params,class"){
-                    Ok,#redirect_page#,Notifications_Single_Close,"notific_id=#notific_id#",ajman-color
-                }
-
-            }.ElseIf(#m_member_info_status#==0){
-                DBFind(members).Where("id=#member_id#").Columns("member_info").Vars(m)
-                SetVar(username,).(first_name_ar,).(last_name_ar,).(first_name_en,).(last_name_en,).(nation,).(emirate_number,).(emirate_id_expiery_date,).(emirate_id_image,).(passport_id,).(passport_expiery_date,).(passport_id_image,).(date_of_birth,).(profile_image,).(gender,).(email,).(mobile,).(phone,).(fax,).(post_office,).(address,).(communication,).(language,).(status,)
-                JsonToSource(src_member,#m_member_info#)
-                ForList(src_member){
-                    If(#key#==username){
-                        SetVar(username,#value#)
-                    }
-                    If(#key#==first_name_ar){
-                        SetVar(first_name_ar,#value#)
-                    }
-                    If(#key#==last_name_ar){
-                        SetVar(last_name_ar,#value#)
-                    }
-                    If(#key#==first_name_en){
-                        SetVar(first_name_en,#value#)
-                    }
-                    If(#key#==last_name_en){
-                        SetVar(last_name_en,#value#)
-                    }
-                    If(#key#==nationality){
-                        SetVar(nation,#value#)
-                    }
-                    If(#key#==emirate_number){
-                        SetVar(emirate_number,#value#)
-                    }
-                    If(#key#==emirate_id_expiery_date){
-                        SetVar(emirate_id_expiery_date,#value#)
-                    }
-                    If(#key#==emirate_id_image){
-                        SetVar(emirate_id_image,#value#)
-                    }
-                    If(#key#==passport_id){
-                        SetVar(passport_id,#value#)
-                    }
-                    If(#key#==passport_expiery_date){
-                        SetVar(passport_expiery_date,#value#)
-                    }
-                    If(#key#==passport_id_image){
-                        SetVar(passport_id_image,#value#)
-                    }
-                    If(#key#==date_of_birth){
-                        SetVar(date_of_birth,#value#)
-                    }
-                    If(#key#==profile_image){
-                        SetVar(profile_image,#value#)
-                    }
-                    If(#key#==gender){
-                        SetVar(gender,"AppParam(App: #application_id#, Name:gender, Index:#value#)")
-                    }
-                    If(#key#==email){
-                        SetVar(email,#value#)
-                    }
-                    If(#key#==mobile){
-                        SetVar(mobile,#value#)
-                    }
-                    If(#key#==phone){
-                        SetVar(phone,#value#)
-                    }
-                    If(#key#==fax){
-                        SetVar(fax,#value#)
-                    }
-                    If(#key#==post_office){
-                        SetVar(post_office,#value#)
-                    }
-                    If(#key#==address){
-                        SetVar(address,#value#)
-                    }
-                    If(#key#==communication){
-                        SetVar(communication,"AppParam(App: #application_id#, Name:communication, Index:#value#)")
-                    }
-                    If(#key#==language){
-                        SetVar(language,"AppParam(App: #application_id#, Name:language, Index:#value#)")
-                    }
-                    If(#key#==status){
-                        SetVar(status,#value#)
-                    }
-                }
-                SetVar(heading,#heading# : $manager_check$).(form_info,).(disabled,true).(nat_value,)
-                ForList(src_nationality){
-                    If("#key#"=="#nation#"){
-                        SetVar(nat_value,"#value#")
-                    }
-                }
-                Data(basic, "name,type,value"){
-                    BasicData,title,
-                    Username,input,#username#
-                    FirstNameAr,input,#first_name_ar#
-                    LastNameAr,input,#last_name_ar#
-                    FirstNameEn,input,#first_name_en#
-                    LastNameEn,input,#last_name_en#
-                    Nationality,input,#nat_value#
-                    EmirateNumber,input,#emirate_number#
-                    EmirateIdExpieryDate,datetime,#emirate_id_expiery_date#
-                    PassportId,input,#passport_id#
-                    PassportExpieryDate,datetime,#passport_expiery_date#
-                    DateOfBirth,datetime,#date_of_birth#
-                    Gender,input,#gender#
-                    CommunicateData,title,
-                    Email,input,#email#
-                    Mobile,input,#mobile#
-                    Phone,input,#phone#
-                    Fax,input,#fax#
-                    PostOffice,input,#post_office#
-                    Address,input,#address#
-                    Communication,input,#communication#
-                    Language,input,#language#
-                    Attachments,title,
-                    EmirateIdImage,file,#emirate_id_image#
-                    PassportIdImage,file,#passport_id_image#
-                    ProfileImage,file,#profile_image#
-                }
-                Data(actions, "name,page,contr,params,class"){
-                    Reject,#redirect_page#,ajman_ManagerActionURP,"Action=reject,MemberId=#member_id#,NotificId=#notific_id#",btn-danger
-                    Approve,#redirect_page#,ajman_ManagerActionURP,"Action=approve,MemberId=#member_id#,NotificId=#notific_id#",ajman-color
-                }
-
-            }.Else{
-                SetVar(form_info,"you can not read this")
-            }
-
-        }.Else{
-            SetVar(form_info,LangRes(ajman_registration_info)).(now,Now("YYYY-MM-DD")).(disabled,).(heading,#heading# : $ajman_register_new_user$)
-            Data(basic, "name,type,req,src"){
-                BasicData,title,,
-                Username,input,*,
-                FirstNameAr,input,*,
-                LastNameAr,input,*,
-                FirstNameEn,input,*,
-                LastNameEn,input,*,
-                Nationality,json_select,*,src_nationality
-                EmirateNumber,input,*,
-                EmirateIdExpieryDate,datetime,*,
-                EmirateIdImage,file,*,
-                PassportId,input,*,
-                PassportExpieryDate,datetime,*,
-                PassportIdImage,file,*,
-                DateOfBirth,datetime,*,
-                ProfileImage,file,*,
-                Gender,radio,*,src_gender
-                CommunicateData,title,,
-                Email,input,*,
-                Mobile,input,*,
-                Phone,input,,
-                Fax,input,,
-                PostOffice,input,,
-                Address,input,,
-                Communication,radio,*,src_comm
-                Language,radio,*,src_lang
-            }
-            Data(actions, "name,page,contr,params,class"){
-                Send,#redirect_page#,ajman_UserRegistration,,ajman-color
-            }
-            SetVar(value,)
-        }
         Form(row form-group bg-white){
             Div(col-sm-12){
                 Div(container){
