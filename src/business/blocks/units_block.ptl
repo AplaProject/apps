@@ -7,41 +7,52 @@ If(#id#>0){
 AppParam(App:#application_id#, Name:unit_types, Source: unit_type)
 AppParam(App:#application_id#, Name:sewerage_type, Source: sewerage_type)
 
+
 If(#unit_id#>0){
     If(#mode#==edit){
-        Data(basic, "title,type,src,val,disable"){
-            number_of_unit,input,,#unit_number_of_unit#,
-            unit_type,select,unit_type,#unit_unit_type#,
-            floor_level,input,,#unit_floor_level#,
-            rooms,input,,#unit_rooms#,
-            roof,checkbox,,#unit_roof#,
-            area,input,,#unit_area#,
-            fewa_number,input,,#unit_fewa_number#,
-            sewerage_type,select,sew_type,#unit_sewerage_type#,
-            security_deposit,input,,#unit_security_deposit#,
-            total_rent_amount,input,,#unit_total_rent_amount#,
-            no_of_installments,input,,#unit_no_of_installments#,
-            start_date,datetime,,#unit_start_date#,
-            end_date,datetime,,#unit_end_date#,
+        SetVar(disabled,)
+        Data(basic, "title,type,src,val"){
+            number_of_unit,input,,#unit_number_of_unit#
+            unit_type,select,unit_type,#unit_unit_type#
+            floor_level,input,,#unit_floor_level#
+            rooms,input,,#unit_rooms#
+            roof,checkbox,,#unit_roof#
+            area,input,,#unit_area#
+            fewa_number,input,,#unit_fewa_number#
+            sewerage_type,select,sewerage_type,#unit_sewerage_type#
+            security_deposit,input,,#unit_security_deposit#
+            total_rent_amount,input,,#unit_total_rent_amount#
+            no_of_installments,input,,#unit_no_of_installments#
+            start_date,datetime,,#unit_start_date#
+            end_date,datetime,,#unit_end_date#
         }
     }.Else{
-        SetVar(start_date, DateTime(#property_start_date#, "YYYY-MM-DD")).(end_date, DateTime(#property_end_date#, "YYYY-MM-DD")).(u_status,"EcosysParam(Name:property_statuses, Index:#unit_status#)")
-        Data(basic, "title,type,src,val,disable"){
-            number_of_unit,view,,#unit_number_of_unit#,1
-            unit_type,view_select,unit_type,#unit_unit_type#,1
-            floor_level,view,,#unit_floor_level#,1
-            rooms,view,,#unit_rooms#,1
-            roof,view,,#unit_roof#,1
-            area,view,,#unit_area#,1
-            fewa_number,view,,#unit_fewa_number#,1
-            sewerage_type,view_select,sew_type,#unit_sewerage_type#,1
-            security_deposit,view,,#unit_security_deposit#,1
-            total_rent_amount,view,,#unit_total_rent_amount#,1
-            no_of_installments,view,,#unit_no_of_installments#,1
-            status,view,,#u_status#,1
-            rented,view,,#unit_rented#,1
-            start_date,view,,#unit_start_date#,1
-            end_date,view,,#unit_end_date#,1
+        SetVar(disabled,1)
+        SetVar(start_date, DateTime(#unit_start_date#, "YYYY-MM-DD")).(end_date, DateTime(#unit_end_date#, "YYYY-MM-DD")).(u_status,"EcosysParam(Name:property_statuses, Index:#unit_status#)")
+        If(#unit_rented#==0){
+            SetVar(is_rented, "Not rented")
+        }.Else{
+            SetVar(is_rented, "Rented")
+        }
+        If(#unit_roof#==0){
+            SetVar(is_roof, "No roof")
+        }.Else{
+            SetVar(is_roof, "Roof")
+        }
+
+        Data(basic, "title,type,src,val"){
+            number_of_unit,view,,#unit_number_of_unit#
+            unit_type,view_select,unit_type,#unit_unit_type#
+            floor_level,view,,#unit_floor_level#
+            rooms,view,,#unit_rooms#
+            roof,view,,#is_roof#
+            area,view,,#unit_area#
+            fewa_number,view,,#unit_fewa_number#
+            sewerage_type,view_select,sewerage_type,#unit_sewerage_type#
+            security_deposit,view,,#unit_security_deposit#
+            total_rent_amount,view,,#unit_total_rent_amount#
+            no_of_installments,view,,#unit_no_of_installments#
+            status,view,,#u_status#
         }
     }
 }
@@ -51,26 +62,27 @@ Div(form-group){
             Div(col-md-2 text-right){
                 Label(For: #title#){LangRes(#title#)}
             }
-            SetVar(add_class,col-md-5)
-            If(Or(#type#==view,#type#==view_json)){
+            If(Or(#type#==view,#type#==view_json,#type#==view_select)){
                 SetVar(add_class,col-md-6)
+            }.Else{
+                SetVar(add_class,col-md-5)
             }
             Div(#add_class#){
                 If(#type#==input){
-                    Input(Name:#title#, Value:#val#, Disabled: #disable#)
+                    Input(Name:#title#, Value:#val#, Disabled: #disabled#)
                 }
                 If(#type#==datetime){
                     SetVar(date, DateTime(#val#, "YYYY-MM-DD"))
-                    Input(Name:#title#, Type:date, Value: #date#, Disabled: #disable#)
+                    Input(Name:#title#, Type:date, Value: #date#, Disabled: #disabled#)
                 }
                 If(#type#==checkbox){
                     If(#val#==1){
                         SetVar(checked, true)
                     }
-                    Input(Name:#title#, Type:checkbox, Value: #checked#, Disabled: #disable#)
+                    Input(Name:#title#, Type:checkbox, Value: #checked#, Disabled: #disabled#)
                 }
                 If(#type#==select){
-                    Select(Name:#title#, Source: #src#, NameColumn:name, ValueColumn: id, Value: #val#, Disabled: #disable#)
+                    Select(Name:#title#, Source: #src#, NameColumn:name, ValueColumn: id, Value: #val#, Disabled: #disabled#)
                 }
                 If(#type#==view){
                     LangRes(#val#)

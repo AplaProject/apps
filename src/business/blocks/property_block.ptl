@@ -6,47 +6,54 @@ If(#id#>0){
 
 AppParam(App:#application_id#, Name:prop_types, Source:prop_type_listing)
 
+
 If(#property_id#>0){
     If(#mode#==edit){
-        Data(basic, "title,type,req,src,val,disable"){
-            name_english,input,,,#property_name_english#,
-            name_arabic,input,,,#property_name_arabic#,
-            property_type,select,,prop_type_listing,#property_property_type#,
-            coordinates,input,,,#property_coordinates#,
-            area,input,,,#property_area#,
-            rooms,input,,,#property_rooms#,
-            floors,input,,,#property_floors#,
-            number_of_units,input,,,#property_number_of_units#,
-            lease_unit,input,,,#property_lease_unit#,
-            makani_id,input,,,#property_makani_id#,
-            have_parking,checkbox,,,#property_have_parking#,
-            total_rent_amount,input,,,#property_total_rent_amount#,
-            no_of_installments,input,,,#property_no_of_installments#,
-            security_deposit,vinputiew,,,#property_security_deposit#,
-            start_date,datetime,*,,#property_start_date#,
-            end_date,datetime,*,,#property_end_date#,
+        SetVar(disabled,)
+        Data(basic, "title,type,req,src,val"){
+            name_english,input,,,#property_name_english#
+            name_arabic,input,,,#property_name_arabic#
+            property_type,select,,prop_type_listing,#property_property_type#
+            coordinates,input,,,#property_coordinates#
+            area,input,,,#property_area#
+            rooms,input,,,#property_rooms#
+            floors,input,,,#property_floors#
+            number_of_units,input,,,#property_number_of_units#
+            lease_unit,input,,,#property_lease_unit#
+            makani_id,input,,,#property_makani_id#
+            have_parking,checkbox,,,#property_have_parking#
+            total_rent_amount,input,,,#property_total_rent_amount#
+            no_of_installments,input,,,#property_no_of_installments#
+            security_deposit,vinputiew,,,#property_security_deposit#
+            start_date,datetime,*,,#property_start_date#
+            end_date,datetime,*,,#property_end_date#
         }
     }.Else{
+        SetVar(disabled,1)
         SetVar(start_date, DateTime(#property_start_date#, "YYYY-MM-DD")).(end_date, DateTime(#property_end_date#, "YYYY-MM-DD")).(p_status,"EcosysParam(Name:property_statuses, Index:#property_status#)")
-        Data(basic, "title,type,src,val,disable"){
-            name_english,view,,#property_name_english#,1
-            name_arabic,view,,#property_name_arabic#,1
-            property_type,view_select,prop_type_listing,#property_property_type#,1
-            coordinates,view_json,,#property_coordinates#,1
-            area,view,,#property_area#,1
-            rooms,view,,#property_rooms#,1
-            floors,view,,#property_floors#,1
-            number_of_units,view,,#property_number_of_units#,1
-            lease_unit,view,,#property_lease_unit#,1
-            makani_id,view,,#property_makani_id#,1
-            have_parking,view,,#property_have_parking#,1
-            status,view,,#p_status#,1
-            rented,view,,#property_rented#,1
-            total_rent_amount,view,,#property_total_rent_amount#,1
-            no_of_installments,view,,#property_no_of_installments#,1
-            security_deposit,view,,#property_security_deposit#,1
-            start_date,view,,#start_date#,1
-            end_date,view,,#end_date#,1
+
+        If(#property_have_parking# == 0){
+            SetVar(is_parking, "No parking")
+        }.Else {
+            SetVar(is_parking, "Parking")
+        }
+
+        Data(basic, "title,type,src,val"){
+            name_english,view,,#property_name_english#
+            name_arabic,view,,#property_name_arabic#
+            property_type,view_select,prop_type_listing,#property_property_type#
+            coordinates,view_map,,#property_coordinates#
+            area,view,,#property_area#
+            rooms,view,,#property_rooms#
+            floors,view,,#property_floors#
+            number_of_units,view,,#property_number_of_units#
+            lease_unit,view,,#property_lease_unit#
+            makani_id,view,,#property_makani_id#
+            have_parking,view,,#is_parking#
+            status,view,,#p_status#
+            total_rent_amount,view,,#property_total_rent_amount#
+            no_of_installments,view,,#property_no_of_installments#
+            security_deposit,view,,#property_security_deposit#
         }
     }
 }
@@ -56,29 +63,34 @@ Div(form-group){
             Div(col-md-2 text-right){
                 Label(For: #title#){LangRes(#title#)}
             }
-            SetVar(add_class,col-md-5)
-            If(Or(#type#==view,#type#==view_json)){
+            If(Or(#type#==view_map,#type#==view,#type#==view_json,#type#==view_select)){
                 SetVar(add_class,col-md-6)
+            }.Else{
+                SetVar(add_class,col-md-5)
             }
+
             Div(#add_class#){
                 If(#type#==input){
-                    Input(Name:#title#, Value:#val#, Disabled: #disable#)
+                    Input(Name:#title#, Value:#val#, Disabled: #disabled#)
                 }
                 If(#type#==datetime){
                     SetVar(date, DateTime(#val#, "YYYY-MM-DD"))
-                    Input(Name:#title#, Type:date, Value: #date#, Disabled: #disable#)
+                    Input(Name:#title#, Type:date, Value: #date#, Disabled: #disabled#)
                 }
                 If(#type#==checkbox){
                     If(#val# == 1){
                         SetVar(checked, true)
                     }
-                    Input(Name:#title#, Type:checkbox, Value: #checked#, Disabled: #disable#)
+                    Input(Name:#title#, Type:checkbox, Value: #checked#, Disabled: #disabled#)
                 }
                 If(#type#==select){
-                    Select(Name:#title#, Source: #src#, NameColumn:name, ValueColumn: id, Value: #val#, Disabled: #disable#)
+                    Select(Name:#title#, Source: #src#, NameColumn:name, ValueColumn: id, Value: #val#, Disabled: #disabled#)
                 }
                 If(#type#==view){
                     #val#
+                }
+                If(#type#==view_map){
+                    Map(MapType: hybrid, Hmap:300, Value: `#val#`)
                 }
                 If(#type#==view_json){
                     JsonToSource(val,`#val#`)
