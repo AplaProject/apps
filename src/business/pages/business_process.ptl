@@ -3,6 +3,16 @@ If(#notific_id#>0){
     DBFind(notifications).WhereId(#notific_id#).Columns("page_params->object_id,page_params->id,page_params->comment").Vars(note)
     SetVar(business_model_id,#note_page_params_id#).(business_object_id,#note_page_params_object_id#).(comment,#note_page_params_comment#)
 }
+AppParam(App: #business_app_id#, Name: object_blocks, Source: app_blocks)
+Data(app_results, "id,name"){
+    1,Submit
+    2,Send Back
+    3,Accept
+    4,Escalation
+    5,Reject
+    6,Inform
+    7,Pay
+}
 Div(content-wrapper ajman_content){
     Div(row){
         Div(col-md-6 pull-left){Image(Binary().ById(18), Class: pull-left)}
@@ -13,8 +23,6 @@ Div(content-wrapper ajman_content){
         DBFind(business_models).Where("id=#business_model_id#").Vars(business_model)
         JsonToSource(business_model_results,#business_model_result#)
         DBFind(roles).Where("deleted=0 and id=#business_model_role_id#").Columns("id,role_name").Vars(business_role)
-        AppParam(App: #business_app_id#, Name: results, Source: app_results)
-        AppParam(App: #business_app_id#, Name: object_blocks, Source: app_blocks)
         SetVar(business_object,"AppParam(App: #business_app_id#, Name: object_types, Index: #business_model_object_type#)")
         Div(row){
             Div(col-sm-12 form-group text-center pt-sm){
@@ -65,21 +73,16 @@ Div(content-wrapper ajman_content){
                         ForList(app_results){
                             ForList(business_model_results){
                                 If(And(#name#==#key#,#value#==1)){
-                                    SetVar(n,Calculate(#id#/5,Type:int)).(mod,Calculate(#id#-#id#*#n#))
-                                    If(Or(#name#==Submit,#mod#==1)){
-                                        SetVar(business_class,btn-primary)
-                                    }.ElseIf(Or(#name#=="Send Back",#mod#==2)){
-                                        SetVar(business_class,btn-info)
-                                    }.ElseIf(Or(#name#==Accept,#mod#==3)){
-                                        SetVar(business_class,btn-success)
-                                    }.ElseIf(Or(#name#==Escalation,#mod#==4)){
-                                        SetVar(business_class,btn-warning)
-                                    }.ElseIf(Or(#name#==Reject,#mod#==5)){
-                                        SetVar(business_class,btn-danger)
+                                    If(#key#==Submit){
+                                        SetVar(business_class,ajman_button_darkgreen_medium)
+                                    }.ElseIf(#key#==Accept){
+                                        SetVar(business_class,ajman_button_darkgreen_large)
+                                    }.ElseIf(#key#==Reject){
+                                        SetVar(business_class,ajman_button_red_large)
                                     }.Else{
-                                        SetVar(business_class,btn-default)
+                                        SetVar(business_class,ajman_button_blue_medium)
                                     }
-                                    Button(Body:LangRes(#name#), Class: btn #business_class#, Page: default_page, Contract: business_Process, Params:"ResultId=#id#")
+                                    Button(Body:#key#, Class: btn #business_class#, Page: default_page, Contract: business_Process, Params:"ResultId=#id#")
                                 }
                             }
                         }

@@ -1,6 +1,15 @@
 DBFind(applications).Where("name='Business'").Vars(application)
 AppParam(App: #application_id#, Name: object_types, Source: src_objects)
-AppParam(App: #application_id#, Name: results, Source: app_results)
+Data(app_results, "id,name"){
+    1,Submit
+    2,Send Back
+    3,Accept
+    4,Escalation
+    5,Reject
+    6,Inform
+    7,Pay
+}
+
 SetVar(result_col_class,col-sm-3)
 If(#Mode#=="play"){
     If(#Id#>0){
@@ -89,14 +98,22 @@ If(#Mode#=="play"){
                             Input(Name:ObjectType, Type:hidden, Value:#model_object_type#)
                             Input(Name:NotificId, Type:hidden)
                             Div(pull-left){
-                                Button(Class: icon-arrow-left btn btn-default, Page: business_manager)
+                                Button(Class: btn ajman_button_green_medium, Page: business_manager, Body: $back$)
                             }
                             Div(){
-                                ForList(app_results){
-                                    ForList(src_results){
+                                ForList(src_results){
+                                    ForList(app_results){
                                         If(And(#name#==#key#,#value#==1)){
-                                            SetVar(class,AppParam(App: #application_id#, Name: class_results, Index: #id#))
-                                            Button(Body:LangRes(#name#), Class: btn #class#, Page: business_process, Contract: business_Process, Params:"ResultId=#id#")
+                                            If(#key#==Submit){
+                                                SetVar(business_class,ajman_button_darkgreen_medium)
+                                            }.ElseIf(#key#==Accept){
+                                                SetVar(business_class,ajman_button_darkgreen_large)
+                                            }.ElseIf(#key#==Reject){
+                                                SetVar(business_class,ajman_button_red_large)
+                                            }.Else{
+                                                SetVar(business_class,ajman_button_blue_medium)
+                                            }
+                                            Button(Body:#key#, Class: btn #business_class#, Page: business_process, Contract: business_Process, Params:"ResultId=#id#")
                                         }
                                     }
                                 }
@@ -174,27 +191,27 @@ If(#Mode#=="play"){
                                             If(#Type#==result){
                                                 Div(row){
                                                     ForList(#Src#){
-                                                Div(#result_col_class#){
-                                                    If(#Id#>0){
-                                                        If(#value#==1){
-                                                            SetVar(bool,true)
-                                                        }.Else{
-                                                            SetVar(bool,false)
-                                                        }
-                                                        If(#key#=="Send Back"){
-                                                            Input(Name: SentBack, Type:checkbox, Value: #bool#) #key#
-                                                        }.Else{
-                                                            Input(Name: #key#, Type:checkbox, Value: #bool#) #key#
-                                                        }
-                                                    }.Else{
-                                                        If(#key#=="Send Back"){
-                                                            Input(Name: SentBack, Type:checkbox) #name#
-                                                        }.Else{
-                                                            Input(Name: #name#, Type:checkbox) #name#
-                                                        }
+                                                        Div(#result_col_class#){
+                                                            If(#Id#>0){
+                                                                If(#value#==1){
+                                                                    SetVar(bool,true)
+                                                                }.Else{
+                                                                    SetVar(bool,false)
+                                                                }
+                                                                If(#key#=="Send Back"){
+                                                                    Input(Name: SentBack, Type:checkbox, Value: #bool#) #key#
+                                                                }.Else{
+                                                                    Input(Name: #key#, Type:checkbox, Value: #bool#) #key#
+                                                                }
+                                                            }.Else{
+                                                                If(#key#=="Send Back"){
+                                                                    Input(Name: SentBack, Type:checkbox) #name#
+                                                                }.Else{
+                                                                    Input(Name: #name#, Type:checkbox) #name#
+                                                                }
+                                                            }
+                                                        }.Style(div {display:inline-block;})
                                                     }
-                                                }.Style(div {display:inline-block;})
-                                            }
                                                 }
                                             }.ElseIf(#Type#==select){
                                                 Select(Name: #Name#, Source:#Src#, NameColumn: name, ValueColumn: id, Value:#Value#)
@@ -277,15 +294,18 @@ If(#Mode#=="play"){
                             }
                             Div(text-right){
                                 Div(btn-group pull-left){
-                                    Button(Class: btn btn-default, Page: business_manager, PageParams: "Mode=#Mode#", Body: $back$)
+                                    Button(Class: btn ajman_button_green_medium, Page: business_manager, PageParams: "Mode=#Mode#", Body: $back$)
                                 }
                                 Input(Name:Action, Value:#Action#, Type: hidden)
                                 Input(Name:Id, Value:#Id#, Type: hidden)
                                 Div(btn-group){
                                     If(#Action#==update){
-                                        Button(Class: btn btn-info, Contract: business_Manager, Params: "Id=0,Action=create", Page: business_model, PageParams: "Id=#Id#,Mode=#Mode#", Body: $copy$)
+                                        SetVar(hidden,)
+                                    }.Else{
+                                        SetVar(hidden,hidden)
                                     }
-                                    Button(Body:LangRes(#Action#), Class: btn btn-primary, Page: business_manager, PageParams: "Mode=#Mode#", Contract: business_Manager)
+                                    Button(Class: btn ajman_button_blue_medium #hidden#, Contract: business_Manager, Params: "Id=0,Action=create", Page: business_model, PageParams: "Id=#Id#,Mode=#Mode#", Body: $copy$)
+                                    Button(Body:LangRes(#Action#), Class: btn ajman_button_darkgreen_large, Page: business_manager, PageParams: "Mode=#Mode#", Contract: business_Manager)
                                 }
                             }
                         }

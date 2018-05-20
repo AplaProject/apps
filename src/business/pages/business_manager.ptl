@@ -1,69 +1,83 @@
+DBFind(applications).Where("name='Business'").Vars(application)
+If(#Mode#==deleted){
+    SetVar(Where,"deleted='1'").(panel,"panel-warning")
+}.Else{
+    SetVar(Where,"deleted='0'").(Mode,actived)
+}
+If(GetVar(mid)){
+    If(#mid#==All){}.Else{
+        SetVar(Where,#Where# and model_id=#mid#)
+    }
+}
+
+DBFind(roles, src_roles).Columns("id,role_name")
+DBFind(business_models, src_models).Where(#Where#).Order("model_id,event_id").Limit(250).Custom(_actions){
+    Div(text-right btn-group){
+        Button(Class: icon-settings link ajman_text_blue, Page: business_model, PageParams: "Id=#id#,Mode=#Mode#")
+        If(#deleted#==1){
+            Button(Class: fa fa-undo link ajman_text_blue, Page: business_manager, Contract: business_Manager,Params: "Id=#id#,Action=restore", PageParams: "Mode=#Mode#")
+        }.Else{
+            Button(Class: icon-trash link ajman_text_red, Page: business_manager, Contract: business_Manager,Params: "Id=#id#,Action=delete", PageParams: "Mode=#Mode#")
+            Button(Class: icon-control-play link ajman_text_darkgreen, Page: business_model, PageParams: "Id=#id#,Mode=play")
+        }
+    }.Style(display:flex; .link {
+        border: none;
+        background-color: transparent;
+        padding: 6px 12px;
+        border-radius: 5px;
+    }
+    .link:hover {
+        box-shadow: 0 3px 5px gray;
+    }
+    .link:active {
+        box-shadow: 0 0 5px gray;
+    })
+}.Custom(_obj){
+    "AppParam(App: #application_id#, Name: object_types, Index: #object_type#)(#object_type#)"
+}.Custom(_role){
+    ForList(src_roles){
+        If(#role_id#==#id#){
+            #role_name#
+        }
+    }
+}.Custom(_cond){
+    Div(){#condition_pretty#}.Style(min-width:150px; word-break: break-word;)
+}.Custom(_res){
+    Div(){#result_pretty#}.Style(min-width:150px; word-break: break-word;)
+}.Custom(_com){
+    Div(){
+        If(#need_comment#==1){
+            $yes$
+        }
+    }.Style(max-width:50px;)
+}.Custom(_text){
+    Strong(#title#)
+    Div(){
+        #text_body#
+    }.Style(min-width:150px; word-break: break-word;)
+}
+SetVar(has_models,0)
+ForList(src_models){
+    SetVar(has_models,1)
+}
 Div(fullscreen-wrapper ajman_content){
     Div(row){
         Div(col-md-6 pull-left){Image(Binary().ById(18), Class: pull-left)}
         Div(col-md-6 pull-right){Image(Binary().ById(19), Class: pull-right)}
     }.Style(padding-bottom: 10px;)
     Div(row){
-        DBFind(applications).Where("name='Business'").Vars(application)
-        If(#Mode#==deleted){
-            SetVar(Where,"deleted='1'").(panel,"panel-warning")
-        }.Else{
-            SetVar(Where,"deleted='0'").(Mode,actived)
-        }
-        If(GetVar(mid)){
-            SetVar(Where,#Where# and model_id=#mid#)
-        }
         Div(col-md-12){
             Div(Class: panel-heading text-center){
                 Span(Class: ajman-color-h1, Body: $business_manager$: LangRes(#Mode#))
             }
         }.Style(height: 50px; background-color: #0f789c)
-
         Div(col-sm-12 content){
-            DBFind(roles, src_roles).Columns("id,role_name")
-            DBFind(business_models, src_models).Where(#Where#).Order("model_id,event_id").Limit(250).Custom(_actions){
-                Div(text-right btn-group){
-                    Button(Class: icon-settings btn ajman_text_blue, Page: business_model, PageParams: "Id=#id#,Mode=#Mode#")
-                    If(#deleted#==1){
-                        Button(Class: fa fa-undo btn ajman_text_blue, Page: business_manager, Contract: business_Manager,Params: "Id=#id#,Action=restore", PageParams: "Mode=#Mode#")
-                    }.Else{
-                        Button(Class: icon-trash btn ajman_text_red, Page: business_manager, Contract: business_Manager,Params: "Id=#id#,Action=delete", PageParams: "Mode=#Mode#")
-                        Button(Class: icon-control-play btn ajman_text_darkgreen, Page: business_model, PageParams: "Id=#id#,Mode=play")
-                    }
-                }.Style(display:flex;)
-            }.Custom(_obj){
-                "AppParam(App: #application_id#, Name: object_types, Index: #object_type#)(#object_type#)"
-            }.Custom(_role){
-                ForList(src_roles){
-                    If(#role_id#==#id#){
-                        #role_name#
-                    }
-                }
-            }.Custom(_cond){
-                Div(){#condition_pretty#}.Style(min-width:150px; word-break: break-word;)
-            }.Custom(_res){
-                Div(){#result_pretty#}.Style(min-width:150px; word-break: break-word;)
-            }.Custom(_com){
-                Div(){
-                    If(#need_comment#==1){
-                        $yes$
-                    }
-                }.Style(max-width:50px;)
-            }.Custom(_text){
-                Strong(#title#)
-                Div(){
-                    #text_body#
-                }.Style(min-width:150px; word-break: break-word;)
-            }
-            SetVar(has_models,0)
-            ForList(src_models){
-                SetVar(has_models,1)
-            }
             Div(content-wrapper){
                 Div(row){
                     Div(col-sm-12){
                         Div(text-right form-group){
                             Data(model_range, "id"){
+                                All
                                 1
                                 2
                                 3
@@ -75,7 +89,7 @@ Div(fullscreen-wrapper ajman_content){
                                 Div(input-group-btn){
                                     Button(Class: btn btn-default fa fa-check, Page: business_manager, PageParams: "Mode=#Mode#,mid=Val(mid)")
                                 }
-                            }.Style(width:200px;)
+                            }.Style(width:250px;)
                             If(#Mode#==deleted){
                                 LinkPage(Page: business_manager, PageParams: "Mode=actived", Body: $show_actived$)
                             }.Else{
