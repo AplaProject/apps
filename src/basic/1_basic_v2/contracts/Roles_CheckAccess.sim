@@ -1,0 +1,37 @@
+contract Roles_CheckAccess {
+    data {
+        rid int
+    }
+    conditions {
+        var role map
+        role = DBFind("roles").Columns("id,deleted,roles_access,role_type,creator->member_id,company_id").Where("id=?", $rid).Row()
+        if !role {
+            warning Sprintf("%v: Role not found", $this_contract)
+        }
+        if role["role_type"] == 3 {
+            // system role
+            warning "System role can not be edit"
+        }
+
+        if role["creator.member_id"] == $key_id {
+            // return
+        }
+
+        var rids map
+        rids = JSONDecode(role["roles_access"])
+        if rids[Str($role_id)] {
+            if rids[Str($role_id)] != ""{
+                Println("roles access")
+                return
+            }
+        }
+
+        if role["role_type"] == 4 {
+            // company role
+            if role["company_id"] != $key_id {
+                warning Sprintf("%v: Sorry, you are not the creator of this company", $this_contract)
+            }
+        }
+        warning Sprintf("%v: Sorry, you don't have permission to change this role", $this_contract)
+    }
+}
