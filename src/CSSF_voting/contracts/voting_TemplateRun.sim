@@ -1,11 +1,8 @@
 contract voting_TemplateRun{
     data{
         TemplateId int
-        Start string "date"
-        End string "date"
+        Duration int
 
-        EndTime string "date,optional"
-        StartTime string "date,optional"
         KeyId int "optional"
         TableWritten string "optional"
         RowId string "optional"
@@ -37,20 +34,12 @@ contract voting_TemplateRun{
                 warning "Key id not found"
             }
         }
-        if $StartTime == ""{
-            $StartTime = "00:00"
-        }
-        if $EndTime == ""{
-            $EndTime = "23:59"
+        if $Duration <= 0{
+            warning "Incorrect duration of the voting"
         }
 
         var initContract string
         initContract = template["init_contract"]
-        if initContract != "" && initContract != "NULL"{
-            var initParam map
-            initParam["KeyId"] = $KeyId
-            CallContract(initContract, initParam)
-        }
         $voters = template["voters"]
         $candidates = template["candidates"]
         $votingName = template["title"]
@@ -60,6 +49,18 @@ contract voting_TemplateRun{
         $participants = Int(template["type_participants"])
         $decision = Int(template["type_decision"])
         $vacancies = Int(template["vacancies"])
+
+        if initContract != "" && initContract != "NULL"{
+            var initParam map
+            if $decision == 4 && $type_voting == 2 {
+                // voting for new value of sysparam
+                initParam["Name"] = $ColumnName
+                initParam["Value"] = $NewValue
+            }else{
+                initParam["KeyId"] = $KeyId
+            }
+            CallContract(initContract, initParam)
+        }
 
         $desc = Sprintf("%v template #%v", $votingName, $TemplateId)
         if $type_voting < 1 || $type_voting > 2 {
@@ -92,7 +93,7 @@ contract voting_TemplateRun{
             checkInput($ColumnName, "ColumnName")
             checkInput($NewValue, "NewValue")
             if $type_voting == 2{
-                $desc = Sprintf("%v [template #%v] %v", $votingName, $TemplateId, $ColumnName)
+                $desc = Sprintf("%v [template #%v] %v, [%v]", $votingName, $TemplateId, $ColumnName, $NewValue)
             }
 
             if $type_voting == 1{
@@ -127,7 +128,8 @@ contract voting_TemplateRun{
     action{
         var votingId int
         // must be installed in voting_CreateNew
-        votingId = voting_CreateNew("voting_name,voting_type,description,type_participants,type_decision,now_date,start_time,start_date,end_date,end_time,volume,quorum", $votingName, $type_voting, $desc, $participants, $decision, $Start, $StartTime, $Start, $End, $EndTime, $volume, $quorum)
+        votingId = voting_CreateNew("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval", $votingName, $type_voting, $desc, $participants, $decision, $Start, $StartTime, $Start, $End, $EndTime, $volume, $quorum, $Duration)
+
         if votingId == 0 {
             warning "votingId is zero"
         }

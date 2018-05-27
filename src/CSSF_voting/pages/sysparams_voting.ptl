@@ -1,8 +1,8 @@
-Div(content-wrapper){
-    DBFind(Name:applications, Source:src_app).Columns("name,id").Where("name='Basic application'").Vars(app)
-    SetVar(template_id, AppParam(App:#app_id#, Name: voting_sysparams_template_id))
-    SetTitle($voting$)
+DBFind(Name:applications, Source:src_app).Columns("name,id").Where("name='Basic application'").Vars(application)
+SetVar(template_id, AppParam(App:#application_id#, Name: voting_sysparams_template_id))
+SetTitle($voting$)
 
+Div(content-wrapper){
     Div(breadcrumb){
         LinkPage($system_params$, sysparams_list)
         Span(/).Style(margin-right: 10px; margin-left: 10px;)
@@ -10,43 +10,89 @@ Div(content-wrapper){
     }
 
     If(And(#template_id#>0,#param_index#>0,#param_name#!="")){
+        DBFind(system_parameters).Where("name='#param_name#'").Vars(param)
         Div(row){
             Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
-                If(#param_name#=="full_nodes"){
+                If(#param_name#!="full_nodes"){
                     Form(panel panel-primary){
-                        Input(Name: Start, Type: hidden, Value: Now("YYYY-MM-DD"))
-                        Input(Name: End, Type: hidden, Value: Now("YYYY-MM-DD", 21 days))
-                        Input(Name: StartTime, Type: hidden, Value: Now("HH:MI", +5 minute))
-                        Input(Name: EndTime, Type: hidden, Value: Now("HH:MI", +5 minute))
-                        Input(Name: TemplateId, Type: hidden, Value: #template_id#)
-                        Div(panel-heading text-center h3){
-                            Span(#param_name#).Style(text-transform:uppercase;): Span($add$ $new_value$).Style(text-transform:lowercase;)
-                        }
-                        Data(new_node_form, "name,type,placeholder,value"){
-                            TcpAddress,text,tcp_address,""
-                            ApiAddress,text,api_address,""
-                            KeyId,number,key_id,#key_id#
-                            PubKey,text,public_key,""
+                        Div(panel-heading text-center h3){#param_name#}
+                        Data(params, "Name,Type,Val"){
+                            OldValue,plain,#param_value#
+                            NewValue,textarea,
+                            Duration,hidden,21
+                            TemplateId,hidden,#template_id#
+                            ColumnName,hidden,#param_name#
                         }
                         Div(panel-body){
-                            ForList(new_node_form){
-                                Div(row form-group){
-                                    Div(col-md-3 text-right){
-                                        Label(For: #name#){LangRes(#name#)}
-                                    }
-                                    Div(col-md-9 text-left){
-                                        Input(Name: #name#, Placeholder: #placeholder#, Type: #type#, Value: #value#)
+                            Div(form-group){
+                                ForList(params){
+                                    If(#Type#==hidden){
+                                        Input(Name: #Name#, Type:#Type#, Value:#Val#)
+                                    }.Else{
+                                        Div(row form-group){
+                                            Div(col-md-3 text-right mt-sm){
+                                                Label(For: #Name#){LangRes(#Name#)}
+                                            }
+                                            Div(col-md-9 text-left){
+                                                If(#Type#==plain){
+                                                    Div(list-group-item){
+                                                        #Val#
+                                                    }
+                                                }.Else{
+                                                    Input(Name: #Name#, Type:#Type#, Value:#Val#)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                         Div(panel-footer text-right){
-                            Button(Body: LangRes(back), Class: btn btn-default, Page: sysparams_list)
+                            Div(pull-left){
+                                Button(Body: LangRes(back), Class: btn btn-default, Page: sysparams_list)
+                            }
+                            Button(Body: LangRes(voting), Class: btn btn-primary, Contract: voting_TemplateRun, Page: voting_list)
+                        }
+                    }
+                }.Else{
+                    Data(new_node_form, "Name,Type,Placeholder,Value"){
+                        TcpAddress,text,tcp address,""
+                        ApiAddress,text,api address,""
+                        KeyId,number,key id,#key_id#
+                        PubKey,text,public key,""
+                        Duration,hidden,,21
+                        TemplateId,hidden,,#template_id#
+                    }
+                    Form(panel panel-primary){
+                        Div(panel-heading text-center h3){
+                            Span(#param_name#).Style(text-transform:uppercase;): Span($add$ $new_value$).Style(text-transform:lowercase;)
+                        }
+                        Div(panel-body){
+                            ForList(new_node_form){
+                                If(#Type#==hidden){
+                                    Input(Name: #Name#, Type:#Type#, Value:#Val#)
+                                }.Else{
+                                    Div(row form-group){
+                                        Div(col-md-3 text-right){
+                                            Label(For: #Name#){LangRes(#Name#)}
+                                        }
+                                        Div(col-md-9 text-left){
+                                            Input(Name: #Name#, Placeholder: #Placeholder#, Type: #Type#, Value: #Value#)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Div(panel-footer text-right){
+                            Div(pull-left){
+                                Button(Body: LangRes(back), Class: btn btn-default, Page: sysparams_list)
+                            }
                             Button(Body: LangRes(voting), Class: btn btn-primary, Contract: sysparams_StartNodeAdd, Page: voting_list)
                         }
                     }
-                    AppParam(App:#app_id#, Name:full_nodes_keys, Source:src_keys)
-                    ForList(Source:src_catalog){
+                    AppParam(App:#application_id#, Name:full_nodes_keys, Source:nodes_keys)
+                    SetVar(node_owner,)
+                    ForList(nodes_keys){
                         If(#name#=="key_id"){
                             SetVar(node_owner, 1)
                         }
@@ -63,37 +109,12 @@ Div(content-wrapper){
                     }
                     If("" != SysParam(full_nodes)){
                         Div(panel panel-primary){
-                            Div(panel-heading text-center h3){full_nodes}
+                            Div(panel-heading text-center h3){LangRes(full_nodes)}
                             Div(panel-body text-center){
                                 Div(col-sm-12 text-center){
                                     SysParam(full_nodes)
                                 }.Style(overflow-x:hidden)
                             }
-                        }
-                    }
-                }.Else{
-                    Form(panel panel-primary){
-                        Input(Name: Start, Type: hidden, Value: Now("YYYY-MM-DD"))
-                        Input(Name: End, Type: hidden, Value: Now("YYYY-MM-DD", 21 days))
-                        Input(Name: StartTime, Type: hidden, Value: Now("HH:MI", +2 minute))
-                        Input(Name: EndTime, Type: hidden, Value: Now("HH:MI", +2 minute))
-                        Input(Name: TemplateId, Type: hidden, Value: #template_id#)
-                        Div(panel-heading text-center h3){#param_name#}
-                        Div(panel-body){
-                            Div(form-group){
-                                Div(row){
-                                    Div(col-md-3 mt-sm text-right){
-                                        Label(For: NewValue){LangRes(new_value)}
-                                    }
-                                    Div(col-md-9 mc-sm text-left){
-                                        Input(Name: NewValue, Value: "SysParam(#param_name#)", Type: textarea)
-                                    }
-                                }
-                            }
-                        }
-                        Div(panel-footer text-right){
-                            Button(Body: LangRes(back), Class: btn btn-default, Page: sysparams_list)
-                            Button(Body: LangRes(voting), Class: btn btn-primary, Contract: voting_TemplateRun, Params: "ColumnName=#param_name#", Page: voting_list)
                         }
                     }
                 }
