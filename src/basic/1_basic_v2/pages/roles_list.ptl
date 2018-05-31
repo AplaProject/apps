@@ -3,14 +3,14 @@ Div(content-wrapper){
     SetTitle($roles$)
     AddToolButton(Title: $create$, Page: roles_create, Icon: icon-plus)
 
-    If(GetVar(isSearch) == 1){
-        SetVar(Name: v_Where, Value: "role_name='#v_Search#'")
+    If(GetVar(search)){
+        SetVar(where,"role_name='#search#'")
     }.Else{
-        SetVar(Name: v_Where, Value: "id>0")
-        SetVar(Name: v_Search, Value: "")
+        SetVar(where,"id>0").(search,)
     }
 
-    DBFind(Name: roles, Source: src_roles).Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted").Custom(custom_id){
+    DBFind(Name: roles, Source: src_roles).Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access").Custom(_id){
+        JsonToSource(rids,#roles_access#)
         If(#deleted# == 0){
             SetVar(Name: style_text, Value: "text-normal")
             SetVar(Name: style_link, Value: "text-primary")
@@ -19,14 +19,14 @@ Div(content-wrapper){
             SetVar(Name: style_link, Value: "text-muted")
         }
         Span(Class: #style_text#, Body: #id#)
-    }.Custom(custom_creator){
+    }.Custom(_creator){
         If(#role_type#==3){
         }.Else{
             LinkPage(Class: #style_link# h5 text-bold, Page: profile_view, PageParams: "v_member_id=#creator.member_id#"){
                 Span(Body: #creator.member_name#)
             }
         }
-    }.Custom(custom_name){
+    }.Custom(_name){
         SetVar(Name: img_id, Value: 0)
         DBFind(Name: binaries, Source: src_binaries).Columns("id,data").Where("id=#image_id#").Vars(img)
         LinkPage(Class: #style_link# h5 text-bold, Page: roles_view, PageParams: "v_role_id=#id#"){
@@ -40,54 +40,73 @@ Div(content-wrapper){
                 }.Style(display:flex; align-items:center;)
             }
         }
-    }.Custom(custom_date){
+    }.Custom(_date){
         Div(#style_text# h6 m0, Body: DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI"))
         Div(#style_text# h6 m0, Body: DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI"))
-    }.Custom(custom_type){
+    }.Custom(_type){
         Span(Class: #style_text#, Body: AppParam(App:#app_id#, Name: roles_types, Index: #role_type#))
-    }.Custom(custom_status){
+    }.Custom(_status){
         If(#deleted# == 0){
             Span(Class: #style_text#, Body: LangRes(active))
         }.Else{
             Span(Class: #style_text#, Body: LangRes(deleted))
         }
-    }.Custom(actions){
-        Div(pull-right){
-            If(And(#deleted#==0,#role_type#!=3)){
-                Button(Class: fa fa-trash btn btn-warning, Contract: Roles_Del, Params: "rid=#id#", Page: roles_list).Alert(Text: $sure_want_delete$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
-            }.ElseIf(#deleted#==1){
-                Button(Class: fa fa-recycle btn btn-default, Contract: Roles_Restore, Params: "rid=#id#", Page: roles_list)
+    }.Custom(_access){
+        Div(){
+            SetVar(access,)
+            ForList(rids){
+                If(And(#role_id#==#key#,#value#!="")){
+                    SetVar(access,done)
+                    Strong(#value#, mr-sm #style_text#)
+                }.Else{
+                    Span(#value#, mr-sm #style_text#)
+                }
             }
-        }
-    }.Where(#v_Where#).Order("deleted ASC, id ASC")
+            If(And(#access#!="done",#creator.member_id#==#key_id#)){
+                SetVar(access,done)
+                Strong([creator], mr-sm #style_text#)
+            }
+        }.Style(div {display:inline-block;})
+    }.Custom(_actions){
+        Div(text-right button-group){
+            If(#access#=="done"){
+                Button(Class: fa fa-edit btn btn-default, PageParams: "rid=#id#", Page: roles_create,Contract:buffer_RoleAccessClean)
+                If(And(#deleted#==0,#role_type#!=3)){
+                    Button(Class: fa fa-trash btn btn-danger, Contract: Roles_Del, Params: "rid=#id#", Page: roles_list).Alert(Text: $sure_want_delete$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                }.ElseIf(#deleted#==1){
+                    Button(Class: fa fa-recycle btn btn-info, Contract: Roles_Restore, Params: "rid=#id#", Page: roles_list)
+                }
+            }
+        }.Style(
+            .btn {
+                width:50px;
+            }
+        )
+    }.Where(#where#).Order("deleted ASC, id ASC")
 
     Form(panel panel-primary){
         Div(panel-body){
             Div(row){
-                Div(col-md-1 mt-sm text-right){
-                    Label(For: Search){
-                        Span(Body: LangRes(name))
-                    }
-                }
-                Div(col-md-11){
+                Div(col-md-12){
                     Div(input-group){
-                        Input(Name: Search, Value: #v_Search#)
+                        Div(input-group-addon mt-sm){
+                            LangRes(name)
+                        }
+                        Input(Name: search, Value: #search#)
                         Div(input-group-btn){
-                            Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: roles_list, PageParams: "isSearch=1,v_Search=Val(Search)")
+                            Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: roles_list, PageParams: "search=Val(search)")
                         }
                     }
                 }
             }
-            Div(row){
-                Div(col-md-12){
-                    Table(Source: src_roles, Columns: "$id$=custom_id,$name$=custom_name,$type$=custom_type,$creator$=custom_creator,$created$ / $deleted$=custom_date,$status$=custom_status,=actions")
-                }
+            Div(table-responsive){
+                Table(Source: src_roles, Columns: "$id$=_id,$name$=_name,$type$=_type,$creator$=_creator,$created$ / $deleted$=_date,$status$=_status,$roles_access$=_access,=_actions")
             }
-            If(GetVar(isSearch) == 1){
+            If(GetVar(search)){
                 Div(row){
                     Div(col-md-12 mt-lg){
                         Div(text-center){
-                            Button(Body: $view_all$, Class: btn btn-primary, Page: roles_list, PageParams: "isSearch=0")
+                            Button(Body: $view_all$, Class: btn btn-primary, Page: roles_list)
                         }
                     }
                 }
