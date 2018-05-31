@@ -63,7 +63,6 @@ contract notifications_Send {
     }
 
     conditions {
-        Println($member_id,$rid,$closure_type,$sender,$icon_name,$text_header,$text_body,$page_name,$params_map)
         $member_id = Int($member_id)
         $rid = Int($rid)
         if Size($icon_name) < 1{
@@ -87,7 +86,7 @@ contract notifications_Send {
         $senderMember = nil
         $senderRole = nil
         if $sender == 1 {
-            $senderMember = DBFind("members").Where("id = $", $key_id).Row()
+            $senderMember = DBFind("members").Where("id=?", $key_id).Row()
             if !$senderMember {
                 warning "Sender not member"
             }
@@ -108,10 +107,13 @@ contract notifications_Send {
         }else{
             if $rid > 0 {
                 if $closure_type == 1 {
-                    // Single "from role" notification
+                    // Single closure: one begins the process - the others do not see
+                    // Одиночное закрытие: все имеющие роль получают оповещение, но как только один из них запустит процесс работы с оповещением оно скроется от остальных
                     sendToRole($rid)
                 } else {
-                    // Multiple "from role" notifications
+                    // Multiple closure: to each his own notification
+                    // Множественное закрытие: каждый участник роли получает свое одиночное оповещение
+                    $notify_type = 1
                     var participants array
                     participants = DBFind("roles_participants").Columns("member->member_id").Where("role->id=? and deleted=0", $rid)
                     var i int

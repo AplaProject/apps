@@ -1,117 +1,118 @@
 Div(content-wrapper){
     SetTitle($role_notifics$)
     AddToolButton(Title: $send$, Page: notifications_roles_send, Icon: icon-plus)
-    
-    If(GetVar(isSearch) == 1){
-        SetVar(Name: v_Where, Value: "notification->type='2' and recipient->role_name='#v_Search#'")
+
+    If(GetVar(Search)){
+        SetVar(Where,"notification->type='2' and recipient->role_name='#Search#'")
     }.Else{
-        SetVar(Name: v_Where, Value: "notification->type='2'")
-        SetVar(Name: v_Search, Value: "")
+        SetVar(Where,"notification->type='2'").(Search,)
     }
-    
-    DBFind(Name: notifications, Source: src_notifications).Columns("id,recipient->role_id,recipient->role_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,date_start_processing,processing_info->member_name,closed").Custom(custom_id){
+
+    DBFind(Name: notifications, Source: src_notifications).Custom(_id){
         If(#closed# == 0){
-            SetVar(Name: style_text, Value: "text-normal")
-            SetVar(Name: style_link, Value: "text-primary")
+            SetVar(style_text,"text-normal").(style_link,"text-primary")
         }.Else{
-            SetVar(Name: style_text, Value: "text-muted")
-            SetVar(Name: style_link, Value: "text-muted")
+            SetVar(style_text,"text-muted").(style_link,"text-muted")
         }
         Span(Class: #style_text#, Body: #id#)
-    }.Custom(custom_recipient){
-        SetVar(Name: img_id, Value: 0)
+    }.Custom(_recipient){
+        SetVar(img_id,0)
         DBFind(Name: binaries, Source: src_binaries).Columns("data").Where("id=#recipient.image_id#").Vars(img)
-        LinkPage(Class: #style_link# h5 text-bold, Page: roles_view, PageParams: "v_role_id=#recipient.role_id#"){
+        LinkPage(Class: #style_link# t5 text-bold, Page: roles_view, PageParams: "v_role_id=#recipient.role_id#"){
             If(#img_id#>0){
-                Image(Src: "#img_data#").Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
-                Span(#recipient.role_name#)
+                Image(Src: "#img_data#", Class: mr-sm).Style(width: 30px; border: 1px solid #5A5D63;)
+                #recipient.role_name#
             }.Else{
-                Div(){
-                    Span(Em(Class: fa icon-settings fa-2x)).Style(margin-right:10px;)
-                    Span(#recipient.role_name#)
-                }.Style(display:flex; align-items:center;)
+                Div(valign-center){
+                    Span(Class: fa icon-settings fa-2x mr-sm)
+                    #recipient.role_name#
+                }
             }
         }
-    }.Custom(custom_sender){
+    }.Custom(_sender){
         If(#sender.type#==1){
-            LinkPage(Class: #style_link# h5 text-bold, Page: profile_view, PageParams: "v_member_id=#sender.member_id#"){
-                Span(Body: #sender.member_name#)
-            }
+            LinkPage(Class: #style_link# h5 text-bold, Page: profile_view, PageParams: "v_member_id=#sender.member_id#"){#sender.member_name#}
         }
         If(#sender.type#==2){
-            LinkPage(Class: #style_link# h5 text-bold, Page: roles_view, PageParams: "v_role_id=#sender.role_id#"){
-                Span(Body: #sender.role_name#)
-            }
+            LinkPage(Class: #style_link# h5 text-bold, Page: roles_view, PageParams: "v_role_id=#sender.role_id#"){#sender.role_name#}
         }
-    }.Custom(custom_icon){
-        Em(Class: fa #notification.icon# fa-2x #style_text#)
-    }.Custom(custom_page){
-        LinkPage(Class: #style_link# h5 text-bold, Page: #page_name#, PageParams: "notific_id=#id#"){
-            Span(Body: #page_name#)
+    }.Custom(_icon){
+        Span(Class: fa #notification.icon# fa-2x #style_text#)
+    }.Custom(_page){
+        LinkPage(Class: #style_link# t5 text-bold, Page: #page_name#, PageParams: "notific_id=#id#"){
+            #page_name#
         }
-    }.Custom(custom_date){
-        Div(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI"))
-        Div(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_closed#, Format: "DD.MM.YYYY HH:MI"))
-    }.Custom(custom_processing){
-        If(#date_start_processing# == NULL){
-            P(Class: #style_text# h6 m0, Body: $not_started$)
-        }.Else{
-            P(Class: #style_text# h6 m0, Body: $started$ #processing_info.member_name# $at$)
-            P(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_start_processing#, Format: "DD.MM.YYYY HH:MI"))
-        }
-    }.Custom(custom_status){
-        If(#closed# == 0){
+    }.Custom(_date){
+        Div(#style_text# t6){DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI")}
+        Div(#style_text# t6){DateTime(DateTime: #date_closed#, Format: "DD.MM.YYYY HH:MI")}
+    }.Custom(_processing){
+        Div(Class: #style_text# t6){
             If(#date_start_processing# == NULL){
-                Span(Class: #style_text#, Body: LangRes(active))
+                $not_started$
             }.Else{
-                Span(Class: #style_text#, Body: LangRes(processing))
+                LangRes(started) #processing_info.member_name# LangRes(at)
+                DateTime(DateTime: #date_start_processing#, Format: "DD.MM.YYYY HH:MI")
+            }
+        }
+    }.Custom(_status){
+        If(#closed# == 0){
+            Span(Class: #style_text#){
+                If(#date_start_processing# == NULL){
+                    LangRes(active)
+                }.Else{
+                    LangRes(processing)
+                }
             }
         }.Else{
-            Span(Class: #style_text#, Body: LangRes(сlosed))
+            Span(Class: #style_text#, Body: LangRes(closed))
         }
-    }.Custom(actions){
+    }.Custom(_actions){
         Div(text-right){
             If(#closed# == 0){
                 If(#date_start_processing# == NULL){
-                    Button(Body: Em(Class: fa fa-recycle), Class: btn btn-default, Contract: notifications_Process, Params: "notific_id=#id#", Page: notifications_roles).Alert(Text: $want_start_processing_notification$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                    Button(Class: btn btn-default fa fa-play, Contract: notifications_Process, Params: "notific_id=#id#", Page: notifications_roles).Alert(Text: $want_start_processing_notification$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
                 }.Else{
-                    Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, Contract: notifications_Close, Params: "notific_id=#id#", Page: notifications_roles).Alert(Text: $want_close_notification$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                    Button(Class: btn btn-default fa fa-trash, Contract: notifications_Close, Params: "notific_id=#id#", Page: notifications_roles).Alert(Text: $want_close_notification$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
                 }
             }
         }
-    }.Where(#v_Where#).Order("closed ASC, id ASC")
-    
+    }.Where(#Where#).Order("closed ASC, id ASC").Columns("id,recipient->role_id,recipient->role_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,date_start_processing,processing_info->member_name,closed")
+
     Form(panel panel-primary){
         Div(panel-body){
             Div(row){
-                Div(col-md-1 mt-sm text-right){
-                    Label(For: Search){
-                        Span(Body: LangRes(recipient))
-                    }
-                }
-                Div(col-md-11){
+                Div(col-md-12){
                     Div(input-group){
-                        Input(Name: Search, Value: #v_Search#)
+                        Div(input-group-addon){
+                            LangRes(recipient)
+                        }
+                        Input(Name: Search, Value: #Search#)
                         Div(input-group-btn){
-                            Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: notifications_roles, PageParams: "isSearch=1,v_Search=Val(Search)")
+                            Button(Class: btn btn-default fa fa-search, Page: notifications_roles, PageParams: "Search=Val(Search)")
                         }
                     }
                 }
             }
             Div(row){
                 Div(col-md-12){
-                    Table(Source: src_notifications, Columns: "$id$=custom_id,$icon$=custom_icon,$recipient$=custom_recipient,$page_name$=custom_page,$sender$=custom_sender,$processing$=custom_processing,$sent$/$сlosed$=custom_date,$status$=custom_status,=actions")
+                    Table(Source: src_notifications, Columns: "$id$=_id,$icon$=_icon,$recipient$=_recipient,$page_name$=_page,$sender$=_sender,$processing$=_processing,$sent$/$сlosed$=_date,$status$=_status,=_actions")
                 }
             }
-            If(GetVar(isSearch) == 1){
+            If(GetVar(Search)){
                 Div(row){
                     Div(col-md-12 mt-lg){
                         Div(text-center){
-                            Button(Body: $view_all$, Class: btn btn-primary, Page: notifications_roles, PageParams: "isSearch=0")
+                            Button(Body: $view_all$, Class: btn btn-primary, Page: notifications_roles)
                         }
                     }
                 }
             }
         }
     }
-}
+}.Style(
+    .t3 {font-size:24px;}
+    .t4 {font-size:18px;}
+    .t5 {font-size:14px;}
+    .t6 {font-size:12px;}
+    .valign-center {display:flex; align-items:center;}
+)

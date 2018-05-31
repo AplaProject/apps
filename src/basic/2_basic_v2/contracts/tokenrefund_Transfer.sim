@@ -1,4 +1,4 @@
-contract TokensTransfer {
+contract tokenrefund_Transfer {
     data {
         SenderId string "optional"
         RecipientId string
@@ -17,7 +17,7 @@ contract TokensTransfer {
             $SenderId = Sprintf("%v", $key_id)
         }
         if $amount <= 0 {
-            error "TokensTransfer. Amount less than or equal to zero"
+            error "tokenrefund_Transfer. Amount less than or equal to zero"
         }
         
         if !HasPrefix($SenderId, "-") && Contains($SenderId, "-"){
@@ -40,9 +40,9 @@ contract TokensTransfer {
         var sender map
         sender = DBFind("keys").Where("id=?", $SenderId).Row()
         if !sender{
-            error "TokensTransfer. Sender is invalid"
+            error "tokenrefund_Transfer. Sender is invalid"
         }
-        if sender["blocked"] == 1{
+        if sender["blocked"] == 1 {
             error "Sender blocked"
         }
         if sender["amount"] < $amount{
@@ -53,6 +53,5 @@ contract TokensTransfer {
     action {
         DBUpdate("keys", Int($SenderId),"-amount", $amount)
         DBUpdate("keys", Int($RecipientId),"+amount", $amount)
-        DBInsert("history", "sender_id,recipient_id,amount,block_id,txhash", $SenderId, $RecipientId, $amount, $block, $txhash)
     }
 }

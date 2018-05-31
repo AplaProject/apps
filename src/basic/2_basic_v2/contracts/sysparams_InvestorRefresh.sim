@@ -10,8 +10,8 @@ contract sysparams_InvestorRefresh {
         return true
     }
     conditions{
-         if $role_id != 3 {
-            warning "You not Validator. You can not to run this"
+        if $role_id != 3 {
+            // warning "You not Validator. You can not to run this"
         }
 
         // roles:id == 4 Investor with voting rights
@@ -30,7 +30,7 @@ contract sysparams_InvestorRefresh {
     action{
         // get investors ids
         var keysInvestors assignedInvestors investorsIds assignedIds array
-        keysInvestors = DBFind("keys").Order("amount desc, id").Limit($limitInvestors)
+        keysInvestors = DBFind("keys").Columns("id").Order("amount desc, id").Limit($limitInvestors)
         assignedInvestors = DBFind("roles_participants").Columns("member->member_id").Where("role->id=? and deleted=0", $roleId)
 
         // get ids
@@ -65,7 +65,9 @@ contract sysparams_InvestorRefresh {
         i=0
         while i < Len(investorsIds) {
             if NotInArray(investorsIds[i], assignedIds){
-                Roles_Assign("rid,member_id", $roleId, Int(investorsIds[i]))
+                if DBFind("members").Where("id=?",investorsIds[i]).Row(){
+                    Roles_Assign("rid,member_id", $roleId, Int(investorsIds[i]))
+                }
             }
             i = i+1
         }

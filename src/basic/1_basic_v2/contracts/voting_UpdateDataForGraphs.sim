@@ -25,17 +25,18 @@ contract voting_UpdateDataForGraphs {
     }
     
     action {
-        var progress, voting, flags map
+        var progress voting flags map
         progress = safeJsonToMap($voting_map["progress"])
         voting = safeJsonToMap($voting_map["voting"])
         flags = safeJsonToMap($voting_map["flags"])
         
-        var flag_success, percent_success, percent_voters, number_voters, quorum int
+        var flag_success percent_success percent_voters number_voters quorum  volume int
         // increment count of voters
         quorum = Int(voting["quorum"])
+        volume = Int(voting["volume"])
         number_voters = Int(progress["number_voters"]) + 1
         percent_voters = percentPartOfTotal(number_voters, Int(progress["number_participants"]))
-        percent_success = percentPartOfTotal(percent_voters, Int(voting["volume"]))
+        percent_success = percentPartOfTotal(percent_voters, volume)
         
         // update the flag of success
         if percent_success == 100 {
@@ -48,7 +49,7 @@ contract voting_UpdateDataForGraphs {
         
         DBUpdate("votings", $votingID, "progress,flags", progress, flags)
         
-        if (percent_voters >= quorum && quorum > 50) || percent_voters == 100 {
+        if (percent_voters >= quorum && quorum > 50 && percent_voters >= volume) || percent_voters == 100 {
             // if a quorum is more than 50% we can immediately make the decision
             // OR
             // if all participants have voted we can not wait until the end of the voting period

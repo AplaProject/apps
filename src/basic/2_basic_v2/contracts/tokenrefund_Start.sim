@@ -4,10 +4,6 @@ contract tokenrefund_Start{
         SuspectAccount string
         Amount int
         Note string
-        DateStart string "date"
-        DateEnd string "date"
-        DateNow string "date"
-        TimeNow string "date"
     }
     func blockAccounts(victimId, attackerId int){
         if victimId==0 {
@@ -88,28 +84,31 @@ contract tokenrefund_Start{
     action{
         blockAccounts($victimId,$attackerId)
 
-        var votingId status result tokenrefundId closure sender memberId int
-        var icon header body page jsonParams string, params map
-
-        votingId = voting_CreateNew("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,now_date,start_time,end_time,start_date,end_date", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $volume, $quorum, $DateNow, $TimeNow, $TimeNow, $DateStart, $DateEnd)
+        var votingId status result closure sender int
+        var icon header body page interval_days string
+        interval_days = "3"
+        votingId = voting_CreateNew("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $volume, $quorum, interval_days)
 
         status = 1 // 0.Accounts blocked 1.Discussion 2.Vote 3.Closed
         result = 0 // 0. discussion and voting 1. cancelled return 2. the tokens returned
-        tokenrefundId = DBInsert("tokenrefund", "victim_key_id,attacker_key_id,amount,note,validator_key_id,blocked_at,voting_id,status,result", $victimId, $attackerId, $Amount, $Note, $key_id, $DateNow, votingId,status,result)
+        var params map
+        params["Id"] = DBInsert("tokenrefund", "victim_key_id,attacker_key_id,amount,note,validator_key_id,blocked_at,voting_id,status,result", $victimId, $attackerId, $Amount, $Note, $key_id, "Now()", votingId,status,result)
+        var paramsJSON string
+         paramsJSON  = JSONEncode(params)
+        
 
-        jsonParams = Sprintf(`{"Id":"%v"}`, tokenrefundId)
-
-        voting_SubjectContract("votingID,contract_reject,contract_accept,contract_reject_params,contract_accept_params", votingId, $contractReject, $contractAccept, jsonParams, jsonParams)
+        voting_SubjectContract("votingID,contract_reject,contract_accept,contract_reject_params,contract_accept_params", votingId, $contractReject, $contractAccept, paramsJSON, paramsJSON)
 
         voting_Invite("votingID,var_id", votingId, $votersRoleId)
 
         closure = 2
         sender = 1 // from member
         icon = "icon-bubbles"
-        header = "$tokenrefund_note_header$"
+        header = "Voting for tokens refund"
         body = $desc
         page = "voting_view"
-        params["vID"] = votingId
-        notifications_Send("rid,closure_type,sender,icon_name,text_header,text_body,page_name,params_map,member_id", $votersRoleId, closure, sender, icon, header, body, page, JSONEncode(params), memberId)
+        var params map
+        params["voting_id"] = votingId
+        notifications_Send("rid,closure_type,sender,icon_name,text_header,text_body,page_name,params_map,member_id", $votersRoleId, closure, sender, icon, header, body, page, JSONEncode(params), 0)
     }
 }
