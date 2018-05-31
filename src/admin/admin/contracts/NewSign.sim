@@ -1,30 +1,17 @@
 contract NewSign {
     data {
         Name string
-        Value string "optional"
-        Title string "optional"
-        Parameter string "optional"
+        Value string
         Conditions string
     }
     conditions {
-        ValidateCondition($Conditions,$ecosystem_id)
-        var exist string
+        ValidateCondition($Conditions, $ecosystem_id)
 
-        var row map
-        row = DBRow("signatures").Columns("id").Where("name = ?", $Name)
-
-        if row {
-            error Sprintf("The signature %s already exists", $Name)
+        if DBFind("signatures").Columns("id").Where("name = ?", $Name).One("id") {
+            warning Sprintf("The signature %s already exists", $Name)
         }
     }
     action {
-        if Size($Value) > 0 {
-            DBInsert("signatures", "name,value,conditions", $Name, $Value, $Conditions)
-        } else {
-            var value map
-            value["title"] = $Title 
-            value["params"] = $Parameter
-            DBInsert("signatures", "name,value,conditions", $Name, value, $Conditions)
-        }    
+        DBInsert("signatures", "name,value,conditions", $Name, $Value, $Conditions)  
     }
 }
