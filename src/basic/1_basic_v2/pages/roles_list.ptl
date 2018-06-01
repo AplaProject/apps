@@ -20,8 +20,8 @@ Div(content-wrapper){
     }.Custom(_creator){
         If(#role_type#==3){
         }.Else{
-            LinkPage(Class: #style_link# h5 text-bold, Page: profile_view, PageParams: "v_member_id=#creator.member_id#"){
-                Span(Body: #creator.member_name#)
+            LinkPage(Class: #style_link# text-bold, Page: profile_view, PageParams: "v_member_id=#creator.member_id#"){
+                #creator.member_name#
             }
         }
     }.Custom(_name){
@@ -29,25 +29,28 @@ Div(content-wrapper){
         DBFind(Name: binaries, Source: src_binaries).Columns("id,data").Where("id=#image_id#").Vars(img)
         LinkPage(Class: #style_link# h5 text-bold, Page: roles_view, PageParams: "v_role_id=#id#"){
             If(#img_id#>0){
-                Image(Src: "#img_data#").Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
-                Span(#role_name#)
+                Image(Src: "#img_data#", Class: mr-sm).Style(width: 30px; border: 1px solid #5A5D63;)
+                #role_name#
             }.Else{
                 Div(){
-                    Span(Em(Class: fa icon-settings fa-2x)).Style(margin-right:10px;)
-                    Span(#role_name#)
+                    Span(Class: fa icon-settings fa-2x mr-sm).(#role_name#)
                 }.Style(display:flex; align-items:center;)
             }
         }
     }.Custom(_date){
-        Div(#style_text# h6 m0, Body: DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI"))
-        Div(#style_text# h6 m0, Body: DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI"))
+        Div(#style_text# small){
+            Div(text-nowrap){DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI")}
+            Div(text-nowrap){DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI")}
+        }
     }.Custom(_type){
         Span(Class: #style_text#, Body: AppParam(App:#app_id#, Name: roles_types, Index: #role_type#))
     }.Custom(_status){
-        If(#deleted# == 0){
-            Span(Class: #style_text#, Body: LangRes(active))
-        }.Else{
-            Span(Class: #style_text#, Body: LangRes(deleted))
+        Span(Class:#style_text#){
+            If(#deleted# == 0){
+                LangRes(active)
+            }.Else{
+                LangRes(deleted)
+            }
         }
     }.Custom(_access){
         If(#creator.member_id#==#key_id#){
@@ -57,22 +60,22 @@ Div(content-wrapper){
         }
         If(#roles_access#!=""){
             DBFind(roles, src_roles_list).Where("id in (#roles_access#)").Columns("id,role_name").Count(access_count).Order(role_name)
-            Div(#style_text#){
+            Div(#style_text# breaker){
                 ForList(src_roles_list){
                     If(And(#role_id#==#id#)){
                         SetVar(access,done)
                     }
-                    
+
                     If(#access_count#!=#src_roles_list_index#){
                         Span("#role_name#,",mr-sm)
                     }.Else{
-                        Span(#role_name#)
+                        #role_name#
                     }
                 }
             }
         }
     }.Custom(_actions){
-        Div(text-right button-group){
+        Div(text-right button-group text-nowrap){
             If(#access#=="done"){
                 Button(Class: fa fa-edit btn btn-default, PageParams: "rid=#id#", Page: roles_create)
                 If(And(#deleted#==0,#role_type#!=3)){
@@ -81,11 +84,7 @@ Div(content-wrapper){
                     Button(Class: fa fa-recycle btn btn-info, Contract: Roles_Restore, Params: "rid=#id#", Page: roles_list)
                 }
             }
-        }.Style(
-            .btn {
-                width:50px;
-            }
-        )
+        }
     }.Where(#where#).Order("deleted ASC, id ASC").Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access")
 
     Form(panel panel-primary){
@@ -117,4 +116,7 @@ Div(content-wrapper){
             }
         }
     }
-}.Style(.inline {display:inline-block;})
+}.Style(
+    .inline {display:inline-block;}
+    .breaker {word-break: break-all;}
+)
