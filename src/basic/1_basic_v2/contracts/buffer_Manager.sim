@@ -1,0 +1,32 @@
+contract buffer_Manager {
+    data {
+        Action string
+        Key string
+        Val string "optional"
+    }
+
+    conditions {
+        $buffer = DBFind("buffer_data").Where("key=? and member_id=?", $Key, $key_id).Row()
+    }
+
+    action {
+        if $buffer {
+            if $Action == "clean" {
+                DBUpdate("buffer_data", id, "value", "")
+            }
+            if $Action == "get" {
+                $result = $buffer["value"]
+            }
+            if $Action == "set" {
+                DBUpdate("buffer_data", Int($buffer["id"]), "value", "")
+            }
+        }else{
+            if $Action == "get" {
+                $result = ""
+            }
+            if $Action == "set" {
+                DBInsert("buffer_data", "key,value,member_id", $Key, $Val, $key_id)
+            }
+        }
+    }
+}

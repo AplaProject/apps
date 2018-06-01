@@ -14,24 +14,27 @@ contract Roles_CheckAccess {
         }
 
         if role["creator.member_id"] == $key_id {
-            // return
+            return
         }
 
-        var rids map
-        rids = JSONDecode(role["roles_access"])
-        if rids[Str($role_id)] {
-            if rids[Str($role_id)] != ""{
-                Println("roles access")
+        var rids map, i int
+        rids = Split(role["roles_access"], ",")
+        Println(Len(rids), i)
+        while i<Len(rids){
+            if rids[i] == $role_id {
                 return
             }
+            i=i+1
         }
 
         if role["role_type"] == 4 {
             // company role
-            if role["company_id"] != $key_id {
-                warning Sprintf("%v: Sorry, you are not the creator of this company", $this_contract)
+            if role["company_id"] == $key_id {
+                return
+            }else{
+                warning "Sorry, you are not the creator of this company"
             }
         }
-        warning Sprintf("%v: Sorry, you don't have permission to change this role", $this_contract)
+        warning "Sorry, you don't have permission to change this role"
     }
 }

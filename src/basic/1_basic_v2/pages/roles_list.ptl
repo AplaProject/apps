@@ -9,14 +9,12 @@ Div(content-wrapper){
         SetVar(where,"id>0").(search,)
     }
 
-    DBFind(Name: roles, Source: src_roles).Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access").Custom(_id){
+    DBFind(Name: roles, Source: src_roles).Custom(_id){
         JsonToSource(rids,#roles_access#)
         If(#deleted# == 0){
-            SetVar(Name: style_text, Value: "text-normal")
-            SetVar(Name: style_link, Value: "text-primary")
+            SetVar(style_text,).(style_link,"text-primary")
         }.Else{
-            SetVar(Name: style_text, Value: "text-muted")
-            SetVar(Name: style_link, Value: "text-muted")
+            SetVar(style_text,"text-muted").(style_link,"text-muted")
         }
         Span(Class: #style_text#, Body: #id#)
     }.Custom(_creator){
@@ -52,25 +50,31 @@ Div(content-wrapper){
             Span(Class: #style_text#, Body: LangRes(deleted))
         }
     }.Custom(_access){
-        Div(){
+        If(#creator.member_id#==#key_id#){
+            SetVar(access,done)
+        }.Else{
             SetVar(access,)
-            ForList(rids){
-                If(And(#role_id#==#key#,#value#!="")){
-                    SetVar(access,done)
-                    Strong(#value#, mr-sm #style_text#)
-                }.Else{
-                    Span(#value#, mr-sm #style_text#)
+        }
+        If(#roles_access#!=""){
+            DBFind(roles, src_roles_list).Where("id in (#roles_access#)").Columns("id,role_name").Count(access_count).Order(role_name)
+            Div(#style_text#){
+                ForList(src_roles_list){
+                    If(And(#role_id#==#id#)){
+                        SetVar(access,done)
+                    }
+                    
+                    If(#access_count#!=#src_roles_list_index#){
+                        Span("#role_name#,",mr-sm)
+                    }.Else{
+                        Span(#role_name#)
+                    }
                 }
             }
-            If(And(#access#!="done",#creator.member_id#==#key_id#)){
-                SetVar(access,done)
-                Strong([creator], mr-sm #style_text#)
-            }
-        }.Style(div {display:inline-block;})
+        }
     }.Custom(_actions){
         Div(text-right button-group){
             If(#access#=="done"){
-                Button(Class: fa fa-edit btn btn-default, PageParams: "rid=#id#", Page: roles_create,Contract:buffer_RoleAccessClean)
+                Button(Class: fa fa-edit btn btn-default, PageParams: "rid=#id#", Page: roles_create)
                 If(And(#deleted#==0,#role_type#!=3)){
                     Button(Class: fa fa-trash btn btn-danger, Contract: Roles_Del, Params: "rid=#id#", Page: roles_list).Alert(Text: $sure_want_delete$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
                 }.ElseIf(#deleted#==1){
@@ -82,7 +86,7 @@ Div(content-wrapper){
                 width:50px;
             }
         )
-    }.Where(#where#).Order("deleted ASC, id ASC")
+    }.Where(#where#).Order("deleted ASC, id ASC").Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access")
 
     Form(panel panel-primary){
         Div(panel-body){
@@ -113,4 +117,4 @@ Div(content-wrapper){
             }
         }
     }
-}
+}.Style(.inline {display:inline-block;})
