@@ -1,0 +1,37 @@
+contract sysparams_UpdateMetrics{
+    data{
+        Interval string
+        Aggregate string
+    }
+    conditions{
+        if $Interval <= 0 {
+            $Interval = 1
+        }
+        var current_year int
+        current_year = 2018
+        if $Interval > (current_year - 1970)*365 {
+            warning "Interval too big"
+        }
+
+        $interval = Sprintf("%v days", $Interval)
+    }
+
+    action{
+        var pages members txs array, i int, metrics map
+        pages = DBSelectMetrics("ecosystem_pages", $interval, $Aggregate)
+        members = DBSelectMetrics("ecosystem_members", $interval, $Aggregate)
+        txs = DBSelectMetrics("ecosystem_tx", $interval, $Aggregate)
+        while i<Len(pages){
+            var p m t map, eco string
+            p = pages[i]
+            m = members[i]
+            t = txs[i]
+            eco = Sprintf("pages: %v, members: %v, tx: %v; [%v, %v]", p["value"], m["value"], t["value"], $interval, $Aggregate)
+            metrics[p["key"]] = eco
+            i=i+1
+        }
+        if Len(pages)>0{
+            buffer_Manager("Action,Key,Val", "set", "metrics", JSONEncode(metrics))
+        }
+    }
+}
