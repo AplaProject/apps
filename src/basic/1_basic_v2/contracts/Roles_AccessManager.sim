@@ -1,0 +1,62 @@
+contract Roles_AccessManager {
+    data {
+        Action string
+        Rid int
+        ManagerRid string "optional"
+    }
+    func updateAccess(ra string){
+        DBUpdate("roles", $Rid, $ROLES_ACCESS, ra)
+    }
+    conditions {
+        $ROLES_ACCESS = "roles_access"
+        Roles_CheckAccess("rid", $Rid)
+
+        $ManagerRid = Int($ManagerRid)
+        $role = DBFind("roles").Where("id=?", $Rid).Row()
+        if !$role {
+            warning "Role not found"
+        }
+        if $ManagerRid > 0{
+            if !DBFind("roles").Where("id=?", $ManagerRid).One("id") {
+                warning "Role not found"
+            }
+        }
+        if $role[$ROLES_ACCESS] == ""{
+            var ids array
+            $ids = ids
+        }else{
+            $ids = Split($role[$ROLES_ACCESS],",")
+        }
+    }
+
+    action {
+        if $Action == "clean"{
+            updateAccess("")
+        }
+        if $ManagerRid > 0{
+            var i int, idsNew array
+            if $Action == "remove"{
+                while i<Len($ids){
+                    if $ids[i] != $ManagerRid{
+                        idsNew[Len(idsNew)] = $ids[i]
+                    }
+                    i=i+1
+                }
+                updateAccess(Join(idsNew, ","))
+            }
+            if $Action == "add"{
+                var double bool
+                while i<Len($ids){
+                    if $ids[i] == $ManagerRid{
+                        double = true
+                    }
+                    i=i+1
+                }
+                if !double {
+                    $ids[Len($ids)] = $ManagerRid
+                    updateAccess(Join($ids, ","))
+                }
+            }
+        }
+    }
+}

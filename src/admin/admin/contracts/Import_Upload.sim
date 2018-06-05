@@ -97,21 +97,31 @@ contract Import_Upload {
         }
 
         // import data
+        // контракты импортируются одним куском, остальное режется согласно $limit, костыль для обхода ошибки при импорте зависимых контрактов в разных кусках
+        // the contracts is imported in one piece, the rest is cut under the $limit, a crutch to bypass the error when you import dependent contracts in different pieces
         i=0
-        var sliced array
-        var arr_data_len int
+        var sliced contracts array, arr_data_len int
         arr_data_len = Len(arr_data)
         while i <arr_data_len{
-            var part array
-            var l int
+            var part array, l int, tmp map
             while l < $limit && (i+l < arr_data_len) {
-                part[l] = arr_data[i+l]
+                tmp = arr_data[i+l]
+                if tmp["Type"] == "contracts" {
+                    contracts[Len(contracts)] = tmp
+                }else{
+                    part[l] = tmp
+                }
                 l=l+1
             }
             var batch map
             batch["Data"] = JSONEncode(part)
             sliced[Len(sliced)] = batch
             i=i+$limit
+        }
+        if Len(contracts) > 0{
+            var batch map
+            batch["Data"] = JSONEncode(contracts)
+            sliced[Len(sliced)] = batch
         }
         input["data"] = sliced
 
