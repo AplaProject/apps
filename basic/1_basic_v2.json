@@ -81,7 +81,7 @@
         },
         {
             "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "voting_decisions_candidate_requests,voting_decisions_candidate_manual,voting_decisions_document,voting_decisions_db,voting_decisions_contract",
+            "Value": "candidate_requests,candidate_manual,document,database_write,contract_run",
             "Name": "type_voting_decisions",
             "Type": "app_params"
         },
@@ -121,7 +121,7 @@
         },
         {
             "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "SetTitle(default_ecosystem_page)",
+            "Value": "SetTitle(default ecosystem page)",
             "Name": "default_ecosystem_page",
             "Menu": "default_menu",
             "Type": "pages"
@@ -397,7 +397,7 @@
         },
         {
             "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract buffer_Manager {\n    data {\n        Action string\n        Key string\n        Val string \"optional\"\n    }\n    func decodeArray(s string) array{\n        var ar array\n        if HasPrefix($buf[\"value\"], \"[\") && Substr($buf[\"value\"], Size($buf[\"value\"])-1, 1) == \"]\"{\n            ar = JSONDecode($buf[\"value\"])\n        }\n        return ar\n    }\n    conditions {\n        $emptyVal = JSONEncode(\"\")\n        $buf = DBFind(\"buffer_data\").Where(\"key=? and member_id=?\", $Key, $key_id).Row()\n        if !$buf {\n            var buf map, id int\n            id = DBInsert(\"buffer_data\", \"key,value,member_id\", $Key, $emptyVal, $key_id)\n            buf[\"id\"] = Str(id)\n            buf[\"value\"] = \"\"\n            buf[\"member_id\"] = Str($key_id)\n            buf[\"key\"] = Str($Key)\n            $buf = buf\n        }\n    }\n\n    action {\n        if $Action == \"clean\" {\n            DBUpdate(\"buffer_data\", Int($buf[\"id\"]), \"value\", $emptyVal)\n        }\n        if $Action == \"set\" {\n            DBUpdate(\"buffer_data\", Int($buf[\"id\"]), \"value\", JSONEncode($Val))\n        }\n        if $Action == \"array_add_value\" {\n            var ar array\n            ar = decodeArray($buf[\"value\"])\n            ar[Len(ar)] = $Val\n            DBUpdate(\"buffer_data\", Int($buf[\"id\"]), \"value\", JSONEncode(ar))\n        }\n        if $Action == \"array_remove_value\" {\n            var ar arNew array, i int\n            ar = decodeArray($buf[\"value\"])\n            while i<Len(ar){\n                if ar[i] != $Val{\n                    arNew[Len(arNew)] = ar[i]\n                }\n                i=i+1\n            }\n            DBUpdate(\"buffer_data\", Int($buf[\"id\"]), \"value\", JSONEncode(arNew))\n        }\n    }\n}\n",
+            "Value": "contract buffer_Manager {\n    data {\n        Action string\n        Key string\n        Val string \"optional\"\n    }\n    func decodeArray(s string) array{\n        var ar array\n        if HasPrefix($buf[\"value\"], \"[\") && Substr($buf[\"value\"], Size($buf[\"value\"])-1, 1) == \"]\"{\n            ar = JSONDecode($buf[\"value\"])\n        }\n        return ar\n    }\n    conditions {\n        $emptyVal = JSONEncode(\"\")\n        $buf = DBFind(\"buffer_data\").Where(\"key=? and member_id=?\", $Key, $key_id).Row()\n        if !$buf {\n            var buf map, id int\n            id = DBInsert(\"buffer_data\", \"key,value,member_id\", $Key, $emptyVal, $key_id)\n            buf[\"id\"] = Str(id)\n            buf[\"value\"] = \"\"\n            buf[\"member_id\"] = Str($key_id)\n            buf[\"key\"] = Str($Key)\n            $buf = buf\n        }\n    }\n\n    action {\n        if $Action == \"clean\" {\n            DBUpdate(\"buffer_data\", Int($buf[\"id\"]), \"value\", $emptyVal)\n        }\n        if $Action == \"set\" {\n            DBUpdate(\"buffer_data\", Int($buf[\"id\"]), \"value\", $Val)\n        }\n        if $Action == \"array_add_value\" {\n            var ar array\n            ar = decodeArray($buf[\"value\"])\n            ar[Len(ar)] = $Val\n            DBUpdate(\"buffer_data\", Int($buf[\"id\"]), \"value\", JSONEncode(ar))\n        }\n        if $Action == \"array_remove_value\" {\n            var ar arNew array, i int\n            ar = decodeArray($buf[\"value\"])\n            while i<Len(ar){\n                if ar[i] != $Val{\n                    arNew[Len(arNew)] = ar[i]\n                }\n                i=i+1\n            }\n            DBUpdate(\"buffer_data\", Int($buf[\"id\"]), \"value\", JSONEncode(arNew))\n        }\n    }\n}\n",
             "Name": "buffer_Manager",
             "Type": "contracts"
         },
