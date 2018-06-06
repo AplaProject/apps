@@ -2,28 +2,30 @@ contract EditSign {
     data {
         Id int
         Value string "optional"
-        Title string "optional"
-        Parameter string "optional"
         Conditions string
     }
-
     func onlyConditions() bool {
         return $Conditions && false
     }
+	
     conditions {
         RowConditions("signatures", $Id, onlyConditions())
         if $Conditions {
             ValidateCondition($Conditions, $ecosystem_id)
-        }
+        }	
     }
     action {
-        if Size($Value) > 0 {
-            DBUpdate("signatures", $Id, "value,conditions", $Value, $Conditions)
-        } else {
-            var value map
-            value["title"] = $Title 
-            value["params"] = $Parameter
-            DBUpdate("signatures", $Id, "value,conditions", value, $Conditions)
+        var pars, vals array
+        if $Value {
+            pars[0] = "value"
+            vals[0] = $Value
+        }
+        if $Conditions {
+            pars[Len(pars)] = "conditions"
+            vals[Len(vals)] = $Conditions
+        }
+        if Len(vals) > 0 {
+            DBUpdate("signatures", $Id, Join(pars, ","), vals...)
         }
     }
 }
