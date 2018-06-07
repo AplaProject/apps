@@ -1,0 +1,35 @@
+contract SavePatent {
+    data {
+        PatentName string
+        Authors string 
+        KeyWords string 
+        PatentType string
+        PatentFormul string 
+        Comment string "optional"
+        ApproveDate string "date"
+        RequestDate string "date"
+    }
+
+    conditions {}
+
+    action {
+        $patent_id = DBInsert("patents", "formula, add_info, key_words, request_date, registration_date, type, title, authors, status", $PatentFormul, $Comment, $KeyWords, $RequestDate, $ApproveDate, 0, $PatentName, $Authors, 1)
+        $result = $patent_id
+        //делаем запрос на сервер Роспатента для получения дополнительной информации
+        var params map
+        params["usage_type"] = 1
+        params["request_date"] = "12.04.2017"
+        params["territory_ids"] = "1,2,3,4"
+        params["exclusive"] = 1
+        params["patent_id"] = $patent_id
+        params["stop_date"] = "31.01.2019"
+        params["register_date"] = "12.06.2017"
+        params["cancelation_type"] = 0
+        params["actor_id"] = $key_id
+        params["start_date"] = "20.07.2017"
+        params["resell_flag"] = 0
+
+        //DBInsert("possessions", "usage_type,request_date,territory_ids,cancelation_date,exclusive,patent_id,stop_date,register_date,cancelation_type,actor_id,start_date,resell_flag", )
+        DBInsert("possession", "usage_type,request_date,territory_ids,exclusive,patent_id,stop_date,register_date,cancelation_type,actor_id,start_date,resell_flag", params["usage_type"], params["request_date"], params["territory_ids"],params["exclusive"],params["patent_id"],params["stop_date"],params["register_date"],params["cancelation_type"],params["actor_id"],params["start_date"],params["resell_flag"])
+    }
+}

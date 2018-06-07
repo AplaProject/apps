@@ -1,0 +1,52 @@
+contract find_patents {
+    data {
+        request string,
+        addr string
+    }
+
+    conditions {
+        var searchwords array
+        searchwords = Split($request, " ")
+        if (Len(searchwords) == 0) {
+            error "Wrong search request"
+        }
+    }
+
+    action {
+        var amount, wn, currPat int, searchwords, resulting, patents array, res map
+        amount = 0
+        currPat = 0
+        var found bool
+
+        searchwords = Split($request, " ")
+        patents = DBFind("user_patents")
+
+        while currPat < Len(patents) {
+            wn = 0
+            while wn < Len(searchwords) {
+                var tmpobj map
+                tmpobj = patents[currPat]
+                found = Contains(tmpobj["name"], searchwords[wn]) || 
+                        Contains(tmpobj["description"], searchwords[wn]) || 
+                        Contains(tmpobj["additional"], searchwords[wn]) || 
+                        Contains(tmpobj["owners"], searchwords[wn]) || 
+                        Contains(tmpobj["readers"], searchwords[wn]) || 
+                        Contains(tmpobj["subleasers"], searchwords[wn]) || 
+                        Contains(tmpobj["creators"], searchwords[wn]) || 
+                        Contains(tmpobj["status"], searchwords[wn])
+                if found {
+                    resulting[amount] = patents[currPat]
+                    amount = amount + 1
+                    found = false
+                    break
+                }
+                wn = wn + 1
+            }
+            currPat = currPat + 1
+        }
+        res["result"] = resulting
+        res["size"] = currPat
+        res["words_search"] = Len(searchwords)
+        DBInsert("search_results", "address,results", $addr, res)
+    }
+}

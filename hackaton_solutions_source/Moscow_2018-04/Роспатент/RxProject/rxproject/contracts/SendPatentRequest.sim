@@ -1,0 +1,57 @@
+contract SendPatentRequest {
+    data {
+        RegistrationNumber string
+        PatentName string
+        Authors string 
+        KeyWords string 
+        PatentType string
+        PatentFormul string 
+        Comment string "optional"
+        ApproveDate string "date"
+        RequestDate string "date"
+    }
+
+    conditions {
+        //эмуляция запроса на поиск патента в Роспатенте и в других официальных открытых источниках
+        var patents array
+        patents[0] = "Патент5"
+        patents[1] = "Patent6"
+        patents[2] = "Patent7"
+
+        var i int
+        var isValid bool
+        while(i < Len(patents)) {
+            if (patents[i] == $PatentName) {
+                isValid = true
+                break
+            }
+            i = i + 1
+        }
+        if !isValid {
+            error "Такого патента нет"
+        }
+
+        //проверка что такого патента еще нет в блокчейне (в идеале надо выделить в несколько смартконтрактов)
+        var ret map
+        ret = DBFind("patents").Columns("title").Where("title = ?", $PatentName).One("title")
+        if ret != nil {
+             error "Такой патент уже зарегистрирован"
+        }
+    }
+    action {
+        //сохраняем патент и всю необходимую информацию из реестра Роспатента в блокчейн
+        var param map
+        param["PatentName"] = $PatentName
+        param["Authors"] = $Authors
+        param["KeyWords"] = $KeyWords 
+        param["PatentType"] = $PatentType
+        param["PatentFormul"] = $PatentFormul
+        param["Comment"] = $Comment
+        param["ApproveDate"] = $ApproveDate
+        param["RequestDate"] = $RequestDate
+        $result = CallContract("SavePatent", param)
+
+        // кидаем нотификейшен юзеру, что патент прошел проверку 
+        NotificationRequestAccept("MemberId,Name,PatentId", $key_id, Sprintf("Проверка патента %s успешно проведена", $PatentName), $result)
+    }
+}

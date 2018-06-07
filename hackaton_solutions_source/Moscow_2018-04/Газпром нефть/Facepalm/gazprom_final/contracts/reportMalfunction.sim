@@ -1,0 +1,33 @@
+contract reportMalfunction {
+    data {
+        Part_id int
+        Event_meta string "optional"
+    }
+    conditions {
+    /*
+        var Caller_data map
+        Caller_data = DBFind("actors").Where("pubkey = ? and role = 'oracle'", $key_id).Row()
+        var Caller_id int
+        Caller_id = Caller_data["id"]
+        if Len(Caller_id) < 1 {
+            error "Только оракулы могут посылать отчеты о поломках"
+        }
+        */
+    }
+    action {
+        var Caller_data map
+        Caller_data = DBFind("actors").Where("pubkey = ?", $key_id).Row()
+        var Caller_id int
+        Caller_id = Caller_data["id"]
+        var Part_data map
+        Part_data = DBRow("part").WhereId($Part_id)
+        if Part_data["rig_cur"] == 0 {
+            DBInsert("pending_malfunctions", "oracle_id,owner_id,producer_id,timestamp date,part_id,meta,votes_for,votes_against", Caller_id, Part_data["producer_id"], Part_data["producer_id"], $time, 4, $Event_meta, 1, 0)
+        }
+        else {
+            var Rig_data map
+            Rig_data = DBRow("rigs").WhereId(5)
+            DBInsert("pending_malfunctions", "oracle_id,owner_id,producer_id,timestamp date,location_id,rig_id,part_id,meta,votes_for,votes_against", Caller_id, Rig_data["owner_cur"], Part_data["producer_id"], $time, Rig_data["location_cur"], Rig_data["id"], 4, $Event_meta, 1, 0)
+        }
+    }
+}

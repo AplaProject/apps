@@ -1,0 +1,60 @@
+SetTitle(Market place)
+
+Div(content-wrapper){
+    
+    Div(panel panel-primary data-sweet-alert){
+        Form(){
+			Div(list-group-item){
+				Div(row df f-valign){
+					Div(col-md-2 mt-sm text-center text-bold){On Sale}
+					Div(col-md-7 mc-sm text-left){}
+					Button(Body:My profile,Page: a_my_profile_page, Class: btn btn-primary)
+				}
+        }
+        Div(list-group-item){
+            DBFind(Name: a_land_registry_bridge, Source: bridge_registry).Where(state=1).Custom(action){
+                SetVar(isDeadline, 0)
+                SetVar(isClaimOwnership, 0)
+                SetVar(nowTime, Now())
+                SetVar(delta, Calculate(#nowTime#-#deadline2#))
+                If(#delta# > 0){
+                    SetVar(isDeadline, 1)
+                }
+                If(#bidder#==#key_id#){
+                    If(#isDeadline#){
+                        SetVar(isClaimOwnership, 1)
+                    }
+                }
+                If(#bidder#==0){
+                   If(#owner#==#key_id#){
+                        If(#isDeadline#){
+                            SetVar(isClaimOwnership, 1)
+                        }               
+                   } 
+                }
+                Span(){
+                    Button(Page: a_land_page, PageParams: "LandId=#id#, isSold=#isDeadline#", Class: btn btn-warning, Body: Open info)
+                }.Style(margin-left: 5px; margin-right: 5px;)
+                If(#isClaimOwnership#){
+                    Span(){
+                        DBFind("land_registry", lr).Where("id=#master_id#").Vars(land)
+                        Button(Contract: ClaimOwnership, Params: "Id=#id#,Coords=#land_map_coords#", Class: btn btn-danger, Body: Claim Ownership)
+                    }
+                }    
+            }.Custom(icon){
+                If(#owner#==#key_id#){
+                    Span(✓)
+                }
+            }
+            Table(Source: bridge_registry, Columns: " =icon, Area=area,Address=address,Price=curr_price,=action")
+        }
+        Div(panel-footer){
+            Div(clearfix){
+                Form(pull-right){
+
+                }
+                }
+            }
+        }
+    }
+}

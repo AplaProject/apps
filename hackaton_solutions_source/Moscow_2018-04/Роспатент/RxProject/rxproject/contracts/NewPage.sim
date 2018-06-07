@@ -1,0 +1,43 @@
+contract NewPage {
+		data {
+			Name       string
+			Value      string
+			Menu       string
+			Conditions string
+			ValidateCount int "optional"
+		}
+		func preparePageValidateCount(count int) int {
+			var min, max int
+			min = Int(EcosysParam("min_page_validate_count"))
+			max = Int(EcosysParam("max_page_validate_count"))
+	
+			if count < min {
+				count = min
+			} else {
+				if count > max {
+					count = max
+				}
+			}
+	
+			return count
+		}
+		conditions {
+			ValidateCondition($Conditions,$ecosystem_id)
+
+			var row map
+			row = DBRow("pages").Columns("id").Where("name = ?", $Name)
+
+			if row {
+				warning Sprintf( "Page %s already exists", $Name)
+			}
+
+			$ValidateCount = preparePageValidateCount($ValidateCount)
+		}
+		action {
+			DBInsert("pages", "name,value,menu,validate_count,conditions", $Name, $Value, $Menu, $ValidateCount, $Conditions)
+		}
+		func price() int {
+			return  SysParamInt("page_price")
+		}
+	}
+	

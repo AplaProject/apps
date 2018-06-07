@@ -1,0 +1,154 @@
+{
+    "pages": [
+        {
+            "Name": "duc_license_approve",
+            "Conditions": "true",
+            "Menu": "Applications",
+            "Value": "SetTitle(\"Approve license buy\")\nDiv(Class: container){\n    DBFind(\"duc_main_license\", req).Where(\"id = '#request#'\").Custom(link){LinkPage(Body: \"#pat_id#\", Page: show_patent, PageParams: \"patent_id=#pat_id#\")}\n    Table(req, \"Client=client,Patent=link,Type=resale,Terms=terms,Region=region\")\n    Div(btn-group){\n        Button(Page: patent_approve_list, Body: $back$, Class: btn btn-default btn-pill-left)\n        If(#admin#==1){\n            Button(Body: \"Approve as Owner\", Class: btn btn-primary btn-pill-right, Contract: owner_allow, Params: \"request=#request#,NotificId=#notific_id#\", Page: buy_list)\n        }.Else{\n            Button(Body: \"Verify as RosPatent\", Class: btn btn-primary btn-pill-right, Contract: rp_allow, Params: \"request=#request#,NotificId=#notific_id#\", Page: buy_list)\n        }\n    }\n}"
+        },
+        {
+            "Name": "buy_list",
+            "Conditions": "true",
+            "Menu": "Applications",
+            "Value": "SetTitle(\"Your list of bought patents\")\nDiv(content-wrapper){\n    Div(panel panel-primary data-sweet-alert){\n    SetVar(Name: addr, Value: Address())\n    DBFind(\"duc_main_license\", bought).Where(\"client = '#addr#'\").Limit(-1)\n    Table(bought, \"pat_id=pat_id,region=region,exp_date=exp_date,owner_allow=owner_allow,rospatent_allow=rospatent_allow,terms=terms,resale=resale\")\n}\n}"
+        },
+        {
+            "Name": "buy_license",
+            "Conditions": "true",
+            "Menu": "Applications",
+            "Value": "Div(Class: container){\n    Div(Class: panel panel-default){\n    Form(){\n        Div(Class: list-group-item text-center){\n        Span(Class: h3, Body: \"Buy patent\")\n        }\n        Div(Class: list-group-item){\n        Div(Class: row df f-valign){\n            Div(Class: col-md-3 mt-sm text-right){\n            Label(For: region){\n                Span(Body: \"Region\")\n            }\n            }\n            Div(Class: col-md-9 mc-sm text-left){\n            Input(Name: region, Type: text, Value: \"\", Placeholder: \"Region\")\n            }\n        }\n        Div(Class: row df f-valign){\n            Div(Class: col-md-3 mt-sm text-right){\n            Label(For: exp_date){\n                Span(Body: \"Expiration Date\")\n            }\n            }\n            Div(Class: col-md-9 mc-sm text-left){\n            Input(Name: exp_date, Type: text, Value: \"\", Placeholder: \"Expiration Date\")\n            }\n        }\n        Div(Class: row df f-valign){\n            Div(Class: col-md-3 mt-sm text-right){\n            Label(For: resale){\n                Span(Body: \"Buy Type\")\n            }\n            }\n            Div(Class: col-md-9 mc-sm text-left){\n            Input(Name: resale, Type: text, Value: \"\", Placeholder: \"Type of required license\")\n            }\n        }\n        Div(Class: row df f-valign){\n            Div(Class: col-md-3 mt-sm text-right){\n            Label(For: terms){\n                Span(Body: \"Terms\")\n            }\n            }\n            Div(Class: col-md-9 mc-sm text-left){\n            Input(Name: terms, Type: text, Value: \"\", Placeholder: \"Terms of use\")\n            }\n        }\n        }\n        Div(Class: panel-footer clearfix){\n        Div(Class: pull-right){\n            Button(Body: \"Buy patent\", Page: buy_list, Contract: init_sale, Params: \"pat_id=#pat_id#,region=Val(region),exp_date=Val(exp_date),resale=Val(resale),terms=Val(terms)\", Class: btn btn-default)\n        }\n        }\n    }\n}"
+        },
+        {
+            "Name": "show_patent",
+            "Conditions": "true",
+            "Menu": "Applications",
+            "Value": "SetTitle(\"Patents\")\nDiv(content-wrapper){\n    Div(panel panel-primary data-sweet-alert){\n    DBFind(\"user_patents\", pat).Where(\"id = #patent_id#\").Custom(buy){LinkPage(\n            Body: \"Buy license\",\n            Page: buy_license,\n            PageParams: \"pat_id=#id#,patent_id=#patent_id#\",\n            Params: \"pat_id=#id#,patent_id=#patent_id#\",\n            Class: btn btn-default\n            )}\n    Table(pat,\"PatID=patent_id,name=name,desc=description,owner=owner,Buy=buy\")\n}\n}"
+        },
+        {
+            "Name": "patent_approve_Edit",
+            "Conditions": "ContractConditions(\"RospatentRegister\")",
+            "Menu": "Applications",
+            "Value": "SetTitle(\"Approve patent #patent_id#\")\nDiv(Class: container){\n    DBFind(\"user_patents\", res).Where(\"id = #patent_id#\")\n    Table(res, \"name=name,description=description,additional=additional,owners=owners\")\n\n    Div(Class: panel panel-default){\n    Form(){\n        Div(Class: list-group-item text-center){\n        Span(Class: h3, Body: \"Approve patent\")\n        }\n        Div(Class: list-group-item){\n        Div(Class: row df f-valign){\n            Div(Class: col-md-3 mt-sm text-right){\n            Label(For: new_patent_id){\n                Span(Body: \"Internal Patent ID\")\n            }\n            }\n            Div(Class: col-md-9 mc-sm text-left){\n            Input(Name: new_patent_id, Type: int, Value: \"\", Placeholder: \"RU1111111111\")\n            }\n        }\n        Div(Class: row df f-valign){\n            Div(Class: col-md-3 mt-sm text-right){\n            Label(For: approve){\n                Span(Body: \"Approve\")\n            }\n            }\n            Div(Class: col-md-9 mc-sm text-left){\n            Input(Name: approve, Type: int, Value: 0, Placeholder: \"Approve\")\n            }\n        }\n        }\n        Div(Class: panel-footer clearfix){\n        Div(Class: pull-right){\n            Button(Body: \"Approve patent\", Page: patent_approve_List, Contract: approve_request, Params: \"patent_id=#patent_id#,approve=Val(approve)\", Class: btn btn-default)\n        }\n        }\n    }\n    }\n}"
+        },
+        {
+            "Name": "patent_approve_List",
+            "Conditions": "true",
+            "Menu": "Applications",
+            "Value": "SetTitle(\"Approves needed\")\nDiv(content-wrapper){\n    Div(panel panel-primary data-sweet-alert){\n    DBFind(\"user_patents\", res).Where(\"approved = 0\").Limit(-1).Custom(link){Button(Body: Approve, Class: btn btn-link, Page: patent_approve_Edit, PageParams: \"patent_id=#id#\"}\n    Table(res,\"ID=id,name=name,additional=additional,status=status,pub_date=pub_date,patent_date=patenting_date,owners=owners,link=link\")\n}\n}"
+        },
+        {
+            "Name": "add_rospatent_address",
+            "Conditions": "true",
+            "Menu": "Applications",
+            "Value": "SetTitle(\"Add RosPatent worker\")\nDiv(content-wrapper){\n    Div(panel panel-primary data-sweet-alert){\nDBFind(\"rospatent_addresses\", rospat)\nTable(rospat,\"Address=address\")\n\nDiv(Class: panel panel-default){\n  Form(){\n    Div(Class: list-group-item text-center){\n      Span(Class: h3, Body: \"Add worker\")\n    }\n    Div(Class: list-group-item){\n      Div(Class: row df f-valign){\n        Div(Class: col-md-3 mt-sm text-right){\n          Label(For: addr){\n            Span(Body: \"Address\")\n          }\n        }\n        Div(Class: col-md-9 mc-sm text-left){\n          Input(Name: addr, Type: text, Value: \"-\", Placeholder: \"Address of Rospatent worker\")\n        }\n      }\n    }\n    Div(Class: panel-footer clearfix){\n      Div(Class: pull-right){\n        Button(Body: \"Add address\", Page: add_rospatent_address, Contract: add_rospatent_address, Class: btn btn-default)\n      }\n    }\n  }\n}\n}\n}"
+        },
+        {
+            "Name": "add_user_patent",
+            "Conditions": "ContractAccess(\"MainCondition\")",
+            "Menu": "Applications",
+            "Value": "SetTitle(\"Request new patent\")\nDiv(content-wrapper){\n    Div(panel panel-primary data-sweet-alert){\n  SetVar(Name: acc, Value: Address())\n  DBFind(\"user_patents\", res).Where(\"creators = '#acc#'\").Limit(-1)\n  Table(res,\"ID=id,name=name,additional=additional,status=status,approved=approved,pub_date=pub_date,patent_date=patenting_date2\")\n\n  Div(Class: panel panel-default){\n    Form(){\n      Div(Class: list-group-item text-center){\n        Span(Class: h3, Body: \"Add patent\")\n      }\n      Div(Class: list-group-item){\n        Div(Class: row df f-valign){\n          Div(Class: col-md-3 mt-sm text-right){\n            Label(For: name){\n              Span(Body: \"Name\")\n            }\n          }\n          Div(Class: col-md-9 mc-sm text-left){\n            Input(Name: name, Type: text, Value: \"\", Placeholder: \"Patent name\")\n          }\n        }\n        Div(Class: row df f-valign){\n          Div(Class: col-md-3 mt-sm text-right){\n            Label(For: description){\n              Span(Body: \"Description\")\n            }\n          }\n          Div(Class: col-md-9 mc-sm text-left){\n            Input(Name: description, Type: text, Value: \"\", Placeholder: \"Patent description\")\n          }\n          Div(Class: col-md-3 mt-sm text-right){\n            Label(For: additional){\n              Span(Body: \"Additional info\")\n            }\n          }\n          Div(Class: col-md-9 mc-sm text-left){\n            Input(Name: additional, Type: text, Value: \"-\", Placeholder: \"Additional info, i.e. link to pdf\")\n          }\n        }\n        Div(Class: row df f-valign){\n          Div(Class: col-md-3 mt-sm text-right){\n            Label(For: patent_date2){\n              Span(Body: \"Patent date\")\n            }\n          }\n          Div(Class: col-md-9 mc-sm text-left){\n            Input(Name: patent_date2, Type: date, Value: \"\", Placeholder: \"Patent date\")\n          }\n        }\n        Div(Class: row df f-valign){\n          Div(Class: col-md-3 mt-sm text-right){\n            Label(For: expiration_date2){\n              Span(Body: \"Expiration date\")\n            }\n          }\n          Div(Class: col-md-9 mc-sm text-left){\n            Input(Name: expiration_date2, Type: date, Value: \"\", Placeholder: \"Expiration date\")\n          }\n        }\n      }\n      Div(Class: panel-footer clearfix){\n        Div(Class: pull-right){\n          Button(Body: \"Add patent\", Page: add_user_patent, Contract: add_full_patent, Class: btn btn-default)\n        }\n      }\n    }\n  }\n}\n}"
+        },
+        {
+            "Name": "search_patents",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Menu": "Applications",
+            "Value": "SetTitle(\"Search patents by its content\")\nDiv(content-wrapper){\n    Div(panel panel-primary data-sweet-alert){\n  SetVar(Name: acc, Value: Address())\n  DBFind(\"search_results\", res).Where(\"address = '#acc#'\").Order(\"id DESC\").Limit(1)\n  Table(res,\"ID=id,Description=results\")\n\n  Div(Class: panel panel-default){\n    Form(){\n      Div(Class: list-group-item text-center){\n        Span(Class: h3, Body: \"Find patent\")\n      }\n      Div(Class: list-group-item){\n        Div(Class: row df f-valign){\n          Div(Class: col-md-3 mt-sm text-right){\n            Label(For: request){\n              Span(Body: \"Keywords for search\")\n            }\n          }\n          Div(Class: col-md-9 mc-sm text-left){\n            Input(Name: request, Type: text, Value: \"\", Placeholder: \"Keywords...\")\n          }\n        }\n      }\n      Div(Class: panel-footer clearfix){\n        Div(Class: pull-right){\n          Button(Body: \"Search patents\", Page: search_patents, Contract: find_patents, Class: btn btn-default, Params: \"request=Val(request),addr=#acc#\", PageParams: \"request=Val(request),addr=#acc#\")\n        }\n      }\n    }\n  }\n}\n}"
+        },
+        {
+            "Name": "Patents",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Menu": "Applications",
+            "Value": "SetTitle(\"Patents\")\nDiv(content-wrapper){\n    Div(panel panel-primary data-sweet-alert){\n  DBFind(\"user_patents\", pats).Order(\"id\").Custom(link){Button(Body: Details, Class: btn btn-link, Page: show_patent, PageParams: \"patent_id=#id#\"}\n  Table(pats,\"ID=patent_id,Name=name,State=status,Owner=owners,Pub=pub_date,Start=patenting_date2,End=expiration_date2,Details=link\")\n}\n}"
+        }
+    ],
+    "blocks": [],
+    "menus": [
+        {
+            "Name": "Applications",
+            "Conditions": "ContractAccess(\"@1EditMenu\")",
+            "Value": "MenuItem(Title: \"Patents\", Page: Patents, Icon: \"fa fa-list-ul\")\nMenuItem(Title: \"Search Patents\", Page: search_patents, Icon: \"fa fa-list-ul\")\nMenuItem(Title: \"Add Patent Request\", Page: add_user_patent, Icon: \"fa fa-list-ul\")\nMenuItem(Title: \"Register Rospatent Worker\", Page: add_rospatent_address, Icon: \"fa fa-list-ul\")\nMenuItem(Title: \"Approve Patent Request\", Page: patent_approve_List, Icon: \"fa fa-list-ul\")\nMenuItem(Title: \"List of My License Requests\", Page: buy_list, Icon: \"fa fa-list-ul\")"
+        },
+        {
+            "Name": "admin_menu",
+            "Conditions": "true",
+            "Value": "MenuItem(\n    Icon: \"icon-screen-desktop\",\n    Page: \"interface\",\n    Title: \"Interface\"\n)\nMenuItem(\n    Icon: \"icon-docs\",\n    Page: \"tables\",\n    Title: \"Tables\"\n)\nMenuItem(\n    Icon: \"icon-briefcase\",\n    Page: \"contracts\",\n    Title: \"Smart Contracts\"\n)\nMenuItem(\n    Icon: \"icon-settings\",\n    Page: \"parameters\",\n    Title: \"Ecosystem parameters\"\n)\nMenuItem(\n    Icon: \"icon-globe\",\n    Page: \"languages\",\n    Title: \"Language resources\"\n)\nMenuItem(\n    Icon: \"icon-cloud-upload\",\n    Page: \"import\",\n    Title: \"Import\"\n)\nMenuItem(\n    Icon: \"icon-cloud-download\",\n    Page: \"export\",\n    Title: \"Export\"\n)\n"
+        },
+        {
+            "Name": "default_menu",
+            "Conditions": "ContractAccess(\"@1EditMenu\")",
+            "Value": "\nMenuItem(Title: $demo_sendPage$, Page: demo_page_sendPage, Icon: fa fa-envelope-open-o)\nMenuItem(Title: $demo_sendContract$, Page: demo_page_sendContract, Icon:fa fa-envelope-o)\nMenuItem(Title: $demo_sendMessage$, Page: demo_page_sendMessage, Icon:fa fa-paper-plane-o)\nMenuItem(Title: $notifications$, Page: demo_notifications, Icon:fa fa-inbox)\nMenuItem(Title: $profile_edit$, Page: profile_edit, Icon:fa fa-address-card-o)\nMenuItem(Title: $applications$, Page: applications_list, Icon:fa fa-list-ul)"
+        }
+    ],
+    "parameters": [],
+    "languages": [],
+    "contracts": [
+        {
+            "Name": "init_sale",
+            "Value": "contract init_sale {\n    data {\n        pat_id string,\n        region string,\n        exp_date string,\n        resale string,\n        terms string\n    }\n\n    conditions {\n        var pat map\n        pat = DBFind(\"user_patents\").Where(\"id = ?\", $pat_id).Row()\n        if !pat {\n            warning \"Patent not found\"\n        }\n    }\n\n    action {\n        var request int\n        request = DBInsert(\"duc_main_license\", \"pat_id,region,exp_date,resale,terms,client\", $pat_id, $region, $exp_date, $resale, $terms, IdToAddress($key_id))\n        var pat map\n        pat = DBFind(\"user_patents\").Where(\"id = ?\", $pat_id).Row()\n        var owners array\n        owners = Split(pat[\"owners\"], \",\")\n        var i int\n        i = 0\n        // notify owners\n        while i < Len(owners) {\n            var owner_id int\n            var params, page, icon string\n            icon = \"fa fa-bell-o\"\n            owner_id = AddressToId(owners[i])\n            params = Sprintf(\"request=%v,admin=1\", request)\n            page = \"duc_license_approve\"\n            Notifications_Single_Send(\"member_id,icon_name,text_header,text_body,page_name,params_val\",\n                owner_id,icon,\"Licence buy request\", \"Your approve needed\",page,params)\n            i = i + 100\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "owner_allow",
+            "Value": "contract owner_allow {\n    data {\n        request int\n        NotificId int\n    }\n\n    conditions {\n\n    }\n\n    action {\n        Notifications_Single_Close(\"notific_id\", $NotificId)\n        DBUpdate(\"duc_main_license\", $request, \"owner_allow\", \"true\")\n        var rp_addrs array\n        rp_addrs = DBFind(\"rospatent_addresses\").Columns(\"address\").Order(\"id\")\n        var i int\n        i = 0\n        // notify RosPatent\n        while i < Len(rp_addrs) {\n            var rp_addr map, rp_id int\n            rp_addr = rp_addrs[i]\n            var params, page, icon string\n            icon = \"fa fa-bell-o\"\n            rp_id = AddressToId(rp_addr[\"address\"])\n            params = Sprintf(\"request=%v,admin=0\", $request)\n            page = \"duc_license_approve\"\n            Notifications_Single_Send(\n                \"member_id,icon_name,text_header,text_body,page_name,params_val\",\n                rp_id,icon,\"Licence buy request\", \"Your verification needed\",page,params\n            )\n            i = i + 100\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "rp_allow",
+            "Value": "contract rp_allow {\n    data {\n        request int\n        NotificId int\n    }\n\n    conditions {\n\n    }\n\n    action {\n        Notifications_Single_Close(\"notific_id\", $NotificId)\n        DBUpdate(\"duc_main_license\", $request, \"rospatent_allow\", \"true\")\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "approve_request",
+            "Value": "contract approve_request {\n    data {\n        approve int,\n        patent_id int,\n        new_patent_id string\n    }\n\n    conditions {\n    }\n\n    action {\n        DBUpdate(\"user_patents\", $patent_id, \"approved,status,patent_id\", $approve, \"Approved\", $new_patent_id)\n    }\n}",
+            "Conditions": "ContractConditions(\"RospatentRegister\")"
+        },
+        {
+            "Name": "add_rospatent_address",
+            "Value": "contract add_rospatent_address {\n    data {\n        addr string\n    }\n    conditions {\n        var parts array\n        parts = Split($addr, \"-\")\n        if ($addr != \"-\") && (Len(parts) != 5) {\n            warning \"Wrong address\"\n        }\n    }\n    action {\n        if $addr == \"\" || $addr == \"-\" {\n            $addr = IdToAddress($key_id)\n        }\n        DBInsert(\"rospatent_addresses\", \"address\", $addr)\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "RospatentRegister",
+            "Value": "contract RospatentRegister {\n    data {\n    }\n\n    conditions {\n        var rospatents array, found int\n        rospatents = DBFind(\"rospatent_addresses\").Columns(\"address\")\n        var i int\n        i = 0\n        found = 0\n        while i < Len(rospatents) {\n            var tmpobj map\n            tmpobj = rospatents[i]\n            if tmpobj[\"address\"] == IdToAddress($key_id) {\n                found = 1\n                break\n            }\n            i = i + 1\n        }\n        if found == 0 {\n            error \"You have to be Rospatent Worker to be able to approve contracts, if you are, then ask administrator to check Rospatent workers table\"\n        }\n    }\n\n    action {\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "add_full_patent",
+            "Value": "contract add_full_patent {\n    data {\n        name string,\n        description string,\n        additional string,\n        patent_date string,\n        expiration_date string,\n    }\n\n    conditions {\n    }\n\n    action {\n      var addr string\n      addr = IdToAddress($key_id)\n      DBInsert(\"user_patents\",\n        \"name,description,additional,creators,owners,status,approved, pub_date, patenting_date2, expiration_date2\",\n        $name, $description, $additional, addr, addr, \"awaiting\", 0, \"now()\", $patent_date, $expiration_date)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "find_patents",
+            "Value": "contract find_patents {\n    data {\n        request string,\n        addr string\n    }\n\n    conditions {\n        var searchwords array\n        searchwords = Split($request, \" \")\n        if (Len(searchwords) == 0) {\n            error \"Wrong search request\"\n        }\n    }\n\n    action {\n        var amount, wn, currPat int, searchwords, resulting, patents array, res map\n        amount = 0\n        currPat = 0\n        var found bool\n\n        searchwords = Split($request, \" \")\n        patents = DBFind(\"user_patents\")\n\n        while currPat < Len(patents) {\n            wn = 0\n            while wn < Len(searchwords) {\n                var tmpobj map\n                tmpobj = patents[currPat]\n                found = Contains(tmpobj[\"name\"], searchwords[wn]) || \n                        Contains(tmpobj[\"description\"], searchwords[wn]) || \n                        Contains(tmpobj[\"additional\"], searchwords[wn]) || \n                        Contains(tmpobj[\"owners\"], searchwords[wn]) || \n                        Contains(tmpobj[\"readers\"], searchwords[wn]) || \n                        Contains(tmpobj[\"subleasers\"], searchwords[wn]) || \n                        Contains(tmpobj[\"creators\"], searchwords[wn]) || \n                        Contains(tmpobj[\"status\"], searchwords[wn])\n                if found {\n                    resulting[amount] = patents[currPat]\n                    amount = amount + 1\n                    found = false\n                    break\n                }\n                wn = wn + 1\n            }\n            currPat = currPat + 1\n        }\n        res[\"result\"] = resulting\n        res[\"size\"] = currPat\n        res[\"words_search\"] = Len(searchwords)\n        DBInsert(\"search_results\", \"address,results\", $addr, res)\n    }\n}",
+            "Conditions": "true"
+        }
+    ],
+    "tables": [
+        {
+            "Name": "duc_main_license",
+            "Columns": "[{\"name\":\"region\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"resale\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"exp_date\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"owner_allow\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"rospatent_allow\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"terms\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"client\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"pat_id\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "patents",
+            "Columns": "[{\"name\":\"description\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"pat_num\",\"type\":\"varchar\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "rospatent_addresses",
+            "Columns": "[{\"name\":\"address\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
+        },
+        {
+            "Name": "search_results",
+            "Columns": "[{\"name\":\"address\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"results\",\"type\":\"json\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "user_patents",
+            "Columns": "[{\"name\":\"owners\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"patent_id\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"additional\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"expiration_date\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"patenting_date2\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"approved\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"pub_date\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"name\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"status\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"subleasers\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"description\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"patenting_date\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"expiration_date2\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"readers\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"creators\",\"type\":\"text\",\"conditions\":\"ContractConditions(\\\"MainCondition\\\")\"}]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"ContractConditions(\\\"RospatentRegister\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        }
+    ],
+    "data": []
+}

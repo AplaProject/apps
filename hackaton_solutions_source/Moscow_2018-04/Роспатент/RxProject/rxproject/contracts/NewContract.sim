@@ -1,0 +1,54 @@
+contract NewContract {
+		data {
+			Value      string
+			Conditions string
+			Wallet         string "optional"
+			TokenEcosystem int "optional"
+		}
+		conditions {
+			ValidateCondition($Conditions,$ecosystem_id)
+			$walletContract = $key_id
+			   if $Wallet {
+				$walletContract = AddressToId($Wallet)
+				if $walletContract == 0 {
+				   error Sprintf("wrong wallet %s", $Wallet)
+				}
+			}
+			var list array
+			list = ContractsList($Value)
+			var i int
+			while i < Len(list) {
+				if IsObject(list[i], $ecosystem_id) {
+					warning Sprintf("Contract or function %s exists", list[i] )
+				}
+				i = i + 1
+			}
+			if !$TokenEcosystem {
+				$TokenEcosystem = 1
+			} else {
+				if !SysFuel($TokenEcosystem) {
+					warning Sprintf("Ecosystem %d is not system", $TokenEcosystem )
+				}
+			}
+		}
+		action {
+			var root, id int
+			root = CompileContract($Value, $ecosystem_id, $walletContract, $TokenEcosystem)
+			id = DBInsert("contracts", "value,conditions, wallet_id, token_id", 
+				   $Value, $Conditions, $walletContract, $TokenEcosystem)
+			FlushContract(root, id, false)
+			$result = id
+		}
+		func rollback() {
+			var list array
+    		list = ContractsList($Value)
+			var i int
+			while i < Len(list) {
+				RollbackContract(list[i])
+				i = i + 1
+			}
+		}
+		func price() int {
+			return  SysParamInt("contract_price")
+		}
+	}

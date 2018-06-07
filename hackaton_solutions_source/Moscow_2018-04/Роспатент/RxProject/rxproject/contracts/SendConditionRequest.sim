@@ -1,0 +1,46 @@
+contract SendConditionRequest {
+    data {
+        PatentId int  
+        ActorId int 
+        ConditionType int 
+        Comment string "optional" 
+        DayCount int
+    }
+
+    conditions {
+        var total int
+        var ret map
+
+        ret = DBRow("pricelists").Columns("day_price, exclusive_price").Where("patent_id = ?", $PatentId).Where("actor_id = ?", $ActorId)
+        //но лучше так
+        //ret = DBFind("pricelists").Columns("day_price,exclusive_price").Where("patent_id = $ and actor_id = $", $PatentId, $ActorId)
+
+        if ($ConditionType == 0) {
+            $total = ret["day_price"] * $DayCount
+        } else {
+            $total = ret["exclusive_price"]
+        }
+
+        var row map
+		row = DBRow("keys").Columns("amount").WhereId($key_id)
+		$amount = Money(row["amount"])
+		if $amount < $total {
+			error Sprintf("Money is not enough %v < %v",total, $amount)
+		}
+    }
+
+    action {
+        var ret map
+        ret = DBRow("possession").Where("patent_id = ?", $PatentId).Where("actor_id = ?", $ActorId)
+        DBInsert("possession", "request_date, territory_ids, exclusive, patent_id, usage_type, status, actor_id, resell_flag", "15.04.2018", ret["territory_ids"], $ConditionType, ret["patent_id"], ret["usage_type"], 0, $ActorId, ret["resell_flag"])
+
+        var icon, header, body, page, params string
+        icon = "fa-bell"
+        header = "Вы получили новое сообщение"
+        body = "Новая заявка на покупку патента"
+        page = "agreement_page"
+        params = Sprintf("SomeText=%v", body)
+        
+        Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val", EcosysParam("founder_account"), icon, header, body, page, params)
+    }
+}

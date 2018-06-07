@@ -1,0 +1,30 @@
+contract moveRig {
+    data {
+        Date_finish string
+        Location_id_finish int
+        Rig_id int
+        Event_meta string "optional"
+    }
+
+    conditions {
+        var Mover_data map
+        Mover_data = DBRow("actors").Where("pubkey = ?", $key_id)
+        var Rig_data map
+        Rig_data = DBRow("rigs").WhereId($Rig_id)
+        if Rig_data["owner_cur"] != Mover_data["id"] {
+            error "Вы не владелец станка"
+        }
+        if Rig_data["status_cur"] != "standby" {
+            error "Станок уже чем-то занят"
+        }
+    }
+
+    action {
+        var Mover_data map
+        Mover_data = DBRow("actors").Where("pubkey = ?", $key_id)
+        var Rig_data map
+        Rig_data = DBRow("rigs").WhereId($Rig_id)
+        DBInsert("event", "initiator_id,timestamp date_start,date_end_planned,location_start_id,location_end_id,rig_id,meta,type", Mover_data["id"], $time, "timestamp " + $Date_finish, Rig_data["location_cur"], $Location_id_finish, $Rig_id, $Event_meta, "move_start")
+        DBUpdate("rigs", $Rig_id, "status_cur", "moving")
+    }
+}

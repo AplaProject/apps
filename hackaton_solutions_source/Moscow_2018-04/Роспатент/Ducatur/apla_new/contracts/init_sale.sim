@@ -1,0 +1,40 @@
+contract init_sale {
+    data {
+        pat_id string,
+        region string,
+        exp_date string,
+        resale string,
+        terms string
+    }
+
+    conditions {
+        var pat map
+        pat = DBFind("user_patents").Where("id = ?", $pat_id).Row()
+        if !pat {
+            warning "Patent not found"
+        }
+    }
+
+    action {
+        var request int
+        request = DBInsert("duc_main_license", "pat_id,region,exp_date,resale,terms,client", $pat_id, $region, $exp_date, $resale, $terms, IdToAddress($key_id))
+        var pat map
+        pat = DBFind("user_patents").Where("id = ?", $pat_id).Row()
+        var owners array
+        owners = Split(pat["owners"], ",")
+        var i int
+        i = 0
+        // notify owners
+        while i < Len(owners) {
+            var owner_id int
+            var params, page, icon string
+            icon = "fa fa-bell-o"
+            owner_id = AddressToId(owners[i])
+            params = Sprintf("request=%v,admin=1", request)
+            page = "duc_license_approve"
+            Notifications_Single_Send("member_id,icon_name,text_header,text_body,page_name,params_val",
+                owner_id,icon,"Licence buy request", "Your approve needed",page,params)
+            i = i + 100
+        }
+    }
+}

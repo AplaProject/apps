@@ -1,0 +1,34 @@
+contract startDig {
+    data {
+        Date_finish string
+        Rig_id int
+        Event_meta string "optional"
+    }
+    conditions {
+        /*ContractConditions("isDriller")
+        var Driller_id int
+        Driller_id = DBRow("actors").Where("pubkey = ?", $key_id)
+        var Rig_data map
+        Rig_data = DBRow("rigs").WhereId($Rig_id)
+        if Rig_data["status_cur"] != "standby" {
+            error "Этот станок сейчас занят"
+        }
+        var Location_data map
+        Location_data = DBRow("location").Where("id = ?", Rig_data["location_cur"])
+        if Location_data["type"] != "deposit"{
+            error "Этот станок не находится на месторождении"
+        }*/
+    }
+    action {
+        var Driller_data map
+        Driller_data = DBRow("actors").Where("pubkey = ?", $key_id)
+        var Driller_id int
+        Driller_id = Driller_data["id"]
+        var Rig_data map
+        Rig_data = DBRow("rigs").WhereId($Rig_id)
+        var Interm_id int
+        Interm_id = Rig_data["owner_cur"]
+        DBInsert("event", "initiator_id,receiver_id,timestamp date_start,date_end_planned,location_end_id,rig_id,meta,type", Driller_id, Interm_id, $time, "timestamp " + $Date_finish, Rig_data["location_cur"], $Rig_id, $Event_meta, "dig_start")
+        DBUpdate("rigs", $Rig_id, "status_cur", "digging")
+    }
+}

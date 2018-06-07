@@ -1,0 +1,21 @@
+contract Nco_OX_Contract_Accept {
+    data {
+        Offer_id string
+    }
+
+    conditions {
+        if $key_id <> DBFind("nco_mat_request").Columns("nco_id").WhereId(Int(DBFind("nco_mat_request_applicants").Columns("mat_request_id").WhereId(Int($Offer_id))))
+        {
+            error "not eligible user"
+        }
+        if DBFind("nco_mat_request").Columns("helper_id").WhereId(Int(DBFind("nco_mat_request_applicants").Columns("mat_request_id").WhereId(Int($Offer_id)))) <> ""
+        {
+            error "contract assigned already"
+        }
+    }
+
+    action {
+        DBUpdate("nco_mat_request", Int(DBFind("nco_mat_request_applicants").Columns("mat_request_id").Where("id = ?", $Offer_id)), "helper_id", DBFind("nco_mat_request_applicants").Columns("nco_id").Where("id = ?", $Offer_id))
+        DBUpdate("nco_mat_request_applicants", $Offer_id, "isapproved", true)
+    }
+}

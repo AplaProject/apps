@@ -1,0 +1,20 @@
+contract produceRig {
+    data {
+        Location_id int
+        Regnum string
+        Rig_meta string "optional"
+        Event_meta string "optional"
+    }
+    conditions {
+        ContractConditions("isProducer")
+    }
+    action {
+        var Res map
+        Res = DBRow("actors").Where("pubkey = ?", $key_id)
+        var Producer_id int
+        Producer_id = Res["id"]
+        var New_id int
+        New_id = DBInsert("rigs", "regnum,owner_cur,status_cur,location_cur,meta", $Regnum, Producer_id, "standby", $Location_id, $Rig_meta)
+        DBInsert("event", "initiator_id,timestamp date_end_actual,location_end_id,rig_id,meta,type", Producer_id, $time, $Location_id, New_id, $Event_meta, "produced")
+    }
+}
