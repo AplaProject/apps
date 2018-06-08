@@ -1,0 +1,327 @@
+{
+    "pages": [
+        {
+            "Name": "production_plan_list",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Menu": "Applications",
+            "Value": "SetTitle(План добычи)\nDiv(Class: content-wrapper){\n    SetVar(founder_account,EcosysParam(\"founder_account\"))\n    If(#founder_account#==#key_id#){\n        Include(\"production_plan_form\")\n    }\n    Include(\"production_plan_list\")\n}"
+        },
+        {
+            "Name": "field_view",
+            "Conditions": "true",
+            "Menu": "Applications",
+            "Value": "SetTitle(Месторождение)\n\nDiv(content-wrapper){\n    Div(breadcrumb){\n        Div(){\n            LinkPage(Body:Список оборудования,Page: production_operation_list)\n            Span(/).Style(margin-right: 10px; margin-left: 10px;)\n            Span(Месторождение #field_id#, text-muted)\n        }\n    }\nIf(#field_id#>0){}.Else{SetVar(field_id, 1)}\n\nIf(GetVar(field_id)){\n    DBFind(Name: fields, Source: src_entry).WhereId(#field_id#).Vars(entry)\n}\n    If(GetVar(field_id)){\n        Div(row df f-valign){\n            Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3 mt-sm text-left){\n                Div(panel panel-default){\n                    Form(){\n                        Div(Class: list-group-item text-center){\n                            Span(Class: h3, Body: #entry_name#)\t\n                        }\n                        Div(list-group-item){\n                            Map(MapType: hybrid, Hmap:300, Value: #entry_map_coords#)\n                        }\n                        Div(list-group-item){\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right h5){\n                                    Strong(Расположение:)\n                                }\n                                Div(col-md-7 mt-sm text-left h5){#entry_address#}\n                            }\n                        }\n                        Div(list-group-item){\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right h5){\n                                    Strong(Глубина:)\n                                }\n                                Div(col-md-7 mt-sm text-left h5){EcosysParam(Name: well_depth, Index: #entry_well_depth#)}\n                            }\n                        }\n                        Div(list-group-item){\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right h5){\n                                    Strong(Залежи:)\n                                }\n                                Div(col-md-7 mt-sm text-left h5){EcosysParam(Name: drill_for, Index: #entry_drill_for#)}\n                            }\n                        }\n                        If(#notification#==true){\n                        Div(panel-footer clearfix){\n                            Div(pull-right text-right){\n                                Button(Page: production_plan_list, Class: btn btn-primary, Contract:Notifications_Single_Close, Params:\"notific_id=#notific_id#\", Body: $close$)\n                            }\n                        }\n                        }\n\n                    }\n                }\n            }\n        }\n    }\n    Include(\"production_plan_list\")\n}"
+        },
+        {
+            "Name": "production_operation_list",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Menu": "Applications",
+            "Value": "Div(content-wrapper){\n    SetTitle(\"Список заявок\")\n    Include(\"product_operation_list\")\n}"
+        },
+        {
+            "Name": "new_drilling_rig",
+            "Conditions": "true",
+            "Menu": "Applications",
+            "Value": "Div(Class: content-wrapper){\n    Include(drilling_rig_form)\n}"
+        },
+        {
+            "Name": "drilling_rigs_list",
+            "Conditions": "true",
+            "Menu": "Applications",
+            "Value": "DBFind(Name: drilling_rig, Source: src_drilling_rig)\nDiv(content-wrapper){\n    SetTitle(\"List drilling rigs\")\n    Include(\"drilling_rig_form\")\n\n    Div(Class: panel panel-primary){\n        Div(Class: list-group-item){\n            Table(src_drilling_rig) \n        }\n    }\n}"
+        },
+        {
+            "Name": "field_add",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Menu": "Applications",
+            "Value": "Div(content-wrapper){\n    Div(breadcrumb){\n        Div(){\n            LinkPage(Месторождения, fields_list)\n            Span(/).Style(margin-right: 10px; margin-left: 10px;)\n            Span(Добавить, text-muted)\n        }\n    }\n    SetTitle(Добавить месторождение)\n    \n    Div(row df f-valign){\n        Div(col-sm-8 col-sm-offset-2 text-left){\n            Div(panel panel-primary){\n                Div(panel-heading, Body: Месторождение)\n                Form(){\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Название)\n                            }\n                            Div(col-md-9 mc-sm text-center){\n                                Input(Name: name)\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(LangRes(address))\n                            }\n                            Div(col-md-9 mc-sm text-center){\n                                InputMap(Name: Сoords,Type: polygon, MapType: hybrid, Value: `{\"zoom\":8, \"center\":{\"lat\":55.500,\"lng\":55.125}}`)\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Тип)\n                            }\n                            Div(col-md-9 mb-sm text-left){\n                                EcosysParam(Name: drill_for, Source: src_drill_for)\n                                Select(Name: drill_for, Source: src_drill_for, Class: form-control, ValueColumn: id, NameColumn: name)\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Глубина залежей)\n                            }\n                            Div(col-md-9 mb-sm text-left){\n                                EcosysParam(Name: well_depth, Source: src_well_depth)\n                                Select(Name: well_depth, Source: src_well_depth, Class: form-control, ValueColumn: id, NameColumn: name)\n                            }\n                        }\n                    }\n                    Div(panel-footer){\n                        Div(clearfix){\n                            Div(pull-right){\n                                Div(btn-group){\n                                    Button(Page: fields_list, Body: Назад, Class: btn btn-default btn-pill-left)\n                                    Button(Body: Добавить, Class: btn btn-primary btn-pill-right, Contract: field_add, Page: fields_list)\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n}"
+        },
+        {
+            "Name": "fields_list",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Menu": "Applications",
+            "Value": "DBFind(Name: fields, Source: src_field_list)\nDiv(content-wrapper){\n    SetTitle(\"Список месторождений\")\n    Include(\"field_form\")\n    Div(Class: panel panel-primary){\n        Div(Class: list-group-item){\n            Table(src_field_list) \n        }\n    }\n}"
+        },
+        {
+            "Name": "new_production_operation",
+            "Conditions": "true",
+            "Menu": "Applications",
+            "Value": "SetVar(curr_user,EcosysParam(founder_account))\n\nDiv(content-wrapper){\n    SetTitle(Добавить заявку)\n    \n    Div(row df f-valign){\n        Div(col-sm-8 col-sm-offset-2 text-left){\n            Div(panel panel-primary){\n                Div(panel-heading, Body: Передача в производство)\n                Form(){\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Нефтесервисная компания)\n                            }\n                            Div(col-md-9 mb-sm text-left){\n                                DBFind(Name: members, Source: src_supplier)\n                                Select(Name: supplier, Source: src_supplier, ValueColumn: id, NameColumn: member_name, Class: form-control m-b)\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Оборудование)\n                            }\n                            Div(col-md-9 mb-sm text-left){\n                                DBFind(Name: drilling_rig, Source: src_drilling_rigs)\n                                Select(Name: drilling_rig, Source: src_drilling_rigs, ValueColumn: id, NameColumn: vendor_code, Class: form-control m-b)\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Месторождение)\n                            }\n                            Div(col-md-9 mb-sm text-left){\n                                DBFind(Name: fields, Source: src_fields)\n                                Select(Name: field, Source: src_fields, ValueColumn: id, NameColumn: name, Class: form-control m-b)\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Дата начала)\n                            }\n                            Div(col-md-9 mb-sm text-left){\n                                Input(Name: start_date, Class: form-control m-b, Value: Now(MM/DD/YYYY))\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Плановая дата окончания)\n                            }\n                            Div(col-md-9 mb-sm text-left){\n                                Input(Name: plan_end_date, Class: form-control m-b, Value: Now(MM/DD/YYYY, +20 days))\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Стоимость работ)\n                            }\n                            Div(col-md-9 mb-sm text-left){\n                                Input(Name: amount, Class: form-control m-b)\n                            }\n                        }\n                    }\n                    If(#curr_user#==#key_id#){\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Выработка)\n                            }\n                            Div(col-md-9 mb-sm text-left){\n                                Input(Name: melage, Type: integer, Class: form-control m-b)\n                            }\n                        }\n                    }}\n                    Div(panel-footer){\n                        Div(clearfix){\n                            Div(pull-right){\n                                Div(btn-group){\n                                    Button(Page: production_operations_list, Body: Назад, Class: btn btn-default btn-pill-left)\n                                    Button(Body: Добавить, Class: btn btn-primary btn-pill-right, Contract: production_operation_add, Page: production_operation_list)\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n}"
+        }
+    ],
+    "blocks": [
+        {
+            "Name": "field_form",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "Div(row df f-valign){\n        Div(col-sm-8 col-sm-offset-2 text-left){\n            Div(panel panel-primary){\n                Div(panel-heading, Body: Месторождение)\n                Form(){\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Название)\n                            }\n                            Div(col-md-9 mc-sm text-center){\n                                Input(Name: name)\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(LangRes(address))\n                            }\n                            Div(col-md-9 mc-sm text-center){\n                                InputMap(Name: Сoords,Type: polygon, MapType: hybrid, Value: `{\"zoom\":8, \"center\":{\"lat\":55.500,\"lng\":55.125}}`)\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Тип)\n                            }\n                            Div(col-md-9 mb-sm text-left){\n                                EcosysParam(Name: drill_for, Source: src_drill_for)\n                                Select(Name: drill_for, Source: src_drill_for, Class: form-control, ValueColumn: id, NameColumn: name)\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 mt-sm text-right){\n                                Strong(Глубина залежей)\n                            }\n                            Div(col-md-9 mb-sm text-left){\n                                EcosysParam(Name: well_depth, Source: src_well_depth)\n                                Select(Name: well_depth, Source: src_well_depth, Class: form-control, ValueColumn: id, NameColumn: name)\n                            }\n                        }\n                    }\n                    Div(panel-footer){\n                        Div(clearfix){\n                            Div(pull-right){\n                                Div(btn-group){\n                                    Button(Page: fields_list, Body: Назад, Class: btn btn-default btn-pill-left)\n                                    Button(Body: Добавить, Class: btn btn-primary btn-pill-right, Contract: field_add, Page: fields_list)\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }"
+        },
+        {
+            "Name": "product_operation_list",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "DBFind(Name: production_operations, Source: src_production_operation).Custom(_supplier){\n    DBFind(Name: members, Source: src_members).Where(\"id=#supplier#\").Vars(row)\n    LinkPage(Page: profile_view, PageParams: \"v_member_id=#row_id#\"){\n        Span(Class: h5 text-bold, Body: #row_member_name#)\n    }\n}.Custom(_drilling_rig){\n   DBFind(Name: drilling_rig, Source: src_drilling_rig).Where(\"id=#drilling_rig#\").Vars(row)\n   Span(Class: h5 text-bold, Body: #row_vendor_code#)\n}.Custom(_field){\n    DBFind(Name: fields, Source: src_fields).Where(\"id=#field#\").Vars(row)\n    LinkPage(Page: field_view, PageParams: \"field_id=#row_id#\"){\n        Span(Class: h5 text-bold, Body: #row_name#)\n    }\n}\nDiv(panel panel-primary data-sweet-alert){\n\tDiv(list-group-item){\n\t\tTable(Source:src_production_operation, Columns: \"Сервисная компания=_supplier,Код оборудования=_drilling_rig,Месторождение=_field\")\n\t}\n}"
+        },
+        {
+            "Name": "production_plan_list",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "If(#field_id#>0){\n  SetVar(v_Where,\"field=#field_id#\")\n}.Else{\n  SetVar(v_Where,'true')\n}\nDBFind(Name: production_plan, Source: src_production_plan).Where(#v_Where#).Order(#id#).Custom(_field){\n    DBFind(Name: fields, Source: src_fields).Where(\"id=#field#\").Vars(row)\n    LinkPage(Page: field_view, PageParams: \"field_id=#row_id#\"){\n        Span(Class: h5 text-bold, Body: #row_name#)\n    }\n}.Custom(_title){\n    Span(#title#)\n}.Custom(_amount){\n    Span(#amount#)\n}.Custom(_start_date){\n    Span(DateTime(#start_date#,DD.MM.YY))\n}.Custom(_end_date){\n    Span(DateTime(#end_date#,DD.MM.YY))\n}\n\nDiv(Class: panel panel-primary){\n    If(#field_id#>0) {\n        Div(Class: panel panel-heading){Span(План работ)}\n        Div(Class: list-group-item){\n            Table(src_production_plan, Columns: \"Описание=_title,Начало=_start_date,Окончание=_end_date,Стоимость=_amount\") \n        }\n    }.Else {\n        Table(src_production_plan, Columns: \"Месторождение=_field,Описание=_title,Начало=_start_date,Окончание=_end_date,Стоимость=_amount\") \n    }\n}"
+        },
+        {
+            "Name": "production_plan_form",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "Div(row df f-valign){\n  Div(col-sm-8 col-sm-offset-2 text-left){\n    Div(panel panel-primary){\n      Div(panel-heading, Body: Новая задача)\n      Form(){\n        Div(Class: list-group-item){\n          Div(Class: row df f-valign){\n            Div(Class: col-md-3 mt-sm text-right){\n              Label(For: title){\n                Span(Body: Описание)\n              }\n            }\n            Div(Class: col-md-9 mb-sm text-left){\n              Input(Name: title, Type: text, Placeholder: Описание работ)\n            }\n          }\n        }\n        Div(Class: list-group-item){\n          Div(Class: row df f-valign){\n            Div(Class: col-md-3 mt-sm text-right){\n              Label(For: amount){\n                Span(Body: Стоимость)\n              }\n            }\n            Div(Class: col-md-9 mb-sm text-left){\n              Input(Name: amount, Type: text, Placeholder: Сметная стоимость работ)\n            }\n          }\n        }\n      \n        Div(Class: list-group-item){\n          Div(Class: row df f-valign){\n            Div(Class: col-md-3 mt-sm text-right){\n              Label(For: field){\n                Span(Body: Месторождение)\n              }\n            }\n            Div(Class: col-md-9 mb-sm text-left){\n              DBFind(Name: fields, Source: src_fields)\n              Select(Name: field, Source: src_fields, ValueColumn: id, NameColumn: name, Class: form-control m-b)\n            }\n          }\n        }\n        Div(Class: list-group-item){\n          Div(Class: row df f-valign){\n            Div(Class: col-md-3 mt-sm text-right){\n              Label(For: start_date){\n                Span(Body: Дата начала)\n              }\n            }\n            Div(Class: col-md-9 mb-sm text-left){\n              Input(Name: start_date, Type: date, Placeholder: Начало работ)\n            }\n          }\n        }\n        Div(Class: list-group-item){\n          Div(Class: row df f-valign){\n            Div(Class: col-md-3 mt-sm text-right){\n              Label(For: end_date){\n                Span(Body: Дата окончания)\n              }\n            }\n            Div(Class: col-md-9 mb-sm text-left){\n              Input(Name: end_date, Type: date, Placeholder: Окончание работ)\n            }\n          }\n        }\n        Div(Class: panel-footer clearfix){\n          Div(Class: pull-right){\n            Input(Name: created_at, Type:hidden, Value: Now(datetime))\n            Button(Body: Добавить, Contract: new_production_plan, Class: btn btn-default)\n          }\n        }\n      }\n    }\n  }\n}"
+        },
+        {
+            "Name": "drilling_rig_form",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "Div(Class: panel panel-default){\n  Form(){\n    Div(Class: list-group-item text-center){\n      Span(Class: h3, Body: Поставка оборудования)\n    }\n    Div(Class: list-group-item){\n      Div(Class: row df f-valign){\n        Div(Class: col-md-3 mt-sm text-right){\n          Label(For: vendor_code){\n            Span(Body: Код)\n          }\n        }\n        Div(Class: col-md-9 mb-sm text-left){\n          Input(Name: vendor_code, Type: text, Placeholder: Код производителя)\n        }\n      }\n    }\n    Div(Class: list-group-item){\n      Div(Class: row df f-valign){\n        Div(Class: col-md-3 mt-sm text-right){\n          Label(For: owner){\n            Span(Body: Сервисная компания)\n          }\n        }\n        Div(Class: col-md-9 mb-sm text-left){\n             DBFind(Name: members, Source: src_supplier)\n             Select(Name: owner, Source: src_supplier, ValueColumn: id, NameColumn: member_name, Class: form-control m-b)\n        }\n      }\n    }\n\n\n\n    Div(Class: list-group-item){\n      Div(Class: row df f-valign){\n        Div(Class: col-md-3 mt-sm text-right){\n          Label(For: carry){\n            Span(Body: Грузоподъемность)\n          }\n        }\n        Div(Class: col-md-9 mb-sm text-left){\n          Input(Name: carry, Type: text, Placeholder: Грузоподъемонсть)\n        }\n      }\n    }\n\n    Div(Class: list-group-item){\n      Div(Class: row df f-valign){\n        Div(Class: col-md-3 mt-sm text-right){\n          Label(For: pump_power){\n            Span(Body: Мощность насоса)\n          }\n        }\n        Div(Class: col-md-9 mb-sm text-left){\n          Input(Name: pump_power, Type: text, Placeholder: Мощность насоса)\n        }\n      }\n    }\n    Div(Class: list-group-item){\n      Div(Class: row df f-valign){\n        Div(Class: col-md-3 mt-sm text-right){\n          Label(For: drill_power){\n            Span(Body: Мощность сверла)\n          }\n        }\n        Div(Class: col-md-9 mb-sm text-left){\n          Input(Name: drill_power, Type: text, Placeholder: Мощность сверла)\n        }\n      }\n    }\n    Div(Class: panel-footer clearfix){\n      Div(Class: pull-right){\n        Input(Name: created_at, Type:hidden, Value: Now(datetime))\n        Button(Body: Добавить, Contract: NewDrillingRig, Class: btn btn-default)\n      }\n    }\n  }\n}"
+        }
+    ],
+    "menus": [
+        {
+            "Name": "Applications",
+            "Conditions": "ContractAccess(\"@1EditMenu\")",
+            "Value": "If(false) {\nMenuItem(Title:$referendum$, Page:referendums_list, Icon:\"fa fa-gavel\")\nMenuItem(Title: $land_records$, Page: land_registry_records,Icon: \"fa icon-home\")\nMenuItem(Title: Добавить оборудование, Page: new_drilling_rig, Icon: \"fa fa-comments\")\nMenuItem(Title: Добавить месторождение, Page: field_add,Icon: \"fa icon-home\")\n\n}\nMenuItem(Title: Список оборудования, Page:drilling_rigs_list, Icon:\"fa fa-gavel\")\nMenuItem(Title: Cписок месторождений, Page:fields_list, Icon:\"fa icon-home\")\nMenuItem(Title: Заявка на работы, Page: new_production_operation,Icon: \"fa icon-phone\")\nMenuItem(Title: Список заявок на выполнение работ, Page: production_operation_list,Icon: \"fa icon-list\")\nMenuItem(Title: План освоения месторождений, Page: production_plan_list,Icon: \"fa icon-calendar\")"
+        }
+    ],
+    "parameters": [
+        {
+            "Name": "well_depth",
+            "Value": "<5K,5K-10K,10K-15K,>15K",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "drill_for",
+            "Value": "Газ,Нефть,Смешанное",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        }
+    ],
+    "languages": [],
+    "contracts": [
+        {
+            "Name": "new_production_plan",
+            "Value": "contract new_production_plan {\n    data {\n        title string\n        amount int\n        field int\n        start_date string\n        end_date string\n        created_at string\n\n    }\n\n    conditions {\n    }\n\n    action {\n        var icon, header, body, page, params string\n        DBInsert(\"production_plan\",\"title,amount,field,start_date,end_date,created_at\",$title,$amount,$field,$start_date,$end_date,$created_at)\n        icon = \"fa fa-bell-o\"\n        header = \"Есть тема\"\n        body = \"Можно поднять денег\"\n        page = \"field_view\"\n        params = Sprintf(\"field_id=%d,notification=true\",$field)\n        Notifications_Single_Send(\"member_id,icon_name,text_header,text_body,page_name,params_val\", \"-3631903339169421283\",icon,header,body,page,params)\n\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "NewDrillingRig",
+            "Value": "contract NewDrillingRig {\n    data {\n        vendor_code string\n        carry int\n        pump_power int\n        drill_power int\n        owner int\n    }\n\n    conditions {\n    }\n\n    action {\n        DBInsert(\"drilling_rig\", \"vendor_code,carry,pump_power,drill_power,vendor_id,owner,timestamp created_at\", $vendor_code, Int($carry),Int($pump_power),Int($drill_power), $key_id,$owner, $block_time)\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "field_add",
+            "Value": "contract field_add {\n    data {\n        name string\n        Сoords string\n        drill_for int\n        well_depth int\n    }\n\n    conditions {\n        $coordsMap = JSONToMap($Сoords)\n        $coordsAddress = $coordsMap[\"address\"]\n        $area = $coordsMap[\"area\"]\n        $area = Sprintf(\"%.0f\", $area)\n\n        if !$coordsAddress {\n            info \"Please input address\"\n        }\n        if $area <= 0 {\n            info \"Please use map for input of the area coordinates\"\n        }\n    }\n    action {\n        DBInsert(\"fields\", \"name,address,map_coords,drill_for,well_depth\", $name, $coordsAddress, $Сoords, $drill_for, $well_depth)\n        //DBInsert(\"fields\", \"name,drill_for,well_depth\", $name, $drill_for, $well_depth)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "production_operation_add",
+            "Value": "contract production_operation_add {\n    data {\n        supplier int\n        drilling_rig int\n        field int\n        start_date string\n        plan_end_date string\n        melage int \"optional\"\n        //contract_num string\n        amount int\n    }\n\n    conditions {\n  //      info $supplier\n  //      info $amount\n\n    }\n    action {\n        //var ret string\n        //ret = DBFind(\"production_operations\").Where(\"drilling_rig=?\", $drilling_rig)\n        //if Len(ret) > 0 {\n       //     var last_id int\n       //     last_id=ret[Len(ret)-1]\n       //     //DBUpdate(\"production_operations\",Int(last_id[\"id\"]),\"end_date,field\",\"timestamp \"+$start_date,$field)\n       //     var milage int\n       //     //info($drilling_rig)\n       //     milage = DBFind(\"drilling_rig\").WhereId($drilling_rig).One(\"milage\")\n       //     DBUpdate(\"drilling_rig\",$drilling_rig,\"milage\",milage+$milage)\n       // }\n      \n       if($melage==0){$melage=20}\n       // info(Int($melage))\n        DBInsert(\"production_operations\",\"supplier,amount,drilling_rig,field,start_date,plan_end_date,melage\",$supplier,$amount,$drilling_rig,$field,\"timestamp \"+$start_date,\"timestamp \"+$plan_end_date,$melage)\n       // DBInsert(\"production_operations\",\"supplier,amount,drilling_rig\",$supplier,$amount,$drilling_rig)\n   }\n}",
+            "Conditions": "true"
+        }
+    ],
+    "tables": [
+        {
+            "Name": "drilling_rig",
+            "Columns": "[{\"name\":\"carry\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"owner\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"pump_power\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"depth\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"milage\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"vendor_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"created_at\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"drill_power\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"vendor_code\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "fields",
+            "Columns": "[{\"name\":\"well_depth\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"name\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"address\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"drill_for\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"map_coords\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "members",
+            "Columns": "[{\"name\":\"avatar\",\"type\":\"bytea\",\"conditions\":\"ContractAccess(\\\"Profile_Edit\\\")\"},{\"name\":\"member_name\",\"type\":\"varchar\",\"conditions\":\"ContractAccess(\\\"Profile_Edit\\\")\"}]",
+            "Permissions": "{\"insert\":\"ContractAccess(\\\"Profile_Edit\\\")\",\"update\":\"ContractAccess(\\\"Profile_Edit\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "production_operations",
+            "Columns": "[{\"name\":\"start_date\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"drilling_rig\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"field\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"amount\",\"type\":\"money\",\"conditions\":\"true\"},{\"name\":\"customer\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"supplier\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"melage\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"end_date\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"plan_end_date\",\"type\":\"datetime\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "production_plan",
+            "Columns": "[{\"name\":\"field\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"title\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"amount\",\"type\":\"money\",\"conditions\":\"true\"},{\"name\":\"end_date\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"created_at\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"start_date\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"production_operation\",\"type\":\"number\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        }
+    ],
+    "data": [
+        {
+            "Table": "drilling_rig",
+            "Columns": [
+                "vendor_code",
+                "depth",
+                "owner",
+                "vendor_id",
+                "created_at",
+                "drill_power",
+                "carry",
+                "milage",
+                "pump_power"
+            ],
+            "Data": [
+                [
+                    "KB-021",
+                    "0",
+                    "-3631903339169421281",
+                    "-7529358009903946284",
+                    "2018-04-15T10:06:15Z",
+                    "6",
+                    "13000",
+                    "0",
+                    "12"
+                ],
+                [
+                    "KB-020",
+                    "0",
+                    "-3631903339169421283",
+                    "-7529358009903946284",
+                    "2018-04-15T10:05:27Z",
+                    "5",
+                    "15000",
+                    "0",
+                    "15"
+                ]
+            ]
+        },
+        {
+            "Table": "fields",
+            "Columns": [
+                "map_coords",
+                "well_depth",
+                "name",
+                "address",
+                "drill_for"
+            ],
+            "Data": [
+                [
+                    "{\"coords\":[{\"lat\":61.366951489571946,\"lng\":63.165642260229674},{\"lat\":61.359053549680986,\"lng\":63.220573900854674},{\"lat\":61.35115361587539,\"lng\":63.176628588354674}],\"area\":2319791.5668874714,\"address\":\"Unnamed Road, Khanty-Mansiyskiy avtonomnyy okrug, Russia, 628260\"}",
+                    "1",
+                    "Югорск-1",
+                    "Unnamed Road, Khanty-Mansiyskiy avtonomnyy okrug, Russia, 628260",
+                    "1"
+                ],
+                [
+                    "{\"coords\":[{\"lat\":51.752346527909125,\"lng\":0.24029541015625},{\"lat\":51.71492434806431,\"lng\":0.36663818359375},{\"lat\":51.70471292080592,\"lng\":0.25128173828125}],\"area\":21527033.351000138,\"address\":\"Willingale Rd, Ongar CM5 0QG, UK\"}",
+                    "1",
+                    "Willingale",
+                    "Willingale Rd, Ongar CM5 0QG, UK",
+                    "1"
+                ],
+                [
+                    "{\"coords\":[{\"lat\":61.366951489571946,\"lng\":63.165642260229674},{\"lat\":61.359053549680986,\"lng\":63.220573900854674},{\"lat\":61.35115361587539,\"lng\":63.176628588354674}],\"area\":2319791.5668874714,\"address\":\"Unnamed Road, Khanty-Mansiyskiy avtonomnyy okrug, Russia, 628260\"}",
+                    "1",
+                    "Югорск-0",
+                    "Willingale Rd, Ongar CM5 0QG, UK\"Unnamed Road, Khanty-Mansiyskiy avtonomnyy okrug, Russia, 628260\"",
+                    "2"
+                ]
+            ]
+        },
+        {
+            "Table": "members",
+            "Columns": [
+                "avatar",
+                "member_name"
+            ],
+            "Data": [
+                [
+                    "",
+                    "ПАО \"Газпром нефть\""
+                ],
+                [
+                    "",
+                    "guest"
+                ],
+                [
+                    "",
+                    "ЗАО \"Вахтовик\""
+                ],
+                [
+                    "",
+                    "ООО \"Правило буравчика\""
+                ],
+                [
+                    "",
+                    "АО \"Геомаш\""
+                ]
+            ]
+        },
+        {
+            "Table": "production_operations",
+            "Columns": [
+                "amount",
+                "supplier",
+                "start_date",
+                "field",
+                "melage",
+                "customer",
+                "end_date",
+                "drilling_rig",
+                "plan_end_date"
+            ],
+            "Data": [
+                [
+                    "6000",
+                    "-3631903339169421283",
+                    "2018-05-01T00:00:00Z",
+                    "3",
+                    "20",
+                    "0",
+                    "NULL",
+                    "1",
+                    "2018-05-25T00:00:00Z"
+                ]
+            ]
+        },
+        {
+            "Table": "production_plan",
+            "Columns": [
+                "amount",
+                "end_date",
+                "created_at",
+                "start_date",
+                "production_operation",
+                "field",
+                "title"
+            ],
+            "Data": [
+                [
+                    "17000",
+                    "2018-06-28T00:00:00Z",
+                    "2018-04-15T10:07:23Z",
+                    "2018-05-21T00:00:00Z",
+                    "0",
+                    "3",
+                    "Бурение"
+                ],
+                [
+                    "7000",
+                    "2018-05-09T00:00:00Z",
+                    "2018-04-15T10:07:23Z",
+                    "2018-04-30T00:00:00Z",
+                    "0",
+                    "1",
+                    "Разведка"
+                ],
+                [
+                    "12000",
+                    "2018-04-30T00:00:00Z",
+                    "2018-04-15T10:07:23Z",
+                    "2018-04-17T00:00:00Z",
+                    "0",
+                    "3",
+                    "Заказчка"
+                ],
+                [
+                    "10000",
+                    "2018-04-20T00:00:00Z",
+                    "2018-04-15T03:54:24Z",
+                    "2018-04-10T00:00:00Z",
+                    "0",
+                    "2",
+                    "Бурение"
+                ]
+            ]
+        }
+    ]
+}

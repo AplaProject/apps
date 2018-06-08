@@ -1,0 +1,40 @@
+DBFind(actors, id_src).Where("pubkey = '#key_id#'").Vars(instance)
+
+DBFind(pending_malfunctions, voting_owner).Where("owner_id = #instance_id# and votes_for < 2 and votes_against < 1").Custom(finishing) {
+    Div(Class: pull-right){
+        Button(Body: Em(Class: fa fa-thumbs-down), Class: btn btn-danger, Contract: ownerVote, Params: "Malfunction_id=#id#,Vote_type=0", Page: gazprom_vote)
+    }
+    Div(Class: pull-right){
+        Button(Body: Em(Class: fa fa-thumbs-up), Class: btn btn-success, Contract: ownerVote, Params: "Malfunction_id=#id#,Vote_type=1", Page: gazprom_vote)
+    }
+}.Custom(custom_rig_regnum){
+    DBFind(rigs).Columns("regnum").WhereId(#rig_id#).Vars(rig)
+    Span(Class: h5, Body: If(Len(rig)>0){#rig_regnum#}.Else{None})
+}.Custom(custom_part_regnum){
+    DBFind(part).Columns("sernum").WhereId(#part_id#).Vars(prt)
+    Span(Class: h5, Body: #prt_sernum#)
+}
+
+DBFind(pending_malfunctions, voting_producer).Where("producer_id = #instance_id# and votes_for < 2 and votes_against < 1").Custom(finishing) {
+    Div(Class: pull-right){
+        Button(Body: Em(Class: fa fa-thumbs-down), Class: btn btn-danger, Contract: producerVote, Params: "Malfunction_id=#id#,Vote_type=0", Page: gazprom_vote)
+    }
+    Div(Class: pull-right){
+        Button(Body: Em(Class: fa fa-thumbs-up), Class: btn btn-success, Contract: producerVote, Params: "Malfunction_id=#id#,Vote_type=1", Page: gazprom_vote)
+    }
+}.Custom(custom_rig_regnum){
+    DBFind(rigs).Columns("regnum").WhereId(#rig_id#).Vars(rig)
+    Span(Class: h5, Body: #rig_regnum#)
+}.Custom(custom_part_regnum){
+    DBFind(part).Columns("sernum").WhereId(#part_id#).Vars(prt)
+    Span(Class: h5, Body: #prt_sernum#)
+}
+
+Div(panel-heading, Body: "Голосование владельца")
+Div(Class: list-group-item){
+    Table(voting_owner, "Malfunction ID=id,Votes for=votes_for,Votes against=votes_against,Part RN=custom_part_regnum,Rig RN=custom_rig_regnum, =finishing")
+}
+Div(panel-heading, Body: "Голосование производителя")
+Div(Class: list-group-item){
+    Table(voting_producer, "Malfunction ID=id,Votes for=votes_for,Votes against=votes_against,Part RN=custom_part_regnum,Rig RN=custom_rig_regnum, =finishing")
+}

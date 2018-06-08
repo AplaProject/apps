@@ -1,0 +1,24 @@
+contract give_application {
+    data {
+        GiveId int
+        appl_id int 
+    }
+
+    conditions {
+        // $appl = DBFind("patent_applications").Where("id = $", $appl_id).Columns("id_creator")
+        var appl_map int
+        appl_map = DBFind("patent_applications").Columns("id,id_creator").WhereId($appl_id).One("id_creator")
+        if appl_map != $key_id {
+          warning "You have no rights!"
+        }
+        //appl_map = DBFind("patent_applications").Where("id = $", $appl_id).Row()
+        //if $key_id != appl_map["id_creator"] {
+            //warning "You have no rights!"
+       // }   проверка $key_id == creator_id from patent_applications by appl_id
+    }
+
+    action {
+        $member_map = DBFind("members").Where("id = $", $GiveId).Row()
+        DBUpdate(`patent_applications`,$appl_id, "creator_name, id_creator", $member_map["member_name"], $GiveId)
+    }
+}

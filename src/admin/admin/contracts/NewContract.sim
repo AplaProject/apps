@@ -21,22 +21,13 @@ contract NewContract {
                 error Sprintf("wrong wallet %s", $Wallet)
             }
         }
-        var list array
-        list = ContractsList($Value)
 
-        if Len(list) == 0 {
+        $contract_name = ContractName($Value)
+
+        if !$contract_name {
             error "must be the name"
         }
 
-        var i int
-        while i < Len(list) {
-            if IsObject(list[i], $ecosystem_id) {
-                warning Sprintf("Contract or function %s exists", list[i])
-            }
-            i = i + 1
-        }
-
-        $contract_name = list[0]
         if !$TokenEcosystem {
             $TokenEcosystem = 1
         } else {
@@ -47,20 +38,10 @@ contract NewContract {
     }
 
     action {
-        var root, id int
-        root = CompileContract($Value, $ecosystem_id, $walletContract, $TokenEcosystem)
-        id = DBInsert("contracts", "name,value,conditions, wallet_id, token_id,app_id", $contract_name, $Value, $Conditions, $walletContract, $TokenEcosystem, $ApplicationId)
-        FlushContract(root, id, false)
-        $result = id
+        $result = CreateContract($contract_name, $Value, $Conditions, $walletContract, $TokenEcosystem, $ApplicationId)
     }
     func rollback() {
-        var list array
-        list = ContractsList($Value)
-        var i int
-        while i < Len(list) {
-            RollbackContract(list[i])
-            i = i + 1
-        }
+        RollbackNewContract($Value)
     }
     func price() int {
         return SysParamInt("contract_price")

@@ -1,0 +1,36 @@
+contract producerVote {
+    data {
+        Malfunction_id int
+        Vote_type int
+    }
+
+    conditions {
+        var Malfunction_data map
+        Malfunction_data = DBRow("pending_malfunctions").WhereId($Malfunction_id)
+        var Caller_data map
+        Caller_data = DBRow("actors").Where("pubkey = ?", $key_id)
+        if Malfunction_data["producer_id"] != Caller_data["id"] {
+            error "Только производитель детали может проголосовать через этот контракт"
+        }
+    }
+
+    action {
+        if $Vote_type == 0 {
+            var Malfunction_data map
+            Malfunction_data = DBRow("pending_malfunctions").WhereId($Malfunction_id)
+            var current_votes int
+            current_votes = Malfunction_data["votes_against"] + 1
+            DBUpdate("pending_malfunctions", $Malfunction_id, "votes_against", current_votes)
+        }
+        else {
+            var Malfunction_data map
+            Malfunction_data = DBRow("pending_malfunctions").WhereId($Malfunction_id)
+            var current_votes int
+            current_votes = Malfunction_data["votes_for"] + 1
+            if current_votes == 2 {
+                DBInsert("event", "initiator_id,timestamp date_end_actual,location_end_id,rig_id,part_id,meta,type", Malfunction_data["oracle_id"], Malfunction_data["date"], Malfunction_data["location_id"], Malfunction_data["rig_id"], Malfunction_data["part_id"], Malfunction_data["meta"], "malfunction")
+            }
+            DBUpdate("pending_malfunctions", $Malfunction_id, "votes_for", current_votes)
+        }
+    }
+}

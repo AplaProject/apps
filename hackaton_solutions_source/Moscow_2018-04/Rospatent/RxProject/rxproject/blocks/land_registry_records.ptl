@@ -1,0 +1,137 @@
+If(#isSearch#==1){
+    SetVar(v_Where, "delete=0 and land_use=#str_search#")
+}.Else{
+    SetVar(v_Where, "delete=0")
+    SetVar(Name:isSearch, Value: 0)
+}
+
+If(#isOrder#==1){
+    SetVar(Name:v_Order, Value: "price")
+}.ElseIf(#isOrder#==2){
+    SetVar(Name:v_Order, Value: "area")
+}.ElseIf(#isOrder#==3){
+    SetVar(Name:v_Order, Value: "price desc")
+}.ElseIf(#isOrder#==4){
+    SetVar(Name:v_Order, Value: "area desc")
+}.Else{
+    SetVar(Name:v_Order, Value: "id desc")
+}
+
+DBFind(Name: land_registry, Source: src_land_registry).Where(#v_Where#).Order(#v_Order#).Custom(_id){
+    Span(#id#)
+}.Custom(_owner){
+    DBFind(Name: members, Source: src_members).Where("id=#owner_id#").Vars(row)
+    LinkPage(Page: profile_view, PageParams: "v_member_id=#row_id#"){
+        Span(Class: h5 text-bold, Body: #row_member_name#)
+    }
+}.Custom(_land){
+    Span(EcosysParam(Name: land_use, Index: #land_use#))
+}.Custom(_buildings){
+    Span(EcosysParam(Name: buildings_use_class, Index: #buildings_use_class#))
+}.Custom(_area){
+    Span(#area#)
+}.Custom(_address){
+    Span(#address#)
+}.Custom(_cons){
+    Div(h6){
+        If(#price#>0){
+            Span(#price#)
+        }.Else{
+            Em(Class: fa fa-1x text-muted fa-question-circle)
+        }
+    }.Style(margin-left: 20px;)
+}.Custom(_legal){
+    Div(h6){
+        If(#legal_status#==0){
+            Em(Class: fa fa-1x text-muted fa-question-circle)
+        }
+        If(#legal_status#==1){
+            Em(Class: fa fa-1x text-success fa-check-circle)
+        }
+        If(#legal_status#==2){
+            Em(Class: fa fa-1x text-danger fa-exclamation-circle)
+        }
+    }.Style(margin-left: 20px;)
+}.Custom(_encumberance){
+    Div(h6){
+        If(#encumbrance_certificate#==0){
+            Em(Class: fa fa-1x text-muted fa-question-circle)
+        }
+        If(#encumbrance_certificate#==1){
+            Em(Class: fa fa-1x text-success fa-check-circle)
+        }
+        If(#encumbrance_certificate#==2){
+            Em(Class: fa fa-1x text-danger fa-exclamation-circle)
+        }
+    }.Style(margin-left: 20px;)
+}.Custom(_admin){
+    Div(Class: pull-right){
+        Span(){
+            Button(Page: #this#, Contract: land_registry_Delete, Params: "LandId=#id#", Class: btn btn-default fa fa-2x fa-trash)
+        }.Style(margin-left: 5px; margin-right: 5px;)
+        Span(){
+            Button(Page: land_registry_view, PageParams: "LandId=#id#", Class: btn btn-default fa fa-2x fa-eye)
+        }.Style(margin-left: 5px; margin-right: 5px;)
+    } 
+}
+
+Div(content-wrapper){
+    Div(panel panel-primary data-sweet-alert){
+		Form(){
+			Div(list-group-item){
+				Div(row df f-valign){
+					Div(col-md-2 mt-sm text-center text-bold){$land_use$}
+					Div(col-md-7 mc-sm text-left){
+						Div(input-group){
+							EcosysParam(Name: land_use, Source: src_land_use)
+							Select(Name: LandUseSelect, Source: src_land_use, Class: form-control, NameColumn: name, ValueColumn: id, Value: #str_search#)
+							
+							Div(input-group-btn){
+								Button(Page: #this#, PageParams: "str_search=Val(LandUseSelect),isSearch=1,isOrder=#isOrder#", Class: btn btn-default fa fa-search)
+							}
+						}
+					}
+					Div(col-md-3 mc-sm text-center){
+						Div(btn-group){
+							Span(){
+								If(#isOrder#==1){
+									Button(Page: #this#, Class: btn bg-gray, PageParams: "isOrder=3,isSearch=#isSearch#,str_search=Val(LandUseSelect)", Body: Em(Class:fa fa-sort-numeric-asc) $price$)
+								}.ElseIf(#isOrder#==3){
+									Button(Page: #this#, Class: btn bg-gray, PageParams: "isOrder=1,isSearch=#isSearch#,str_search=Val(LandUseSelect)", Body: Em(Class:fa fa-sort-numeric-desc) $price$)
+								}.Else{
+									Button(Page: #this#, Class: btn bg-gray-lighter,PageParams: "isOrder=1,isSearch=#isSearch#,str_search=Val(LandUseSelect)", Body: $price$)
+								}
+							}.Style(margin-left: 5px; margin-right: 5px;)
+							Span(){
+								If(#isOrder#==2){
+									Button(Page: #this#, Class: btn bg-gray, PageParams: "isOrder=4,isSearch=#isSearch#,str_search=Val(LandUseSelect)", Body: Em(Class:fa fa-sort-numeric-asc) $area_size$)
+								}.ElseIf(#isOrder#==4){
+									Button(Page: #this#, Class: btn bg-gray, PageParams: "isOrder=2,isSearch=#isSearch#,str_search=Val(LandUseSelect)", Body: Em(Class:fa fa-sort-numeric-desc) $area_size$)
+								}.Else{
+									Button(Page: #this#, Class: btn bg-gray-lighter, PageParams: "isOrder=4,isSearch=#isSearch#,str_search=Val(LandUseSelect)", Body: $area_size$)
+								}
+							}.Style(margin-left: 5px; margin-right: 5px;)
+						}
+					}.Style(display:flex;)
+				}
+			}
+			Div(list-group-item){
+				Table(Source:src_land_registry, Columns: "ID=_id,$owner$=_owner,$area_size$=_area,$address$=_address,$consideration_value$(INR)=_cons,$legal_status$=_legal,$encumbrance_certificate$=_encumberance,=_admin")
+				If(#isSearch#==1){
+					Form(text-center){
+						Button(Page: #this#, PageParams:"isSearch=0", Class: btn btn-primary btn-oval){
+							LangRes(view_all)
+						}
+					}
+				}
+			}
+			Div(panel-footer){
+				Div(clearfix){
+					Form(pull-right){
+						Button(Page: land_registry_add, Class: btn btn-primary, Body: $add$)
+					}
+				}
+			}
+		}
+    }
+}

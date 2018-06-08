@@ -1,0 +1,460 @@
+{
+    "pages": [
+        {
+            "Name": "RegisterCar",
+            "Conditions": "true",
+            "Menu": "Applications",
+            "Value": "Div(Class: content-wrapper){\n    Div(Class: col-lg-2)\n    Div(Class: col-lg-8){\n\n    Div(Class: h2, Body: \"Register your car\")\n    Div(Class: panel panel-default){\n        Form(Class: panel-body){\n            Input(Name: model, Type: text, Value: \"\", Placeholder: \"Your model...\")\n            P(){}\n            Input(Name: car_number, Type: text, Value: \"\", Placeholder: \"Your car number...\")\n            P(){}\n            Button(Class: btn btn-primary pull-right, Contract: RegisterCarContract, Body: \"Register\", Page: RegisterCar)\n        }\n    }\n    Div(Class: h2, Body: \"Your cars\")\n        DBFind(Name: car_register, Source: cars).Where(\"citizen_id = #key_id#\")\n    ForList(cars){\n        Div(Class: panel panel-default){\n\n            Form(Class: panel-body){\n                P(Class: text-normal, Body: Car: #model#)\n                P(Class: text-normal, Body: Car: #car_number# Button(Class: btn btn-danger pull-right,, Body: \"Remove\")\n)\n            }\n        }\n       \n    }\n    Div(Class: col-lg-2)\n    \n}"
+        },
+        {
+            "Name": "MakeBetForTender",
+            "Conditions": "true",
+            "Menu": "Applications",
+            "Value": "Div(Class: content-wrapper){\n    Div(Class: col-lg-2)\n    Div(Class: col-lg-8){\n    SetVar(time, Now())\n    DBFind(Name: tenders, Source: tenders_active).Where(\"isActive = 1\").Vars(\"ta\")\n\n    ForList(tenders_active){\n        DBFind(Name: tender_participants_correct, Source: take_part).Where(\"citizen_id=#key_id# and tender_id=#ta_id#\").Vars(\"bet\")\n        Div(Class: h2, Body: \"Active tender\")\n        Div(Class: panel panel-default){\n            Form(Class: panel-body){                \n                ForList(take_part){\n                    P(Class: text-normal, Body: \"Your current bet is #bet_amount#\")\n                }\n                P(Class: text-normal){\n                    How much money can you afford to pay for a certificate?\n                }\n                Input(Name: amount,  Type: text, Value: \"\", Placeholder: \"Type a number...\")\n                Div(Class: panel-footer clearfix){\n                    Button(Body: \"Accept\", Class: btn btn-primary pull-right, Contract: MakeCarBetContract, Params: \"tender_id=#ta_id#\", Page: MakeBetForTender)\n                }\n            }\n        }\n        DBFind(Name: tender_participants_correct, Source: participants).Where(\"tender_id=#ta_id#\").Order(\"amount DESC\")\n        Div(Class: h2, Body: \"All bids\")\n        ForList(participants){\n            Div(Class: panel panel-default){\n                Form(Class: panel-body){    \n                    If(#citizen_id# == #key_id#){\n                        Span(Class: text-success pull-right, Body:\"This is your bet\")\n                    }            \n                    P(Class: text-normal, Body: \"Participant with id #citizen_id#\")\n                    P(Class: text-normal, Body: \"His/her bet is #amount#\")\n                    \n                }\n            }\n        }\n  \n    }\n    \n    If(Len(tenders_active) == 0){\n        Div(Class: text-mute text-center, Body: \"No more tenders found for now. Check one more time a few days\")\n    }"
+        },
+        {
+            "Name": "CreateTender",
+            "Conditions": "ContractAccess(\"OnlyGovernmentCondition\")",
+            "Menu": "Applications",
+            "Value": "Div(Class: content-wrapper){\n    Div(Class: col-lg-2)\n    Div(Class: col-lg-8){\n    SetVar(time, Now())\n    DBFind(Name: tenders, Source: tenders_active).Where(\"isActive = 1\")\n\n    Div(Class: h2, Body: \"Create new tender:\")\n    Div(Class: panel panel-default){\n        Form(Class: panel-body){\n            Input(Name: amount_of_certs, Type: text, Value: 0, Placeholder: \"Amount of certificates\")\n            P(){}\n            Button(Class: btn btn-primary, Contract: CreateTender, Body: \"Create\", Page: CreateTender)\n        }\n    }\n    ForList(tenders_active){\n        DBFind(Name: tenders, Source: tenders_active).Where(\"isActive = 1\").Vars(\"ta\")\n        Div(Class: h2, Body: \"Active tender\")\n        Div(Class: panel panel-default){\n            Div(Class: panel-body){\n                P(Class: text-normal, Body: \"There is an active tender with id = #ta_id#\")\n                P(Class: text-normal, Body: \"Amount of certs = #ta_amount_of_certs#\")\n\n                P(Class: text-normal){\n                    Span(Body: #ta_starts#) - Span(Body: #ta_ends#)\n                }\n                Button(Body: \"End tender\", Params: \"tender_id=#ta_id#\", Contract: EndTenderContract, Class: btn btn-primary pull-right,  Page: CreateTender)\n            }\n        }\n\n    }\n\n   \n    \n    \n   \n\n    Div(Class: h2, Body: \"History:\")\n    DBFind(Name: tenders, Source: tenders_history).Where(\"isActive = 0\").Order(\"starts DESC\")\n    ForList(tenders_history){\n        Div(Class: panel panel-default){\n            Div(Class: panel-body){\n                P(Class: text-normal, Body: \"There was a tender with id = #id#\")\n                P(Class: text-normal, Body: Amount of certs #amount_of_certs#)\n                P(Class: text-normal){\n                    Span(Body: #starts#) - Span(Body: #ends#)\n                }\n            }\n        }\n    }   \n       \n\n    Div(Class: col-lg-2)\n\n    \n}"
+        }
+    ],
+    "blocks": [],
+    "menus": [
+        {
+            "Name": "Applications",
+            "Conditions": "ContractAccess(\"@1EditMenu\")",
+            "Value": "MenuItem(Title:$referendum$, Page:referendums_list, Icon:\"fa fa-gavel\")\nMenuItem(Title: $land_records$, Page: land_registry_records,Icon: \"fa icon-home\")\nMenuItem(Title: \"Create tender\", Page: CreateTender)\nMenuItem(Title: Make Bet, Page: MakeBetForTender)\nMenuItem(Title: Register Car, Page: RegisterCar)"
+        }
+    ],
+    "parameters": [],
+    "languages": [],
+    "contracts": [
+        {
+            "Name": "BecomeCitizenContract",
+            "Value": "contract BecomeCitizenContract {\n    data {\n\n    }\n\n    conditions {\n\n    }\n\n    action {\n        DBInsert(\"roles_assign\", \"member_id,role_type\", $key_id, 4)\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "CheckCarLegalIssues",
+            "Value": "contract CheckCarLegalIssues {\n    data {\n        car_model string\n        car_number string\n    }\n\n    conditions {\n        // do some checks, may be aggregate information from different sources\n    }\n}",
+            "Conditions": "ContractConditions(\"OnlyGovernmentCondition\")"
+        },
+        {
+            "Name": "CitizenHasCOECondition",
+            "Value": "contract CitizenHasCOECondition {\n\n    conditions {\n        $res = DBFind(\"certificates_to_have_car\").Where(\"citizen_id = ?\", $key_id).One(\"id\")\n        if $res == nil {\n            error \"You can't register a car until you get Certificate of Entitlement\"\n        }\n        \n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "OnlyCitizenCondition",
+            "Value": "contract OnlyCitizenCondition {\n\n    conditions {\n        $role_type = DBFind(\"roles_assign\").Where(\"member_id = ? and role_type = ?\", $key_id, 4).One(\"role_type\")\n        if !$role_type {\n            warning \"Only citizens are allowed to perform such action\"\n        }\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "RegisterCarContract",
+            "Value": "contract RegisterCarContract {\n    data {\n        model string\n        car_number string\n    }\n\n    conditions {\n        // check that it is citizen\n        // check that citizen has COE\n        ContractConditions(\"OnlyCitizenCondition\")\n        ContractConditions(\"CitizenHasCOECondition\")\n        \n        // some additional check can also be performed\n        // e.g. it is common to check legal status of the car\n        //ContractConditions(\"CheckCarLegalIssues\")\n    }\n\n    action {\n        DBInsert(\"car_register\", \"model,car_number,citizen_id\", $model, $car_number, $key_id)\n    }\n}",
+            "Conditions": "ContractAccess(\"OnlyGovernmentCondifiton\")"
+        },
+        {
+            "Name": "EndTenderContract",
+            "Value": "contract EndTenderContract {\n    data {\n        tender_id int\n    }\n\n    conditions {\n\n    }\n\n    action {\n        DBUpdate(\"tenders\", $tender_id, \"isActive\", 0)\n        var participants array\n        participants = DBFind(\"tender_participants_correct\").Where(\"tender_id=?\", $tender_id).Order(\"amount\")\n\n        var amount_of_certs int\n        amount_of_certs = Int(DBFind(\"tenders\").Where(\"id = ?\", $tender_id).One(\"amount_of_certs\"))\n\n        var counter int\n        counter = 0\n        var i int\n        i = 0 \n        while(i < Len(participants)){\n            DBInsert(\"certificates_to_have_car\", \"citizen_id,price_int,tender_id\", -7559942406377650793, 245400, $tender_id)\n\n            //DBInsert(\"certificates_to_have_car\", \"citizen_id,starts,ends,price_int,tender_id\", participants[i][\"citizen_id\"], $time, $time + 10*365*24*3600, participants[i][\"amount\"], participants[\"tender_id\"])\n            var param map\n\n            // doesn't work because of the bug\n            //param[\"MemberId\"] = participants[i][\"citizen_id\"]\n            \n            // just to test\n            param[\"MemberId\"] = -7559942406377650793\n            param[\"SomeText\"] = \"Congratulations, you got a Certificate of Entitlement. Now you can own every car you want :)\"\n            CallContract(\"DemoNotificationSingle\", param)\n            i = i + 1\n            counter = counter + 1\n            if counter == amount_of_certs {\n                break\n            }\n        }\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "GovernmentAddBet",
+            "Value": "contract GovernmentAddBet {\n    data {\n        int amount\n        int tender_id\n        int citizen_id\n    }\n\n    conditions {\n        ContractConditions(\"OnlyCitizenTenderParticipantCondition\")\n\n        $res = DBFind(\"tender_participants_correct\").Where(\"tender_id = ? and citizen_id = ?\", $tender_id, $key_id).Row()\n        if $amount < 1 {\n            info \"Minimal bet is 1$\"\n        }\n        \n        if $res[\"amount\"] != nil{\n            if $amount < Int($res[\"amount\"]) {\n                info \"Next bet can't be less than previus ones\"\n            }\n        }\n    }\n\n    action {\n        if $res[\"amount\"] == nil {\n            DBInsert(\"tender_participants_correct\", \"amount,citizen_id,tender_id\", $amount, $citizen_id, $tender_id)\n        }else{\n            DBUpdate(\"tender_participants_correct\", Int($res[\"id\"]), \"amount\", $amount)\n        }\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "OnlyOneTenderBet",
+            "Value": "contract OnlyOneTenderBet {\n    data{\n        tender_id int\n    }\n    conditions {\n        $res = DBFind(\"tender_participants_correct\").Where(\"citizen_id = ? and tender_id = ?\", $key_id, $tender_id).Row()\n        if $res{\n            warning \"Each citizen can participate in one tender no more than one\" \n        }\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "MakeCarBetContract",
+            "Value": "contract MakeCarBetContract {\n    data {\n        amount string\n        tender_id int\n    }\n\n    conditions {\n        var amount_int int\n        amount_int = Int($amount);\n        if amount_int < 0 {\n            warning \"Amount can't be less than 0\"\n        }\n        var param map;\n        param[\"tender_id\"] = $tender_id\n    }\n\n    action {\n        var param map\n        param[\"citizen_id\"] = $key_id\n        param[\"tender_id\"] = $tender_id\n        param[\"amount\"] = Int($amount)\n        CallContract(\"GovernmentAddBet\", param);\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "OnlyCitizenTenderParticipantCondition",
+            "Value": "contract OnlyCitizenTenderParticipantCondition {\n    conditions {\n        $role_type = DBFind(\"roles_assign\").Where(\"member_id = ? and role_type = ?\", $key_id, 4).One(\"role_type\");\n        if !$role_type {\n            warning \"Only citizens are allowed to participate in tenders\"\n        }\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "OnlyOneCertificateCondition",
+            "Value": "contract OnlyOneCertificateCondition {\n    conditions {\n        $certificate = DBFind(\"certificates_to_have_car\").Where(\"citizen_id\", $key_id).One(\"id\")\n        if $certificate {\n            error \"There is already one active certificate. Nobody can have more than one certificate\"\n        }\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "CreateTender",
+            "Value": "contract CreateTender {\n    data {\n        amount_of_certs int\n    }\n\n    conditions {\n        var param map\n        CallContract(\"OnlyOneActiveTenderCondition\", param)\n    }\n\n    action {\n        var certs int\n        certs = Int($amount_of_certs)\n        var end int\n        end = $time + 7*24*3600\n        DBInsert(\"tenders\", \"starts,ends,isActive,amount_of_certs\", $time, end, 1, certs);\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "OnlyOneActiveTenderCondition",
+            "Value": "contract OnlyOneActiveTenderCondition {\n\n    conditions {\n        $active_tender_id = DBFind(\"tenders\").Where(\"isActive = 1\").One(\"id\")\n        if $active_tender_id {\n            error \"There is already one active tender\"\n        }\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "OnlyGovernmentCondition",
+            "Value": "contract OnlyGovernmentCondition {\n    conditions {\n        $member_name = DBFind(\"members\").WhereId($key_id).One(\"member_name\")\n        if $member_name != \"government\"{\n            warning \"Forbidden. Only government can create tenders\"\n        }\n    }\n}",
+            "Conditions": "ContractAccess(\"MainCondition\")"
+        }
+    ],
+    "tables": [
+        {
+            "Name": "car_register",
+            "Columns": "[{\"name\":\"model\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"car_number\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"citizen_id\",\"type\":\"number\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"RegisterCarContract\\\")\",\"update\":\"ContractConditions(\\\"RegisterCarContract\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "certificates_to_have_car",
+            "Columns": "[{\"name\":\"price_int\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"tender_id\",\"type\":\"number\",\"conditions\":\"ContractAccess(\\\"EndTender\\\")\"},{\"name\":\"citizen_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"ends\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"price\",\"type\":\"money\",\"conditions\":\"true\"},{\"name\":\"starts\",\"type\":\"datetime\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"EndTenderContract\\\")\",\"update\":\"ContractConditions(\\\"EndTenderContract\\\")\",\"new_column\":\"ContractConditions(\\\"OnlyGovernmentCondition\\\")\"}"
+        },
+        {
+            "Name": "tender_participants_correct",
+            "Columns": "[{\"name\":\"amount\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"tender_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"citizen_id\",\"type\":\"number\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractAccess(\\\"GovernmentAddBet\\\")\",\"update\":\"ContractAccess(\\\"GovernmentAddBet\\\")\",\"new_column\":\"false\"}"
+        },
+        {
+            "Name": "tenders",
+            "Columns": "[{\"name\":\"ends\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"starts\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"isactive\",\"type\":\"number\",\"conditions\":\"ContractAccess(\\\"EndTenderContract\\\")\"},{\"name\":\"amount_of_certs\",\"type\":\"number\",\"conditions\":\"ContractAccess(\\\"CreateTender\\\")\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"OnlyGovernmentCondition\\\")\",\"update\":\"ContractAccess(\\\"EndTenderContract\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        }
+    ],
+    "data": [
+        {
+            "Table": "car_register",
+            "Columns": [
+                "model",
+                "car_number",
+                "citizen_id"
+            ],
+            "Data": [
+                [
+                    "Lexus 323",
+                    "23232kmkm",
+                    "-7559942406377650793"
+                ],
+                [
+                    "Lexus",
+                    "LE5454",
+                    "-7559942406377650793"
+                ],
+                [
+                    "Honda Accord",
+                    "HA2390",
+                    "-7559942406377650793"
+                ],
+                [
+                    "Ford",
+                    "KL1234",
+                    "-7559942406377650793"
+                ],
+                [
+                    "Ford",
+                    "KL1234",
+                    "-7559942406377650793"
+                ]
+            ]
+        },
+        {
+            "Table": "certificates_to_have_car",
+            "Columns": [
+                "ends",
+                "price",
+                "starts",
+                "price_int",
+                "tender_id",
+                "citizen_id"
+            ],
+            "Data": [
+                [
+                    "NULL",
+                    "0",
+                    "NULL",
+                    "245400",
+                    "18",
+                    "-7559942406377650793"
+                ],
+                [
+                    "NULL",
+                    "0",
+                    "NULL",
+                    "245400",
+                    "17",
+                    "-7559942406377650793"
+                ],
+                [
+                    "NULL",
+                    "0",
+                    "NULL",
+                    "245400",
+                    "16",
+                    "-7559942406377650793"
+                ],
+                [
+                    "NULL",
+                    "0",
+                    "NULL",
+                    "245400",
+                    "16",
+                    "-7559942406377650793"
+                ],
+                [
+                    "NULL",
+                    "0",
+                    "NULL",
+                    "245400",
+                    "14",
+                    "-7559942406377650793"
+                ],
+                [
+                    "NULL",
+                    "0",
+                    "NULL",
+                    "245400",
+                    "14",
+                    "-7559942406377650793"
+                ],
+                [
+                    "NULL",
+                    "0",
+                    "NULL",
+                    "245400",
+                    "13",
+                    "-7559942406377650793"
+                ],
+                [
+                    "NULL",
+                    "0",
+                    "NULL",
+                    "245400",
+                    "13",
+                    "-7559942406377650793"
+                ],
+                [
+                    "NULL",
+                    "0",
+                    "NULL",
+                    "245400",
+                    "11",
+                    "-7559942406377650793"
+                ],
+                [
+                    "NULL",
+                    "0",
+                    "NULL",
+                    "245400",
+                    "11",
+                    "-7559942406377650793"
+                ]
+            ]
+        },
+        {
+            "Table": "tender_participants_correct",
+            "Columns": [
+                "citizen_id",
+                "amount",
+                "tender_id"
+            ],
+            "Data": [
+                [
+                    "-8606610744310894676",
+                    "560",
+                    "18"
+                ],
+                [
+                    "-7559942406377650793",
+                    "230",
+                    "18"
+                ],
+                [
+                    "-8606610744310894676",
+                    "300",
+                    "17"
+                ],
+                [
+                    "-7559942406377650793",
+                    "200",
+                    "17"
+                ],
+                [
+                    "-7559942406377650793",
+                    "13800",
+                    "16"
+                ],
+                [
+                    "-8606610744310894676",
+                    "12800",
+                    "16"
+                ],
+                [
+                    "-7559942406377650793",
+                    "96000",
+                    "14"
+                ],
+                [
+                    "6269942797938292028",
+                    "23",
+                    "14"
+                ],
+                [
+                    "6269942797938292028",
+                    "12000",
+                    "13"
+                ],
+                [
+                    "-7559942406377650793",
+                    "24000",
+                    "13"
+                ],
+                [
+                    "-7559942406377650793",
+                    "1200",
+                    "11"
+                ],
+                [
+                    "-8606610744310894676",
+                    "12",
+                    "11"
+                ],
+                [
+                    "-8606610744310894676",
+                    "1000",
+                    "1"
+                ],
+                [
+                    "-7559942406377650793",
+                    "32",
+                    "1"
+                ],
+                [
+                    "6269942797938292028",
+                    "123",
+                    "1"
+                ]
+            ]
+        },
+        {
+            "Table": "tenders",
+            "Columns": [
+                "ends",
+                "starts",
+                "isactive",
+                "amount_of_certs"
+            ],
+            "Data": [
+                [
+                    "1524420768",
+                    "1523815968",
+                    "0",
+                    "1"
+                ],
+                [
+                    "1524410519",
+                    "1523805719",
+                    "0",
+                    "1"
+                ],
+                [
+                    "1524405439",
+                    "1523800639",
+                    "0",
+                    "12"
+                ],
+                [
+                    "1524405359",
+                    "1523800559",
+                    "0",
+                    "12"
+                ],
+                [
+                    "1524402791",
+                    "1523797991",
+                    "0",
+                    "12"
+                ],
+                [
+                    "1524402050",
+                    "1523797250",
+                    "0",
+                    "5"
+                ],
+                [
+                    "1524401813",
+                    "1523797013",
+                    "0",
+                    "5"
+                ],
+                [
+                    "1524395314",
+                    "1523790514",
+                    "0",
+                    "10"
+                ],
+                [
+                    "1524394191",
+                    "1523789391",
+                    "0",
+                    "0"
+                ],
+                [
+                    "1524394084",
+                    "1523789284",
+                    "0",
+                    "0"
+                ],
+                [
+                    "1524393780",
+                    "1523788980",
+                    "0",
+                    "0"
+                ],
+                [
+                    "1524323684",
+                    "1523718884",
+                    "0",
+                    "0"
+                ],
+                [
+                    "1524323465",
+                    "1523718665",
+                    "0",
+                    "0"
+                ],
+                [
+                    "1524323374",
+                    "1523718574",
+                    "0",
+                    "0"
+                ],
+                [
+                    "1524323361",
+                    "1523718561",
+                    "0",
+                    "0"
+                ],
+                [
+                    "1524323330",
+                    "1523718530",
+                    "0",
+                    "0"
+                ],
+                [
+                    "1524323284",
+                    "1523718484",
+                    "0",
+                    "0"
+                ],
+                [
+                    "1524323259",
+                    "1523718459",
+                    "0",
+                    "0"
+                ]
+            ]
+        }
+    ]
+}

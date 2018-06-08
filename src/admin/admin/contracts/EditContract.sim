@@ -19,28 +19,7 @@ contract EditContract {
             error Sprintf("Contract %d does not exist", $Id)
         }
         if $Value {
-            var list, curlist array
-            list = ContractsList($Value)
-            curlist = ContractsList($cur["value"])
-            if Len(list) != Len(curlist) {
-                error "Contracts cannot be removed or inserted"
-            }
-            var i int
-            while i < Len(list) {
-                var j int
-                var ok bool
-                while j < Len(curlist) {
-                    if curlist[j] == list[i] {
-                        ok = true
-                        break
-                    }
-                    j = j + 1 
-                }
-                if !ok {
-                    error "Contracts or functions names cannot be changed"
-                }
-                i = i + 1
-            }
+            ValidateEditContractNewValue($Value, $cur["value"])
         }
         if $WalletId != "" {
             $recipient = AddressToId($WalletId)
@@ -56,31 +35,7 @@ contract EditContract {
     }
 
     action {
-        var root int
-        var pars, vals array
-        if $Value {
-            root = CompileContract($Value, $ecosystem_id, $recipient, Int($cur["token_id"]))
-            pars[0] = "value"
-            vals[0] = $Value
-        }
-        if $Conditions {
-            pars[Len(pars)] = "conditions"
-            vals[Len(vals)] = $Conditions
-        }
-        if $WalletId != "" {
-            pars[Len(pars)] = "wallet_id"
-            vals[Len(vals)] = $recipient
-        }
-        if Len(vals) > 0 {
-            DBUpdate("contracts", $Id, Join(pars, ","), vals...)
-        }        
-        if $Value {
-            FlushContract(root, $Id, Int($cur["active"]) == 1)
-        } else {
-            if $WalletId != "" {
-                SetContractWallet($Id, $ecosystem_id, $recipient)
-            }
-        }
+        UpdateContract($Id, $Value, $Conditions, $WalletId, $recipient, $cur["active"], $cur["token_id"])
     }
     func rollback() {
         RollbackEditContract()

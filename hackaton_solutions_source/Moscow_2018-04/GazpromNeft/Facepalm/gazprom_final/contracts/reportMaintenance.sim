@@ -1,0 +1,32 @@
+contract reportMaintenance {
+    data {
+        Part_id int
+        Event_meta string "optional"
+    }
+    conditions {
+        var Caller_data map
+        Caller_data = DBRow("actors").Where("pubkey = ?", $key_id)
+        var Part_data map
+        Part_data = DBRow("part").WhereId($Part_id)
+        if Part_data["producer_id"] != Caller_data["id"] {
+            error "Только производитель может посылать очтеты о ТО детали"
+        }
+    }
+    action {
+        
+        var Caller_data map
+        Caller_data = DBFind("actors").Where("pubkey = ?", $key_id).Row()
+        var Part_data map
+        Part_data = DBFind("part").WhereId($Part_id).Row()
+        var Rig_id int
+        Rig_id = Part_data["rig_cur"]
+        if Rig_id == 0 {
+            DBInsert("event", "initiator_id,timestamp date_end_actual,part_id,meta,type", Caller_data["id"], $time, $Part_id, $Event_meta, "maintenance_performed")
+        }
+        else {
+            var Rig_data map
+            Rig_data = DBFind("rigs").WhereId(Rig_id).Row()
+            DBInsert("event", "initiator_id,timestamp date_end_actual,location_end_id,rig_id,part_id,meta,type", Caller_data["id"], $time, Rig_data["location_cur"], Rig_id, $Part_id, $Event_meta, "maintenance_performed")
+        }
+    }
+}

@@ -1,0 +1,270 @@
+{
+    "pages": [
+        {
+            "Name": "report_on_fulfilled_charity_request_confirmation_status",
+            "Conditions": "true",
+            "Menu": "default_menu",
+            "Value": "SetTitle($demo_title$)\nDiv(content-wrapper){\n    DBFind(Name: nco_mission_completed_report, Source: report)\n}"
+        },
+        {
+            "Name": "nco_add_test",
+            "Conditions": "true",
+            "Menu": "admin_menu",
+            "Value": "Button(\"Create\", Contract: TestInput)"
+        },
+        {
+            "Name": "nco_org_info",
+            "Conditions": "true",
+            "Menu": "admin_menu",
+            "Value": "Div(Body:\r\n    DBFind(nco_credentials, name).Columns(name).Where(id=#org_id#)\r\n    DBFind(nco_credentials, desc).Columns(description).Where(id=#org_id#)\r\n    DBFind(nco_credentials, tags).Columns(tags).Where(id=#org_id#)\r\n    DBFind(nco_credentials, rate).Columns(rating).Where(id=#org_id#)\r\n    Div(Body: #name#)\r\n    Div(Body: #desc#)\r\n    Div(Body: #tags#)\r\n    Div(Body: #rate#)\r\n    Table()\r\n)"
+        },
+        {
+            "Name": "nco_org_list",
+            "Conditions": "true",
+            "Menu": "admin_menu",
+            "Value": "DBFind(nco_org_tag_list, types).Columns(category)\r\nDiv(Body:\r\n    P(Tag for search)\r\n    Select(Name: selector, types, category, category)\r\n    SetVar(variable,  selector.Value)\r\n    Span(#variable#)\r\n    DBFind(nco_credentials, info).Where(tags = 'wellness').Custom(Link){LinkPage(Body: #id#, \"nco_org_info\", PageParams: \"org_id=#id#\")}\r\n    \r\n    Table(LinkPage(info, info, PageParams: org_id = #info#))\r\n    Button(Show_List, Page: nco_org_list)\r\n)"
+        },
+        {
+            "Name": "nco_exchange_offers_page",
+            "Conditions": "true",
+            "Menu": "admin_menu",
+            "Value": "Data(bools, \"bool\"){\r\n\"true\"\r\n\"false\"\r\n}\r\nDiv(Body:\r\n    P(Completed requests?)\r\n    Select(Name: selector, bools, bool, bool, Value: \"false\")\r\n    DBFind(nco_mat_request, info).Where(isfulfilled = '#Val(selector)#')\r\n    Table(info, \"ORG_ID=nco_id, MATTYPE=material_type, QUANT=quantity\")\r\n    Button(Submit, Page: nco_exchange_offers_page)\r\n)"
+        },
+        {
+            "Name": "add_report_on_fulfilled_charity_request",
+            "Conditions": "true",
+            "Menu": "admin_menu",
+            "Value": "SetTitle(\"Add Report On Fulfilled Charity Request\")\nDiv(content-wrapper){\n    Form(panel-body){\n                    Div(row){\n                        Div(col-sm-6){\n                            Input(Name: doc, Type:file, Placeholder:Upload Report) \n                            \n                            Label(Choose a recipient related to this charity act:)\n                           \n                        } \n                       Div(col-sm-6){\n            Button(Body: Send Report, Page: report_on_fulfilled_charity_request_confirmation_status,\n                        Contract: NotifyRecipientForConfirmation, Class:btn btn-primary, Params: \"MemberId=Val(MemberId)\")\n                \n        }\n                    }\n                Div(col-sm-6){\n                    Div(input-group){\n                    DBFind(Name: members, Source: src_member)\n                    Select(Name: MemberId, Source: src_member, NameColumn: member_name, ValueColumn: id)\n                   }\n                    \n            \n        }\n        \n    }\n}"
+        },
+        {
+            "Name": "admin_index",
+            "Conditions": "true",
+            "Menu": "admin_menu",
+            "Value": ""
+        }
+    ],
+    "blocks": [],
+    "menus": [],
+    "parameters": [],
+    "languages": [],
+    "contracts": [
+        {
+            "Name": "NotifyRecipientForConfirmation",
+            "Value": "contract NotifyRecipientForConfirmation {\n    data {\n        MemberId int\n        }\n     conditions {}\n    \n    action {\n        var icon, header, body, page, params string\n        icon = \"fa-bell\"\n        header = \"Confirmation needed\"\n        body = \"One report awaits your confirmation\"\n        page = \"report_on_fulfilled_charity_request_confirmation_status\"\n        params = Sprintf(\"Confirmation needed %v\", \"\")\n\n        Notifications_Single_Send(\"member_id,icon_name,text_header,text_body,page_name,params_val\", $MemberId, icon, header, body, page, params)\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "TestInput",
+            "Value": "contract TestInput {\n\n    action {\n        DBInsert(\"nco_org_tag_list\", \"category\", \"wellness\")\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "Nco_OX_Rate_Of_Service",
+            "Value": "contract Nco_OX_Rate_Of_Service {\n    data {\n        Rating int\n        Request_Id int\n    }\n\n    conditions {\n\n    }\n\n    action {\n        DBInsert(\"nco_comments\", \"rate, nco_id\", $Rating, DBFind(\"nco_mat_request\").Columns(\"helper_id\").Where(\"id = ?\", $Request_id))\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "Nco_OX_Contract_Accept",
+            "Value": "contract Nco_OX_Contract_Accept {\n    data {\n        Offer_id string\n    }\n\n    conditions {\n        if $key_id <> DBFind(\"nco_mat_request\").Columns(\"nco_id\").WhereId(Int(DBFind(\"nco_mat_request_applicants\").Columns(\"mat_request_id\").WhereId(Int($Offer_id))))\n        {\n            error \"not eligible user\"\n        }\n        if DBFind(\"nco_mat_request\").Columns(\"helper_id\").WhereId(Int(DBFind(\"nco_mat_request_applicants\").Columns(\"mat_request_id\").WhereId(Int($Offer_id)))) <> \"\"\n        {\n            error \"contract assigned already\"\n        }\n    }\n\n    action {\n        DBUpdate(\"nco_mat_request\", Int(DBFind(\"nco_mat_request_applicants\").Columns(\"mat_request_id\").Where(\"id = ?\", $Offer_id)), \"helper_id\", DBFind(\"nco_mat_request_applicants\").Columns(\"nco_id\").Where(\"id = ?\", $Offer_id))\n        DBUpdate(\"nco_mat_request_applicants\", $Offer_id, \"isapproved\", true)\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "Nco_OX_Contract_Application",
+            "Value": "contract Nco_OX_Contract_Application {\n    data {\n        Contract_ID string\n    }\n\n    conditions {\n\n    }\n\n    action {\n        var nco_id string\n        nco_id = $key_id\n        DBUpdate(\"nco_mat_request\", $Contract_ID, \"nco_id, mat_request_id, isapproved\", nco_id, $Contract_ID, false)\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "Nco_OX_Order_Creation",
+            "Value": "contract Nco_OX_Order_Creation {\n    data {\n        Material string\n        Quantity int\n    }\n\n    conditions {\n\n    }\n\n    action {\n        var nco_id string\n        nco_id = $key_id\n        DBInsert(\"nco_mat_request\", \"name, material_type, quantity, isfulfilled\", DBFind(\"nco_credentials\").Columns(\"name\").Where(\"id = ?\", nco_id), $Material, $Quantity, false)\n    }\n}",
+            "Conditions": "true"
+        },
+        {
+            "Name": "AddReportOnCompletedCharityRequest",
+            "Value": "contract AddReportOnCompletedCharityRequest {\n    data {\n        OrganizationId int\n        IsConfirmed bool\n        //CharityRequestId int \"hidden\"\n    }\n\n    conditions {\n\n    }\n\n    action {\n        var rowId int\n        //rowId = DBInsert(\"nco_mission_completed_report\", \"organization_id,charity_request_id,recipient_acknowledgement\",\n        //                    )\n    }\n}",
+            "Conditions": "ContractConditions(\"MainCondition\")"
+        },
+        {
+            "Name": "Nco_Rating",
+            "Value": "contract Nco_Rating {\n    data {\n        Nco_id string\n    }\n\n    action {\n        var yarr array\n        yarr = DBFind(\"nco_comments\").Columns(\"rating\").Where(\"nco_id = ?\", $Nco_id)\n        var i int\n        var sum float\n        i = 0\n        sum = 0\n        while i < Len(yarr) {\n            sum= sum+yarr[i]\n            i = i+1\n        }\n        if i > 0\n        {\n            sum = sum/i\n        }\n        else\n        {\n            sum = 2.5\n        }\n        DBUpdate(\"nco_credentials\", $Nco_id, \"rating\", Int(sum))\n    }\n}",
+            "Conditions": "true"
+        }
+    ],
+    "tables": [
+        {
+            "Name": "nco_charity_request",
+            "Columns": "[{\"name\":\"recipient_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"request_digest\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "nco_comments",
+            "Columns": "[{\"name\":\"text\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"nco_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"rating\",\"type\":\"number\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "nco_credentials",
+            "Columns": "[{\"name\":\"name\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"tags\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"rating\",\"type\":\"double\",\"conditions\":\"true\"},{\"name\":\"sys_id\",\"type\":\"text\",\"conditions\":\"{\\\"update\\\":\\\"true\\\"}\"},{\"name\":\"website\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"registered\",\"type\":\"datetime\",\"conditions\":\"true\"},{\"name\":\"credentials\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"description\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "nco_donation",
+            "Columns": "[{\"name\":\"donor_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"sum\",\"type\":\"money\",\"conditions\":\"true\"},{\"name\":\"nco_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"comment\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "nco_donor",
+            "Columns": "[{\"name\":\"name\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"karma\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"description\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "nco_mat_request",
+            "Columns": "[{\"name\":\"rate_of_service\",\"type\":\"number\",\"conditions\":\"{\\\"update\\\":\\\"true\\\"}\"},{\"name\":\"nco_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"quantity\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"helper_id\",\"type\":\"text\",\"conditions\":\"{\\\"update\\\":\\\"true\\\"}\"},{\"name\":\"isfulfilled\",\"type\":\"bytea\",\"conditions\":\"true\"},{\"name\":\"material_type\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "nco_mat_request_applicants",
+            "Columns": "[{\"name\":\"nco_id\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"isapproved\",\"type\":\"bytea\",\"conditions\":\"true\"},{\"name\":\"mat_request_id\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "nco_mission_completed_report",
+            "Columns": "[{\"name\":\"charity_request_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"recipient_acknowledgement\",\"type\":\"bytea\",\"conditions\":\"true\"},{\"name\":\"organization_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"report_contains\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"true\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "nco_org_tag_list",
+            "Columns": "[{\"name\":\"category\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "nco_recipient",
+            "Columns": "[{\"name\":\"name\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"description\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "nco_roles",
+            "Columns": "[{\"name\":\"name\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"permissions\",\"type\":\"text\",\"conditions\":\"true\"}]",
+            "Permissions": "{\"insert\":\"ContractConditions(\\\"MainCondition\\\")\",\"update\":\"ContractConditions(\\\"MainCondition\\\")\",\"new_column\":\"ContractConditions(\\\"MainCondition\\\")\"}"
+        }
+    ],
+    "data": [
+        {
+            "Table": "nco_charity_request",
+            "Columns": [
+                "recipient_id",
+                "request_digest"
+            ],
+            "Data": []
+        },
+        {
+            "Table": "nco_comments",
+            "Columns": [
+                "rating",
+                "text",
+                "nco_id"
+            ],
+            "Data": []
+        },
+        {
+            "Table": "nco_credentials",
+            "Columns": [
+                "website",
+                "registered",
+                "credentials",
+                "description",
+                "name",
+                "tags",
+                "rating",
+                "sys_id"
+            ],
+            "Data": [
+                [
+                    "NULL",
+                    "NULL",
+                    "NULL",
+                    "They help",
+                    "GoodCorp",
+                    "wellness",
+                    "NULL",
+                    "890123"
+                ]
+            ]
+        },
+        {
+            "Table": "nco_donation",
+            "Columns": [
+                "nco_id",
+                "comment",
+                "donor_id",
+                "sum"
+            ],
+            "Data": []
+        },
+        {
+            "Table": "nco_donor",
+            "Columns": [
+                "name",
+                "karma",
+                "description"
+            ],
+            "Data": []
+        },
+        {
+            "Table": "nco_mat_request",
+            "Columns": [
+                "nco_id",
+                "quantity",
+                "helper_id",
+                "isfulfilled",
+                "material_type",
+                "rate_of_service"
+            ],
+            "Data": []
+        },
+        {
+            "Table": "nco_mat_request_applicants",
+            "Columns": [
+                "nco_id",
+                "isapproved",
+                "mat_request_id"
+            ],
+            "Data": []
+        },
+        {
+            "Table": "nco_mission_completed_report",
+            "Columns": [
+                "organization_id",
+                "report_contains",
+                "charity_request_id",
+                "recipient_acknowledgement"
+            ],
+            "Data": []
+        },
+        {
+            "Table": "nco_org_tag_list",
+            "Columns": [
+                "category"
+            ],
+            "Data": [
+                [
+                    "wellness"
+                ]
+            ]
+        },
+        {
+            "Table": "nco_recipient",
+            "Columns": [
+                "name",
+                "description"
+            ],
+            "Data": []
+        },
+        {
+            "Table": "nco_roles",
+            "Columns": [
+                "name",
+                "permissions"
+            ],
+            "Data": []
+        }
+    ]
+}

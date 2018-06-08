@@ -1,0 +1,53 @@
+contract EditPage {
+		data {
+			Id         int
+			Value      string "optional"
+			Menu      string "optional"
+			Conditions string "optional"
+      ValidateCount int "optional"
+		}
+		func preparePageValidateCount(count int) int {
+			var min, max int
+			min = Int(EcosysParam("min_page_validate_count"))
+			max = Int(EcosysParam("max_page_validate_count"))
+	
+			if count < min {
+				count = min
+			} else {
+				if count > max {
+					count = max
+				}
+			}
+	
+			return count
+		}		
+		conditions {
+			RowConditions("pages", $Id)
+			if $Conditions {
+				ValidateCondition($Conditions, $ecosystem_id)
+			}
+      $ValidateCount = preparePageValidateCount($ValidateCount)
+		}
+		action {
+			var pars, vals array
+			if $Value {
+				pars[0] = "value"
+				vals[0] = $Value
+			}
+			if $Menu {
+				pars[Len(pars)] = "menu"
+				vals[Len(vals)] = $Menu
+			}
+			if $Conditions {
+				pars[Len(pars)] = "conditions"
+				vals[Len(vals)] = $Conditions
+			}
+      if $ValidateCount {
+				pars[Len(pars)] = "validate_count"
+				vals[Len(vals)] = $ValidateCount
+      }
+			if Len(vals) > 0 {
+				DBUpdate("pages", $Id, Join(pars, ","), vals...)
+			}
+		}
+	}

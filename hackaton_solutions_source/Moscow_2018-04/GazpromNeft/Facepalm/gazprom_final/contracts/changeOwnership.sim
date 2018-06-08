@@ -1,0 +1,24 @@
+contract changeOwnership {
+    data {
+        Rig_id int
+        New_owner int
+        Event_meta string "optional"
+    }
+    conditions {
+        var Caller_data map
+        Caller_data = DBRow("actors").Where("pubkey = ?", $key_id)
+        var Caller_id int
+        Caller_id = Caller_data["id"]
+        var Rig_data map
+        Rig_data = DBRow("rigs").WhereId($Rig_id)
+        if Rig_data["owner_cur"] != Caller_id {
+            error "You are not the owner"
+        }
+    }
+    action {
+        var Rig_data map
+        Rig_data = DBRow("rigs").WhereId($Rig_id)
+        DBInsert("event", "initiator_id,receiver_id,timestamp date_end_actual,location_end_id,rig_id,meta,type", Rig_data["owner_cur"], $New_owner, $time, Rig_data["location_cur"], $Rig_id, $Event_meta, "sold")
+        DBUpdate("rigs", $Rig_id, "owner_cur", $New_owner)
+    }
+}

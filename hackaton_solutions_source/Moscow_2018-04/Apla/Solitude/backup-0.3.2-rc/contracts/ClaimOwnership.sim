@@ -1,0 +1,30 @@
+contract ClaimOwnership {
+    data {
+        Id int
+        Coords string
+    }
+
+    conditions {
+    }
+
+    action {
+        var res map
+        res = DBFind("a_land_registry_bridge").Columns("master_id,bidder,curr_price,address").WhereId($Id).Row()
+        $bidder = res["bidder"]
+        $curr_price = res["curr_price"]
+        $owner = res["owner"]
+        $address = res["address"]
+        $master_id = res["master_id"]
+
+        if $key_id == $owner {
+            DBUpdate("a_land_registry_bridge", $Id, "owner,state", $key_id, 0) // owner claims his own property
+        } else {
+            //MoneyTransfer("Recipient,Amount,Comment", $owner, $curr_price, $address) // transfer money
+            
+            DBUpdate("a_land_registry_bridge", $Id, "owner,state", $key_id, 0) // sold condition
+            //land_registry_Delete("LandId", $Id)
+            //land_registry_Add("OwnerId,Coords,BuildingsUseClass,LandNature", $key_id, $Coords, 1, 1)
+            TransferOwnership("master_id,curr_price", $Id, $curr_price) // update land_registry
+        }
+    }
+}

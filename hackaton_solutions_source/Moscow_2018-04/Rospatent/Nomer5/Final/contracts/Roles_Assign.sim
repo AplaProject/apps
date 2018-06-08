@@ -1,0 +1,59 @@
+contract Roles_Assign {
+    data {
+        role_id int
+        member_id int
+        origin_contract string "optional"
+    }
+    
+    conditions {
+        
+        $role_map = DBFind("roles_list").Where("id = $", $role_id).Row()
+        $member_map = DBFind("members").Where("id = $", $member_id).Row()
+        $appointer_map = DBFind("members").Where("id = $", $key_id).Row()
+        
+        if !$role_map {
+            warning "Role not found"
+        }
+        if !$member_map {
+            warning "Member not found"
+        }
+        if !$appointer_map {
+            warning "Appointer not found"
+        }
+        
+        if(Int($role_map["delete"]) == 1) {
+            warning "This role has been deleted. The appointment of members is impossible"
+        }
+        
+        var specialRule int
+        if $origin_contract == "sysparams_AcceptValidator" && $role_map["role_name"] == "Validator" {
+            specialRule = 1
+        }
+        if $origin_contract == "sysparams_DelegateRefresh" && $role_map["role_name"] == "Delegate" {
+            specialRule = 1
+        }
+        if $origin_contract == "sysparams_CandidateValidatorRequest" && $role_map["role_name"] == "Candidate for validators" {
+            specialRule = 1
+        }
+        if $origin_contract == "sysparams_InvestorRefresh" && $role_map["role_name"] == "Investor with voting rights" {
+            specialRule = 1
+        }
+        if specialRule == 0 {
+            if((Int($role_map["role_type"]) != 1) &&(Int($role_map["role_type"]) != 4)) {
+                warning "This role is not assignable. The appointment of members is impossible"
+            }
+            if(Int($role_map["creator_id"]) != $key_id) {
+                warning "Sorry, you are not the creator of this role. The appointment of members is impossible"
+            }
+        }
+        $assign_id = DBFind("roles_assign").Where("role_id=$ and member_id=$ and delete=0", $role_id, $member_id).One("id")
+        if($assign_id != nil) {
+            warning "This member has already been added"
+        }
+    }
+    
+    action {
+        DBInsert("roles_assign", "role_id,role_type,role_name,member_id,member_name,member_avatar,appointed_by_id,appointed_by_name,timestamp date_start,delete",
+        $role_id, $role_map["role_type"], $role_map["role_name"], $member_id, $member_map["member_name"], $member_map["avatar"], $key_id, $appointer_map["member_name"], $block_time, 0)
+    }
+}

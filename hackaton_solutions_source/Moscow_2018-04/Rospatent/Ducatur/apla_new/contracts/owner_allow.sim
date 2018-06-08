@@ -1,0 +1,34 @@
+contract owner_allow {
+    data {
+        request int
+        NotificId int
+    }
+
+    conditions {
+
+    }
+
+    action {
+        Notifications_Single_Close("notific_id", $NotificId)
+        DBUpdate("duc_main_license", $request, "owner_allow", "true")
+        var rp_addrs array
+        rp_addrs = DBFind("rospatent_addresses").Columns("address").Order("id")
+        var i int
+        i = 0
+        // notify RosPatent
+        while i < Len(rp_addrs) {
+            var rp_addr map, rp_id int
+            rp_addr = rp_addrs[i]
+            var params, page, icon string
+            icon = "fa fa-bell-o"
+            rp_id = AddressToId(rp_addr["address"])
+            params = Sprintf("request=%v,admin=0", $request)
+            page = "duc_license_approve"
+            Notifications_Single_Send(
+                "member_id,icon_name,text_header,text_body,page_name,params_val",
+                rp_id,icon,"Licence buy request", "Your verification needed",page,params
+            )
+            i = i + 100
+        }
+    }
+}

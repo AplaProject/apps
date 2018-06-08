@@ -1,0 +1,43 @@
+Div(Class: content-wrapper){
+    Div(Class: col-lg-2)
+    Div(Class: col-lg-8){
+    SetVar(time, Now())
+    DBFind(Name: tenders, Source: tenders_active).Where("isActive = 1").Vars("ta")
+
+    ForList(tenders_active){
+        DBFind(Name: tender_participants_correct, Source: take_part).Where("citizen_id=#key_id# and tender_id=#ta_id#").Vars("bet")
+        Div(Class: h2, Body: "Active tender")
+        Div(Class: panel panel-default){
+            Form(Class: panel-body){                
+                ForList(take_part){
+                    P(Class: text-normal, Body: "Your current bet is #bet_amount#")
+                }
+                P(Class: text-normal){
+                    How much money can you afford to pay for a certificate?
+                }
+                Input(Name: amount,  Type: text, Value: "", Placeholder: "Type a number...")
+                Div(Class: panel-footer clearfix){
+                    Button(Body: "Accept", Class: btn btn-primary pull-right, Contract: MakeCarBetContract, Params: "tender_id=#ta_id#", Page: MakeBetForTender)
+                }
+            }
+        }
+        DBFind(Name: tender_participants_correct, Source: participants).Where("tender_id=#ta_id#").Order("amount DESC")
+        Div(Class: h2, Body: "All bids")
+        ForList(participants){
+            Div(Class: panel panel-default){
+                Form(Class: panel-body){    
+                    If(#citizen_id# == #key_id#){
+                        Span(Class: text-success pull-right, Body:"This is your bet")
+                    }            
+                    P(Class: text-normal, Body: "Participant with id #citizen_id#")
+                    P(Class: text-normal, Body: "His/her bet is #amount#")
+                    
+                }
+            }
+        }
+  
+    }
+    
+    If(Len(tenders_active) == 0){
+        Div(Class: text-mute text-center, Body: "No more tenders found for now. Check one more time a few days")
+    }

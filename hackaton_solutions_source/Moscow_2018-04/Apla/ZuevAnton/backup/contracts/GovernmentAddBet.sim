@@ -1,0 +1,30 @@
+contract GovernmentAddBet {
+    data {
+        int amount
+        int tender_id
+        int citizen_id
+    }
+
+    conditions {
+        ContractConditions("OnlyCitizenTenderParticipantCondition")
+
+        $res = DBFind("tender_participants_correct").Where("tender_id = ? and citizen_id = ?", $tender_id, $key_id).Row()
+        if $amount < 1 {
+            info "Minimal bet is 1$"
+        }
+        
+        if $res["amount"] != nil{
+            if $amount < Int($res["amount"]) {
+                info "Next bet can't be less than previus ones"
+            }
+        }
+    }
+
+    action {
+        if $res["amount"] == nil {
+            DBInsert("tender_participants_correct", "amount,citizen_id,tender_id", $amount, $citizen_id, $tender_id)
+        }else{
+            DBUpdate("tender_participants_correct", Int($res["id"]), "amount", $amount)
+        }
+    }
+}

@@ -1,0 +1,152 @@
+If(GetVar(LandId)){}.Else{
+    SetVar(LandId, 1)
+}
+
+If(#admin#==1){
+    SetTitle($depart_role2$)
+}.Else{
+    SetTitle($owner$)
+}
+
+EcosysParam(Name: land_yes_no, Source: src_yes_no)
+If(GetVar(LandId)){
+    DBFind(Name: land_registry, Source: src_entry).WhereId(#LandId#).Vars(entry)
+    DBFind(Name: members, Source: src_owners).Where(id=#entry_owner_id#).Vars(owner)
+}
+Div(content-wrapper red){
+    Div(breadcrumb){
+        Div(){
+            LinkPage(LangRes(land_records), land_registry_records, PageParams: "admin=#admin#").Style(margin-right: 10px;)
+            Span(/).Style(margin-right: 10px;)
+            Span(LangRes(land_records_edit) ##LandId#, text-muted).Style(margin-right: 10px;)
+        }
+    }
+    Div(row df f-valign){
+        
+        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3 mt-sm text-left){
+            Div(panel panel-primary data-sweet-alert){
+                Form(){
+                    Div(Class: list-group-item text-center){
+                        Span(Class: h3, Body: LangRes(land_records_edit))	
+                    }
+                    Div(list-group-item){
+                        Map(Hmap:300, MapType: hybrid, Value: #entry_map_coords#)
+                    }
+                    Div(list-group-item){
+                        Div(row df f-valign){
+                            Div(col-md-5 mt-sm text-right h5){
+                                Strong($owner$:)
+                            }
+                            Div(col-md-6 mt-sm text-left h5){
+                                Div(){
+                                    Span(#owner_member_name#)
+                                }
+                            }
+                        }
+                        Div(row df f-valign){
+                            Div(col-md-5 mt-sm text-right h5){
+                                Strong($area_size$)
+                                (Span(m).(2).Style(vertical-align: super;font-size:small;)):
+                            }
+                            Div(col-md-7 mt-sm text-left h5){#entry_area#}
+                        }
+                        Div(row df f-valign){
+                            Div(col-md-5 mt-sm text-right h5){
+                                Strong($address$:)
+                            }
+                            Div(col-md-7 mt-sm text-left h5){#entry_address#}
+                        }
+                        
+                        Div(row df f-valign){
+                            Div(col-md-5 mt-sm text-right h5){Strong($record_add_date$:)}
+                            Div(col-md-7 mt-sm text-left h5){DateTime(#entry_date_create#)}
+                        }
+                        
+                        Div(row df){
+                            Div(col-md-5 mt-sm text-right h5){Strong($buildings_use_class$:)}
+                            Div(col-md-7 mt-sm text-left h5){
+                                EcosysParam(Name: buildings_use_class, Index: #entry_buildings_use_class#)
+                            }
+                        }
+                        
+                        Div(row df){
+                            Div(col-md-5 mt-sm text-right h5){Strong($land_nature$:)}
+                            Div(col-md-7 mt-sm text-left h5){
+                                EcosysParam(Name: land_nature, Index: #entry_land_nature#)
+                            }
+                        }
+                    }
+
+                    
+                    Div(list-group-item){
+                        Div(row df f-valign){
+                            Div(col-md-4 mt-sm text-right h5){Strong(LangRes(consideration_value))}
+                            Div(col-md-8 mt-sm text-left h5){
+                                If(#admin#==1){
+                                    If(GetVar(entry_price)){
+                                        #entry_price#
+                                    }
+                                }.Else{
+                                    Input(Name: Price,Class: form-control input-sm, Value: #entry_price#, Type: number)
+                                }
+                            }
+                        }
+                    }
+                    
+                    Div(list-group-item){
+                        Div(row df f-valign){
+                            Div(col-md-4 mt-sm text-right h5){Strong(LangRes(encumbrance_certificate))}
+                            Div(col-md-8 mt-sm text-left h5){
+                                If(#admin#==1){
+                                    Div(form-inline){
+                                        RadioGroup(Name: EncumbranceCertificate,Class: form-control, Value: #entry_encumbrance_certificate#, Source: src_yes_no, ValueColumn: id, NameColumn: name)
+                                    }
+                                }.Else{
+                                    If(GetVar(entry_encumbrance_certificate)){
+                                        Span(EcosysParam(Name: land_yes_no, Index: #entry_encumbrance_certificate#))
+                                    }.Else{
+                                        LangRes(undefined)
+                                    }
+                                }
+                            }
+                        }
+                        Div(row df f-valign){
+                            Div(col-md-4 mt-sm text-right h5){Strong(LangRes(legal_status))}
+                            Div(col-md-8 mt-sm text-left h5){
+                                If(#admin#==1){
+                                    Div(form-inline){
+                                        RadioGroup(Name: LegalStatus,Class: form-control, Value: #entry_legal_status#, Source: src_yes_no, ValueColumn: id, NameColumn: name)
+                                    }
+                                }.Else{
+                                    If(GetVar(entry_legal_status)){
+                                        Span(EcosysParam(Name: land_yes_no, Index: #entry_legal_status#))
+                                    }.Else{
+                                        LangRes(undefined)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    
+                    Div(panel-footer){
+                        Div(clearfix){
+                            Div(pull-right){
+                                Input(Name: LandId, Type: hidden, Value: #LandId#)
+                                Div(btn-group){
+                                    Button(Page: land_registry_records, Body: $back$, Class: btn btn-default btn-pill-left, PageParams: "admin=#admin#")
+                                    
+                                    If(#admin#==1){
+                                        Button(Body: $save$, Class: btn btn-primary btn-pill-right, Contract: land_registry_UpdateAdmin, Params: "NotificId=#notific_id#", Page: land_registry_records)
+                                    }.Else{
+                                        Button(Body: $save$, Class: btn btn-primary btn-pill-right, Contract: land_registry_UpdateOwner, Params: "Price=Val(Price),NotificId=#notific_id#", Page: land_registry_records)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

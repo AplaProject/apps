@@ -1,0 +1,28 @@
+contract finishDig {
+    data {
+        event_id int
+    }
+
+    conditions {
+    
+        var Chosen_event map
+        Chosen_event = DBRow("event").Where("id = ?", $event_id)
+        var Caller_data map
+        Caller_data = DBRow("actors").Where("pubkey = ?", $key_id)
+        var Caller_id int
+        Caller_id = Caller_data["id"]
+        if Chosen_event["receiver_id"] != Caller_id || Chosen_event["type"] != "dig_start" {
+            error "You cannot finish this event"
+        }
+       
+    }
+
+    action {
+        DBUpdate("event", $event_id, "timestamp date_end_actual", $time)
+        var Chosen_event map
+        Chosen_event = DBRow("event").Where("id = ?", $event_id)
+        var Target_rig_id int
+        Target_rig_id = Int(Chosen_event["rig_id"])
+        DBUpdate("rigs", Target_rig_id, "status_cur", "standby")
+    }
+}
