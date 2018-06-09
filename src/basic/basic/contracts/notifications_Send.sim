@@ -41,7 +41,7 @@ contract notifications_Send {
         var member map
         member = DBFind("members").Where("id=?", memberId).Row()
         if !member {
-            warning "Member not found"
+            warning Sprintf("%v:  Member not found (%v)", $this_contract, memberId)
         }
         var recipient map
         recipient["member_id"] = member["id"]
@@ -74,13 +74,13 @@ contract notifications_Send {
             if $rid > 0{
                 $notify_type = 2 // is "role"
                 if !DBFind("roles").Where("id=?", $rid).One("id") {
-                    warning "Recipient role not found"
+                    warning $this_contract+": Recipient role not found"
                 }
                 if !DBFind("roles_participants").Where("role->id=? and deleted=0", $rid).One("id") {
-                    warning "Recipient role does not contain members"
+                    warning $this_contract+": Recipient role does not contain members"
                 }
             } else{
-                warning "Notification type not defined"
+                warning $this_contract+": Notification type not defined"
             }
         }
         $senderMember = nil
@@ -88,16 +88,16 @@ contract notifications_Send {
         if $sender == 1 {
             $senderMember = DBFind("members").Where("id=?", $key_id).Row()
             if !$senderMember {
-                warning "Sender not member"
+                warning $this_contract+": Sender not member"
             }
         }else{
             if $sender == 2 {
                 $senderRole = DBFind("roles").Where("id=?", $role_id).Row()
                 if !$senderRole {
-                    warning "Sender role not found"
+                    warning $this_contract+": Sender role not found"
                 }
             }else{
-                warning "Sender invalid"
+                warning $this_contract+": Sender invalid"
             }
         }
     }
