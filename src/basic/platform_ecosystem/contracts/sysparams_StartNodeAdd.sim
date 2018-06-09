@@ -87,11 +87,9 @@ contract sysparams_StartNodeAdd{
         }
     }
     func getNodesJSON() string{
-        // kostyl
-        // return json-like string from full_nodes trimmed "[" and "]"
         var nodes string
         nodes = SysParamString("full_nodes")
-        if Size(nodes) < 80 {
+        if Size(nodes) < 50 {
             nodes = "[]"
         }
         return nodes
@@ -111,14 +109,13 @@ contract sysparams_StartNodeAdd{
     }
 
     action{
-        var nodes array
-        var node map
-        nodes = JSONDecode(getNodesJSON())
+        var nodes array node map
         node["tcp_address"] = $TcpAddress
         node["api_address"] = $ApiAddress
         node["key_id"] = Str($KeyId)
         node["public_key"] = $PubKey
-        nodes[Len(nodes)] = node
+        nodes = JSONDecode(getNodesJSON())
+        nodes = Append(nodes, node)
         voting_TemplateRun("TemplateId,Duration,KeyId,TableWritten,RowId,ColumnName,NewValue,TextDocument", $TemplateId, $Duration, 0, "", "", "full_nodes", JSONEncode(nodes), "")
     }
 }
