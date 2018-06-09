@@ -4,22 +4,24 @@ contract Roles_CheckAccess {
     }
     conditions {
         var role map
-        role = DBFind("roles").Columns("id,deleted,roles_access,role_type,creator->member_id,company_id").Where("id=?", $rid).Row()
+        role = DBFind("roles").Columns("id,deleted,roles_access->rids,role_type,creator->member_id,company_id").Where("id=?", $rid).Row()
         if !role {
             warning Sprintf("%v: Role not found", $this_contract)
         }
-        if role["role_type"] == 3 {
-            // system role
-            warning "System role can not be edit"
-        }
-
+        
         if role["creator.member_id"] == $key_id {
             return
         }
 
-        var rids map, i int
-        rids = Split(role["roles_access"], ",")
-        Println(Len(rids), i)
+        var rids rawRids array, i int
+        rawRids = Split(role["roles_access.rids"], ",")
+        while i < Len(rawRids){
+            if rawRids[i] > 0 {
+                rids = Append(rids, rawRids[i])
+            }
+            i=i+1
+        }
+        i=0
         while i<Len(rids){
             if rids[i] == $role_id {
                 return
