@@ -16,7 +16,7 @@ contract sysparams_DelegateRefresh{
 
         var ROLE_NAME string ROLE_ID int
         ROLE_NAME = "Delegate"
-        ROLE_ID = 5
+        ROLE_ID = 7
 
         // get role Id and Type
         $role = DBFind("roles").Where("role_name=? and id=? and deleted=0", ROLE_NAME, ROLE_ID).Row()
@@ -26,8 +26,6 @@ contract sysparams_DelegateRefresh{
     }
 
     action{
-        var DELEGATE_ACCOUNT string
-        DELEGATE_ACCOUNT = "delegate_account"
         // get delegates ids
         var delegateIds currentDelegates ecosystems array
         ecosystems = DBFind("ecosystems").Columns("id").Ecosystem(1)
@@ -36,26 +34,27 @@ contract sysparams_DelegateRefresh{
             var eco delegateParam map
             eco = ecosystems[i]
             ecoId = Int(eco["id"])
-            delegateParam = DBFind("parameters").Where("name=?", DELEGATE_ACCOUNT).Ecosystem(ecoId).Row()
+            delegateParam = DBFind("parameters").Where("name='delegate_account'").Ecosystem(ecoId).Row()
             if !delegateParam{
                 delegateParam = DBFind("parameters").Where("name='founder_account'").Ecosystem(ecoId).Row()
             }
 
             if NotInArray(delegateParam["value"], delegateIds){
-                delegateIds[Len(delegateIds)] = delegateParam["value"]
+                delegateIds = Append(delegateIds, delegateParam["value"])
             }
             i = i + 1
         }
 
         // remove old role assigns
-        currentDelegates = DBFind("roles_participants").Where("role->id=? and deleted=0", $role["id"])
+        currentDelegates = DBFind("roles_participants").Columns("id,member->member_id").Where("role->id=? and deleted=0", $role["id"])
         i = 0
         while i < Len(currentDelegates){
             var delegate map
             delegate = currentDelegates[i]
-            if NotInArray(delegate["member_id"], delegateIds){
+            if NotInArray(delegate["member.member_id"], delegateIds){
                 var id int
                 id = Int(delegate["id"])
+                Println(id)
                 Roles_Unassign("row_id", id)
             }
             i = i + 1
