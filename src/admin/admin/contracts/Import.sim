@@ -51,38 +51,40 @@ contract Import {
         while i<Len(dataImport){
             var item, cdata map
             cdata = dataImport[i]
-            cdata["ApplicationId"] = $ApplicationId
-            $Type = cdata["Type"]
-            $Name = cdata["Name"]
+            if cdata {
+                cdata["ApplicationId"] = $ApplicationId
+                $Type = cdata["Type"]
+                $Name = cdata["Name"]
 
-            Println(Sprintf("import %v: %v", $Type, cdata["Name"]))
+                Println(Sprintf("import %v: %v", $Type, cdata["Name"]))
 
-            item = DBFind($Type).Where("name=?", $Name).Row()
-            var contractName string
-            if item {
-                contractName = editors[$Type]
-                cdata["Id"] = Int(item["id"])
-                if $Type == "menu"{
-                    var menu menuItem string
-                    menu = Replace(item["value"], " ", "")
-                    menu = Replace(menu, "\n", "")
-                    menu = Replace(menu, "\r", "")
-                    menuItem = Replace(cdata["Value"], " ", "")
-                    menuItem = Replace(menuItem, "\n", "")
-                    menuItem = Replace(menuItem, "\r", "")
-                    if Contains(menu, menuItem) {
-                        // ignore repeated
-                        contractName = ""
-                    }else{
-                        cdata["Value"] = item["value"] + "\n" + cdata["Value"]
+                item = DBFind($Type).Where("name=?", $Name).Row()
+                var contractName string
+                if item {
+                    contractName = editors[$Type]
+                    cdata["Id"] = Int(item["id"])
+                    if $Type == "menu"{
+                        var menu menuItem string
+                        menu = Replace(item["value"], " ", "")
+                        menu = Replace(menu, "\n", "")
+                        menu = Replace(menu, "\r", "")
+                        menuItem = Replace(cdata["Value"], " ", "")
+                        menuItem = Replace(menuItem, "\n", "")
+                        menuItem = Replace(menuItem, "\r", "")
+                        if Contains(menu, menuItem) {
+                            // ignore repeated
+                            contractName = ""
+                        }else{
+                            cdata["Value"] = item["value"] + "\n" + cdata["Value"]
+                        }
                     }
+                } else {
+                    contractName = creators[$Type]
                 }
-            } else {
-                contractName = creators[$Type]
-            }
 
-            if contractName != ""{
-                CallContract(contractName, cdata)
+                if contractName != ""{
+                    CallContract(contractName, cdata)
+                }
             }
             i=i+1
         }
