@@ -2,15 +2,13 @@ Div(content-wrapper){
     SetTitle($single_notifics$)
     AddToolButton(Title: $send$, Page: notifications_single_send, Icon: icon-plus)
 
-    If(GetVar(isSearch) == 1){
-        SetVar(Name: v_Where, Value: "notification->type='1' and recipient->member_name='#v_Search#'")
+    If(GetVar(Search)){
+        SetVar(Where,"notification->type='1' and recipient->member_name='#Search#'")
     }.Else{
-        SetVar(Name: v_Where, Value: "notification->type='1'")
-        SetVar(Name: v_Search, Value: "")
+        SetVar(Where,"notification->type='1'").(Search,)
     }
-    SetVar(pager_table,notifications).(pager_where,#v_Where#).(pager_page,notifications_single).(pager_limit,25)
-    Include(pager_header)
-    DBFind(Name: notifications, Source: src_notifications).Columns("id,recipient->member_id,recipient->member_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,closed").Custom(custom_id){
+    
+    DBFind(Name: notifications, Source: src_notifications).Limit(20).Columns("id,recipient->member_id,recipient->member_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,closed").Custom(custom_id){
         If(#closed# == 0){
             SetVar(Name: style_text, Value: "text-normal")
             SetVar(Name: style_link, Value: "text-primary")
@@ -20,11 +18,9 @@ Div(content-wrapper){
         }
         Span(Class: #style_text#, Body: #id#)
     }.Custom(custom_recipient){
-        SetVar(Name: img_id, Value: 0)
-        DBFind(Name: binaries, Source: src_binaries).Columns("data").Where("id=#recipient.image_id#").Vars(img)
         LinkPage(Class: #style_link# h5 text-bold, Page: profile_view, PageParams: "v_member_id=#recipient.member_id#"){
-            If(#img_id#>0){
-                Image(Src: "#img_data#", Class: img-circle).Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
+            If(#recipient.image_id#>0){
+                Image(Src: Binary().ById(#recipient.image_id#), Class: img-circle).Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
                 Span(#recipient.member_name#)
             }.Else{
                 Div(){
@@ -65,21 +61,19 @@ Div(content-wrapper){
                 Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, Contract: notifications_Close, Params: "notific_id=#id#", Page: notifications_single).Alert(Text: $want_close_notification$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
             }
         }
-    }.Where(#v_Where#).Order("closed ASC, id ASC").Offset(#pager_offset#)
+    }.Where(#Where#).Order("closed ASC, id DESC")
 
     Form(panel panel-primary){
         Div(panel-body){
             Div(row){
-                Div(col-md-1 mt-sm text-right){
-                    Label(For: Search){
-                        Span(Body: LangRes(recipient))
-                    }
-                }
-                Div(col-md-11){
+                Div(col-md-12){
                     Div(input-group){
-                        Input(Name: Search, Value: #v_Search#)
+                        Div(input-group-addon){
+                            LangRes(recipient)
+                        }
+                        Input(Name: Search, Value: #Search#)
                         Div(input-group-btn){
-                            Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: notifications_single, PageParams: "isSearch=1,v_Search=Val(Search)")
+                            Button(Class: btn btn-default fa fa-search, Page: notifications_single, PageParams: "Search=Val(Search)")
                         }
                     }
                 }
@@ -89,18 +83,15 @@ Div(content-wrapper){
                     Table(Source: src_notifications, Columns: "$id$=custom_id,$icon$=custom_icon,$recipient$=custom_recipient,$page_name$=custom_page,$sender$=custom_sender,$sent$/$сlosed$=custom_date,$status$=custom_status,=actions")
                 }
             }
-            If(GetVar(isSearch) == 1){
+            If(GetVar(Search)){
                 Div(row){
                     Div(col-md-12 mt-lg){
                         Div(text-center){
-                            Button(Body: $view_all$, Class: btn btn-primary, Page: notifications_single, PageParams: "isSearch=0")
+                            Button(Body: $view_all$, Class: btn btn-primary, Page: notifications_single)
                         }
                     }
                 }
             }
-        }
-        Div(panel-footer){
-            Include(pager)
         }
     }
 }

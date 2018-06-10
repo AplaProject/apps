@@ -8,7 +8,7 @@ Div(content-wrapper){
         SetVar(Where,"notification->type='2'").(Search,)
     }
 
-    DBFind(Name: notifications, Source: src_notifications).Custom(_id){
+    DBFind(Name: notifications, Source: src_notifications).Limit(20).Columns("id,recipient->role_id,recipient->role_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,date_start_processing,processing_info->member_name,closed").Custom(_id){
         If(#closed# == 0){
             SetVar(style_text,"text-normal").(style_link,"text-primary")
         }.Else{
@@ -16,17 +16,15 @@ Div(content-wrapper){
         }
         Span(Class: #style_text#, Body: #id#)
     }.Custom(_recipient){
-        SetVar(img_id,0)
-        DBFind(Name: binaries, Source: src_binaries).Columns("data").Where("id=#recipient.image_id#").Vars(img)
         LinkPage(Class: #style_link# t5 text-bold, Page: roles_view, PageParams: "v_role_id=#recipient.role_id#"){
-            If(#img_id#>0){
-                Image(Src: "#img_data#", Class: mr-sm).Style(width: 30px; border: 1px solid #5A5D63;)
+            If(#recipient.image_id#>0){
+                Image(Src: Binary().ById(#recipient.image_id#) "#img_data#", Class: mr-sm).Style(width: 30px; border: 1px solid #5A5D63;)
                 #recipient.role_name#
             }.Else{
-                Div(valign-center){
-                    Span(Class: fa icon-settings fa-2x mr-sm)
-                    #recipient.role_name#
-                }
+                Div(){
+                    Span(Em(Class: fa icon-settings fa-2x)).Style(margin-right:10px;)
+                    Span(#recipient.role_name#)
+                }.Style(display:flex; align-items:center;)
             }
         }
     }.Custom(_sender){
@@ -77,7 +75,7 @@ Div(content-wrapper){
                 }
             }
         }
-    }.Where(#Where#).Order("closed ASC, id ASC").Columns("id,recipient->role_id,recipient->role_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,date_start_processing,processing_info->member_name,closed")
+    }.Where(#Where#).Order("closed ASC, id DESC")
 
     Form(panel panel-primary){
         Div(panel-body){
@@ -110,10 +108,4 @@ Div(content-wrapper){
             }
         }
     }
-}.Style(
-    .t3 {font-size:24px;}
-    .t4 {font-size:18px;}
-    .t5 {font-size:14px;}
-    .t6 {font-size:12px;}
-    .valign-center {display:flex; align-items:center;}
-)
+}
