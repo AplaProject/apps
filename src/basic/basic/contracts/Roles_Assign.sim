@@ -5,17 +5,17 @@ contract Roles_Assign {
     }
 
     conditions {
-        $role_map = DBFind("roles").Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Where("id = $", $rid).Row()
+        $role_map = DBFind("roles").Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Where("id=?", $rid).Row()
         if !$role_map {
             warning "Role not found"
         }
 
-        $member_map = DBFind("members").Where("id = $", $member_id).Row()
+        $member_map = DBFind("members").Where("id=?", $member_id).Row()
         if !$member_map {
             warning "Member not found"
         }
 
-        $appointer_map = DBFind("members").Where("id = $", $key_id).Row()
+        $appointer_map = DBFind("members").Where("id=?", $key_id).Row()
         if !$appointer_map {
             warning "Appointer not found"
         }
@@ -39,14 +39,16 @@ contract Roles_Assign {
             Roles_CheckAccess("rid", $rid)
         }
 
-        $assign_id = DBFind("roles_participants").Where("role->id=$ and member->member_id=$ and deleted=0", $rid, $member_id).One("id")
-        if $assign_id {
-            warning "This member has already been added"
-        }
-
+        $assigned = DBFind("roles_participants").Where("role->id=? and member->member_id=? and deleted=0", $rid, $member_id).One("id")
+        // if $assigned {
+        //     warning "This member has already been added"
+        // }
     }
 
     action {
+        if $assigned {
+            return
+        }
         var role map
         role["id"] = $role_map["id"]
         role["type"] = $role_map["role_type"]
