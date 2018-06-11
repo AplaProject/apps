@@ -12,6 +12,9 @@ contract tokenrefund_Start{
         if attackerId==0{
             error "unblockAccounts. invalid attacker key"
         }
+        if DBFind("keys").Where("blocked=1 and (id=? or id=?)", victimId, attackerId).Row(){
+            error "Accounts already blocked"
+        }
         DBUpdate("keys", victimId, "blocked", 1)
         DBUpdate("keys", attackerId, "blocked", 1)
     }
@@ -46,9 +49,8 @@ contract tokenrefund_Start{
         $victimId = victim
         $attackerId = attacker
 
-        var app_id int
+        var app_id template_id int
         app_id = Int(DBFind("applications").Columns("name,id").Where("name='Basic application'").One("id"))
-        var template_id int
         template_id = Int(AppParam(app_id,"voting_tokenrefund_template_id"))
         if template_id <= 0 {
             warning "Template id not found"
@@ -57,9 +59,9 @@ contract tokenrefund_Start{
         $template = DBFind("voting_templates").Where("id=?", template_id).Row()
         $votersRoleId = Int($template["voters"])
         $votingName = $template["title"]
-        $typeParticipants = 3 // add participants by role
-        $typeDecision = 5 // the launch of the contract
-        $typeVoting = 2 // the voting system
+        $typeParticipants = Int($template["type_participants"])
+        $typeDecision = Int($template["type_decision"])
+        $typeVoting = Int($template["type_voting"])
         $volume = Int($template["volume"])
         $quorum = Int($template["quorum"])
         $contractAccept = $template["contract_accept"]
@@ -75,40 +77,21 @@ contract tokenrefund_Start{
         if !DBFind("roles_participants").Where("role->id=? and deleted=0", $votersRoleId).One("id") {
             warning Sprintf("Role (id: %v) does not contain members", $votersRoleId)
         }
-
-        if DBFind("votings").Where("voting->name=? and voting->description=? and deleted=0", $votingName, $desc).Row(){
-            // info "Voting already created" // debug: uncomment on the prod
-        }
     }
 
     action{
         blockAccounts($victimId,$attackerId)
-
-        var votingId status result closure sender int
-        var icon header body page interval_days string
+        var votingId status result int, params map, paramsJSON interval_days string
         interval_days = "3"
         votingId = voting_CreateNew("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $volume, $quorum, interval_days)
 
         status = 1 // 0.Accounts blocked 1.Discussion 2.Vote 3.Closed
-        result = 0 // 0. discussion and voting 1. cancelled return 2. the tokens returned
-        var params map
+        result = 0 // 0. discussion and voting 1. cancelled 2. the tokens returned
         params["Id"] = DBInsert("tokenrefund", "victim_key_id,attacker_key_id,amount,note,validator_key_id,blocked_at,voting_id,status,result", $victimId, $attackerId, $Amount, $Note, $key_id, "Now()", votingId,status,result)
-        var paramsJSON string
-         paramsJSON  = JSONEncode(params)
-        
+        paramsJSON = JSONEncode(params)
 
         voting_SubjectContract("votingID,contract_reject,contract_accept,contract_reject_params,contract_accept_params", votingId, $contractReject, $contractAccept, paramsJSON, paramsJSON)
 
         voting_Invite("votingID,var_id", votingId, $votersRoleId)
-
-        closure = 2
-        sender = 1 // from member
-        icon = "icon-bubbles"
-        header = "Voting for tokens refund"
-        body = $desc
-        page = "voting_view"
-        var params map
-        params["voting_id"] = votingId
-        notifications_Send("rid,closure_type,sender,icon_name,text_header,text_body,page_name,params_map,member_id", $votersRoleId, closure, sender, icon, header, body, page, JSONEncode(params), 0)
     }
 }
