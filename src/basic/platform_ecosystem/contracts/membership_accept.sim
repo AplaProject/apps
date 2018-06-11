@@ -1,0 +1,57 @@
+contract membership_accept {
+    data {
+        request_id int
+    }
+    conditions {
+        $request = DBFind("membership_requests").Where("id = ?", $request_id).Row()
+
+        if Int($request["request_status"]) != 0 {
+            warning "Request already processed"
+        }
+
+        var founder_id int
+        founder_id = DBFind("parameters").Where("name = 'founder_account'").Ecosystem(Int($request["ecosystem_id"])).One("value")
+
+        if founder_id != $key_id {
+            warning "Access denied"
+        }
+    }
+    action {
+
+        var notifications array
+        notifications = DBFind("notifications").Where("page_params->request_id = ? and closed = 0", $request_id)
+
+        var notific_len int
+        notific_len = Len(notifications)
+
+        var i int
+        while i < notific_len {
+            var notific map
+            notific = notifications[i]
+
+            notifications_Close("notific_id", Int(notific["id"]))
+            
+            i = i + 1
+        }
+
+        DBUpdate("membership_requests", $request_id, "request_status", 1)
+
+        var params map
+        params["request_id"] = $request_id
+
+        var table_name string
+        table_name = Sprintf("@%v_keys", $request["ecosystem_id"]) 
+
+        var found array
+        found = DBFind(table_name).Where("id = ?", $request["member_id"])
+
+        if Len(found) == 0 {
+            var pub string
+            pub = DBFind("keys").Where("id = ?", $request["member_id"]).One("pub")
+
+            DBInsert(table_name, "id,pub", $request["member_id"], pub)
+        }
+
+        notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", $request["member_id"], 1, "icon icon-user-follow", "Request is accepted", "Your request for membership is accepted", "membership_user_view", params)
+    }
+}

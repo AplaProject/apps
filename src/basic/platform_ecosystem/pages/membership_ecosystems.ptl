@@ -1,0 +1,58 @@
+Div(content-wrapper){
+
+	SetTitle($request_membership$)
+
+    If(GetVar(isSearch) == 1){
+        SetVar(Name: v_Where, Value: "name='#v_Search#' and id != 1")
+    }.Else{
+        SetVar(Name: v_Where, Value: "id != 1")
+        SetVar(Name: v_Search, Value: "")
+    }
+
+    Form(panel panel-primary){
+        Div(panel-body){
+            Div(row){
+                Div(col-md-1 mt-sm text-right){
+                    Label(For: Search){
+                        Span(Body: LangRes(name))
+                    }
+                }
+                Div(col-md-11){
+                    Div(input-group){
+                        Input(Name: Search, Value: #v_Search#)
+                        Div(input-group-btn){
+                            Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: membership_ecosystems, PageParams: "isSearch=1,v_Search=Val(Search)")
+                        }
+                    }
+                }
+            }
+
+            DBFind(ecosystems, src_ecosystems).Ecosystem(1).Where("#v_Where#").Custom(custom_actions) {
+                SetVar(req_id, "")
+                SetVar(k_id, "")
+                DBFind(membership_requests, src_requests).Where("member_id = #key_id# and ecosystem_id = #id# and request_status = 0").Limit(1).Vars("req")
+                DBFind(keys, src_keys).Where("id = #key_id#").Ecosystem(#id#).Limit(1).Vars("k")
+
+                If(And(GetVar(req_id) == "", GetVar(k_id) == "")){
+                    Button(Class: btn btn-primary pull-right, Body: Send Request, Contract: "membership_send_request", Page: membership_ecosystems, Params: "ecosystem_num=#id#")
+                }
+            }
+			
+            Div(row){
+                Div(col-md-12){
+                    Table(Source: src_ecosystems, Columns: "ID=id,$name$=name,=custom_actions")
+                }
+            }
+			
+            If(GetVar(isSearch) == 1){
+                Div(row){
+                    Div(col-md-12 mt-lg){
+                        Div(text-center){
+                            Button(Body: $view_all$, Class: btn btn-primary, Page: membership_ecosystems, PageParams: "isSearch=0")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

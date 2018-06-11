@@ -1,0 +1,51 @@
+contract membership_send_request {
+    data {
+        ecosystem_num int
+    }
+    
+    conditions {
+        
+    }
+    
+    action {
+
+        var found int
+        found = DBFind("membership_requests").Where("ecosystem_id = ? and member_id = ? and request_status = 0", $ecosystem_num, $key_id)
+        
+        if Len(found) > 0 {
+            warning Sprintf("Request already sent.", $ecosystem_num)
+        }
+
+        var request_id int
+        request_id = DBInsert("membership_requests", "member_id,ecosystem_id", $key_id, $ecosystem_num)
+
+        var notific_params map
+        notific_params["request_id"] = request_id
+
+        /*
+
+        var admins array
+        admins = DBFind("roles_participants").Where("role->id = ? and deleted = 0", 1).Ecosystem($ecosystem_num)
+
+        var i int
+        var admin_len int
+        admin_len = Len(admins)
+
+        while i < admin_len {
+            var admin map
+            admin = admins[i]
+
+            var parsed map
+            parsed = JSONToMap(admin["member"])
+
+            notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", parsed["member_id"], 1, "icon icon-user-follow", "New request for membership", "View details", "membership_admin_view", notific_params)
+            i = i + 1
+        }
+        */
+
+        var founder_id int
+        founder_id = DBFind("parameters").Where("name = 'founder_account'").Ecosystem($ecosystem_num).One("value")
+
+        notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", founder_id, 1, "icon icon-user-follow", "New request for membership", "View details", "membership_admin_view", notific_params)
+    }
+}
