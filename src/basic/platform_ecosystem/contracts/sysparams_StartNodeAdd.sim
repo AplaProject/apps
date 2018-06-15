@@ -4,7 +4,6 @@ contract sysparams_StartNodeAdd{
         ApiAddress string
         KeyId int
         PubKey string
-        TemplateId int
         Duration int
     }
     func warn(name, detail string){
@@ -89,17 +88,30 @@ contract sysparams_StartNodeAdd{
     func getNodesJSON() string{
         var nodes string
         nodes = SysParamString("full_nodes")
-        if Size(nodes) < 50 {
+        if Size(nodes) < 100 {
             nodes = "[]"
         }
         return nodes
     }
+    func appendFirstNode(nodes array) array{
+        var first string firstNode map
+        first = AppParam($appId,"first_node")
+        if !HasPrefix(first, "{") || Size(first) < 100 {
+            warning "Application parameter first_node not valid"
+        }
+        firstNode = JSONDecode(first)
+        checkTcpAddress(firstNode["tcp_address"])
+        checkApiAddress(firstNode["api_address"])
+        checkKeyId(Int(firstNode["key_id"]))
+        checkPub(firstNode["public_key"])
+
+        nodes = Append(nodes, firstNode)
+        return nodes
+    }
     conditions{
-        var app_id int
-        app_id = Int(DBFind("applications").Columns("name,id").Where("name='Basic application'").One("id"))
-        var id int
-        id = Int(AppParam(app_id,"voting_sysparams_template_id"))
-        if $TemplateId != id || $TemplateId <= 0 {
+        $appId = Int(DBFind("applications").Columns("name,id").Where("name='Basic application'").One("id"))
+        $templateId = Int(AppParam($appId,"voting_sysparams_template_id"))
+        if $templateId == 0 {
             warning "Template id not found"
         }
         checkKeyId($KeyId)
@@ -115,7 +127,10 @@ contract sysparams_StartNodeAdd{
         node["key_id"] = Str($KeyId)
         node["public_key"] = $PubKey
         nodes = JSONDecode(getNodesJSON())
+        if Len(nodes) == 0 {
+            nodes = appendFirstNode(nodes)
+        }
         nodes = Append(nodes, node)
-        voting_TemplateRun("TemplateId,Duration,KeyId,TableWritten,RowId,ColumnName,NewValue,TextDocument", $TemplateId, $Duration, 0, "", "", "full_nodes", JSONEncode(nodes), "")
+        voting_TemplateRun("TemplateId,Duration,KeyId,TableWritten,RowId,ColumnName,NewValue,TextDocument", $templateId, $Duration, 0, "", "", "full_nodes", JSONEncode(nodes), "")
     }
 }
