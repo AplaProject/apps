@@ -56,35 +56,60 @@ Div(content-wrapper){
                         }
                     }
                 }.Else{
-                    Data(new_node_form, "Name,Type,Placeholder,Value"){
-                        TcpAddress,text,tcp address,""
-                        ApiAddress,text,api address,""
-                        KeyId,number,key id,#key_id#
-                        PubKey,text,public key,""
-                    }
+                    SetVar(full_nodes,SysParam(full_nodes)).(first_node,AppParam(App:#application_id#, Name: first_node)).(first_node_set,)
                     Form(panel panel-primary){
                         Div(panel-heading text-center h3){
                             Span(#param_name#, text-uppercase): Span($add$ $new_value$, text-lowercase)
                         }
-                        Div(panel-body){
-                            Input(Name:Duration, Type:hidden, Value:21)
-
-                            ForList(new_node_form){
-                                Div(row form-group){
-                                    Div(col-md-3 text-right){
-                                        Label(For: #Name#){LangRes(#Name#)}
+                        If(`#full_nodes#`==""){
+                            JsonToSource(src_first_node,#first_node#)
+                            ForList(src_first_node){
+                                If(#value#==""){
+                                    SetVar(first_node_set,error)
+                                }
+                            }
+                            If(#first_node_set#==error){
+                                Div(panel-body text-center){
+                                    ForList(src_first_node){
+                                        If(#value#==""){
+                                            Div(){first node: '#key#' empty}
+                                        }
                                     }
-                                    Div(col-md-9 text-left){
-                                        Input(Name: #Name#, Placeholder: #Placeholder#, Type: #Type#, Value: #Value#)
+                                }
+                                Div(panel-footer text-center){
+                                    DBFind(app_params).Where("name='first_node'").Vars(first_node_param)
+                                    Button(Page: app_params_edit, Class: btn btn-info, PageParams: "id=#first_node_param_id#"){
+                                        Install the first node before adding the new
                                     }
                                 }
                             }
                         }
-                        Div(panel-footer text-right){
-                            Div(pull-left){
-                                Button(Body: LangRes(back), Class: btn btn-default, Page: sysparams_list)
+                        If(#first_node_set#!=error){
+                            Data(new_node_form, "Name,Type,Placeholder,Value"){
+                                TcpAddress,text,tcp address,""
+                                ApiAddress,text,api address,""
+                                KeyId,number,key id,#key_id#
+                                PubKey,text,public key,""
                             }
-                            Button(Body: LangRes(voting), Class: btn btn-primary, Contract: sysparams_StartNodeAdd, Page: voting_list)
+                            Div(panel-body){
+                                Input(Name:Duration, Type:hidden, Value:21)
+                                ForList(new_node_form){
+                                    Div(row form-group){
+                                        Div(col-md-3 text-right){
+                                            Label(For: #Name#){LangRes(#Name#)}
+                                        }
+                                        Div(col-md-9 text-left){
+                                            Input(Name: #Name#, Placeholder: #Placeholder#, Type: #Type#, Value: #Value#)
+                                        }
+                                    }
+                                }
+                            }
+                            Div(panel-footer text-right){
+                                Div(pull-left){
+                                    Button(Body: LangRes(back), Class: btn btn-default, Page: sysparams_list)
+                                }
+                                Button(Body: LangRes(voting), Class: btn btn-primary, Contract: sysparams_StartNodeAdd, Page: voting_list)
+                            }
                         }
                     }
                     AppParam(App:#application_id#, Name:full_nodes_keys, Source:nodes_keys)
@@ -104,13 +129,13 @@ Div(content-wrapper){
                             }
                         }
                     }
-                    If("" != SysParam(full_nodes)){
+                    If(`#full_nodes#`!=""){
                         Div(panel panel-primary){
                             Div(panel-heading text-center h3){LangRes(full_nodes)}
                             Div(panel-body text-center){
                                 Div(col-sm-12 text-center){
-                                    SysParam(full_nodes)
-                                }.Style(overflow-x:hidden)
+                                    #full_nodes#
+                                }.Style(word-break: break-all;)
                             }
                         }
                     }
