@@ -5,12 +5,13 @@ contract voting_Delete {
 
     conditions {
         var voting map
-        $voting_map = DBFind("votings").Columns("creator->member_id,date_started,id").Where("id=? and date_started > now()", $votingID).Row()
+        $voting_map = DBFind("votings").Columns("creator->member_id,date_started,id").Where("id=? and (date_started>now() or progress->number_participants='0')", $votingID).Row()
         if !$voting_map {
             warning "Voting already started. Delete voting impossible"
         }
-
-        if $voting_map["creator.member_id"] != $key_id {
+        var creatorId int
+        creatorId = Int($voting_map["creator.member_id"])
+        if creatorId != $key_id {
             warning "You are not the creator of the voting"
         }
     }
@@ -21,9 +22,8 @@ contract voting_Delete {
         notes = DBFind("notifications").Where("page_name='voting_view' and page_params->voting_id=?", $votingID)
         var i int
         while i < Len(notes){
-            var note map
+            var note map noteId int
             note = notes[i]
-            var noteId int
             noteId = Int(note["id"])
             notifications_Close("notific_id", noteId)
             i=i+1
