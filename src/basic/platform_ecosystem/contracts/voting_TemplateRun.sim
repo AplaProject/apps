@@ -37,12 +37,12 @@ contract voting_TemplateRun{
         if $Duration <= 0{
             $Duration = 3
         }
-
+ 
         var initContract string
         initContract = template["init_contract"]
         $voters = template["voters"]
         $candidates = template["candidates"]
-        $votingName = template["title"]
+        $votingName = Sprintf("%v [template id:%v]", template["title"], $TemplateId)
         $volume = Int(template["volume"])
         $quorum = Int(template["quorum"])
         $type_voting = Int(template["type_voting"])
@@ -93,13 +93,13 @@ contract voting_TemplateRun{
             checkInput($ColumnName, "ColumnName")
             checkInput($NewValue, "NewValue")
             if $type_voting == 2{
-                $desc = Sprintf("[template #%v] sysparam: %v, value: %v", $TemplateId, $ColumnName, $NewValue)
+                $desc = Sprintf("Parameter: %v, Value: %v", $ColumnName, $NewValue)
             }
 
             if $type_voting == 1{
                 checkInput($TableWritten, "TableWritten")
                 checkInput($RowId, "RowId")
-                $desc = Sprintf("[template #%v] table: %v, column: %v, ID: %v, value: %v", $TemplateId, $TableWritten, $ColumnName, $RowId, $NewValue)
+                $desc = Sprintf("Table: %v, Column: %v, ID: %v, Value: %v", $TableWritten, $ColumnName, $RowId, $NewValue)
             }
             if $RowId == "" || $RowId == "NULL"{
                 $RowId = 0
@@ -107,11 +107,9 @@ contract voting_TemplateRun{
 
         }
         // check duplicated
-        // var isCreated map
-        // isCreated = DBFind("votings").Where("voting->name=? and voting->description=? and deleted=0", $votingName, $desc).Row()
-        // if isCreated{
-        // info "Voting already created"
-        // }
+        if DBFind("votings").Where("voting->name=? and flags->decision not in ('1', '-1') and deleted=0", $votingName).Row(){
+            error "Same voting already created"
+        }
 
 
         if $participants == 3 {
@@ -127,7 +125,6 @@ contract voting_TemplateRun{
 
     action{
         var votingId int
-        // must be installed in voting_CreateNew
         votingId = voting_CreateNew("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval", $votingName, $type_voting, $desc, $participants, $decision, $volume, $quorum, $Duration)
 
         if votingId == 0 {
