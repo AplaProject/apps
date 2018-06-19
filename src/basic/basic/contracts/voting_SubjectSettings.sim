@@ -21,13 +21,13 @@ contract voting_SubjectSettings {
             warning "Number of vacancies can not be less than 1"
         }
         
-        $voting_map = DBFind("votings").Columns("optional,voting->type,flags->full_data").Where("id=? and date_started > now()", $votingID).Row()
+        $voting = DBFind("votings").Columns("optional,voting->type,flags->full_data").Where("id=? and date_started > now()", $votingID).Row()
         
-        if !$voting_map {
+        if !$voting {
             warning "Voting already started. Can not edit document"
         }
         
-        if $voting_map["flags.full_data"] == 1 && $voting_map["voting.type"] == 2 {
+        if $voting["flags.full_data"] == 1 && $voting["voting.type"] == 2 {
             warning "This vote is a system. Change settings not allowed"
         }
         var role map
@@ -44,7 +44,7 @@ contract voting_SubjectSettings {
     
     action {
         var optional map
-        optional = safeJsonToMap($voting_map["optional"])
+        optional = safeJsonToMap($voting["optional"])
         
         optional["contract_accept"] = $contract_accept
         optional["contract_accept_params"] = safeJsonToMap($contract_accept_params)
