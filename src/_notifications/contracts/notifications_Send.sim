@@ -10,6 +10,7 @@ contract notifications_Send {
         text_body string "optional"
         page_name string
         params_map string // json encoded expected
+        eco string "optional"
     }
     func sendNotify(recipient map){
         var notification map
@@ -33,15 +34,19 @@ contract notifications_Send {
                 sender["image_id"] = $senderRole["image_id"]
             }
         }
-
-        DBInsert("notifications", "recipient,sender,notification,page_name,page_params,timestamp date_created",
-        recipient, sender, notification, $page_name, $params_map, $block_time)
+        var notifications string
+        if $eco > 0 {
+            notifications = Sprintf("@%v_notifications", $eco)
+        }else{
+            notifications = "notifications"
+        }
+        DBInsert(notifications, "recipient,sender,notification,page_name,page_params,timestamp date_created", recipient, sender, notification, $page_name, $params_map, $block_time)
     }
     func sendToMember(memberId int){
         var member map
         member = DBFind("members").Where("id=?", memberId).Row()
         if !member {
-            warning Sprintf("%v:  Member not found (%v)", $this_contract, memberId)
+            warning Sprintf("%v: Member not found (%v)", $this_contract, memberId)
         }
         var recipient map
         recipient["member_id"] = member["id"]
@@ -64,6 +69,7 @@ contract notifications_Send {
 
     conditions {
         $member_id = Int($member_id)
+        $eco = Int($eco)
         $rid = Int($rid)
         if Size($icon_name) < 1{
             $icon_name = "icon-envelope"

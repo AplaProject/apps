@@ -1,5 +1,36 @@
 Div(content-wrapper){
-    DBFind(Name:applications, Source:src_app).Columns("name,id").Where("name='Basic application'").Vars(app)
+    DBFind(applications,src_app).Columns("name,id").Where("name='Basic application'").Vars(app)
+    DBFind(members,members).Ecosystem(1).Columns("id,member_name").Custom(name){#member_name#}
+    DBFind(ecosystems,ecosystems).Ecosystem(1).Columns("id,name")
+    AppParam(App:#app_id#, Name: notification_sender, Source: senders)
+    AppParam(App:#app_id#, Name: notification_icon, Source: icons)
+    SetVar(params_map,`{"param_int":"10","param_str":"my_string"}`)
+    Data(section0,"Name,Type,Res,Req,Src"){
+        eco,select,ecosystem,,ecosystems
+    }
+    Data(section1,"Name,Type,Res,Req,Src"){
+        member_id,select,recipient,*,members
+    }
+    Data(section2,"Name,Type,Res,Req,Src"){
+        sender,select,sender,*,senders
+    }
+    Data(section3,"Name,Type,Res,Req,Src,Val"){
+        icon_name,name_select,icon,,icons,
+        text_header,validated_input,header,*,,"Header text"
+        text_body,input,body_text,*,,"Body text"
+    }
+    Data(section4,"Name,Type,Res,Req,Src,Val"){
+        page_name,validated_input,page_name,*,,"notifications_testpage"
+        params_map,input,params,,,#params_map#
+    }
+
+    Data(sections, "Section"){
+        section0
+        section1
+        section2
+        section3
+        section4
+    }
 
     SetTitle($single_notifics$)
     Div(breadcrumb){
@@ -7,99 +38,43 @@ Div(content-wrapper){
         Span(/).Style(margin-right: 10px; margin-left: 10px;)
         Span(Class: text-muted, Body: $send$)
     }
-
-    Div(row){
-        Div(col-md-6 col-md-offset-3){
-            Form(panel panel-primary){
-                Div(panel-heading){LangRes(single_notifics)}
-                Div(panel-body){
-                    Div(list-group-item){
-                        Div(row){
-                            Div(col-md-3 mt-sm text-right){
-                                Label(){
-                                    Span(Body: LangRes(recipient)).(Class: text-danger, Body:*)
+    Div(container){
+        Div(row){
+            Div(col-md-8 col-md-offset-2){
+                Form(panel panel-primary){
+                    Div(panel-heading){LangRes(single_notifics)}
+                    Div(panel-body){
+                        ForList(sections){
+                            Div(list-group-item){
+                                ForList(#Section#){
+                                    Div(row mt-sm){
+                                        Div(col-md-3 text-right text-nowrap){
+                                            Label(For:#Name#){LangRes(#Res#)}
+                                            If(#Req#==*){
+                                                Span(*,text-danger)
+                                            }
+                                        }
+                                        Div(col-md-9 text-left){
+                                            If(#Type#==select){
+                                                Select(Name: #Name#, Source: #Src#, NameColumn: name, ValueColumn: id)
+                                            }.ElseIf(#Type#==name_select){
+                                                Select(Name: #Name#, Source: #Src#, NameColumn: name, ValueColumn: name)
+                                            }.ElseIf(#Type#==validated_input){
+                                                Input(Name: #Name#, Value: #Val#).Validate(minLength:3, maxLength:255)
+                                                InputErr(Name: #Name#, minLength: "Too short", maxLength: "Too long")
+                                            }.ElseIf(#Type#==input){
+                                                Input(Name: #Name#, Value: #Val#)
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                            Div(col-md-9 mc-sm text-left){
-                                DBFind(Name: members, Source: source_members).Columns("id,member_name")
-                                Select(Name: member_id, Source: source_members, NameColumn: member_name, ValueColumn: id)
                             }
                         }
                     }
-                    Div(list-group-item){
-                        Div(row){
-                            Div(col-md-3 mt-sm text-right){
-                                Label(){
-                                    Span(Body: LangRes(sender)).(Class: text-danger, Body:*)
-                                }
-                            }
-                            Div(col-md-9 mc-sm text-left){
-                                AppParam(App:#app_id#, Name: notification_sender, Source: src_sender)
-                                Select(Name: sender, Source: src_sender, NameColumn: name, ValueColumn: id)
-                            }
-                        }
+                    Div(panel-footer text-right){
+                        Button(Body: LangRes(back), Class: btn btn-default pull-left, Page: notifications_single)
+                        Button(Body: LangRes(send), Class: btn btn-primary, Page: notifications_single, Contract: notifications_Send)
                     }
-                    Div(list-group-item){
-                        Div(row){
-                            Div(col-md-3 mt-sm text-right){
-                                Label(){
-                                    Span(Body: LangRes(icon)).(Class: text-danger, Body:*)
-                                }
-                            }
-                            Div(col-md-9 mb-sm text-left){
-                                AppParam(App:#app_id#, Name: notification_icon, Source: src_icon)
-                                Select(Name: icon_name, Source: src_icon, NameColumn: name, ValueColumn: name)
-                            }
-                        }
-                        Div(row){
-                            Div(col-md-3 mt-sm text-right){
-                                Label(){
-                                    Span(Body: LangRes(header)).(Class: text-danger, Body:*)
-                                }
-                            }
-                            Div(col-md-9 mb-sm text-left){
-                                Input(Name: text_header, Value: "Header text").Validate(minLength:3, maxLength:255)
-                                InputErr(Name: text_header, minLength: $validate_notification$, maxLength: $validate_role_name$)
-                            }
-                        }
-                        Div(row){
-                            Div(col-md-3 mt-sm text-right){
-                                Label(){
-                                    Span(Body: LangRes(body_text))
-                                }
-                            }
-                            Div(col-md-9 mc-sm text-left){
-                                Input(Name: text_body, Value: "Body text")
-                            }
-                        }
-                    }
-                    Div(list-group-item){
-                        Div(row){
-                            Div(col-md-3 mt-sm text-right){
-                                Label(){
-                                    Span(Body: LangRes(page_name)).(Class: text-danger, Body:*)
-                                }
-                            }
-                            Div(col-md-9 mb-sm text-left){
-                                Input(Name: page_name, Value: "notifications_testpage").Validate(minLength:3, maxLength:255)
-                                InputErr(Name: page_name, minLength: $validate_notification$, maxLength: $validate_role_name$)
-                            }
-                        }
-                        Div(row){
-                            Div(col-md-3 mt-sm text-right){
-                                Label(){
-                                    Span(Body: LangRes(params))
-                                }
-                            }
-                            Div(col-md-9 mc-sm text-left){
-                                Input(Name: params_map, Value: `{"param_int":"10","param_str":"my_string"}`)
-                            }
-                        }
-                    }
-                }
-                Div(panel-footer text-right){
-                    Button(Body: LangRes(back), Class: btn btn-default, Page: notifications_single)
-                    Button(Body: LangRes(send), Class: btn btn-primary, Page: notifications_single, Contract: notifications_Send)
                 }
             }
         }
