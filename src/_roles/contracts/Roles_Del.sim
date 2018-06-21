@@ -1,0 +1,25 @@
+contract Roles_Del {
+    data {
+        rid int
+    }
+
+    conditions {
+        Roles_CheckAccess("rid", $rid)
+    }
+
+    action {
+        var participants array
+        participants = DBFind("roles_participants").Columns("id").Where("role->id=? and deleted=0", $rid)
+
+        // delete all participants
+        var i int
+        while i < Len(participants) {
+            var p map
+            p = participants[i]
+            Roles_Unassign("row_id", Int(p["id"]))
+            i = i + 1
+        }
+
+        DBUpdate("roles", $rid, "deleted,timestamp date_deleted", 1, $block_time)
+    }
+}

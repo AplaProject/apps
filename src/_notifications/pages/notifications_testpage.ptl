@@ -1,0 +1,91 @@
+Div(content-wrapper){
+    DBFind(Name:applications, Source:src_app).Columns("name,id").Where("name='Basic application'").Vars(app)
+    SetTitle($test_page$)
+
+    If(#notific_id# > 0){
+        DBFind(Name: notifications, Source: src_notifications).Columns("id,notification->type,notification->header,page_params->param_int,page_params->param_str,date_start_processing,closed").Where("id=#notific_id#").Vars(prefix)
+        SetVar(Name: notific_type, Value: #prefix_notification_type#)
+        SetVar(Name: notific_header, Value: #prefix_notification_header#)
+        SetVar(Name: notific_val_int, Value: #prefix_page_params_param_int#)
+        SetVar(Name: notific_val_str, Value: #prefix_page_params_param_str#)
+    }.Else{
+        Div(md-12 alert alert-danger text-center){
+            Span(Body: LangRes(attention))
+        }
+        SetVar(Name: notific_id, Value: "0")
+        SetVar(Name: notific_type, Value: "0")
+        SetVar(Name: notific_header, Value: "null")
+        SetVar(Name: notific_val_int, Value: "null")
+        SetVar(Name: notific_val_str, Value: "null")
+    }
+
+    Div(row){
+        Div(col-md-6 col-md-offset-3){
+            Form(panel panel-default){
+                Div(panel-body){
+                    Div(list-group-item text-center){
+                        Span(Class: h3, Body: #notific_header#)
+                    }
+                    Div(list-group-item){
+                        Div(row){
+                            Div(col-md-6 mt-sm text-right){
+                                Span(Class: h4, Body: LangRes(id))
+                            }
+                            Div(col-md-6 mt-sm text-left){
+                                Span(Class: h4, Body: #notific_id#)
+                            }
+                        }
+                        Div(row){
+                            Div(col-md-6 mt-sm text-right){
+                                Span(Class: h4, Body: LangRes(type))
+                            }
+                            Div(col-md-6 mt-sm text-left){
+                                If(#notific_type# > 0){
+                                    Span(Class: h4, Body: AppParam(App:#app_id#, Name: notification_type, Index: #notific_type#))
+                                }.Else{
+                                    Span(Class: h4, Body: #notific_type#)
+                                }
+                            }
+                        }
+                    }
+                    Div(list-group-item){
+                        Div(row){
+                            Div(col-md-6 mt-sm text-right){
+                                Span(Class: h4, Body: LangRes(value_number))
+                            }
+                            Div(col-md-6 mt-sm text-left){
+                                Span(Class: h4, Body: #notific_val_int#)
+                            }
+                        }
+                        Div(row){
+                            Div(col-md-6 mt-sm text-right){
+                                Span(Class: h4, Body: LangRes(value_string))
+                            }
+                            Div(col-md-6 mt-sm text-left){
+                                Span(Class: h4, Body: #notific_val_str#)
+                            }
+                        }
+                    }
+                }
+                If(#notific_type# == 1){
+                    If(#prefix_closed# == 0){
+                        Div(panel-footer text-right){
+                            Button(Body: LangRes(close), Class: btn btn-primary, Contract: notifications_Close, Params: "notific_id=#notific_id#", Page: notifications_single).Alert(Text: $want_close_notification$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                        }
+                    }
+                }
+                If(#notific_type# == 2){
+                    If(#prefix_closed# == 0){
+                        Div(panel-footer text-right){
+                            If(#prefix_date_start_processing# == ""){
+                                Button(Body: LangRes(begin), Class: btn btn-primary, Contract: notifications_Process, Params: "notific_id=#notific_id#", Page: notifications_roles).Alert(Text: $want_start_processing_notification$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                            }.Else{
+                                Button(Body: LangRes(close), Class: btn btn-primary, Contract: notifications_Close, Params: "notific_id=#notific_id#", Page: notifications_roles).Alert(Text: $want_close_notification$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

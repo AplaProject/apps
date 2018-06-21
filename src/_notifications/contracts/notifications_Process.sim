@@ -1,0 +1,39 @@
+contract notifications_Process {
+    data {
+        notific_id int
+    }
+
+    conditions {
+        $notify = DBFind("notifications").Columns("recipient->role_id,sender->type,date_start_processing").Where("id=?", $notific_id).Row()
+        if !$notify {
+            warning "Notification not found"
+        }
+
+        if $notify["sender.type"] == 2{
+            if $notify["date_start_processing"] != "" {
+                warning "Sorry, processing of this notification has already begun"
+            }
+            if !DBFind("roles_participants").Where("role->id=? and member->member_id=? and deleted=0", Int($notify["recipient.role_id"]), $key_id).One("id") {
+                warning "Sorry, you are not part of the role for which this notification is intended"
+            }
+        }else{
+            if $notify["sender.type"] != 1 {
+                warning "Notification type not found"
+            }
+        }
+
+        $member = DBFind("members").Where("id=?", $key_id).Row()
+        if !$member {
+            warning "Member not found"
+        }
+    }
+
+    action {
+        var member_info map
+        member_info["member_id"] = $member["id"]
+        member_info["member_name"] = $member["member_name"]
+        member_info["image_id"] = $member["image_id"]
+
+        DBUpdate("notifications", $notific_id, "timestamp date_start_processing,processing_info", $block_time, JSONEncode(member_info))
+    }
+}

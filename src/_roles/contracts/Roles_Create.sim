@@ -1,0 +1,45 @@
+contract Roles_Create {
+    data {
+        role_name string
+        role_type int
+        company_id string "optional"
+    }
+
+    conditions {
+        $company_id = Int($company_id)
+        // system role
+        if $role_type == 3 {
+            warning "System role can not be created"
+        }
+
+        // company role
+        if $role_type == 4 {
+            // check param
+            if $company_id == 0 {
+                warning "On this page you can not create a role for the company. Go to the company's view page to create a role"
+            }
+
+            // check creator of the company
+            if $company_id != $key_id {
+                warning "Sorry, you are not the creator of this company"
+            }
+        }
+
+        $member_map = DBFind("members").Where("id=?", $key_id).Row()
+        if !$member_map {
+            warning "You are not a member of the ecosystem"
+        }
+    }
+
+    action {
+        var creator map
+        creator["member_id"] = $member_map["id"]
+        creator["member_name"] = $member_map["member_name"]
+        creator["image_id"] = $member_map["image_id"]
+
+        if $role_type != 4 {
+            $company_id = 0
+        }
+        $result = DBInsert("roles", "role_name,role_type,creator,timestamp date_created,company_id", $role_name, $role_type, creator, $block_time, $company_id)
+    }
+}

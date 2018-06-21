@@ -1,0 +1,130 @@
+contract notifications_Send {
+    data {
+        member_id int "optional"
+        rid int "optional"
+        closure_type int "optional"
+
+        sender int
+        icon_name string "optional"
+        text_header string
+        text_body string "optional"
+        page_name string
+        params_map string // json encoded expected
+    }
+    func sendNotify(recipient map){
+        var notification map
+        notification["header"] = $text_header
+        notification["type"] = $notify_type
+        notification["icon"] = $icon_name
+        notification["body"] = $text_body
+        var sender map
+        if $sender == 1 && $senderMember {
+            // send from member
+            sender["type"] = $sender
+            sender["member_id"] = $senderMember["id"]
+            sender["member_name"] = $senderMember["member_name"]
+            sender["image_id"] = $senderMember["image_id"]
+        }else{
+            if $sender == 2 && $senderRole{
+                // send from role
+                sender["type"] = $sender
+                sender["role_id"] = $senderRole["id"]
+                sender["role_name"] = $senderRole["role_name"]
+                sender["image_id"] = $senderRole["image_id"]
+            }
+        }
+
+        DBInsert("notifications", "recipient,sender,notification,page_name,page_params,timestamp date_created",
+        recipient, sender, notification, $page_name, $params_map, $block_time)
+    }
+    func sendToMember(memberId int){
+        var member map
+        member = DBFind("members").Where("id=?", memberId).Row()
+        if !member {
+            warning Sprintf("%v:  Member not found (%v)", $this_contract, memberId)
+        }
+        var recipient map
+        recipient["member_id"] = member["id"]
+        recipient["member_name"] = member["member_name"]
+        recipient["image_id"] = member["image_id"]
+
+        sendNotify(recipient)
+    }
+
+    func sendToRole(roleId int){
+        var role map
+        role = DBFind("roles").Where("id=?", roleId).Row()
+        var recipient map
+        recipient["role_id"] = role["id"]
+        recipient["role_name"] = role["role_name"]
+        recipient["image_id"] = role["image_id"]
+
+        sendNotify(recipient)
+    }
+
+    conditions {
+        $member_id = Int($member_id)
+        $rid = Int($rid)
+        if Size($icon_name) < 1{
+            $icon_name = "icon-envelope"
+        }
+        if $member_id != 0 {
+            $notify_type = 1 // is "member"
+        }else{
+            if $rid > 0{
+                $notify_type = 2 // is "role"
+                if !DBFind("roles").Where("id=?", $rid).One("id") {
+                    warning $this_contract+": Recipient role not found"
+                }
+                if !DBFind("roles_participants").Where("role->id=? and deleted=0", $rid).One("id") {
+                    warning $this_contract+": Recipient role does not contain members"
+                }
+            } else{
+                warning $this_contract+": Notification type not defined"
+            }
+        }
+        $senderMember = nil
+        $senderRole = nil
+        if $sender == 1 {
+            $senderMember = DBFind("members").Where("id=?", $key_id).Row()
+            if !$senderMember {
+                warning $this_contract+": Sender not member"
+            }
+        }else{
+            if $sender == 2 {
+                $senderRole = DBFind("roles").Where("id=?", $role_id).Row()
+                if !$senderRole {
+                    warning $this_contract+": Sender role not found"
+                }
+            }else{
+                warning $this_contract+": Sender invalid"
+            }
+        }
+    }
+    action {
+        if $member_id != 0 {
+            sendToMember($member_id)
+        }else{
+            if $rid > 0 {
+                if $closure_type == 1 {
+                    // Single closure: one begins the process - the others do not see
+                    // Одиночное закрытие: все имеющие роль получают оповещение, но как только один из них запустит процесс работы с оповещением оно скроется от остальных
+                    sendToRole($rid)
+                } else {
+                    // Multiple closure: to each his own notification
+                    // Множественное закрытие: каждый участник роли получает свое одиночное оповещение
+                    $notify_type = 1
+                    var participants array
+                    participants = DBFind("roles_participants").Columns("member->member_id").Where("role->id=? and deleted=0", $rid)
+                    var i int
+                    while i < Len(participants) {
+                        var p map
+                        p = participants[i]
+                        sendToMember(Int(p["member.member_id"]))
+                        i=i+1
+                    }
+                }
+            }
+        }
+    }
+}
