@@ -1,0 +1,39 @@
+contract Profile_Edit {
+    data {
+        member_name string
+        member_image bytes "file"
+        information string "optional"
+    }
+
+    conditions {
+        var app_name string
+        app_name = "Basic application" 
+
+        $member = DBFind("members").Where("id=?", $key_id).Row()
+        $app_id = Int(DBFind("applications").Where("name=? and deleted=0", app_name).One("id"))
+
+        if !$member {
+            // check member_name 
+            if DBFind("members").Where("member_name=?", $member_name).One("id") {
+                warning "This member name is busy. Enter another member name, please"
+            }
+        }
+    }
+
+    action {
+        var memberInfo map
+        var image_id int
+        var image_name string
+        image_name = "avatar" 
+
+        if $member {
+            image_id = Int($member["image_id"]) 
+            image_id = @1UploadBinary("Name,Data,ApplicationId", image_name, $member_image, $app_id)
+            DBUpdate("members", Int($member["id"]), "member_info->information,image_id", $information, image_id)
+        } else {
+            memberInfo["information"] = $information
+            image_id = @1UploadBinary("Name,Data,ApplicationId", image_name, $member_image, $app_id)
+            DBInsert("members", "id,member_name,image_id,member_info", $key_id, $member_name, image_id, memberInfo)
+        }
+    }
+}
