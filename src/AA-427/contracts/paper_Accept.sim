@@ -1,0 +1,59 @@
+contract paper_Accept {
+    data {
+        PaperId int
+    }
+    func signAccept(){
+        var signature string
+        if $isBuyer {
+            signature = "signature_buyer"
+        }
+        if $isOwner {
+            signature = "signature_owner"
+        }
+        if signature {
+            DBUpdate("@3_form_of_listing", $PaperId, signature, 1)
+        }
+    }
+    func isFullSigned() bool{
+        if DBFind("form_of_listing").Ecosystem(3).Where("id=? and signature_fin1=1 and signature_fin2=1 and signature_buyer=1 and signature_owner=1", $PaperId).One("id") {
+            return true
+        }
+        return false
+    }
+    func changeOwner(){
+        DBUpdate("@3_form_of_listing", $PaperId, "issuer", $paper["dealer"])
+    }
+    func transferAmount(){
+        if $paper["dealer"] != $paper["issuer"]{
+            var amount money
+            amount = Int($paper["discount_max"]) * SysParamInt("money_digit")
+            DBUpdate("@1_keys", Int($paper["dealer"]), "-deposit,-amount", amount, amount)
+            DBUpdate("@1_keys", Int($paper["issuer"]), "+amount", amount)
+        }
+    }
+    conditions {
+        $paper = DBFind("form_of_listing").Ecosystem(3).Where("id=?", $PaperId).Row()
+        if !$paper {
+            warning "Paper not found"
+        }
+        var isFalse bool
+        $isBuyer = isFalse
+        $isOwner = isFalse
+        if $paper["dealer"] == $key_id {
+            $isBuyer = true
+        }
+        if $paper["issuer"] == $key_id {
+            $isOwner = true
+        }
+        if !($isOwner || $isBuyer){
+            warning "Denied. You can not accept it"
+        }
+    }
+    action {
+        signAccept()
+        if isFullSigned() {
+            transferAmount()
+            changeOwner()
+        }
+    }
+}

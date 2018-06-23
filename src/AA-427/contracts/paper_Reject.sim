@@ -1,0 +1,59 @@
+contract paper_Reject {
+    data {
+        PaperId int
+    }
+    func signReject(){
+        var signature string
+        if $isBuyer {
+            signature = "signature_buyer"
+        }
+        if $isOwner {
+            signature = "signature_owner"
+        }
+        if signature {
+            DBUpdate("@3_form_of_listing", $PaperId, signature, -1)
+        }
+    }
+    func unholdDeposit(){
+        var amount money
+        amount = Int($paper["discount_max"]) * SysParamInt("money_digit")
+        DBUpdate("@1_keys", Int($paper["dealer"]), "-deposit", amount)
+    }
+    func isValidForUnhold(){
+        if $isOwner {
+            return
+        }
+        if DBFind("form_of_listing").Ecosystem(3).Where("id=? and (signature_buyer=-1 or signature_owner=-1)", $PaperId).Row(){
+            return
+        }
+        var amount money
+        amount = Int($paper["discount_max"]) * SysParamInt("money_digit")
+        DBUpdate("@1_keys", Int($paper["dealer"]), "-deposit", amount)
+    }
+    conditions {
+        $paper = DBFind("form_of_listing").Ecosystem(3).Where("id=?", $PaperId).Row()
+        if !$paper {
+            warning "Paper not found"
+        }
+        $isBuyer = false
+        $isOwner = false
+        if $paper["dealer"] == $key_id {
+            $isBuyer = true
+        }
+        if $paper["issuer"] == $key_id {
+            $isOwner = true
+        }
+        if !($isOwner || $isBuyer){
+            warning "Denied. You can not reject it"
+        }
+        if $paper["dealer"] == $paper["issuer"] {
+            warning "Denied. Offer out of date"
+        }
+    }
+    action {
+        signReject()
+        if isValidForUnhold() {
+            unholdDeposit()
+        }
+    }
+}
