@@ -1,73 +1,89 @@
 Div(content-wrapper){
-    If(#form_of_listing_id#>0){
-        DBFind(form_of_listing).WhereId(#form_of_listing_id#).Vars(offer)
-        Data(sec1,"Name,Val"){
-            Type of Note,#offer_type_of_note#
-            Aggregate Principal Amount,#offer_agregat_p_a#
-        }
-        Data(sec2,"Name,Val"){
-            Issuer,#offer_issuer#
-            Guarantor,#offer_guarantor#
-            Issue Date,"DateTime(#offer_issue_date#,DD-MM-YYYY)"
-            Maturity Date,"DateTime(#offer_maturity_date#, DD-MM-YYYY)"
-            Listing Agent,#offer_listing_agent#
-            Delivery,#offer_delivery#
-            Clearing System,#offer_clearing_system#
-            Ratings,#offer_ratings#
-            Dealer,#offer_dealer#
-            ISIN,#offer_isin#
-            Issuuing and paying Agent,#offer_issuuing_and_paying_agent#
-        }
-        Data(sec3,"Name,Val"){
-            section_title,Commercial Terms
-        }
-        Data(sec4,"Name,Val"){
-            Floating Rate Note,#offer_floating_rate_note#
-        }
-        Data(secs,"sec"){
-            sec1
-            sec2
-            sec3
-            sec4
-        }
-        Div(container){
-            Div(row){
-                Div(col-md-8 col-md-offset-2){
-                    Form(panel panel-default){
-                        Div(list-group-item text-center h2 text-bold m0){
-                            Please confirm the transaction
-                        }
-                        ForList(secs){
-                            Div(list-group-item text-center){
-                                ForList(#sec#){
-                                    If(#Name#==section_title){
-                                        Div(h2 text-bold){
-                                            #Val#
-                                        }
-                                    }.Else{
-                                        Div(row mt-sm h4 m0 text-bold){
-                                            Div(col-md-6 text-right){
-                                                #Name#
-                                            }
-                                            Div(col-md-6 text-left){
+    If(#notific_id#>0){
+        SetVar(notific_header,).(notific_body,).(form_of_listing_id,0).(amount,0)
+        DBFind(notifications).Columns("id,notification->type,notification->header,notification->body,page_params->form_of_listing_id").Where("id=#notific_id#").Vars(note)
+        SetVar(notific_header,#note_notification_header#).(notific_body,#note_notification_body#).(form_of_listing_id,#note_page_params_form_of_listing_id#)
+
+        If(#form_of_listing_id#>0){
+            DBFind(form_of_listing).WhereId(#form_of_listing_id#).Vars(offer)
+            SetVar(amount,#offer_discount_max#)
+            DBFind(members).WhereId(#offer_issuer#).Vars(owner)
+            DBFind(members).WhereId(#offer_dealer#).Vars(buyer)
+            Data(sec1,"Name,Val,Cls"){
+                title,#offer_type_of_note#,h2
+                ISIN,#offer_isin#,h3
+                Ratings,#offer_ratings#,h3
+                Amount,#offer_agregat_p_a#,h3
+            }
+            Data(sec2,"Name,Val,Cls"){
+                Owner,"Image(Src: Binary().ById(#owner_image_id#)) #owner_member_name#",h4
+                Buyer,"Image(Src: Binary().ById(#buyer_image_id#)) #buyer_member_name#",h4
+                Guarantor,#offer_guarantor#,h4
+                Listing Agent,#offer_listing_agent#,h4
+                Clearing System,#offer_clearing_system#,h4
+                Delivery,#offer_delivery#,h4
+                Listing and admission to trading,#offer_listing_and_admission_to_tr#,h4
+                Issue Date,"DateTime(#offer_issue_date#,DD-MM-YYYY)",h4
+                Maturity Date,"DateTime(#offer_maturity_date#, DD-MM-YYYY)",h4
+            }
+            Data(secs,"sec"){
+                sec1
+                sec2
+            }
+            Div(container){
+                Div(row){
+                    Div(col-md-10 col-md-offset-1){
+                        Form(panel panel-default){
+                            Div(list-group-item text-center h3 text-bold m0){
+                                #notific_body#
+                                Div(){
+                                    Please confirm the transaction
+                                }
+                            }
+                            ForList(secs){
+                                Div(list-group-item text-center){
+                                    ForList(#sec#){
+                                        If(#Name#==title){
+                                            Div(h2 text-bold pb-lg){
                                                 #Val#
+                                            }
+                                        }.Else{
+                                            Div(row m0 pb #Cls# fv){
+                                                Div(col-md-6 text-bold text-right){
+                                                    #Name#
+                                                }
+                                                Div(col-md-6 text-left f-valign){
+                                                    #Val#
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
-                        Div(panel-footer text-right){
-                            Button(Body: Accept, Class: btn btn-primary, Page: profile_view, Contract: paper_Accept, Params: "PaperId=#form_of_listing_id#")
-                            Button(Body: Reject, Class: btn btn-danger pull-left, Page: profile_view, Contract: paper_Reject, Params: "PaperId=#form_of_listing_id#")
+                            Div(panel-footer text-right){
+                                Button(Body: Accept, Class: btn btn-primary, Page: profile_view, Contract: paper_Accept, Params: "PaperId=#form_of_listing_id#,NotificId=#notific_id#,Amount=#amount#")
+                                Button(Body: Reject, Class: btn btn-danger pull-left, Page: profile_view, Contract: paper_Reject, Params: "PaperId=#form_of_listing_id#,NotificId=#notific_id#")
+                            }
                         }
                     }
                 }
+            }.Style(
+                img {width: 50px; height: 50px;}
+                .pb-lg {padding-bottom:13px;}
+                .pb {padding-bottom:8px;}
+                .fv {
+                    display: flex;
+                    align-items: center
+                }
+            )
+        }.Else{
+            Div(col-md-12 alert alert-danger text-center h3){
+                Offer not found
             }
         }
     }.Else{
         Div(col-md-12 alert alert-danger text-center h3){
-            Offer not found
+            Notification not found
         }
     }
 }

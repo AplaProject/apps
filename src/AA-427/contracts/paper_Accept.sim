@@ -1,6 +1,8 @@
 contract paper_Accept {
     data {
         PaperId int
+        NotificId int
+        Amount money
     }
     func signAccept(){
         var signature string
@@ -21,14 +23,12 @@ contract paper_Accept {
         return false
     }
     func changeOwner(){
-        DBUpdate("@3_form_of_listing", $PaperId, "issuer", $paper["dealer"])
+        DBUpdate("@3_form_of_listing", $PaperId, "issuer,dealer,signature_fin1,signature_fin2,signature_owner,signature_buyer", $paper["dealer"], "", 0, 0, 0, 0)
     }
     func transferAmount(){
-        if $paper["dealer"] != $paper["issuer"]{
-            var amount money
-            amount = Int($paper["discount_max"]) * SysParamInt("money_digit")
-            DBUpdate("@1_keys", Int($paper["dealer"]), "-deposit,-amount", amount, amount)
-            DBUpdate("@1_keys", Int($paper["issuer"]), "+amount", amount)
+        if $paper["dealer"] > 0 {
+            DBUpdate("@1_keys", Int($paper["dealer"]), "-deposit,-amount", $Amount, $Amount)
+            DBUpdate("@1_keys", Int($paper["issuer"]), "+amount", $Amount)
         }
     }
     conditions {
@@ -36,9 +36,8 @@ contract paper_Accept {
         if !$paper {
             warning "Paper not found"
         }
-        var isFalse bool
-        $isBuyer = isFalse
-        $isOwner = isFalse
+        $isBuyer = false
+        $isOwner = false
         if $paper["dealer"] == $key_id {
             $isBuyer = true
         }
@@ -55,5 +54,6 @@ contract paper_Accept {
             transferAmount()
             changeOwner()
         }
+        notifications_Close("notific_id", $NotificId)
     }
 }
