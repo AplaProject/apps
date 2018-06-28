@@ -15,14 +15,14 @@ contract voting_Invite {
         DBInsert("votings_participants", "voting_id,member", votingId, member)
     }
     conditions {
-        $voting_map = DBFind("votings").Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Where("id=$ and date_ended > now()", $votingID).Row()
-        if !$voting_map {
+        $voting = DBFind("votings").Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Where("id=$ and date_ended > now()", $votingID).Row()
+        if !$voting {
             warning "Voting has expired. Can not add new participants"
         }
 
-        $type_participants = $voting_map["voting.type_participants"]
-        $type_voting = $voting_map["voting.type"]
-        $number_participants = Int($voting_map["progress.number_participants"])
+        $type_participants = $voting["voting.type_participants"]
+        $type_voting = $voting["voting.type"]
+        $number_participants = Int($voting["progress.number_participants"])
 
         if $number_participants > 1 && $type_voting == 2 {
             warning "This vote is a system. Add new participants are not possible"
@@ -74,10 +74,11 @@ contract voting_Invite {
             }
         }
 
-        var progress map
-        progress = safeJsonToMap($voting_map["progress"])
-        progress["number_participants"] = $number_participants
-        DBUpdate("votings", $votingID, "progress", progress)
+        if $type_participants == 3 {
+            DBUpdate("votings", $votingID, "progress->number_participants,voting->role_id", $number_participants, $var_id)
+        }else{
+            DBUpdate("votings", $votingID, "progress->number_participants", $number_participants)
+        }
         voting_SendNotifics("votingID", $votingID)
     }
 }

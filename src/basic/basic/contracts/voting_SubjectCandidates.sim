@@ -10,12 +10,12 @@ contract voting_SubjectCandidates {
     }
     
     conditions {
-        $voting_map = DBFind("votings").Columns("id,date_started,optional,voting->type,flags->full_data").Where("id=? and date_started > now()", $votingID).Row()
-        if !$voting_map {
+        $voting = DBFind("votings").Columns("id,date_started,optional,voting->type,flags->full_data").Where("id=? and date_started > now()", $votingID).Row()
+        if !$voting {
             warning "Voting already started. Can not edit document"
         }
         
-        if $voting_map["flags.full_data"] == 1 && $voting_map["voting.type"] == 2 {
+        if $voting["flags.full_data"] == 1 && $voting["voting.type"] == 2 {
             warning "This vote is a system. Change settings not allowed"
         }
         
@@ -28,8 +28,8 @@ contract voting_SubjectCandidates {
             warning "This candidature for this role has already been added before"
         }
         
-        $member_map = DBFind("members").Where("id = $", $memberID).Row()
-        if !$member_map {
+        $member = DBFind("members").Where("id = $", $memberID).Row()
+        if !$member {
             warning "Member not found"
         }
     }
@@ -37,14 +37,14 @@ contract voting_SubjectCandidates {
     action {
         
         var subject map
-        subject["member_id"] = $member_map["id"]
-        subject["member_name"] = $member_map["member_name"]
-        subject["image_id"] = $member_map["image_id"]
+        subject["member_id"] = $member["id"]
+        subject["member_name"] = $member["member_name"]
+        subject["image_id"] = $member["image_id"]
         
         DBInsert("votings_subject", "voting_id,subject", $votingID, subject)
         
         var optional map
-        optional = safeJsonToMap($voting_map["optional"])
+        optional = safeJsonToMap($voting["optional"])
         
         var number_candidates int
         if optional["number_candidates"]{
@@ -54,9 +54,6 @@ contract voting_SubjectCandidates {
             number_candidates = 1
         }
         
-        optional["number_candidates"] = number_candidates
-        DBUpdate("votings", $votingID, "optional", optional)
-        
-        //voting_SubjectCheckFulldata("votingID", $votingID)
+        DBUpdate("votings", $votingID, "optional->number_candidates", number_candidates)
     }
 }

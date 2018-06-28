@@ -21,12 +21,12 @@ contract voting_SubjectFormal {
     }
     
     conditions {
-        $voting_map = DBFind("votings").Columns("id,date_started,flags->full_data,voting->type,optional").Where("id=? and date_started > now()", $votingID).Row()
-        if !$voting_map {
+        $voting = DBFind("votings").Columns("id,date_started,flags->full_data,voting->type,optional").Where("id=? and date_started > now()", $votingID).Row()
+        if !$voting {
             warning "Voting already started. Can not edit document"
         }
         
-        if $voting_map["flags.full_data"] == 1 && $voting_map["voting.type"] == 2 {
+        if $voting["flags.full_data"] == 1 && $voting["voting.type"] == 2 {
             warning "This vote is a system. Change settings not allowed"
         }
     }
@@ -46,12 +46,12 @@ contract voting_SubjectFormal {
             DBUpdate("votings_subject", Int($subject_id), "subject", subject)
         }
         
-        var accept_params, reject_params map
+        var accept_params reject_params map
         accept_params = safeJsonToMap($contract_accept_params)
         reject_params = safeJsonToMap($contract_reject_params)
         
         var optional map
-        optional = safeJsonToMap($voting_map["optional"])
+        optional = safeJsonToMap($voting["optional"])
         optional["contract_accept"] = $contract_accept
         optional["contract_accept_params"] = accept_params
         optional["contract_reject"] = $contract_reject

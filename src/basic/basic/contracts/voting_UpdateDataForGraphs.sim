@@ -18,17 +18,16 @@ contract voting_UpdateDataForGraphs {
     }
     
     conditions {
-        $voting_map = DBFind("votings").Columns("flags,voting,progress").Where("id=?", $votingID).Row()
-        if !$voting_map {
+        $voting = DBFind("votings").Columns("flags,voting,progress").Where("id=?", $votingID).Row()
+        if !$voting {
             warning "Voting is not found"
         }
     }
     
     action {
-        var progress voting flags map
-        progress = safeJsonToMap($voting_map["progress"])
-        voting = safeJsonToMap($voting_map["voting"])
-        flags = safeJsonToMap($voting_map["flags"])
+        var progress voting map
+        progress = safeJsonToMap($voting["progress"])
+        voting = safeJsonToMap($voting["voting"])
         
         var flag_success percent_success percent_voters number_voters quorum  volume int
         // increment count of voters
@@ -45,9 +44,8 @@ contract voting_UpdateDataForGraphs {
         progress["percent_voters"] = percent_voters
         progress["percent_success"] = percent_success
         progress["number_voters"] = number_voters
-        flags["success"] = flag_success
         
-        DBUpdate("votings", $votingID, "progress,flags", progress, flags)
+        DBUpdate("votings", $votingID, "progress,flags->success", progress, flag_success)
         
         if (percent_voters >= quorum && quorum > 50 && percent_voters >= volume) || percent_voters == 100 {
             // if a quorum is more than 50% we can immediately make the decision

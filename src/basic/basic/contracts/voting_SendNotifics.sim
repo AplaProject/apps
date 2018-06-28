@@ -8,23 +8,23 @@ contract voting_SendNotifics {
         return res
     }
     conditions {
-        $voting_map = DBFind("votings").Columns("id,date_ended").Where("id=$ and date_ended > now()", $votingID).One("id")
-        if !$voting_map {
+        $voting = DBFind("votings").Columns("id,date_ended").Where("id=$ and date_ended > now()", $votingID).One("id")
+        if !$voting {
             warning "Voting has expired. Notifications can not be sent"
         }
         
-        $voting_map = DBFind("votings").Columns("voting->name,creator->member_id,flags->notifics,flags,date_started").Where("id=? and date_started > now()", $votingID).Row()
-        if !$voting_map {
+        $voting = DBFind("votings").Columns("voting->name,creator->member_id,flags->notifics,flags,date_started").Where("id=? and date_started > now()", $votingID).Row()
+        if !$voting {
             warning "Voting has not yet begun. Try again later, please"
         }
-        if $voting_map["creator.member_id"] != $key_id {
+        if $voting["creator.member_id"] != $key_id {
             warning "You are not the creator of the voting"
         }
-        if $voting_map["flags.notifics"] == 1 {
+        if $voting["flags.notifics"] == 1 {
             warning "Notifications have already been sent"
         }
         
-        $voting_name = $voting_map["voting.name"]
+        $voting_name = $voting["voting.name"]
     }
     
     action {
@@ -41,9 +41,6 @@ contract voting_SendNotifics {
             i = i + 1
         }
         
-        var flags map
-        flags = safeJsonToMap($voting_map["flags"])
-        flags["notifics"] = 1
-        DBUpdate("votings", $votingID, "flags", flags)
+        DBUpdate("votings", $votingID, "flags->notifics", 1)
     }
 }
