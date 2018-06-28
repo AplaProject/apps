@@ -10,9 +10,52 @@ contract voting_CreateNew {
 
         description string "optional"
         interval string "optional"
+        start_date string "optional"
+        start_time string "optional"
+        end_date string "optional"
+        end_time string "optional"
     }
-
-    func conditions {
+    func trimZeroTime(s string) string{
+        if Contains(s, "T00:00:00Z"){
+            s = s Replace(s, "T00:00:00Z", "")
+        }
+        return s
+    }
+    func dateAddTime(d, t string) string {
+        return Sprintf("%v %v", trimZeroTime(d), t)
+    }
+    func isCalledFromPage() bool{
+        return $stack[0] == Sprintf("@%v%v", $ecosystem_id, $this_contract)
+    }
+    func checkDatetimes(){
+        if Size($date_started) < 10 || Size($date_ended) < 10 { // invalid datetimes
+            if isCalledFromPage(){
+                var errs array
+                if Size($start_date) < 1 {
+                    errs = Append(errs, "starting date")
+                }
+                if Size($start_time) < 1 {
+                    errs = Append(errs, "starting time")
+                }
+                if Size($end_date) < 1 {
+                    errs = Append(errs, "ending date")
+                }
+                if Size($end_time) < 1 {
+                    errs = Append(errs, "ending time")
+                }
+                error Sprintf("Error create voting: %v not found", Join(errs, ", "))
+            }else{
+                $timestamped = true
+                $date_started = $time + 2 * 60
+                $interval = Int($interval)
+                if $interval == 0 {
+                    $interval = 3
+                }
+                $date_ended = $date_started + 3600 * 24 * $interval
+            }
+        }
+    }
+    conditions {
         if ($volume < 50) || ($volume > 100) {
             warning Sprintf("Volume [%v] should be in the range from 50 to 100", $volume)
         }
@@ -25,17 +68,13 @@ contract voting_CreateNew {
         if !$key {
             warning "You are not a member of the ecosystem"
         }
-        $date_started = $time + 2 * 60
-
-        var days int
-        days = Int($interval)
-        if days == 0 {
-            days = 3
-        }
-        $date_ended = $date_started + 3600*24*days
+        $timestamped = false
+        $date_started = dateAddTime($start_date, $start_time)
+        $date_ended = dateAddTime($end_date, $end_time)
+        checkDatetimes()
     }
 
-    func action {
+    action {
         var voting progress flags creator map votingId int
         voting["name"] = $voting_name
         voting["type"] = $voting_type
@@ -57,8 +96,11 @@ contract voting_CreateNew {
 
         creator["member_id"] = $key["id"]
         creator["member_name"] = IdToAddress($key_id)
-
-        votingId = DBInsert("votings", "voting,progress,flags,creator,timestamp date_started,timestamp date_ended", voting, progress, flags, creator, $date_started, $date_ended)
+        if $timestamped {
+            votingId = DBInsert("votings", "voting,progress,flags,creator,timestamp date_started,timestamp date_ended", voting, progress, flags, creator, $date_started, $date_ended)
+        }else{
+            votingId = DBInsert("votings", "voting,progress,flags,creator,date_started,date_ended", voting, progress, flags, creator, $date_started, $date_ended)
+        }
 
         // if all members are voting participants
         if $type_participants == 1 {

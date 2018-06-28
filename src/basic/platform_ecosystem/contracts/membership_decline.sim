@@ -1,11 +1,11 @@
 contract membership_decline {
     data {
-        request_id int
+        notific_id int
     }
     conditions {
-        $request = DBFind("membership_requests").Where("id = ?", $request_id).Row()
+        $request = DBFind("notifications").Where("id = ?", $notific_id).Row()
 
-        if Int($request["request_status"]) != 0 {
+        if Int($request["closed"]) == 1 {
             warning "Request already processed"
         }
 
@@ -17,8 +17,16 @@ contract membership_decline {
         }
     }
     action {
+
+        var sender map
+        sender = JSONToMap($request["sender"])
+
+        var params map
+        params = JSONToMap($request["page_params"])
+
         var notifications array
-        notifications = DBFind("notifications").Where("page_params->request_id = ? and closed = 0", $request_id)
+        notifications = DBFind("notifications").Where("page_params->ecosystem_id = ? and sender->member_id = ? and closed = 0 and page_name = 'membership_admin_view'", params["ecosystem_id"], sender["member_id"])
+
 
         var notific_len int
         notific_len = Len(notifications)
@@ -32,12 +40,9 @@ contract membership_decline {
             
             i = i + 1
         }
-        
-        DBUpdate("membership_requests", $request_id, "request_status", -1)
 
-        var params map
-        params["request_id"] = $request_id
+        params["status"] = 0
 
-        notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", $request["member_id"], 1, "icon icon-user-follow", "Request is rejected", "Your request for membership is rejected", "membership_user_view", params)
+        notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", sender["member_id"], 1, "icon icon-user-follow", "Request is rejected", "Your request for membership is rejected", "membership_user_view", params)
     }
 }
