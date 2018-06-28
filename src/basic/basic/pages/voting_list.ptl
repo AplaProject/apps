@@ -3,9 +3,9 @@ DBFind(applications,src_app).Columns("name,id").Where("name='Basic application'"
 SetTitle("List of votings")
 
 If(GetVar(Search)){
-    SetVar(v_Where,"voting->name='#Search#' and deleted=0")
+    SetVar(Where,"voting->name='#Search#' and deleted=0")
 }.Else{
-    SetVar(v_Where,"deleted=0").(Search,)
+    SetVar(Where,"deleted=0").(Search,)
 }
 
 DBFind(votings,src_voting).Custom(_id){
@@ -15,85 +15,72 @@ DBFind(votings,src_voting).Custom(_id){
     DBFind(votings).Columns("date_ended").Where("id=#id# and date_ended < now()").Vars(ended)
 
     If(#started_id#>0){
-        SetVar(isStarted,1)
+        SetVar(isStarted,1).(startedClass,text-muted)
     }.Else{
-        SetVar(isStarted,-1)
+        SetVar(isStarted,-1).(startedClass,text-bold)
     }
     If(#ended_id#>0){
-        SetVar(isEnded,1)
+        SetVar(isEnded,1).(endedClass,text-muted)
     }.Else{
-        SetVar(isEnded,-1)
+        SetVar(isEnded,-1).(endedClass,text-bold)
     }
 }.Custom(_name){
     LinkPage(Page: voting_view, PageParams: "vID=#id#"){
-        Span(Class: h5 text-bold, Body: #voting.name#)
+        Span(Class: h5 text-bold m0, Body: #voting.name#)
     }
 }.Custom(_subject){
-    If(Or(#isStarted#<0,#voting.type#==2)){
-        Span(Class: h6, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
-    }.Else{
-        If(#voting.type_decision# == 1){
-            LinkPage(Page: voting_decision_candidates, PageParams: "vID=#id#"){
-                Span(Class: h6 text-bold, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
+    SetVar(decision, AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
+    Div(h6 m0){
+        If(Or(#isStarted#>0,#voting.type#==2)){
+            #decision#
+        }.Else{
+            If(#voting.type_decision# == 1){
+                SetVar(Page,voting_decision_candidates)
+            }.ElseIf(#voting.type_decision# == 2){
+                SetVar(Page,voting_decision_election)
+            }.ElseIf(#voting.type_decision# == 3){
+                SetVar(Page,voting_decision_document)
+            }.ElseIf(#voting.type_decision# == 4){
+                SetVar(Page,voting_decision_formal)
+            }.ElseIf(#voting.type_decision# == 5){
+                SetVar(Page,voting_decision_contract)
             }
-        }.ElseIf(#voting.type_decision# == 2){
-            LinkPage(Page: voting_decision_election, PageParams: "vID=#id#"){
-                Span(Class: h6 text-bold, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
-            }
-        }.ElseIf(#voting.type_decision# == 3){
-            LinkPage(Page: voting_decision_document, PageParams: "vID=#id#"){
-                Span(Class: h6 text-bold, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
-            }
-        }.ElseIf(#voting.type_decision# == 4){
-            LinkPage(Page: voting_decision_formal, PageParams: "vID=#id#"){
-                Span(Class: h6 text-bold, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
-            }
-        }.ElseIf(#voting.type_decision# == 5){
-            LinkPage(Page: voting_decision_contract, PageParams: "vID=#id#"){
-                Span(Class: h6 text-bold, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
-            }
+            LinkPage(Page: #Page#, PageParams: "vID=#id#", Class:text-bold, Body: #decision#)
         }
     }
 }.Custom(_participants){
-    If(Or(#isStarted#<0,#voting.type#==2)){
-        Span(Class: h6, Body: AppParam(App:#application_id#, Name: type_voting_participants, Index: #voting.type_participants#))
-    }.Else{
-        LinkPage(Page: voting_invite, PageParams: "vID=#id#"){
-            Span(Class: h6 text-bold, Body: AppParam(App:#application_id#, Name: type_voting_participants, Index: #voting.type_participants#))
+    SetVar(participants, AppParam(App:#application_id#, Name: type_voting_participants, Index: #voting.type_participants#))
+    Div(h6 m0){
+        If(Or(#isStarted#>0,#voting.type#==2)){
+            #participants#
+        }.Else{
+            LinkPage(Page: voting_invite, PageParams: "vID=#id#", Class:text-bold, Body: #participants#)
         }
     }
 }.Custom(_creator){
-    LinkPage(Class: text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#creator.member_id#"){
-        Span(Body: #creator.member_name#)
-    }
+    LinkPage(Class: text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#creator.member_id#", Body: #creator.member_name#)
 }.Custom(_date){
-    If(#isStarted#>0){
-        Div(Class: text-muted, Body: DateTime(DateTime: #date_started#, Format: "DD.MM.YYYY HH:MI"))
-    }.Else{
-        Div(Class: text-bold, Body: DateTime(DateTime: #date_started#, Format: "DD.MM.YYYY HH:MI"))
-    }
-    If(#isEnded#>0){
-        Div(Class: text-muted, Body: DateTime(DateTime: #date_ended#, Format: "DD.MM.YYYY HH:MI"))
-    }.Else{
-        Div(Class: text-bold, Body: DateTime(DateTime: #date_ended#, Format: "DD.MM.YYYY HH:MI"))
-    }
+    Div(Class: #startedClass#, Body: DateTime(DateTime: #date_started#, Format: "DD.MM.YYYY HH:MI"))
+    Div(Class: #endedClass#, Body: DateTime(DateTime: #date_ended#, Format: "DD.MM.YYYY HH:MI"))
 }.Custom(_type){
-    Span(Class: h6, Body: AppParam(App:#application_id#, Name: type_voting, Index: #voting.type#))
+    Span(Class: h6 m0, Body: AppParam(App:#application_id#, Name: type_voting, Index: #voting.type#))
 }.Custom(_progress){
     Div(Class: text-center h5 text-bold, Body: #progress.percent_success# %)
 }.Custom(_decision){
-    If(#flags.decision# == 0){
-        If(And(#isEnded#>0,#creator.member_id#==#key_id#)){
-            Div(Class: text-center, Body: Button(Body: LangRes(decision), Class: btn btn-primary, Contract: voting_CheckDecision, Params: "votingID=#id#", Page: voting_list))
-        }.Else{
-            Div(Class: text-muted text-center, Body: LangRes(no))
+    Div(text-center){
+        If(#flags.decision# == 0){
+            If(And(#isEnded#>0,#creator.member_id#==#key_id#)){
+                Button(Body: LangRes(decision), Class: btn btn-primary, Contract: voting_CheckDecision, Params: "votingID=#id#", Page: voting_list)
+            }.Else{
+                Div(text-muted){LangRes(no)}
+            }
+        }.ElseIf(#flags.decision# == -2){
+            Div(text-muted){LangRes(not_enough_votes)}
+        }.ElseIf(#flags.decision# == 1){
+            Div(text-success){LangRes(accepted)}
+        }.ElseIf(#flags.decision# == -1){
+            Div(text-danger){LangRes(rejected)}
         }
-    }.ElseIf(#flags.decision# == -2){
-        Div(Class: text-muted text-center, Body: LangRes(not_enough_votes))
-    }.ElseIf(#flags.decision# == 1){
-        Div(Class: text-success text-center, Body: LangRes(accepted))
-    }.ElseIf(#flags.decision# == -1){
-        Div(Class: text-danger text-center, Body: LangRes(rejected))
     }
 }.Custom(_status){
     Div(text-center){
@@ -102,22 +89,18 @@ DBFind(votings,src_voting).Custom(_id){
         }.ElseIf(#isEnded#>0){
             Span(Class: text-muted, Body: LangRes(finished))
         }.ElseIf(#isStarted#>0){
-            Button(Class: btn btn-link, Page: voting_view, PageParams: "vID=#id#"){
-                Span(Class: h4, Body: Em(Class: fa icon-eye))
-            }
+            Button(Class: btn btn-link icon-eye, Page: voting_view, PageParams: "vID=#id#")
         }.Else{
             Span(Class: text-warning, Body: LangRes(waiting))
         }
     }
 }.Custom(_actions){
     Div(text-right){
-        If(And(#isStarted#<0,#creator.member_id#==#key_id#)){
+        If(And(#creator.member_id#==#key_id#,Or(#flags.full_data#==0,#progress.number_participants#==0,#isStarted#<0))){
             Button(Class: fa fa-trash btn btn-default, Contract: voting_Delete, Params: "votingID=#id#", Page: voting_list).Alert(Text: $want_delete_voting$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
-        }.ElseIf(And(#isStarted#>0,#creator.member_id#==#key_id#,#progress.number_participants#==0)){
-            Button(Class: fa fa-trash btn btn-default, Contract: voting_Delete, Params: "votingID=#id#", Page: voting_list)
         }
     }
-}.Where(#v_Where#).Order(id desc).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->success,flags->decision,progress->percent_success,progress->number_participants,creator->member_id,creator->member_name,date_started,date_ended,deleted")
+}.Where(#Where#).Order(id desc).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->success,flags->decision,flags->full_data,progress->percent_success,progress->number_participants,creator->member_id,creator->member_name,date_started,date_ended,deleted")
 
 AddToolButton(Title: $create$, Page: voting_create, Icon: icon-plus)
 Div(content-wrapper){
