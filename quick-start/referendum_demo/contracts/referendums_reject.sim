@@ -5,12 +5,12 @@ contract referendums_reject {
 
     conditions {
         $referendums_map = DBFind("referendums").Where("id=$", $referendum_id).Row()
-        if ($referendums_map["id"] == nil) {
+        if !$referendums_map {
             warning "Referendum not found"
         }
 
 		$participant_id = DBFind("referendums_participants").Where("referendum_id=$ and member_id=$", $referendum_id, $key_id).One("id")
-        if ($participant_id != nil){
+        if $participant_id {
 			warning "You already voted"
 		}
 
@@ -31,11 +31,9 @@ contract referendums_reject {
         DBUpdate("referendums", $referendum_id, "votes_total,votes_accept,votes_reject,percent_accept,percent_reject", $votes_total, $votes_accept, $votes_reject, $percent_accept, $percent_reject)
         DBInsert("referendums_participants", "referendum_id,member_id,decision", $referendum_id, $key_id, -1)
 
-        var params string
-        params = "referendum_id=" + Str($referendum_id)
-        $notific_id = DBFind("notifications").Where("page_name=$ and page_params=$ and recipient_id=$ and closed=$", "referendums_view", params, $key_id, 0).One("id")
+        $notific_id = DBFind("notifications").Where("page_name=$ and page_params->referendum_id=$ and recipient->member_id=$ and closed=$", "referendums_view", $referendum_id, $key_id, 0).One("id")
         if ($notific_id != nil){
-            Notifications_Single_Close("notific_id", Int($notific_id))
+            notifications_Close("notific_id", Int($notific_id))
 		}
     }
 }
