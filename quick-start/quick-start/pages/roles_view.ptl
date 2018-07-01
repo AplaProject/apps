@@ -1,0 +1,80 @@
+Div(content-wrapper){
+    
+    If(#v_role_id# > 0){
+        DBFind(Name: roles, Source: src_roles).Columns("role_name,role_type,deleted").Where("id=#v_role_id#").Vars(prefix)
+        
+        SetTitle($role$: #prefix_role_name#)
+        Div(breadcrumb){
+            LinkPage($roles$, roles_list)
+            Span(/).Style(margin-right: 10px; margin-left: 10px;)
+            Span(Class: text-muted, Body: #prefix_role_name#)
+        }
+        
+        DBFind(Name: roles_participants, Source: src_participants).Columns("id,member->member_id,member->member_name,member->image_id,appointed->member_id,appointed->member_name,appointed->voting_id,appointed->voting_name,date_created,date_deleted,deleted").Custom(custom_id){
+            If(#deleted# == 0){
+                SetVar(Name: style_text, Value: "text-normal")
+                SetVar(Name: style_link, Value: "text-primary")
+            }.Else{
+                SetVar(Name: style_text, Value: "text-muted")
+                SetVar(Name: style_link, Value: "text-muted")
+            }
+            Span(Class: #style_text#, Body: #id#)
+        }.Custom(custom_appointed){
+            If(Or(#appointed.member_id#>0,#appointed.member_id#<0)){
+                LinkPage(Class: #style_link# h5 text-bold, Page: profile_view, PageParams: "v_member_id=#appointed.member_id#"){
+                    Span(Body: #appointed.member_name#)
+                }
+            }
+            If(#appointed.voting_id#>0){
+                LinkPage(Page: voting_view, PageParams: "vID=#appointed.voting_id#"){
+                    Span(Class: h5 text-bold, Body: #appointed.voting_name#)
+                }
+            }
+        }.Custom(custom_member){
+            LinkPage(Class: #style_link# h5 text-bold, Page: profile_view, PageParams: "v_member_id=#member.member_id#"){
+                If(#member.image_id#>0){
+                    Image(Src: Binary().ById(#member.image_id#), Class: img-circle).Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
+                    Span(#member.member_name#)
+                }.Else{
+                    Div(){
+                        Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                        Span(#member.member_name#)
+                    }.Style(display:flex; align-items:center;)
+                }
+            }
+        }.Custom(custom_address){
+            Span(Class: #style_text#, Body: Address(#member.member_id#))
+        }.Custom(custom_date){
+            Div(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI"))
+            Div(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI"))
+        }.Custom(custom_status){
+            If(#deleted# == 0){
+                Span(Class: #style_text#, Body: LangRes(active))
+            }.Else{
+                Span(Class: #style_text#, Body: LangRes(deleted))
+            }
+        }.Custom(actions){
+            Div(pull-right){
+                If(And(#deleted#==0,#prefix_role_type#!=3)){
+                    Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, Contract: Roles_Unassign, Params: "row_id=#id#", Page: roles_view, PageParams: "v_role_id=#v_role_id#").Alert(Text: $sure_want_delete$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                }
+            }
+        }.Where("role->id='#v_role_id#'").Order("deleted ASC, id ASC")
+        
+        Form(panel panel-primary){
+            Div(panel-body){
+                Table(Source: src_participants, Columns: "$id$=custom_id,$member$=custom_member,$address$=custom_address,$appointed$=custom_appointed,$appointed$ / $deleted$=custom_date,$status$=custom_status,=actions")
+            }
+            Div(panel-footer text-right){
+                Button(Body: LangRes(back), Class: btn btn-default, Page: roles_list)
+                If(#prefix_deleted#==0){
+                    Button(Body: LangRes(assign), Class: btn btn-primary, Page: roles_assign, PageParams: "v_role_id=#v_role_id#")
+                }
+            }
+        }
+    }.Else{
+        Div(md-12 alert alert-danger text-center){
+            Span(Body: LangRes(attention))
+        }
+    }
+}
