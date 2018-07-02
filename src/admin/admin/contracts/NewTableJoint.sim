@@ -10,13 +10,6 @@ contract NewTableJoint {
     }
 
     conditions {
-        if Len($ColumnsArr) == 1 && Contains($ColumnsArr[0], ","){
-            $ColumnsArr = Split($ColumnsArr[0], ",")
-        }
-        if Len($TypesArr) == 1 && Contains($TypesArr[0], ","){
-            $TypesArr = Split($TypesArr[0], ",")
-        }
-
         var i int
         while i < Len($ColumnsArr) {
             if Size($ColumnsArr[i]) == 0 {
@@ -30,24 +23,27 @@ contract NewTableJoint {
     }
 
     action {
-        var i int cols array perms params map
+        var i int
+        var col_arr array
         while i < Len($ColumnsArr) {
-            var col map
-            col["name"] = $ColumnsArr[i]
-            col["type"] = $TypesArr[i]
-            col["conditions"] = "true"
-            cols[i] = JSONEncode(col)
+            var col_map map
+            col_map["name"] = $ColumnsArr[i]
+            col_map["type"] = $TypesArr[i]
+            col_map["conditions"] = "true"
+            col_arr[i] = JSONEncode(col_map)
             i = i + 1
         }
 
-        perms["insert"] = $InsertPerm
-        perms["update"] = $UpdatePerm
-        perms["new_column"] = $NewColumnPerm
+        var Permissions map
+        Permissions["insert"] = $InsertPerm 
+        Permissions["update"] = $UpdatePerm
+        Permissions["new_column"] = $NewColumnPerm
 
-        params["ApplicationId"] = $ApplicationId
+        var params map
+        params["ApplicationId"] = $ApplicationId 
         params["Name"] = $Name
-        params["Columns"] = JSONEncode(cols)
-        params["Permissions"] = JSONEncode(perms)
+        params["Columns"] = JSONEncode(col_arr)
+        params["Permissions"] = JSONEncode(Permissions)
         CallContract("NewTable", params)
     }
 }
