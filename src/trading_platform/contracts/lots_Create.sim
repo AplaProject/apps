@@ -1,0 +1,39 @@
+contract lots_Create {
+    data {
+        name string
+        description string
+        photo bytes "file"
+        lot_contract bytes "file"
+        date_start string "date"
+        date_end string "date"
+        amount_starting money
+        amount_final money
+        order_min money
+        order_max money
+
+    }
+
+    conditions {
+        RoleConditions("role", "Seller")
+
+        if $order_min > $order_max {
+            warning "Minimum order bigger than maximum order"
+        }
+    }
+
+    action {
+
+        var app_id int
+        app_id = DBFind("applications").Where("name = $ AND deleted = 0", "Trading Platform").One("id")
+
+        var image_id int
+        image_id = @1UploadBinary("Name,Data,ApplicationId", "lot_photo", $photo, Int(app_id))
+
+        var contract_file_id int
+        contract_file_id = @1UploadBinary("Name,Data,ApplicationId", "lot_contract", $lot_contract, Int(app_id), "application/pdf")
+
+
+        DBInsert("lots", "name,description,photo,timestamp date_creation,date_start,date_end,amount_starting,amount_final,seller,order_min,order_max,contract_id", $name, $description, image_id, $block_time, $date_start, $date_end, $amount_starting, $amount_final, $key_id, $order_min, $order_max, contract_file_id)
+
+    }
+}
