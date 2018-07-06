@@ -1,189 +1,198 @@
+DBFind(applications).Columns("id").Where("name='Trading Platform' AND deleted=0").Vars(application)
 Div(content-wrapper){
-    
-    DBFind(lots, src_lot).Where("id = #id#").Vars("lot")
-    DBFind(roles, src_roles).Columns("role_name").Where("id = #role_id#").Vars("r")
+    Div(breadcrumb){
+        LinkPage($lots_list$, lots_list)
+        Span(/,mh)
+        Span(Class: text-muted, Body: $lots_view$)
+    }
 
-    Div(row){
-        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
-            Form(panel panel-default){
-                Div(panel-heading text-center){
-                    If(#lot_deleted# == 1){
-                        Div(Class: h2 text-danger, Body: LangRes(lot_deleted))
+    If(GetVar(Id)){
+        DBFind(lots).Where("id=#Id#").Vars(lot)
+        DBFind(roles).Columns("role_name").Where("id=#role_id#").Vars(r)
+
+        Div(row){
+            Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
+                Form(panel panel-default){
+                    Div(panel-heading text-center){
+                        If(#lot_deleted#==1){
+                            Div(Class: h2 text-danger, Body: LangRes(lot_deleted))
+                        }
+                        Div(Class: h3, Body: #lot_name#)
                     }
-                    Div(Class: h3, Body: #lot_name#)
-                    Image(Src: Binary().ById(#lot_photo#)).Style(height: 300px; width: 300px; margin-bottom: 15px;)
-                    SetVar(status_index, Calculate(Exp: #lot_status# + 1, Type: int))
-
-                    Div(list-group-item text-center){
-                    
-                        If(#status_index# == 4){
-                            Div(Class: text-success, Body: AppParam(App: #app_id#, Name: "lots_status", Index: #status_index#))
-                            Div(col-md-6 text-right){
-                                LangRes(buyer)
-                            }
-                            Div(col-md-6 text-left){
-                                DBFind(Name: members, Source: src_member).Columns("id,member_name,image_id").Where("id = #lot_buyer#").Vars("m")
-                                LinkPage(Class: text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#lot_buyer#"){
-                                    If(#m_image_id#>0){
-                                        Image(Src: Binary().ById(#m_image_id#), Class: img-circle).Style(height: 30px;width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
-                                        Span(#m_member_name#)
+                    Div(panel-body){
+                        Div(text-center){
+                            Image(Src: Binary().ById(#lot_photo#), Class:big_photo mb-lg)
+                        }
+                        Div(list-group-item text-center){
+                            SetVar(status_index, Calculate(#lot_status# + 1))
+                            If(#status_index# == 4){
+                                Div(Class: text-success, Body: AppParam(App: #application_id#, Name: lots_status, Index: #status_index#))
+                                Div(col-md-6 mt-sm text-right){
+                                    LangRes(buyer)
+                                }
+                                Div(col-md-6 text-left){
+                                    DBFind(members).Columns("id,member_name,image_id").Where("id=#lot_buyer#").Vars(buyer)
+                                    If(Or(#buyer_id#>0,#buyer_id#<0)){
                                     }.Else{
-                                        Div(){
-                                            Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
-                                            Span(#m_member_name#)
-                                        }.Style(display:flex; align-items:center;)
+                                        SetVar(buyer_member_name,Address(#lot_buyer#))
+                                    }
+                                    LinkPage(Class: center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
+                                        If(#buyer_image_id#>0){
+                                            Image(Src: Binary().ById(#buyer_image_id#), Class: img-circle mr)
+                                        }.Else{
+                                            Span(Class: fa icon-user fa-2x mr)
+                                        }
+                                        Span(#buyer_member_name#)
                                     }
                                 }
-                            }
 
-                        }.Else{
-                            Div(Class: text-warning, Body: AppParam(App: #app_id#, Name: "lots_status", Index: #status_index#))
+                            }.Else{
+                                Div(Class: text-warning, Body: AppParam(App: #application_id#, Name: lots_status, Index: #status_index#))
+                            }
                         }
-                    }
-                }
-                Div(panel-body){
-                    Div(form-group){
-                        Div(list-group-item text-center){
-                            Div(row mt-sm t4){
-                                Div(col-md-6 text-right){
-                                    ID
+                        Div(form-group){
+                            Div(list-group-item text-center){
+                                Div(row mt-sm t4){
+                                    Div(col-md-6 text-right){
+                                        ID
+                                    }
+                                    Div(col-md-6 text-left){
+                                        #lot_id#
+                                    }
                                 }
-                                Div(col-md-6 text-left){
-                                    #lot_id#
-                                }
-                            }
 
-                            Div(row mt-sm t4){
-                                Div(col-md-6 text-right){
-                                    LangRes(lots_description)
+                                Div(row mt-sm t4){
+                                    Div(col-md-6 text-right){
+                                        LangRes(lots_description)
+                                    }
+                                    Div(col-md-6 text-left){
+                                        #lot_description#
+                                    }
                                 }
-                                Div(col-md-6 text-left){
-                                    #lot_description#
-                                }
-                            }
 
-                            Div(row mt-sm t4){
-                                Div(col-md-6 text-right){
-                                    LangRes(seller)
-                                }
-                                Div(col-md-6 text-left){
-                                    DBFind(Name: members, Source: src_member).Columns("id,member_name,image_id").Where("id = #lot_seller#").Vars("m")
-                                    LinkPage(Class: text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#lot_seller#"){
-                                        If(#m_image_id#>0){
-                                            Image(Src: Binary().ById(#m_image_id#), Class: img-circle).Style(height: 30px;width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
-                                            Span(#m_member_name#)
+                                Div(row mt-sm t4){
+                                    Div(col-md-6 mt-sm text-right){
+                                        LangRes(seller)
+                                    }
+                                    Div(col-md-6 text-left){
+                                        DBFind(members).Columns("id,member_name,image_id").Where("id=#lot_seller#").Vars(seller)
+                                        If(Or(#seller_id#>0,#seller_id#<0)){
                                         }.Else{
-                                            Div(){
-                                                Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
-                                                Span(#m_member_name#)
-                                            }.Style(display:flex; align-items:center;)
+                                            SetVar(seller_member_name,Address(#lot_seller#))
+                                        }
+                                        LinkPage(Class: center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#lot_seller#"){
+                                            If(#seller_image_id#>0){
+                                                Image(Src: Binary().ById(#seller_image_id#), Class: img-circle)
+                                            }.Else{
+                                                Span(Class: fa icon-user fa-2x mr)
+                                            }
+                                            Span(#seller_member_name#)
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        Div(list-group-item text-center){
-                            Div(row mt-sm t4){
-                                Div(col-md-6 text-right){
-                                    LangRes(date_creation)
+                            Div(list-group-item text-center){
+                                Div(row mt-sm t4){
+                                    Div(col-md-6 text-right){
+                                        LangRes(date_creation)
+                                    }
+                                    Div(col-md-6 text-left){
+                                        DateTime(#lot_date_creation#, DD.MM.YYYY)
+                                    }
                                 }
-                                Div(col-md-6 text-left){
-                                    DateTime(#lot_date_creation#, DD.MM.YYYY)
+                                Div(row mt-sm t4){
+                                    Div(col-md-6 text-right){
+                                        LangRes(lots_date_start)
+                                    }
+                                    Div(col-md-6 text-left){
+                                        DateTime(#lot_date_start#, DD.MM.YYYY)
+                                    }
                                 }
-                            }
-                            Div(row mt-sm t4){
-                                Div(col-md-6 text-right){
-                                    LangRes(lots_date_start)
-                                }
-                                Div(col-md-6 text-left){
-                                    DateTime(#lot_date_start#, DD.MM.YYYY)
-                                }
-                            }
-                            Div(row mt-sm t4){
-                                Div(col-md-6 text-right){
-                                    LangRes(lots_date_end)
-                                }
-                                Div(col-md-6 text-left){
-                                    DateTime(#lot_date_end#, DD.MM.YYYY)
-                                }
-                            }
-                        }
-
-                        Div(list-group-item text-center){
-                            Div(row mt-sm t4){
-                                Div(col-md-6 text-right){
-                                    LangRes(amount_starting)
-                                }
-                                Div(col-md-6 text-left){
-                                    Money(#lot_amount_starting#)
+                                Div(row mt-sm t4){
+                                    Div(col-md-6 text-right){
+                                        LangRes(lots_date_end)
+                                    }
+                                    Div(col-md-6 text-left){
+                                        DateTime(#lot_date_end#, DD.MM.YYYY)
+                                    }
                                 }
                             }
 
-                            Div(row mt-sm t4){
-                                Div(col-md-6 text-right){
-                                    LangRes(amount_final)
+                            Div(list-group-item text-center){
+                                Div(row mt-sm t4){
+                                    Div(col-md-6 text-right){
+                                        LangRes(amount_starting)
+                                    }
+                                    Div(col-md-6 text-left){
+                                        Money(#lot_amount_starting#)
+                                    }
                                 }
-                                Div(col-md-6 text-left){
-                                    Money(#lot_amount_final#)
+
+                                Div(row mt-sm t4){
+                                    Div(col-md-6 text-right){
+                                        LangRes(amount_final)
+                                    }
+                                    Div(col-md-6 text-left){
+                                        Money(#lot_amount_final#)
+                                    }
+                                }
+
+                                Div(row mt-sm t4){
+                                    Div(col-md-6 text-right){
+                                        LangRes(order_min)
+                                    }
+                                    Div(col-md-6 text-left){
+                                        Money(#lot_order_min#)
+                                    }
+                                }
+
+                                Div(row mt-sm t4){
+                                    Div(col-md-6 text-right){
+                                        LangRes(order_max)
+                                    }
+                                    Div(col-md-6 text-left){
+                                        Money(#lot_order_max#)
+                                    }
+                                }
+
+                                Div(row mt-sm t4){
+                                    Div(col-md-6 text-right){
+                                        LangRes(lots_amount_max)
+                                    }
+                                    Div(col-md-6 text-left){
+                                        Money(#lot_amount_max#)
+                                    }
                                 }
                             }
 
-                            Div(row mt-sm t4){
-                                Div(col-md-6 text-right){
-                                    LangRes(order_min)
-                                }
-                                Div(col-md-6 text-left){
-                                    Money(#lot_order_min#)
-                                }
-                            }
-
-                            Div(row mt-sm t4){
-                                Div(col-md-6 text-right){
-                                    LangRes(order_max)
-                                }
-                                Div(col-md-6 text-left){
-                                    Money(#lot_order_max#)
+                            Div(list-group-item text-center){
+                                Div(row mt-sm t4){
+                                    Div(col-md-12){
+                                        DBFind(binaries, src_binaries).Where("id=#lot_contract_id#")
+                                        Table(Source: src_binaries, "$lots_contract$=data")
+                                    }
                                 }
                             }
-
-                            Div(row mt-sm t4){
-                                Div(col-md-6 text-right){
-                                    LangRes(lots_amount_max)
+                            If(#lot_deleted#==0) {
+                                If(#r_role_name#=="Buyer"){
+                                    Div(list-group-item text-center){
+                                        If(#lot_status#==0){
+                                            Button(Class: btn btn-primary btn-block, Body: $lots_subscribe$, Page: lots_list)
+                                        }.Else{
+                                            Button(Class: btn btn-primary btn-block, Body: $lots_bid$, Page: lots_list)
+                                        }
+                                    }
+                                }.ElseIf(#r_role_name#=="Seller"){
+                                    If(And(#lot_seller#==#key_id#,#lot_status#==0)){
+                                        Div(list-group-item text-center){
+                                            Button(Class: btn btn-default btn-block, Body: LangRes(lot_edit), Page: lots_edit, PageParams: "Id=#Id#")
+                                        }
+                                        Div(list-group-item text-center){
+                                            Button(Class: btn btn-danger btn-block, Body: LangRes(lots_delete), Page: lots_list, Contract: lots_Delete, Params: "LotId=#Id#").Alert($lots_delete_auction$, $lots_yes$, $lots_no$)
+                                        }
+                                    }
                                 }
-                                Div(col-md-6 text-left){
-                                    Money(#lot_amount_max#)
-                                }
-                            }
-                        }
-
-                        Div(list-group-item text-center){
-                            Div(row mt-sm t4){
-                                Div(text-center){
-                                    LangRes(lots_contract)
-                                }
-                                DBFind(binaries, src_binaries).Where("id = #lot_contract_id#")
-                                Table(Source: src_binaries, "=data")
-                            }
-                        }
-                        If(#lot_deleted# == 0) {
-                            If(And(#lot_status# == 0, #r_role_name# == Buyer)){
-                                Div(list-group-item text-center){
-                                    Button(Class: btn btn-primary btn-block, Body: $lots_subscribe$, Page: lots_list)
-                                }
-                            }
-                            If(And(#lot_status# > 0, #r_role_name# == Buyer)){
-                                Div(list-group-item text-center){
-                                    Button(Class: btn btn-primary btn-block, Body: $lots_bid$, Page: lots_list)
-                                }
-                            }
-                            If(And(And(#lot_seller# == #key_id#, #r_role_name# == Seller), #lot_status# == 0)){
-                                Div(list-group-item text-center){
-                                    Button(Class: btn btn-default btn-block, Body: LangRes(lot_edit), Page: lots_edit, PageParams: "id=#id#").Style(margin-right:15px;)
-                                }
-                                Div(list-group-item text-center){
-                                    Button(Class: btn btn-danger btn-block, Body: LangRes(lots_delete), Page: lots_list, Contract: lots_Delete, Params: "lot_id=#id#").Alert($lots_delete_auction$, $lots_yes$, $lots_no$)
-                                }                        
                             }
                         }
                     }
@@ -191,4 +200,10 @@ Div(content-wrapper){
             }
         }
     }
-}
+}.Style(
+    th,td {text-align:center;}
+    .t4 {font-size:18px;}
+    .img-circle {height: 30px;width: 30px; border: 1px solid #5A5D63;}
+    .center {display:flex; align-items:center;}
+    .big_photo {height: 300px; width: 300px;}
+)
