@@ -15,15 +15,15 @@ contract notifications_Send {
         var res member map
         member = DBFind("members").Where("id=?", kid).Row()
         if member {
-            res["member_id"] = member["id"]
+            res["member_id"] = Str(member["id"])
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         }else{
-            member = DBFind("keys").Where("id=?", kid).Row()
+            member = DBFind("keys").Columns("id").Where("id=?", kid).Row()
             if member {
-                res["member_id"] = member["id"]
-                res["member_name"] = IdToAddress(Int(member["id"]))
-                res["image_id"] = 0
+                res["member_id"] = Str(kid)
+                res["member_name"] = Str(IdToAddress(kid))
+                res["image_id"] = "0"
             }
         }
         return res
@@ -37,10 +37,8 @@ contract notifications_Send {
         var sender map
         if $sender == 1 && $senderMember {
             // send from member
-            sender["type"] = $sender
-            sender["member_id"] = $senderMember["id"]
-            sender["member_name"] = $senderMember["member_name"]
-            sender["image_id"] = $senderMember["image_id"]
+            $senderMember["type"] = $sender
+            sender = $senderMember
         }else{
             if $sender == 2 && $senderRole{
                 // send from role
