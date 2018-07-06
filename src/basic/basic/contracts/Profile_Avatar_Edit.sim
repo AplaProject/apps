@@ -1,0 +1,31 @@
+contract Profile_Avatar_Edit {
+    data {
+        member_image bytes "file"
+    }
+
+    conditions {
+        var app_name string
+        app_name = "Basic application" 
+
+        $member_map = DBFind("members").Where("id = $", $key_id).Row()
+        $app_id = DBFind("applications").Where("name = $ AND deleted = 0", app_name).One("id")
+
+    }
+
+    action {
+        var memberInfo map
+        var image_id int
+        var image_name string
+        image_name = "avatar" 
+
+        if $member_map {
+            image_id = Int($member_map["image_id"]) 
+            image_id = @1UploadBinary("Name,Data,ApplicationId", image_name, $member_image, Int($app_id))
+            DBUpdate("members", Int($member_map["id"]), "image_id", image_id)
+        } else {
+            memberInfo["information"] = $information
+            image_id = @1UploadBinary("Name,Data,ApplicationId", image_name, $member_image, Int($app_id))
+            DBInsert("members", "id,image_id", $key_id, image_id)
+        }
+    }
+}
