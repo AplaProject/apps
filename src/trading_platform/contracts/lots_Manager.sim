@@ -1,0 +1,106 @@
+contract lots_Manager {
+    data {
+        Action string
+        Id string "optional"
+        TypeId int
+        Name string 
+        Description string
+        Photo bytes "file"
+        DateStart string "date"
+        TimeStart string "date"
+        DateEnd string "date"
+        TimeEnd string "date"
+        AmountStarting money
+        OrderMin money
+        OrderMax money
+        Count int
+        Weight string "optional"
+        WeightType string "optional"
+        Length string "optional"
+        Width string "optional"
+        Height string "optional"
+    }
+    func trimZeroTime(s string) string{
+        if Contains(s, "T00:00:00Z"){
+            s = s Replace(s, "T00:00:00Z", "")
+        }
+        return s
+    }
+    func checkZero(s string) string{
+        if Contains(s, "T00:00:00Z"){
+            s = s Replace(s, "T00:00:00Z", "")
+        }
+        return s
+    }
+    conditions {
+        $Id = Int($Id)
+        if !($Action == "create" || $Action == "edit") {
+            warning "Lot: unknown action"
+        }
+        if $Action == "create" {
+            RoleConditions("role", "Seller")
+        }else{
+            var lot map
+            lot = DBFind("lots").Where("id=? and deleted=0", $Id).Row()
+
+            if !lot {
+                warning "Lot not found"
+            }
+            if lot["status"] > 0 {
+                warning "Bidding has already begun"
+            }
+            if lot["seller"] != $key_id {
+                warning "You are not owner of the lot"
+            }
+
+        }
+        $Weight = Int($Weight)
+        $WeightType = Int($WeightType)
+        $Length = Int($Length)
+        $Width = Int($Width)
+        $Height = Int($Height)
+
+        if $OrderMin > $OrderMax {
+            warning "Minimum order bigger than maximum order"
+        }
+        $dateStart = Sprintf("%v %v", trimZeroTime($DateStart), $TimeStart)
+        $dateEnd = Sprintf("%v %v", trimZeroTime($DateEnd), $TimeEnd)
+        $catId = Int(DBFind("lots_types").Where("id=?", $TypeId).One("id"))
+    }
+
+    action {
+        var appId imageId contractFileId int
+        appId = Int(DBFind("applications").Where("name = $ AND deleted = 0", "Trading Platform").One("id"))
+        imageId = @1UploadBinary("ApplicationId,Name,Data", appId, "lot_photo", $Photo)
+        // TODO: contractFileId генерировать внутри
+        // contractFileId = @1UploadBinary("ApplicationId,Name,Data,DataMimeType", appId, "lot_contract", "application/pdf")
+
+        var fields string args array
+        args = Append(args,$Name)
+        args = Append(args,$Description)
+        args = Append(args,imageId)
+        args = Append(args,$dateStart)
+        args = Append(args,$dateEnd)
+        args = Append(args,$AmountStarting)
+        args = Append(args,$OrderMin)
+        args = Append(args,$OrderMax)
+        args = Append(args,contractFileId)
+        args = Append(args,$Count)
+        args = Append(args,$Weight)
+        args = Append(args,$WeightType)
+        args = Append(args,$Length)
+        args = Append(args,$Width)
+        args = Append(args,$Height)
+        args = Append(args,$TypeId)
+        args = Append(args,$catId)
+        fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight,weight_type,length,width,height,lots_type_id,category"
+        if $Action == "create"{
+            DBInsert("lots", "timestamp date_creation,seller,"+fields, $block_time, $key_id, ...args)
+            return
+        }
+        if $Action == "edit"{
+            DBUpdate("lots", $Id, fields, ...args)
+            return
+        }
+    }
+}

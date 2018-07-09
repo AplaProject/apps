@@ -1,21 +1,22 @@
 contract lots_Delete {
     data {
-        LotId int
+        Id int
     }
-
     conditions {
         var lot map
-        lot = DBFind("lots").Where("id=?", $LotId).Row()
-
+        lot = DBFind("lots").Where("id=? and deleted=0", $Id).Row()
         if !lot {
             warning "Lot not found"
         }
         if lot["status"] > 0 {
             warning "Bidding has already begun"
         }
+        if lot["seller"] != $key_id {
+            warning "You are not owner of the lot"
+        }
     }
 
     action {
-        DBUpdate("lots", $LotId, "deleted", 1)
+        DBUpdate("lots", $Id, "deleted", 1)
     }
 }

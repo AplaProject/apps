@@ -1,12 +1,34 @@
+DBFind(applications).Columns("id").Where("name='Trading Platform' AND deleted=0").Vars(application)
+SetVar(title, $lots_create$).(name,).(description,).(amount_starting,).(order_min,).(order_max,).(date_start,).(date_end,).(time_start,).(time_end,).(contract_text,).(unit_count,).(weight,).(weight_type,).(length,).(width,).(height,)
+
+SetVar(Action,"create").(BtnBody,LangRes(create))
 If(GetVar(Id)){
+    SetVar(Action,"edit").(BtnBody,LangRes(save))
+
     DBFind(lots, src_lots).Where("id=#Id#").Vars(lot)
     SetVar(title, $lots_edit$)
-}.Else{
-    SetVar(title, $lots_create$)
+    SetVar(name, $lot_name$)
+    SetVar(description, $lot_description$)
+    SetVar(amount_starting, Money(#lot_amount_starting#))
+    SetVar(order_min, Money(#lot_order_min#))
+    SetVar(order_max, Money(#lot_order_max#))
+    SetVar(date_start, DateTime(#lot_date_start#, YYYY-MM-DD))
+    SetVar(date_end, DateTime(#lot_date_end#, YYYY-MM-DD))
+    SetVar(time_start, DateTime(#lot_date_start#, HH:mm))
+    SetVar(time_end, DateTime(#lot_date_end#, HH:mm))
+    SetVar(contract_text,Binary().ById(#lot_contract_id#))
+    SetVar(unit_count,#lot_unit_count#)
+    SetVar(weight,#lot_weight#)
+    SetVar(weight_type,#lot_weight_type#)
+    SetVar(length,#lot_length#)
+    SetVar(width,#lot_width#)
+    SetVar(height,#lot_height#)
+
+    SetVar(TypeId,#lot_type_id#)
+    SetVar(CatId,#lot_category#)
 }
 SetTitle(#title#)
 
-SetVar(amount_starting, Money(#lot_amount_starting#)).(amount_final, Money(#lot_amount_final#)).(order_min, Money(#lot_order_min#)).(order_max, Money(#lot_order_max#)).(date_start, DateTime(#lot_date_start#, YYYY-MM-DD)).(date_end, DateTime(#lot_date_end#, YYYY-MM-DD))
 
 Div(content-wrapper){
     Div(breadcrumb){
@@ -18,80 +40,115 @@ Div(content-wrapper){
     Div(row){
         Div(col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3){
             Form(panel panel-primary){
-                Div(panel-heading){#title#}
-                Div(panel-body){
-                    If(GetVar(Id)) {
-                        Input(Name: Id, Type: hidden, Value: #Id#)
+                If(GetVar(TypeId)){
+                    DBFind(lots_types,src_type).Where("deleted=0 and id=#TypeId#").Vars(type)
+
+                    Div(panel-heading){#title#}
+                    Div(panel-body){
+                        If(GetVar(Id)) {
+                            Input(Name: Id, Type: hidden, Value: #Id#)
+                        }
                         Div(list-group-item){
                             Div(row mt-sm){
                                 Div(col-md-3 mt-sm text-right){
-                                    Label(For: Name){
-                                        Span(Body: LangRes(lots_name))
-                                    }
+                                    Strong(LangRes(lots_cat))
                                 }
-                                Div(col-md-9 text-left){
-                                    Input(Name: Name, Value: #lot_name#)
+                                Div(col-md-9 text-left mt-sm){
+                                    AppParam(App: #application_id#, Name: lots_categories, Index: #CatId#)
                                 }
                             }
                             Div(row mt-sm){
                                 Div(col-md-3 mt-sm text-right){
-                                    Label(For: Description){
-                                        Span(Body: LangRes(lots_description))
+                                    Strong(LangRes(lots_type))
+                                }
+                                Div(col-md-9 text-left mt-sm){
+                                    ForList(src_type){
+                                        LangRes(#resource_name#)
                                     }
                                 }
+                            }
+                        }
+                        Div(list-group-item){
+                            Div(row mt-sm){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(For: Name){LangRes(lots_name)}
+                                }
                                 Div(col-md-9 text-left){
-                                    Input(Name: Description, Type: textarea, Value: #lot_description#)
+                                    Input(Name: Name, Value: #name#)
                                 }
                             }
                             Div(row mt-sm){
                                 Div(col-md-3 mt-sm text-right){
-                                    Label(For: Photo){
-                                        Span(Body: LangRes(Photo))
-                                    }
+                                    Label(For: Description){LangRes(lots_description)}
+                                }
+                                Div(col-md-9 text-left){
+                                    Input(Name: Description, Type: textarea, Value: #description#)
+                                }
+                            }
+                            Div(row mt-sm){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(For: Photo){LangRes(Photo)}
                                 }
                                 Div(col-md-9 text-left){
                                     Input(Name: Photo, Type: file)
                                 }
                             }
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: LotContract){
-                                        Span(Body: LangRes(lots_contract))
+                            If(#lot_contract_id#>0){
+                                Div(row mt-sm){
+                                    Div(col-md-3 mt-sm text-right){
+                                        Label(For: LotContract){LangRes(lots_contract)}
+                                    }
+                                    Div(col-md-9 mt-sm text-left){
+                                        #contract_text#
                                     }
                                 }
+                            }
+
+                            ArrayToSource(type_blocks, [#type_lots_params#])
+                            ForList(type_blocks){
+                                Div(row mt-sm){
+                                    SetVar(block,AppParam(App:#application_id#, Name:lots_params, Index:#value#))
+                                    Include(#block#)
+                                }
+                            }
+
+                        }
+                        Div(list-group-item){
+                            Div(row mt-sm){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(For: DateStart){LangRes(lots_date_start)}
+                                }
                                 Div(col-md-9 text-left){
-                                    Input(Name: LotContract, Type: file)
+                                    Div(row){
+                                        Div(col-md-6){
+                                            Input(Name: DateStart, Type: date, Value: #date_start#)
+                                        }
+                                        Div(col-md-6){
+                                            Input(Name: TimeStart, Type: time, Value: #time_start#)
+                                        }
+                                    }
+                                }
+                            }
+                            Div(row mt-sm){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(For: DateEnd){LangRes(lots_date_end)}
+                                }
+                                Div(col-md-9 text-left){
+                                    Div(row){
+                                        Div(col-md-6){
+                                            Input(Name: DateEnd, Type: date, Value: #date_end#)
+                                        }
+                                        Div(col-md-6){
+                                            Input(Name: TimeEnd, Type: time, Value: #time_end#)
+                                        }
+                                    }
                                 }
                             }
                         }
                         Div(list-group-item){
                             Div(row mt-sm){
                                 Div(col-md-3 mt-sm text-right){
-                                    Label(For: DateStart){
-                                        Span(Body: LangRes(lots_date_start))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: DateStart, Type: date, Value: #date_start#)
-                                }
-                            }
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: DateEnd){
-                                        Span(Body: LangRes(lots_date_end))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: DateEnd, Type: date, Value: #date_end#)
-                                }
-                            }
-                        }
-                        Div(list-group-item){
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: AmountStarting){
-                                        Span(Body: LangRes(amount_starting))
-                                    }
+                                    Label(For: AmountStarting){LangRes(amount_starting)}
                                 }
                                 Div(col-md-9 text-left){
                                     Input(Name: AmountStarting, Type: number, Value: #amount_starting#)
@@ -99,19 +156,7 @@ Div(content-wrapper){
                             }
                             Div(row mt-sm){
                                 Div(col-md-3 mt-sm text-right){
-                                    Label(For: AmountFinal){
-                                        Span(Body: LangRes(amount_final))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: AmountFinal, Type: number, Value: #amount_final#)
-                                }
-                            }
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: OrderMin){
-                                        Span(Body: LangRes(order_min))
-                                    }
+                                    Label(For: OrderMin){LangRes(order_min)}
                                 }
                                 Div(col-md-9 text-left){
                                     Input(Name: OrderMin, Type: number, Value: #order_min#)
@@ -119,9 +164,7 @@ Div(content-wrapper){
                             }
                             Div(row mt-sm){
                                 Div(col-md-3 mt-sm text-right){
-                                    Label(For: OrderMax){
-                                        Span(Body: LangRes(order_max))
-                                    }
+                                    Label(For: OrderMax){LangRes(order_max)}
                                 }
                                 Div(col-md-9 text-left){
                                     Input(Name: OrderMax, Type: number, Value: #order_max#)
@@ -129,121 +172,39 @@ Div(content-wrapper){
                             }
 
                         }
-                    }.Else{
-                        Div(list-group-item){
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: Name){
-                                        Span(Body: LangRes(lots_name))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: Name)
-                                }
-                            }
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: Description){
-                                        Span(Body: LangRes(lots_description))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: Description, Type: textarea)
-                                }
-                            }
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: Photo){
-                                        Span(Body: LangRes(Photo))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: Photo, Type: file)
-                                }
-                            }
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: LotContract){
-                                        Span(Body: LangRes(lots_contract))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: LotContract, Type: file)
-                                }
-                            }
-                        }
-                        Div(list-group-item){
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: DateStart){
-                                        Span(Body: LangRes(lots_date_start))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: DateStart, Type: date)
-                                }
-                            }
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: DateEnd){
-                                        Span(Body: LangRes(lots_date_end))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: DateEnd, Type: date)
-                                }
-                            }
-                        }
-                        Div(list-group-item){
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: AmountStarting){
-                                        Span(Body: LangRes(amount_starting))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: AmountStarting, Type: number)
-                                }
-                            }
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: AmountFinal){
-                                        Span(Body: LangRes(amount_final))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: AmountFinal, Type: number)
-                                }
-                            }
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: OrderMin){
-                                        Span(Body: LangRes(order_min))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: OrderMin, Type: number)
-                                }
-                            }
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: OrderMax){
-                                        Span(Body: LangRes(order_max))
-                                    }
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: OrderMax, Type: number)
-                                }
-                            }
-
-                        }
                     }
-                }
-                Div(panel-footer text-right){
-                    If(GetVar(Id)){
-                        Button(Body: LangRes(save), Class: btn btn-primary, Contract: lots_Edit, Page: lots_list)
+                    Div(panel-footer text-right){
+                        If(GetVar(Id)) {
+                            Button(Body: $lots_back$, Class: btn btn-default pull-left, Page: lots_list)
+                        }.Else{
+                            Button(Body: $lots_back$, Class: btn btn-default pull-left, Page: lots_edit, PageParams: "CatId=#CatId#")
+                        }
+                        Button(Body: #BtnBody#, Class: btn btn-primary, Contract: lots_Manager, Page: lots_list, Params: "Action=#Action#")
+                    }
+                }.Else{
+                    If(GetVar(CatId)){
+                        SetVar(Cat,AppParam(App: #application_id#, Name: lots_categories, Index: #CatId#))
+                        Div(panel-heading){$lots_cat$ LangRes(#Cat#): LangRes(lots_select_type)}
+                        Div(panel-body text-center){
+                            DBFind(lots_types,src_types).Where("deleted=0 and category=#CatId#")
+                            ForList(src_types){
+                                Button(Body: LangRes(#resource_name#), Class: btn btn-primary mr-sm mb-sm, Page: lots_edit, PageParams: "TypeId=#id#,CatId=#CatId#")
+                            }
+                        }
+                        Div(panel-footer text-left){
+                            Button(Body: $lots_back$, Class: btn btn-default, Page: lots_edit)
+                        }
                     }.Else{
-                        Button(Body: LangRes(create), Class: btn btn-primary, Contract: lots_Create, Page: lots_list)
+                        Div(panel-heading){LangRes(lots_select_cat)}
+                        Div(panel-body text-center){
+                            AppParam(App: #application_id#, Name: lots_categories, Source: src_cats)
+                            ForList(src_cats){
+                                Button(Body: #name#, Class: btn btn-primary mr-sm mb-sm, Page: lots_edit, PageParams: "CatId=#id#")
+                            }
+                        }
+                        Div(panel-footer text-left){
+                            Button(Body: $lots_back$, Class: btn btn-default, Page: lots_list)
+                        }
                     }
                 }
             }
