@@ -3,7 +3,7 @@ contract lots_Manager {
         Action string
         Id string "optional"
         TypeId int
-        Name string 
+        Name string
         Description string
         Photo bytes "file"
         DateStart string "date"
@@ -65,7 +65,7 @@ contract lots_Manager {
         }
         $dateStart = Sprintf("%v %v", trimZeroTime($DateStart), $TimeStart)
         $dateEnd = Sprintf("%v %v", trimZeroTime($DateEnd), $TimeEnd)
-        $catId = Int(DBFind("lots_types").Where("id=?", $TypeId).One("id"))
+        $catId = Int(DBFind("lots_types").Where("id=?", $TypeId).One("category"))
     }
 
     action {
@@ -95,7 +95,10 @@ contract lots_Manager {
         args = Append(args,$catId)
         fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight,weight_type,length,width,height,lots_type_id,category"
         if $Action == "create"{
-            DBInsert("lots", "timestamp date_creation,seller,"+fields, $block_time, $key_id, ...args)
+            fields = Sprintf("%v,timestamp date_creation,seller", fields)
+            args = Append(args,$block_time)
+            args = Append(args,$key_id)
+            DBInsert("lots", fields, ...args)
             return
         }
         if $Action == "edit"{
