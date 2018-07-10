@@ -14,8 +14,8 @@ If(GetVar(Id)){
     SetVar(order_max, Money(#lot_order_max#))
     SetVar(date_start, DateTime(#lot_date_start#, YYYY-MM-DD))
     SetVar(date_end, DateTime(#lot_date_end#, YYYY-MM-DD))
-    SetVar(time_start, DateTime(#lot_date_start#, HH:mm))
-    SetVar(time_end, DateTime(#lot_date_end#, HH:mm))
+    SetVar(time_start, DateTime(#lot_date_start#, HH:MI))
+    SetVar(time_end, DateTime(#lot_date_end#, HH:MI))
     SetVar(contract_text,Binary().ById(#lot_contract_id#))
     SetVar(unit_count,#lot_unit_count#)
     SetVar(weight,#lot_weight#)
@@ -108,7 +108,15 @@ Div(content-wrapper){
                             ForList(type_blocks){
                                 Div(row mt-sm){
                                     SetVar(block,AppParam(App:#application_id#, Name:lots_params, Index:#value#))
-                                    Include(#block#)
+                                    If(#block#=="lots_count_block"){
+                                        Include(lots_count_block)
+                                    }.ElseIf(#block#=="lots_dimensions_block"){
+                                        Include(lots_dimensions_block)
+                                    }.ElseIf(#block#=="lots_weight_block"){
+                                        Include(lots_weight_block)
+                                    }.ElseIf(#block#=="lots_weight2_block"){
+                                        Include(lots_weight2_block)
+                                    }
                                 }
                             }
 
@@ -179,14 +187,15 @@ Div(content-wrapper){
                         }.Else{
                             Button(Body: $lots_back$, Class: btn btn-default pull-left, Page: lots_edit, PageParams: "CatId=#CatId#")
                         }
-                        Button(Body: #BtnBody#, Class: btn btn-primary, Contract: lots_Manager, Page: lots_list, Params: "Action=#Action#")
+                        Button(Body: #BtnBody#, Class: btn btn-primary, Contract: lots_Manager, Page: lots_list, Params: "Action=#Action#,TypeId=#TypeId#")
                     }
                 }.Else{
                     If(GetVar(CatId)){
                         SetVar(Cat,AppParam(App: #application_id#, Name: lots_categories, Index: #CatId#))
+                        DBFind(lots_types,src_types).Where("deleted=0 and category=#CatId#")
+
                         Div(panel-heading){$lots_cat$ LangRes(#Cat#): LangRes(lots_select_type)}
                         Div(panel-body text-center){
-                            DBFind(lots_types,src_types).Where("deleted=0 and category=#CatId#")
                             ForList(src_types){
                                 Button(Body: LangRes(#resource_name#), Class: btn btn-primary mr-sm mb-sm, Page: lots_edit, PageParams: "TypeId=#id#,CatId=#CatId#")
                             }
@@ -195,9 +204,9 @@ Div(content-wrapper){
                             Button(Body: $lots_back$, Class: btn btn-default, Page: lots_edit)
                         }
                     }.Else{
+                        AppParam(App: #application_id#, Name: lots_categories, Source: src_cats)
                         Div(panel-heading){LangRes(lots_select_cat)}
                         Div(panel-body text-center){
-                            AppParam(App: #application_id#, Name: lots_categories, Source: src_cats)
                             ForList(src_cats){
                                 Button(Body: #name#, Class: btn btn-primary mr-sm mb-sm, Page: lots_edit, PageParams: "CatId=#id#")
                             }
