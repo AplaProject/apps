@@ -13,6 +13,10 @@ contract lots_Manager {
         AmountStarting money
         OrderMin money
         OrderMax money
+
+        Location string
+        Condition int
+
         Count int
         Weight string "optional"
         WeightType string "optional"
@@ -40,16 +44,15 @@ contract lots_Manager {
         if $Action == "create" {
             RoleConditions("role", "Seller")
         }else{
-            var lot map
-            lot = DBFind("lots").Where("id=? and deleted=0", $Id).Row()
+            $lot = DBFind("lots").Where("id=? and deleted=0", $Id).Row()
 
-            if !lot {
+            if !$lot {
                 warning "Lot not found"
             }
-            if lot["status"] > 0 {
+            if $lot["status"] > 0 {
                 warning "Bidding has already begun"
             }
-            if lot["seller"] != $key_id {
+            if $lot["seller"] != $key_id {
                 warning "You are not owner of the lot"
             }
 
@@ -69,9 +72,13 @@ contract lots_Manager {
     }
 
     action {
-        var appId imageId contractFileId int
+        var appId imageId contractFileId int imageName string
         appId = Int(DBFind("applications").Where("name = $ AND deleted = 0", "Trading Platform").One("id"))
-        imageId = @1UploadBinary("ApplicationId,Name,Data", appId, "lot_photo", $Photo)
+        imageName = Sprintf("%v_%v", $key_id, $time)
+        if $Id > 0 {
+            imageName = DBFind("binaries").Where("id=?", $lot["photo"]).One("name")
+        }
+        imageId = @1UploadBinary("ApplicationId,Name,Data", appId, imageName, $Photo)
         // TODO: contractFileId генерировать внутри
         // contractFileId = @1UploadBinary("ApplicationId,Name,Data,DataMimeType", appId, "lot_contract", "application/pdf")
 
@@ -93,7 +100,9 @@ contract lots_Manager {
         args = Append(args,$Height)
         args = Append(args,$TypeId)
         args = Append(args,$catId)
-        fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight,weight_type,length,width,height,lots_type_id,category"
+        args = Append(args,$Location)
+        args = Append(args,$Condition)
+        fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight,weight_type,length,width,height,lots_type_id,category,location,condition"
         if $Action == "create"{
             fields = Sprintf("%v,timestamp date_creation,seller", fields)
             args = Append(args,$block_time)
