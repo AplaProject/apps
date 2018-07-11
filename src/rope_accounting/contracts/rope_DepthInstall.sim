@@ -1,0 +1,34 @@
+contract rope_DepthInstall {
+    data {}
+    conditions {}
+
+    action {
+        var d map depths array i count int
+        count = 3
+        while i < count {
+            d["manufacturer_final"] = 100 + Random(0,4+i) - 2 - i
+            d["servicer_final"] = 99 + Random(0,4+i) - 2 - i
+            d["producer_final"] = 98 + Random(0,4+i) - 2 - i
+
+            d["manufacturer_started"] = 10 + Random(0,4+i) - 2 - i
+            d["servicer_started"] = 11 + Random(0,4+i) - 2 - i
+            d["producer_started"] = 12 + Random(0,4+i) - 2 - i
+
+            d["operation"] = i + 1
+            d["rope_drilling_id"] = 1
+            d["status_started"] = 0
+            d["status_final"] = 0
+            if !DBFind("rope_works").Where("operation=? and rope_drilling_id=1", d["operation"]).One("id"){
+                DBInsert("rope_works", "operation,rope_drilling_id", d["operation"], d["rope_drilling_id"])
+            }
+            var depth map
+            depth = DBFind("rope_depths").Where("operation=? and rope_drilling_id=1", d["operation"]).Row()
+            if depth{
+                DBUpdate("rope_depths", Int(depth["id"]), "manufacturer_final,manufacturer_started,servicer_final,servicer_started,producer_final,producer_started,status_started,status_final", d["manufacturer_final"], d["manufacturer_started"], d["servicer_final"], d["servicer_started"], d["producer_final"], d["producer_started"], d["status_started"], d["status_final"])
+            }else{
+                DBInsert("rope_depths", "operation,rope_drilling_id,manufacturer_final,manufacturer_started,servicer_final,servicer_started,producer_final,producer_started,status_started,status_final", d["operation"], d["rope_drilling_id"], d["manufacturer_final"], d["manufacturer_started"], d["servicer_final"], d["servicer_started"], d["producer_final"], d["producer_started"], d["status_started"], d["status_final"])
+            }
+            i=i+1
+        }
+    }
+}
