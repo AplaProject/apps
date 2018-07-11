@@ -24,28 +24,34 @@ contract rope_DepthCheck {
         }
         return n
     }
-    func isCorrectValue(m map, depthType string) bool{
+    func isCommonValue(m map, depthType string) bool{
         var res bool avgValue absError float values array
         if depthType == "started" {
             values[0] = Int(m["manufacturer_started"])
-            values[1] = Int(m["servecer_started"])
+            values[1] = Int(m["servicer_started"])
             values[2] = Int(m["producer_started"])
         }else{
             values[0] = Int(m["manufacturer_final"])
-            values[1] = Int(m["servecer_final"])
+            values[1] = Int(m["servicer_final"])
             values[2] = Int(m["producer_final"])
         }
-        if $errorRate == 0 {
-            res = values[0] == values[1] == values[2]
-        }else{
-            avgValue = (values[0] + values[1] + values[2])/3
-            absError = absFloat(Float($Value - avgValue))
-            if avgValue != 0{
-                res = absError/avgValue <= $errorRate
-            }else{
-                res = true
-            }
-        }
+        Println("values",values)
+        res = values[0] == values[1] || values[1] == values[2] || values[0] == values[2]
+        // if $errorRate == 0 {
+        // Println("errorRate is zero")
+        // res = values[0] == values[1] == values[2]
+        // }else{
+        // avgValue = Float(values[0] + values[1] + values[2])/3
+        // Println("avgValue",avgValue)
+        // absError = absFloat(Float($Value - avgValue))
+        // Println("absError",absError)
+        // if avgValue != 0{
+        // res = absError/avgValue <= $errorRate
+        // Println("res", absError/avgValue, $errorRate)
+        // }else{
+        // res = true
+        // }
+        // }
         return res
     }
 
@@ -72,7 +78,7 @@ contract rope_DepthCheck {
         if !($role_id == $servicerRid || $role_id == $producerRid || $role_id == $manufacturerRid){
             warning "Your role not allowed for this action"
         }
-        $errorRate = Float(AppParam(appId, "rope_depth_error_rate"))
+        // $errorRate = Float(AppParam(appId, "rope_depth_error_rate"))
     }
 
     action {
@@ -81,28 +87,29 @@ contract rope_DepthCheck {
 
         // issue: "interface conversion: interface {} is map[string]string, not map[string]interface {}"
         depth["manufacturer_started"] = Int($depth["manufacturer_started"])
-        depth["servecer_started"] = Int($depth["servecer_started"])
+        depth["servicer_started"] = Int($depth["servicer_started"])
         depth["producer_started"] = Int($depth["producer_started"])
         depth["manufacturer_final"] = Int($depth["manufacturer_final"])
         depth["servecer_final"] = Int($depth["servecer_final"])
         depth["producer_final"] = Int($depth["producer_final"])
         depth[depthField] = $Value
         //
-        Println("here")
 
-        if isCorrectValue(depth, $Type) {
+        if isCommonValue(depth, $Type) {
+            Println("is Correct Value")
             var fields workField string
             if $Type == "started"{
-                fields = Sprintf("status_started,%v", depthField)
+                fields = Sprintf("status_started,depth_started,%v", depthField)
                 workField = "depth_started"
             }else{
-                fields = Sprintf("status_final,%v", depthField)
+                fields = Sprintf("status_final,depth_final,%v", depthField)
                 workField = "depth_final"
             }
             DBUpdate("rope_works", $workId, workField, $Value)
-            DBUpdate("rope_depths", $Id, fields, 1, $Value)
+            DBUpdate("rope_depths", $Id, fields, 1, $Value, $Value)
 
         }else{
+            Println("is not Correct Value")
             DBUpdate("rope_depths", $Id, depthField, $Value)
         }
 
