@@ -1,0 +1,122 @@
+contract RopeBinaryToWorks {
+    data {
+        Id string "optional"
+    }
+    func getWorkIndexes(cells array) map{
+        var indexes map i cellsLen int s string
+        // default indexes
+        indexes["operation_date"] = 3
+        indexes["operation"] = 4
+        indexes["depth_started"] = 6
+        indexes["depth_final"] = 7
+        indexes["weight_started"] = 8
+        indexes["weight_final"] = 9
+        indexes["bypass_bracing"] = 13
+        cellsLen = Len(cells)
+        while i < cellsLen{
+            // correction indexes
+            s = ToLower(TrimSpace(cells[i]))
+            if HasPrefix(s, "дата") && Contains(s,"операции"){
+                indexes["operation_date"] = i
+            }
+            if HasPrefix(s, "№") && Contains(s,"операции"){
+                indexes["operation"] = i
+            }
+            if HasPrefix(s, "глубина") && Contains(s,"начала"){
+                indexes["depth_started"] = i
+            }
+            if HasPrefix(s, "глубина") && Contains(s,"конце") {
+                indexes["depth_final"] = i
+            }
+            if HasPrefix(s, "вес") && Contains(s,"крюке") && Contains(s,"начале"){
+                indexes["weight_started"] = i
+            }
+            if HasPrefix(s, "вес") && Contains(s,"крюке") && Contains(s,"конце"){
+                indexes["weight_final"] = i
+            }
+            if HasPrefix(s, "перепуск") && Contains(s,"перетяжка"){
+                indexes["bypass_bracing"] = i
+            }
+            if s == "примечание" {
+                break
+            }
+            i=i+1
+        }
+        return indexes
+    }
+    func parseRows(rows array) array {
+        var i rowsLen int indexes map rowsRes array
+        indexes = getWorkIndexes(rows[0])
+        Println(indexes)
+        i = 1
+        rowsLen = Len(rows)
+        while i<rowsLen {
+            var work map row array
+            row = rows[i]
+            work["depth_final"] = row[indexes["depth_final"]]
+            work["depth_started"] = row[indexes["depth_started"]]
+            work["weight_final"] = row[indexes["weight_final"]]
+            work["weight_started"] = row[indexes["weight_started"]]
+            work["bypass_bracing"] = row[indexes["bypass_bracing"]]
+            work["operation_date"] = row[indexes["operation_date"]]
+            work["operation"] = row[indexes["operation"]]
+
+            // "rope_drilling_id"
+            // "rope_coil_id"
+            if work["operation"] {
+                // stored data row only if has operation
+                rowsRes = Append(rowsRes, work)
+            }
+            i=i+1
+        }
+        return rowsRes
+    }
+    func getParsedAfter(search string, rows array) array {
+        var i rowsLen int rowsRes array canCopy bool
+        rowsLen = Len(rows)
+        while i < rowsLen {
+            var cells array c cellsLen notEmptyCellCount int
+            cells = rows[i]
+            cellsLen = Len(cells)
+            while c < cellsLen {
+                if Size(cells[c]) > 0{
+                    notEmptyCellCount = notEmptyCellCount+1
+                }
+                if search == cells[c] {
+                    canCopy = true
+                }
+                c = c+1
+            }
+            if canCopy && notEmptyCellCount > 0 {
+                rowsRes = Append(rowsRes, rows[i])
+            }
+            if canCopy && notEmptyCellCount == 0 {
+                break
+            }
+            i = i+1
+        }
+        return parseRows(rowsRes)
+    }
+
+    conditions {
+        $Id = Int($Id)
+        $appId = Int(DBFind("applications").Columns("id").Where("name='Rope accounting'").One("id"))
+        if $Id == 0 {
+            $Id = Int(DBFind("buffer_data").Where("key='rope_upload' and member_id=?", $key_id).One("value"))
+        }
+        $binId = Int(DBFind("binaries").Where("id=?", $Id).One("id"))
+        if $binId == 0 {
+            warning "File not found"
+        }
+        // RopeRolesCondition()
+    }
+    action {
+        var line count sheet int rows works array
+        sheet = 1
+        count = Int(Str(GetRowsCountXLSX($binId, sheet)))
+        rows = GetDataFromXLSX($binId, line, count, sheet)
+        works = getParsedAfter("Месторождение", rows)
+
+        // TODO: stored works to rope_works and rope_depths
+    }
+}
