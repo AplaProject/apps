@@ -1,0 +1,159 @@
+contract RopeWorksCalculate {
+    data {}
+
+    func getFindAll(table, where, columns string) array {
+        var full parts array limit offset int
+        limit = 250
+        while true {
+            parts = DBFind(table).Where(where).Columns(columns).Offset(offset).Limit(limit).Order("id")
+            if Len(parts) > 0 {
+                if Len(full) == 0 {
+                    full = parts
+                }else{
+                    var i lenParts int
+                    lenParts = Len(parts)
+                    while i < lenParts {
+                        full = Append(full, parts[i])
+                        i = i+1
+                    }
+                }
+            }else{
+                break
+            }
+            offset = offset+limit
+        }
+        Println("find all", table, Len(full))
+        return full
+    }
+    func getAbsFloat(n float) float{
+        if n < 0{
+            return -1 * n
+        }
+        Println("getAbsFloat", n)
+        return n
+    }
+
+    func getMapValues(m map, keys array) array {
+        Println("getMapValues", m, keys)
+        var values array i keysLen int key string
+        keysLen = Len(keys)
+        while i < keysLen {
+            key = keys[i]
+            values = Append(values, m[key])
+            i=i+1
+        }
+        return values
+    }
+
+    conditions {
+        RopeRolesCondition()
+        $appId = Int(DBFind("applications").Columns("id").Where("name='Rope accounting'").One("id"))
+        var userRoles map
+        userRoles[AppParam($appId, "rope_manufacturer_role_id")] = "manufacturer"
+        userRoles[AppParam($appId, "rope_servicer_role_id")] = "servicer"
+        userRoles[AppParam($appId, "rope_producer_role_id")] = "producer"
+        $userRoles = userRoles
+        $errorRate = Float(AppParam($appId, "rope_depth_error_rate"))
+    }
+
+    action {
+        var works array cols where op string i lenWorks int work workPrev coil drilling map
+        cols = "id,work_started,work_final,work_operation,work_bypass,work_coil,operation_type,operation,rope_coil_id,rope_drilling_id,weight_started,depth_started"
+        where = "id>0"
+        works = getFindAll("rope_works", where, cols)
+        lenWorks = Len(works)
+
+        var w1 w2 d1 d2 cl bw float
+        while i<lenWorks {
+            if i > 0 {
+                workPrev = work
+            }
+            work = works[i]
+            var workNew map
+            workNew["id"] = work["id"]
+
+            if work["rope_coil_id"] != coil["id"]{
+                coil = DBFind("rope_coils").Where("id=?", work["rope_coil_id"]).Row()
+            }
+            if work["rope_drilling_id"] != drilling["id"]{
+                drilling = DBFind("rope_drillings").Where("id=?", work["rope_drilling_id"]).Row()
+            }
+            op = work["operation_type"]
+            w1 = Float(work["weight_started"])
+            w2 = Float(work["weight_final"])
+            d1 = Float(work["depth_started"])
+            d2 = Float(work["depth_final"])
+            cl = Float(drilling["candle_length"])
+            bw = Float(drilling["block_weight"])
+
+            // "Наработка Lн, тк.м"
+            Println("Наработка Lн, тк.м")
+            workNew["work_started"] = (w1 * (d1 + bw) + (4 * d1 * cl))/1000
+
+            // "Наработка Lк, т.км"
+            Println("Наработка Lк, т.км")
+            workNew["work_final"] = (w2 * (d2 + cl) + (4 * d2 * bw))/1000
+
+            // "Наработка за операцию, т.км"
+            Println("Наработка за операцию, т.км")
+            if op == "Подъем"{
+                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])*0.5
+            }
+            if op == "Спуск"{
+                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])*0.5
+            }
+            if op == "СПО"{
+                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])
+            }
+            if op == "Бурение"{
+                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])*3
+            }
+            if op == "Отбор керна"{
+                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])*2
+            }
+            if op == "Проработка"{
+                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])*2
+            }
+            if op == "Шаблонировка"{
+                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])*2
+            }
+            if op == "Спуск обсадной колонны"{
+                workNew["work_operation"] = workNew["work_final"]*0.5
+            }
+            if op == "Технологическое СПО" {
+                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])
+            }
+            if op == "Аварийные работы"{
+                workNew["work_operation"] = workNew["work_final"]*2
+            }
+
+
+            // "Наработка нарастающая до перепуска"
+            Println("Наработка нарастающая до перепуска")
+            if workNew["operation"] == 1 {
+                workNew["work_bypass"] = workNew["work_operation"]
+            }else{
+                if workNew["work_operation"] == 0 {
+                    workNew["work_bypass"] = 0
+                }else{
+                    workNew["work_bypass"] = workNew["work_operation"] + Float(workPrev["work_bypass"])
+                }
+            }
+            // "Наработка нарастающая на бухту"
+            Println("Наработка нарастающая на бухту")
+            if workNew["operation"] == 1 {
+                workNew["work_coil"] = workNew["work_bypass"] + drilling["previous_workout"]
+            }else{
+                workNew["work_coil"] = workNew["work_operation"] + Float(workPrev["work_coil"])
+            }
+
+            var keys values array
+            keys = GetMapKeys(workNew)
+            values = getMapValues(workNew, keys)
+            DBUpdate("rope_works", Int(workNew["id"]), Join(keys,","), ...values)
+            Println("db write",Int(workNew["id"]), Join(keys,","), ...values)
+            i=i+1
+        }
+
+    }
+}

@@ -1,0 +1,308 @@
+contract RopeBinaryParse {
+    data {
+        Id string "optional"
+    }
+    func getWorkIndexes(cells array) map{
+        Println("getWorkIndexes")
+        var indexes map i cellsLen int s string
+        // default indexes
+        indexes["operation_date"] = 3
+        indexes["operation"] = 4
+        indexes["operation_type"] = 5
+        indexes["depth_started"] = 6
+        indexes["depth_final"] = 7
+        indexes["weight_started"] = 9
+        indexes["weight_final"] = 10
+        indexes["bypass_bracing"] = 17
+        cellsLen = Len(cells)
+        while i < cellsLen{
+            // correction indexes
+            s = ToLower(TrimSpace(cells[i]))
+            if HasPrefix(s, "дата") && Contains(s,"операции"){
+                indexes["operation_date"] = i
+            }
+            if HasPrefix(s, "№") && Contains(s,"операции"){
+                indexes["operation"] = i
+            }
+            if HasPrefix(s, "вид") && Contains(s,"работ") && Contains(s,"рейса"){
+                indexes["operation_type"] = i
+            }
+            if HasPrefix(s, "глубина") && Contains(s,"начала"){
+                indexes["depth_started"] = i
+            }
+            if HasPrefix(s, "глубина") && Contains(s,"конце") {
+                indexes["depth_final"] = i
+            }
+            if HasPrefix(s, "вес") && Contains(s,"крюке") && Contains(s,"начале"){
+                indexes["weight_started"] = i
+            }
+            if HasPrefix(s, "вес") && Contains(s,"крюке") && Contains(s,"конце"){
+                indexes["weight_final"] = i
+            }
+            if HasPrefix(s, "перепуск") && Contains(s,"перетяжка"){
+                indexes["bypass_bracing"] = i
+            }
+            if s == "примечание" {
+                break
+            }
+            i=i+1
+        }
+        return indexes
+    }
+    func parseWorks(titleCell string, rows array) array {
+        Println("parseWorks")
+        var i rowsLen int resultRows selectedRows array canCopy bool
+        rowsLen = Len(rows)
+        while i < rowsLen {
+            var cells array c cellsLen notEmptyCellCount int
+            cells = rows[i]
+            cellsLen = Len(cells)
+            while c < cellsLen {
+                if Size(cells[c]) > 0{
+                    notEmptyCellCount = notEmptyCellCount+1
+                }
+                if titleCell == cells[c] {
+                    canCopy = true
+                }
+                c = c+1
+            }
+            if canCopy && notEmptyCellCount > 0 {
+                selectedRows = Append(selectedRows, rows[i])
+            }
+            if canCopy && notEmptyCellCount == 0 {
+                break
+            }
+            i = i+1
+        }
+        var indexes map
+        indexes = getWorkIndexes(selectedRows[0])
+        rowsLen = Len(selectedRows)
+        i = 1
+        while i < rowsLen {
+            var work map row array
+            row = selectedRows[i]
+            work["depth_final"] = Int(row[indexes["depth_final"]])
+            work["depth_started"] = Int(row[indexes["depth_started"]])
+            work["weight_final"] = Int(row[indexes["weight_final"]])
+            work["weight_started"] = Int(row[indexes["weight_started"]])
+            work["bypass_bracing"] = Int(row[indexes["bypass_bracing"]])
+            work["operation_type"] = row[indexes["operation_type"]]
+            work["operation_date"] = Int(row[indexes["operation_date"]])
+            if work["operation_date"] != 0{
+                // https://stackoverflow.com/a/6154953
+                work["operation_date"] = (work["operation_date"] - 25569) * 86400
+            }
+            work["operation"] = Int(row[indexes["operation"]])
+            if work["operation"] {
+                // stored data row only if has operation
+                resultRows = Append(resultRows, work)
+            }
+            i=i+1
+        }
+        return resultRows
+    }
+    func parseCoil(rows array) map {
+        Println("parseCoil")
+        var coil map i int row array
+        i = 7 // start coil info
+        while i < 9 { // end coil info
+            row = rows[i]
+            if i == 7 {
+                coil["certificate"] = row[6]
+                coil["diameter"] = Int(row[9])
+            }
+            if i == 8 {
+                coil["length_full"] = Int(row[6])
+                coil["length_rigging"] = Int(row[7])
+                coil["previous_workout"] = Int(row[17])
+            }
+            i = i+1
+        }
+        return coil
+    }
+    func parseDrilling(rows array) map {
+        Println("parseDrilling")
+        var drilling map i int row array
+        i = 3 // start drilling info
+        while i < 9 { // end drilling info
+            row = rows[i]
+            if i == 3 {
+                drilling["filial"] = row[6]
+            }
+            if i == 4 {
+                drilling["expedition"] = row[6]
+            }
+            if i == 5 {
+                drilling["brigade"] = row[6]
+            }
+            if i == 6 {
+                drilling["master"] = row[6]
+                drilling["block_weight"] = Int(row[17])
+            }
+            if i == 7 {
+                if row[17] == ""{
+                    drilling["candle_length"] = 0.0
+                }else{
+                    drilling["candle_length"] = Float(row[17])
+                }
+            }
+            i = i+1
+        }
+        return drilling
+    }
+    func getMapValues(m map, keys array) array {
+        var values array i keysLen int key string
+        keysLen = Len(keys)
+        while i < keysLen {
+            key = keys[i]
+            if Contains(key, " "){
+                var splittedKey array
+                splittedKey = Split(key, " ")
+                key = splittedKey[1]
+            }
+            values = Append(values, m[key])
+            i=i+1
+        }
+        return values
+    }
+    func storeCoil(coil map) int {
+        Println("storeCoil")
+        var id int
+        id = Int(DBFind("rope_coils").Where("certificate=? and diameter=?", coil["certificate"], coil["diameter"]).One("id"))
+        if id == 0{
+            var keys values array
+            keys = GetMapKeys(coil)
+            values = getMapValues(coil, keys)
+            id = DBInsert("rope_coils", Join(keys, ","), ...values)
+        }
+        return id
+    }
+    func storeDrilling(drilling map) int {
+        Println("storeDrilling")
+        var id int
+        id = Int(DBFind("rope_drillings").Where("filial=? and expedition=? and brigade=?", drilling["filial"], drilling["expedition"], drilling["brigade"]).One("id"))
+        if id == 0{
+            var keys values array
+            keys = GetMapKeys(drilling)
+            values = getMapValues(drilling, keys)
+            id = DBInsert("rope_drillings", Join(keys, ","), ...values)
+        }
+        return id
+    }
+    func storeWorksDepths(coilId, drillingId int, works array) {
+        Println("storeWorksDepths", coilId, drillingId)
+        var i worksLen int workId depthId workKeys depthKeys depthWorkKeys fields string values array work map
+        worksLen = Len(works)
+        workKeys = "operation_type,weight_final,weight_started,bypass_bracing,timestamp operation_date,operation"
+        depthWorkKeys = "depth_final,depth_started"
+        depthKeys = Sprintf("%v,%v,rope_drilling_id,rope_coil_id", $startedField, $finalField)
+
+        while i < worksLen {
+            work = works[i]
+            workId = DBFind("rope_works").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", coilId, drillingId, work["operation"]).One("id")
+            if !workId {
+                values = getMapValues(work, Split(workKeys, ","))
+                values = Append(values,drillingId)
+                values = Append(values,coilId)
+                fields = workKeys + ",rope_drilling_id,rope_coil_id"
+                // Println("rope_works", fields, ...values)
+                DBInsert("rope_works", workKeys, ...values)
+            }
+            depthId = DBFind("rope_depths").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", coilId, drillingId, work["operation"]).One("id")
+            if !depthId {
+                values = getMapValues(work, Split(depthWorkKeys, ","))
+                values = Append(values,drillingId)
+                values = Append(values,coilId)
+                fields = depthKeys + ",rope_drilling_id,rope_coil_id"
+                DBInsert("rope_depths", depthKeys, ...values, drillingId, coilId)
+            }
+            i=i+1
+        }
+    }
+    func getFindAll(table, where, columns string) array {
+        var full parts array limit offset int
+        limit = 250
+        while true {
+            parts = DBFind(table).Where(where).Columns(columns).Offset(offset).Limit(limit)
+            if Len(parts) > 0 {
+                if Len(full) == 0 {
+                    full = parts
+                }else{
+                    var i lenParts int
+                    lenParts = Len(parts)
+                    while i < lenParts {
+                        full = Append(full, parts[i])
+                        i = i+1
+                    }
+                }
+            }else{
+                break
+            }
+            offset = offset+limit
+        }
+        return full
+    }
+    func updateDepths(coilId, drillingId int) {
+        Println("updateDepths",coilId, drillingId)
+        var startedIds startedValues finalIds finalValues depths array i depthsLen int depth map columns string
+        columns = Sprintf("id,%v,%v", $startedField, $finalField)
+        depths = getFindAll("rope_depths", Sprintf("rope_coil_id=%v and rope_drilling_id=%v", coilId, drillingId), columns)
+        depthsLen = Len(depths)
+        Println("depthsLen",depthsLen)
+        while i < depthsLen {
+            depth = depths[i]
+            startedIds = Append(startedIds, depth["id"])
+            finalIds = Append(finalIds, depth["id"])
+            startedValues = Append(startedValues, depth[$startedField])
+            finalValues = Append(finalValues, depth[$finalField])
+            i=i+1
+        }
+        RopeDepthsUpdate("StartedIds,StartedValues,FinalIds,FinalValues", startedIds, startedValues, finalIds, finalValues)
+    }
+
+    conditions {
+        $Id = Int($Id)
+        if $Id == 0 {
+            $Id = Int(DBFind("buffer_data").Where("key='rope_upload' and member_id=?", $key_id).One("value"))
+        }
+        $binId = Int(DBFind("binaries").Where("id=?", $Id).One("id"))
+        if $binId == 0 {
+            warning "File not found"
+        }
+        RopeRolesCondition()
+        var appId mid sid pid int
+        appId = Int(DBFind("applications").Columns("id").Where("name='Rope accounting'").One("id"))
+        mid = Int(AppParam(appId, "rope_manufacturer_role_id"))
+        sid = Int(AppParam(appId, "rope_servicer_role_id"))
+        pid = Int(AppParam(appId, "rope_producer_role_id"))
+        Println("$role_id == mid",$role_id == mid)
+        if $role_id == mid {
+            $startedField = "manufacturer_started"
+            $finalField = "manufacturer_final"
+        }
+        if $role_id == sid {
+            $startedField = "servicer_started"
+            $finalField = "servicer_final"
+        }
+        if $role_id == pid {
+            $startedField = "producer_started"
+            $finalField = "producer_final"
+        }
+        Println($this_contract)
+    }
+    action {
+        var line count sheet drillingId coilId int rows works array coil drilling map
+        sheet = 1
+        count = Int(Str(GetRowsCountXLSX($binId, sheet)))
+        rows = GetDataFromXLSX($binId, line, count, sheet)
+
+        coil = parseCoil(rows)
+        drilling = parseDrilling(rows)
+        works = parseWorks("Месторождение", rows)
+
+        coilId = storeCoil(coil)
+        drillingId = storeDrilling(drilling)
+        storeWorksDepths(coilId, drillingId, works)
+        updateDepths(coilId, drillingId)
+    }
+}

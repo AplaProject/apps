@@ -1,0 +1,202 @@
+contract RopeDepthsUpdate {
+    data {
+        StartedIds array
+        StartedValues array
+        FinalIds array
+        FinalValues array
+    }
+
+    func getFindAll(table, where, columns string) array {
+        var full parts array limit offset int
+        limit = 250
+        while true {
+            parts = DBFind(table).Where(where).Columns(columns).Offset(offset).Limit(limit).Order("id")
+            if Len(parts) > 0 {
+                if Len(full) == 0 {
+                    full = parts
+                }else{
+                    var i lenParts int
+                    lenParts = Len(parts)
+                    while i < lenParts {
+                        full = Append(full, parts[i])
+                        i = i+1
+                    }
+                }
+            }else{
+                break
+            }
+            offset = offset+limit
+        }
+        Println("find all", table, Len(full))
+        return full
+    }
+    func getAbsFloat(n float) float{
+        if n < 0{
+            return -1 * n
+        }
+        Println("getAbsFloat", n)
+        return n
+    }
+    func isEqualWithErrorRate(rate float, nums ...) bool {
+        var i sum numsLen int res bool avg absError float
+        res = true
+        numsLen = Len(nums)
+        if rate == 0 {
+            while i < numsLen{
+                if i > 0{
+                    if nums[i] != nums[i-1]{
+                        res = false
+                        break
+                    }
+                }
+                i = i + 1
+            }
+        }else{
+            while i < numsLen{
+                sum = sum + nums[i]
+                i = i + 1
+            }
+            avg = Float(sum) / numsLen
+            i = 0
+            if avg != 0{
+                while i < numsLen{
+                    absError = getAbsFloat(Float(nums[i]) - avg)
+                    res = absError/avg <= rate
+                    if !res {
+                        break
+                    }
+                    i = i + 1
+                }
+            }
+        }
+        return res
+    }
+    func isSameDepth(m map, depthType string) bool{
+        var a b c int
+        if depthType == "started" {
+            a = Int(m["manufacturer_started"])
+            b = Int(m["servicer_started"])
+            c = Int(m["producer_started"])
+        }else{
+            a = Int(m["manufacturer_final"])
+            b = Int(m["servicer_final"])
+            c = Int(m["producer_final"])
+        }
+        if a > 0 && b+c == 0 || b >0 && a+c == 0 || c>0 && a+b==0 {
+            return false
+        }
+        return isEqualWithErrorRate($errorRate, a,b) || isEqualWithErrorRate($errorRate, a,c) || isEqualWithErrorRate($errorRate, b,c)
+    }
+    func notesRefresh(did, cid string){
+        Println("notesRefresh")
+        var depthsLen i notesLen int notes array note map
+        depthsLen = Len(DBFind("rope_depths").Where("deleted=0 and rope_drilling_id=? and rope_coil_id=? and (status_started=0 or status_final=0)", did, cid))
+        notes = DBFind("notifications").Where("page_params->rope_drilling_id=? and page_params->rope_coil_id=?", did, cid)
+        notesLen = Len(notes)
+
+        if depthsLen == 0 && notesLen > 0{
+            // closing notes
+            while i < notesLen {
+                note = notes[i]
+                notifications_Close("notific_id", Int(note["id"]))
+                i = i + 1
+            }
+        }else{
+            if depthsLen > 0 && notesLen == 0{
+                // sending notes
+                var rid closureType sender int textHeader pageName string params map
+                closureType = 2
+                sender = 1
+                textHeader = "Need your action: correct depths"
+                pageName = "rope_depths"
+                params["rope_drilling_id"] = did
+                params["rope_coil_id"] = cid
+                rid = Int(AppParam($appId, "rope_manufacturer_role_id"))
+                notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, JSONEncode(params))
+
+                rid = Int(AppParam($appId, "rope_servicer_role_id"))
+                notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, JSONEncode(params))
+
+                rid = Int(AppParam($appId, "rope_producer_role_id"))
+                notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, JSONEncode(params))
+            }
+        }
+    }
+    func calculateValues(type string){
+        Println("calculateValues")
+        var ids values array i idsLen int depthField fields workField string
+        depthField = Sprintf("%v_%v", $userRoles[Str($role_id)], type)
+
+        if type == "started"{
+            ids = $StartedIds
+            values = $StartedValues
+            fields = Sprintf("status_started,depth_started,%v", depthField)
+            workField = "depth_started"
+        }
+        if type == "final"{
+            ids = $FinalIds
+            values = $FinalValues
+            fields = Sprintf("status_final,depth_final,%v", depthField)
+            workField = "depth_final"
+        }
+        idsLen = Len(ids)
+        var id value int depth row map did cid where string
+        while i < idsLen {
+            id = Int(ids[i])
+            value = Int(values[i])
+            if id > 0{
+                row = DBFind("rope_depths").Where("id=?", id).Row()
+                if !(did == row["rope_drilling_id"] || cid == row["rope_coil_id"]){
+                    did = row["rope_drilling_id"]
+                    cid = row["rope_coil_id"]
+                    notesRefresh(did, cid)
+                }
+
+                // "interface conversion: interface {} is map[string]string, not map[string]interface {}"
+                depth["manufacturer_started"] = Int(row["manufacturer_started"])
+                depth["servicer_started"] = Int(row["servicer_started"])
+                depth["producer_started"] = Int(row["producer_started"])
+                depth["manufacturer_final"] = Int(row["manufacturer_final"])
+                depth["servicer_final"] = Int(row["servicer_final"])
+                depth["producer_final"] = Int(row["producer_final"])
+                depth[depthField] = value
+                //
+                if isSameDepth(depth, type) {
+                    var workId int
+                    workId = Int(DBFind("rope_works").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", cid, did, row["operation"]).One("id"))
+                    if workId > 0{
+                        where = Sprintf("id=%v and %v=%v", workId, workField, value)
+                        if !DBFind("rope_works").Where(where) {
+                            Println("SameDepth update")
+                            DBUpdate("rope_works", workId, workField, value)
+                            DBUpdate("rope_depths", id, fields, 1, value, value)
+                        }
+                    }
+                }else{
+                    where = Sprintf("id=%v and %v=%v", id, depthField, value)
+                    if !DBFind("rope_depths").Where(where) {
+                        Println("not SameDepth update")
+                        DBUpdate("rope_depths", id, depthField, value)
+                    }
+                }
+            }
+            i = i + 1
+        }
+    }
+
+    conditions {
+        RopeRolesCondition()
+        $appId = Int(DBFind("applications").Columns("id").Where("name='Rope accounting'").One("id"))
+        var userRoles map
+        userRoles[AppParam($appId, "rope_manufacturer_role_id")] = "manufacturer"
+        userRoles[AppParam($appId, "rope_servicer_role_id")] = "servicer"
+        userRoles[AppParam($appId, "rope_producer_role_id")] = "producer"
+        $userRoles = userRoles
+        $errorRate = Float(AppParam($appId, "rope_depth_error_rate"))
+    }
+
+    action {
+        calculateValues("started")
+        calculateValues("final")
+    }
+}

@@ -1,12 +1,47 @@
 DBFind(applications).Columns("id").Where("name='Rope accounting' AND deleted=0").Vars(application)
-DBFind(rope_works,works)
+DBFind(rope_works).Count(count)
 SetTitle($rope_works$)
-AddToolButton(Title: $rope_upload$, Icon: fa fa-upload, Page: rope_upload)
+If(#page#>0){
+    SetVar(prev_page,Calculate(#page#-1)
+}.Else{
+    SetVar(page,0).(prev_page,0)
+}
+SetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#count#/#per_page#)).(next_page,#last_page#)
+If(#count#>Calculate(#off#+#per_page#)){
+    SetVar(next_page,Calculate(#page#+1)
+}
+Div(button-group){
+    If(#page#>0){
+        Button(Body:"1", Class:btn btn-default, Page:rope_works, PageParams: "page=0")
+    }.Else{
+        Button(Body:"1", Class:btn btn-default disabled)
+    }
+    If(#page#>1){
+        Button(Body:Calculate(#prev_page#+1), Class:btn btn-default, Page:rope_works, PageParams: "page=#prev_page#")
+    }
+    If(And(#page#>0,#page#<#last_page#)){
+        Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)
+    }
+    If(#next_page#<#last_page#){
+        Button(Body:Calculate(#next_page#+1), Class:btn btn-default, Page:rope_works, PageParams: "page=#next_page#")
+    }
+    If(#page#<#last_page#){
+        Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:rope_works, PageParams: "page=#last_page#")
+    }.ElseIf(#last_page#>0){
+        Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)
+    }
+}
 Div(content-wrapper){
+    Div(text-right){
+        Button(Body: $rope_calculate$, Class: btn btn-default, Page: rope_works, Contract: RopeWorksCalculate)
+    }
     Div(panel panel-primary){
         Div(panel-body){
             Div(table-responsive){
-                Table(works)
+                DBFind(rope_works,works).Offset(#off#).Order(id).Custom(_date){
+                    DateTime(#operation_date#)
+                }
+                Table(works,"id=id,$rope_operation_date$=_date,$rope_operation$=operation$,rope_operation_type$=operation_type,$rope_depth_started$=depth_started,$rope_depth_final$=depth_final,$rope_weight_started$=weight_started,$rope_weight_final$=weight_final,$rope_bypass_bracing$=bypass_bracing,$rope_drilling_id$=rope_drilling_id,$rope_coil_id$=rope_coil_id")
             }
         }
     }
