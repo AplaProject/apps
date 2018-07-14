@@ -1,11 +1,17 @@
 contract RopeWorksCalculate {
     data {}
-
     func getFindAll(table, where, columns string) array {
         var full parts array limit offset int
         limit = 250
+        if where = ""{
+            where = "id>0"
+        }
         while true {
-            parts = DBFind(table).Where(where).Columns(columns).Offset(offset).Limit(limit).Order("id")
+            if columns == "*"{
+                parts = DBFind(table).Where(where).Offset(offset).Limit(limit).Order("id")
+            }else{
+                parts = DBFind(table).Where(where).Columns(columns).Offset(offset).Limit(limit).Order("id")
+            }
             if Len(parts) > 0 {
                 if Len(full) == 0 {
                     full = parts
@@ -22,19 +28,27 @@ contract RopeWorksCalculate {
             }
             offset = offset+limit
         }
-        Println("find all", table, Len(full))
+        // Println("find all", table, Len(full))
         return full
     }
     func getAbsFloat(n float) float{
         if n < 0{
             return -1 * n
         }
-        Println("getAbsFloat", n)
         return n
     }
-
+    func safeFloat(num ...)float{
+        var res float
+        if Len(num) != 0{
+            if !num[0] {
+                res = 0.0
+            }else{
+                res = Float(num[0])
+            }
+        }
+        return res
+    }
     func getMapValues(m map, keys array) array {
-        Println("getMapValues", m, keys)
         var values array i keysLen int key string
         keysLen = Len(keys)
         while i < keysLen {
@@ -44,7 +58,6 @@ contract RopeWorksCalculate {
         }
         return values
     }
-
     conditions {
         RopeRolesCondition()
         $appId = Int(DBFind("applications").Columns("id").Where("name='Rope accounting'").One("id"))
@@ -53,105 +66,101 @@ contract RopeWorksCalculate {
         userRoles[AppParam($appId, "rope_servicer_role_id")] = "servicer"
         userRoles[AppParam($appId, "rope_producer_role_id")] = "producer"
         $userRoles = userRoles
-        $errorRate = Float(AppParam($appId, "rope_depth_error_rate"))
+        $errorRate = safeFloat(AppParam($appId, "rope_depth_error_rate"))
     }
 
     action {
-        var works array cols where op string i lenWorks int work workPrev coil drilling map
-        cols = "id,work_started,work_final,work_operation,work_bypass,work_coil,operation_type,operation,rope_coil_id,rope_drilling_id,weight_started,depth_started"
-        where = "id>0"
-        works = getFindAll("rope_works", where, cols)
+        var works array cols op string i lenWorks int work workPrev coil drilling map
+        works = getFindAll("rope_works", "", cols)
         lenWorks = Len(works)
 
-        var w1 w2 d1 d2 cl bw float
+        var w1 w2 d1 d2 cl bw pw float
         while i<lenWorks {
             if i > 0 {
                 workPrev = work
             }
-            work = works[i]
-            var workNew map
-            workNew["id"] = work["id"]
-
+            work = JSONDecode(JSONEncode(works[i])) // [string]string => [string]interface{}
             if work["rope_coil_id"] != coil["id"]{
                 coil = DBFind("rope_coils").Where("id=?", work["rope_coil_id"]).Row()
             }
             if work["rope_drilling_id"] != drilling["id"]{
                 drilling = DBFind("rope_drillings").Where("id=?", work["rope_drilling_id"]).Row()
+                cl = safeFloat(drilling["candle_length"])
+                bw = safeFloat(drilling["block_weight"])
+                pw = safeFloat(drilling["previous_workout"])
             }
             op = work["operation_type"]
-            w1 = Float(work["weight_started"])
-            w2 = Float(work["weight_final"])
-            d1 = Float(work["depth_started"])
-            d2 = Float(work["depth_final"])
-            cl = Float(drilling["candle_length"])
-            bw = Float(drilling["block_weight"])
+            w1 = safeFloat(work["weight_started"])
+            w2 = safeFloat(work["weight_final"])
+            d1 = safeFloat(work["depth_started"])
+            d2 = safeFloat(work["depth_final"])
 
             // "Наработка Lн, тк.м"
-            Println("Наработка Lн, тк.м")
-            workNew["work_started"] = (w1 * (d1 + bw) + (4 * d1 * cl))/1000
+            // Println("Наработка Lн, тк.м")
+            work["work_started"] = (w1 * (d1 + cl) + (4 * d1 * bw))/1000.0
 
             // "Наработка Lк, т.км"
-            Println("Наработка Lк, т.км")
-            workNew["work_final"] = (w2 * (d2 + cl) + (4 * d2 * bw))/1000
+            // Println("Наработка Lк, т.км")
+            work["work_final"] = (w2 * (d2 + cl) + (4 * d2 * bw))/1000.0
 
             // "Наработка за операцию, т.км"
-            Println("Наработка за операцию, т.км")
+            // Println("Наработка за операцию, т.км")
+            work["work_operation"] = 0
             if op == "Подъем"{
-                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])*0.5
+                work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*0.5
             }
             if op == "Спуск"{
-                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])*0.5
+                work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*0.5
             }
             if op == "СПО"{
-                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])
+                work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])
             }
             if op == "Бурение"{
-                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])*3
+                work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*3
             }
             if op == "Отбор керна"{
-                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])*2
+                work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*2
             }
             if op == "Проработка"{
-                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])*2
+                work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*2
             }
             if op == "Шаблонировка"{
-                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])*2
+                work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*2
             }
             if op == "Спуск обсадной колонны"{
-                workNew["work_operation"] = workNew["work_final"]*0.5
+                work["work_operation"] = work["work_final"]*0.5
             }
             if op == "Технологическое СПО" {
-                workNew["work_operation"] = getAbsFloat(workNew["work_final"] - workNew["work_started"])
+                work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])
             }
             if op == "Аварийные работы"{
-                workNew["work_operation"] = workNew["work_final"]*2
+                work["work_operation"] = work["work_final"]*2
             }
 
 
             // "Наработка нарастающая до перепуска"
-            Println("Наработка нарастающая до перепуска")
-            if workNew["operation"] == 1 {
-                workNew["work_bypass"] = workNew["work_operation"]
+            // Println("Наработка нарастающая до перепуска")
+            if work["operation"] == 1 {
+                work["work_bypass"] = work["work_operation"]
             }else{
-                if workNew["work_operation"] == 0 {
-                    workNew["work_bypass"] = 0
+                if work["work_operation"] == 0 {
+                    work["work_bypass"] = 0
                 }else{
-                    workNew["work_bypass"] = workNew["work_operation"] + Float(workPrev["work_bypass"])
+                    work["work_bypass"] = work["work_operation"] + workPrev["work_bypass"]
                 }
             }
             // "Наработка нарастающая на бухту"
-            Println("Наработка нарастающая на бухту")
-            if workNew["operation"] == 1 {
-                workNew["work_coil"] = workNew["work_bypass"] + drilling["previous_workout"]
+            // Println("Наработка нарастающая на бухту")
+            if work["operation"] == 1 {
+                work["work_coil"] = work["work_bypass"] + pw
             }else{
-                workNew["work_coil"] = workNew["work_operation"] + Float(workPrev["work_coil"])
+                work["work_coil"] = work["work_operation"] + safeFloat(workPrev["work_coil"])
             }
 
             var keys values array
-            keys = GetMapKeys(workNew)
-            values = getMapValues(workNew, keys)
-            DBUpdate("rope_works", Int(workNew["id"]), Join(keys,","), ...values)
-            Println("db write",Int(workNew["id"]), Join(keys,","), ...values)
+            keys = GetMapKeys(work)
+            values = getMapValues(work, keys)
+            DBUpdate("rope_works", Int(work["id"]), Join(keys,","), values...)
             i=i+1
         }
 

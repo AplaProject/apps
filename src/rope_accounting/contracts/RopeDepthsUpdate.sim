@@ -27,14 +27,12 @@ contract RopeDepthsUpdate {
             }
             offset = offset+limit
         }
-        Println("find all", table, Len(full))
         return full
     }
     func getAbsFloat(n float) float{
         if n < 0{
             return -1 * n
         }
-        Println("getAbsFloat", n)
         return n
     }
     func isEqualWithErrorRate(rate float, nums ...) bool {
@@ -85,12 +83,14 @@ contract RopeDepthsUpdate {
         if a > 0 && b+c == 0 || b >0 && a+c == 0 || c>0 && a+b==0 {
             return false
         }
+        if 0 == a && a == b && b == c && c == a {
+            return true
+        }
         return isEqualWithErrorRate($errorRate, a,b) || isEqualWithErrorRate($errorRate, a,c) || isEqualWithErrorRate($errorRate, b,c)
     }
     func notesRefresh(did, cid string){
-        Println("notesRefresh")
         var depthsLen i notesLen int notes array note map
-        depthsLen = Len(DBFind("rope_depths").Where("deleted=0 and rope_drilling_id=? and rope_coil_id=? and (status_started=0 or status_final=0)", did, cid))
+        depthsLen = Len(DBFind("rope_depths").Where("deleted=0 and rope_drilling_id=? and rope_coil_id=? and (status_started=0 or status_final=0) and operation>0", did, cid))
         notes = DBFind("notifications").Where("page_params->rope_drilling_id=? and page_params->rope_coil_id=?", did, cid)
         notesLen = Len(notes)
 
@@ -111,20 +111,21 @@ contract RopeDepthsUpdate {
                 pageName = "rope_depths"
                 params["rope_drilling_id"] = did
                 params["rope_coil_id"] = cid
+                params = JSONEncode(params)
                 rid = Int(AppParam($appId, "rope_manufacturer_role_id"))
-                notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, JSONEncode(params))
+                notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, params)
 
                 rid = Int(AppParam($appId, "rope_servicer_role_id"))
-                notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, JSONEncode(params))
+                notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, params)
 
                 rid = Int(AppParam($appId, "rope_producer_role_id"))
-                notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, JSONEncode(params))
+                notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, params)
             }
         }
     }
     func calculateValues(type string){
-        Println("calculateValues")
-        var ids values array i idsLen int depthField fields workField string
+        Println("calculateValues", type)
+        var ids values array i lenIds int depthField fields workField string
         depthField = Sprintf("%v_%v", $userRoles[Str($role_id)], type)
 
         if type == "started"{
@@ -139,45 +140,30 @@ contract RopeDepthsUpdate {
             fields = Sprintf("status_final,depth_final,%v", depthField)
             workField = "depth_final"
         }
-        idsLen = Len(ids)
-        var id value int depth row map did cid where string
-        while i < idsLen {
+        lenIds = Len(ids)
+        var id value int row map did cid where string
+        while i < lenIds {
+            Println(i)
             id = Int(ids[i])
             value = Int(values[i])
             if id > 0{
                 row = DBFind("rope_depths").Where("id=?", id).Row()
+                row = JSONDecode(JSONEncode(row)) // [string]string => [string]interface{}
                 if !(did == row["rope_drilling_id"] || cid == row["rope_coil_id"]){
                     did = row["rope_drilling_id"]
                     cid = row["rope_coil_id"]
                     notesRefresh(did, cid)
                 }
-
-                // "interface conversion: interface {} is map[string]string, not map[string]interface {}"
-                depth["manufacturer_started"] = Int(row["manufacturer_started"])
-                depth["servicer_started"] = Int(row["servicer_started"])
-                depth["producer_started"] = Int(row["producer_started"])
-                depth["manufacturer_final"] = Int(row["manufacturer_final"])
-                depth["servicer_final"] = Int(row["servicer_final"])
-                depth["producer_final"] = Int(row["producer_final"])
-                depth[depthField] = value
-                //
-                if isSameDepth(depth, type) {
+                row[depthField] = value
+                if isSameDepth(row, type) {
                     var workId int
                     workId = Int(DBFind("rope_works").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", cid, did, row["operation"]).One("id"))
                     if workId > 0{
-                        where = Sprintf("id=%v and %v=%v", workId, workField, value)
-                        if !DBFind("rope_works").Where(where) {
-                            Println("SameDepth update")
-                            DBUpdate("rope_works", workId, workField, value)
-                            DBUpdate("rope_depths", id, fields, 1, value, value)
-                        }
+                        DBUpdate("rope_works", workId, workField, value)
+                        DBUpdate("rope_depths", id, fields, 1, value, value)
                     }
                 }else{
-                    where = Sprintf("id=%v and %v=%v", id, depthField, value)
-                    if !DBFind("rope_depths").Where(where) {
-                        Println("not SameDepth update")
-                        DBUpdate("rope_depths", id, depthField, value)
-                    }
+                    DBUpdate("rope_depths", id, depthField, value)
                 }
             }
             i = i + 1

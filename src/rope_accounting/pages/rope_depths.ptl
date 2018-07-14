@@ -1,41 +1,74 @@
 DBFind(applications).Columns("id").Where("name='Rope accounting' AND deleted=0").Vars(application)
 SetTitle($rope_depths$)
-DBFind(rope_depths, src_depths).Custom(_started){
-    If(#status_started#==0){
-        Div(text-warning){LangRes(rope_data_conflict)}
-
-        ArrayToSource(src_started#id#, [#manufacturer_started#,#producer_started#,#servicer_started#])
-        Select(Name: StartedValues, Source: src_started#id#,NameColumn: value, ValueColumn: value)
-        Input(Name: StartedIds, Type:hidden, Value: #id#)
-    }.Else{
-        Div(text-success){LangRes(rope_data_confirmed)}
-        #depth_started#
-        Input(Name: StartedValues, Type:hidden, Value: 0)
-        Input(Name: StartedIds, Type:hidden, Value: 0)
-    }
-}.Custom(_final){
-    If(#status_final#==0){
-        Div(text-warning){LangRes(rope_data_conflict)}
-
-        ArrayToSource(src_final#id#, [#manufacturer_final#,#producer_final#,#servicer_final#])
-        Select(Name: FinalValues, Source: src_final#id#,NameColumn: value, ValueColumn: value)
-        Input(Name: FinalIds, Type:hidden, Value: #id#)
-    }.Else{
-        Div(text-success){LangRes(rope_data_confirmed)}
-        #depth_final#
-        Input(Name: FinalValues, Type:hidden, Value: 0)
-        Input(Name: FinalIds, Type:hidden, Value: 0)
-    }
-}.Where("deleted=0 and (status_final=0 or status_started=0)").Count(depths_count).Order("id")
+DBFind(rope_depths).Where("deleted=0 and (status_final=0 or status_started=0)").Count(count)
+SetVar(page_name,rope_depths)
+If(#page#>0){
+    SetVar(prev_page,Calculate(#page#-1)
+}.Else{
+    SetVar(page,0).(prev_page,0)
+}
+SetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#count#/#per_page#)).(next_page,#last_page#)
+If(#count#>Calculate(#off#+#per_page#)){
+    SetVar(next_page,Calculate(#page#+1)
+}
 
 Div(content-wrapper){
-    If(#depths_count#>0){
+    If(#count#>0){
+        Div(button-group){
+            If(#page#>0){
+                Button(Body:"1", Class:btn btn-default, Page:#page_name#, PageParams: "page=0")
+            }.Else{
+                Button(Body:"1", Class:btn btn-default disabled)
+            }
+            If(#page#>1){
+                Button(Body:Calculate(#prev_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#prev_page#")
+            }
+            If(And(#page#>0,#page#<#last_page#)){
+                Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)
+            }
+            If(#next_page#<#last_page#){
+                Button(Body:Calculate(#next_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#next_page#")
+            }
+            If(#page#<#last_page#){
+                Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#last_page#")
+            }.ElseIf(#last_page#>0){
+                Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)
+            }
+        }
         Form(panel panel-primary){
             Div(panel-body){
                 Div(row){
                     Div(col-md-12){
                         Div(table-responsive){
-                            Table(src_depths,"$rope_drilling_id$=rope_drilling_id,$rope_operation$=operation,$rope_depth_started$=_started,$rope_depth_final$=_final")
+
+                            DBFind(rope_depths, src_depths).Custom(_started){
+                                If(#status_started#==0){
+                                    Div(text-warning){LangRes(rope_data_conflict)}
+
+                                    ArrayToSource(src_started#id#, [#manufacturer_started#,#producer_started#,#servicer_started#])
+                                    Select(Name: StartedValues, Source: src_started#id#,NameColumn: value, ValueColumn: value)
+                                    Input(Name: StartedIds, Type:hidden, Value: #id#)
+                                }.Else{
+                                    Div(text-success){LangRes(rope_data_confirmed)}
+                                    #depth_started#
+                                    Input(Name: StartedValues, Type:hidden, Value: 0)
+                                    Input(Name: StartedIds, Type:hidden, Value: 0)
+                                }
+                            }.Custom(_final){
+                                If(#status_final#==0){
+                                    Div(text-warning){LangRes(rope_data_conflict)}
+
+                                    ArrayToSource(src_final#id#, [#manufacturer_final#,#producer_final#,#servicer_final#])
+                                    Select(Name: FinalValues, Source: src_final#id#,NameColumn: value, ValueColumn: value)
+                                    Input(Name: FinalIds, Type:hidden, Value: #id#)
+                                }.Else{
+                                    Div(text-success){LangRes(rope_data_confirmed)}
+                                    #depth_final#
+                                    Input(Name: FinalValues, Type:hidden, Value: 0)
+                                    Input(Name: FinalIds, Type:hidden, Value: 0)
+                                }
+                            }.Where("deleted=0 and (status_final=0 or status_started=0)").Order("id").Offset(#off#)
+                            Table(src_depths,"id,$rope_drilling_id$=rope_drilling_id,$rope_operation$=operation,$rope_depth_started$=_started,$rope_depth_final$=_final")
                         }
                     }
                 }

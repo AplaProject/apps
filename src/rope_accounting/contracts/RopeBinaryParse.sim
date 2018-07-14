@@ -173,7 +173,7 @@ contract RopeBinaryParse {
             var keys values array
             keys = GetMapKeys(coil)
             values = getMapValues(coil, keys)
-            id = DBInsert("rope_coils", Join(keys, ","), ...values)
+            id = DBInsert("rope_coils", Join(keys, ","), values...)
         }
         return id
     }
@@ -185,7 +185,7 @@ contract RopeBinaryParse {
             var keys values array
             keys = GetMapKeys(drilling)
             values = getMapValues(drilling, keys)
-            id = DBInsert("rope_drillings", Join(keys, ","), ...values)
+            id = DBInsert("rope_drillings", Join(keys, ","), values...)
         }
         return id
     }
@@ -194,7 +194,7 @@ contract RopeBinaryParse {
         var i worksLen int workId depthId workKeys depthKeys depthWorkKeys fields string values array work map
         worksLen = Len(works)
         workKeys = "operation_type,weight_final,weight_started,bypass_bracing,timestamp operation_date,operation"
-        depthWorkKeys = "depth_final,depth_started"
+        depthWorkKeys = "depth_started,depth_final"
         depthKeys = Sprintf("%v,%v,rope_drilling_id,rope_coil_id", $startedField, $finalField)
 
         while i < worksLen {
@@ -205,16 +205,19 @@ contract RopeBinaryParse {
                 values = Append(values,drillingId)
                 values = Append(values,coilId)
                 fields = workKeys + ",rope_drilling_id,rope_coil_id"
-                // Println("rope_works", fields, ...values)
-                DBInsert("rope_works", workKeys, ...values)
+                // Println("rope_works", fields, values...)
+                DBInsert("rope_works", fields, values...)
             }
             depthId = DBFind("rope_depths").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", coilId, drillingId, work["operation"]).One("id")
+            values = getMapValues(work, Split(depthWorkKeys, ","))
+            values = Append(values,drillingId)
+            values = Append(values,coilId)
+            values = Append(values,work["operation"])
+            fields = depthKeys + ",operation"
             if !depthId {
-                values = getMapValues(work, Split(depthWorkKeys, ","))
-                values = Append(values,drillingId)
-                values = Append(values,coilId)
-                fields = depthKeys + ",rope_drilling_id,rope_coil_id"
-                DBInsert("rope_depths", depthKeys, ...values, drillingId, coilId)
+                DBInsert("rope_depths", fields, values...)
+            }else{
+                DBUpdate("rope_depths", Int(depthId), fields, values...)
             }
             i=i+1
         }
@@ -246,7 +249,7 @@ contract RopeBinaryParse {
         Println("updateDepths",coilId, drillingId)
         var startedIds startedValues finalIds finalValues depths array i depthsLen int depth map columns string
         columns = Sprintf("id,%v,%v", $startedField, $finalField)
-        depths = getFindAll("rope_depths", Sprintf("rope_coil_id=%v and rope_drilling_id=%v", coilId, drillingId), columns)
+        depths = getFindAll("rope_depths", Sprintf("rope_coil_id=%v and rope_drilling_id=%v and operation>0", coilId, drillingId), columns)
         depthsLen = Len(depths)
         Println("depthsLen",depthsLen)
         while i < depthsLen {

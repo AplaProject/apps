@@ -1,6 +1,7 @@
 DBFind(applications).Columns("id").Where("name='Rope accounting' AND deleted=0").Vars(application)
 DBFind(rope_works).Count(count)
 SetTitle($rope_works$)
+SetVar(page_name,rope_works)
 If(#page#>0){
     SetVar(prev_page,Calculate(#page#-1)
 }.Else{
@@ -10,38 +11,54 @@ SetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#cou
 If(#count#>Calculate(#off#+#per_page#)){
     SetVar(next_page,Calculate(#page#+1)
 }
-Div(button-group){
-    If(#page#>0){
-        Button(Body:"1", Class:btn btn-default, Page:rope_works, PageParams: "page=0")
-    }.Else{
-        Button(Body:"1", Class:btn btn-default disabled)
-    }
-    If(#page#>1){
-        Button(Body:Calculate(#prev_page#+1), Class:btn btn-default, Page:rope_works, PageParams: "page=#prev_page#")
-    }
-    If(And(#page#>0,#page#<#last_page#)){
-        Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)
-    }
-    If(#next_page#<#last_page#){
-        Button(Body:Calculate(#next_page#+1), Class:btn btn-default, Page:rope_works, PageParams: "page=#next_page#")
-    }
-    If(#page#<#last_page#){
-        Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:rope_works, PageParams: "page=#last_page#")
-    }.ElseIf(#last_page#>0){
-        Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)
-    }
-}
 Div(content-wrapper){
     Div(text-right){
-        Button(Body: $rope_calculate$, Class: btn btn-default, Page: rope_works, Contract: RopeWorksCalculate)
+        Button(Body: $rope_recalculate$, Class: btn btn-default, Page: #page_name#, Contract: RopeWorksCalculate)
+    }
+    Div(button-group){
+        If(#page#>0){
+            Button(Body:"1", Class:btn btn-default, Page:#page_name#, PageParams: "page=0")
+        }.Else{
+            Button(Body:"1", Class:btn btn-default disabled)
+        }
+        If(#page#>1){
+            Button(Body:Calculate(#prev_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#prev_page#")
+        }
+        If(And(#page#>0,#page#<#last_page#)){
+            Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)
+        }
+        If(#next_page#<#last_page#){
+            Button(Body:Calculate(#next_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#next_page#")
+        }
+        If(#page#<#last_page#){
+            Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#last_page#")
+        }.ElseIf(#last_page#>0){
+            Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)
+        }
     }
     Div(panel panel-primary){
         Div(panel-body){
             Div(table-responsive){
                 DBFind(rope_works,works).Offset(#off#).Order(id).Custom(_date){
-                    DateTime(#operation_date#)
+                    Div(text-nowrap){
+                        DateTime(#operation_date#, DD-MM-YYYY)
+                    }
+                }.Custom(_type){
+                    Div(text-nowrap){
+                        #operation_type#
+                    }
+                }.Custom(_wb){
+                    Calculate(#work_bypass#, Prec:0)
+                }.Custom(_ws){
+                    Calculate(#work_started#, Prec:0)
+                }.Custom(_wf){
+                    Calculate(#work_final#, Prec:0)
+                }.Custom(_wo){
+                    Calculate(#work_operation#, Prec:0)
+                }.Custom(_wc){
+                    Calculate(#work_coil#, Prec:0)
                 }
-                Table(works,"id=id,$rope_operation_date$=_date,$rope_operation$=operation$,rope_operation_type$=operation_type,$rope_depth_started$=depth_started,$rope_depth_final$=depth_final,$rope_weight_started$=weight_started,$rope_weight_final$=weight_final,$rope_bypass_bracing$=bypass_bracing,$rope_drilling_id$=rope_drilling_id,$rope_coil_id$=rope_coil_id")
+                Table(works,"$rope_drilling_id$=rope_drilling_id,$rope_operation$=operation,$rope_operation_date$=_date,$rope_operation_type$=_type,$rope_depth_started$=depth_started,$rope_depth_final$=depth_final,$rope_weight_started$=weight_started,$rope_weight_final$=weight_final,$rope_work_started$=_ws, $rope_work_final$=_wf, $rope_work_operation$=_wo, $rope_work_bypass$=_wb, $rope_work_coil$=_wc,$rope_bypass_bracing$=bypass_bracing")
             }
         }
     }
