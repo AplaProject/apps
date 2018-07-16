@@ -2,14 +2,21 @@ contract lots_Delete {
     data {
         Id int
     }
+    func closeAdminNotify(){
+        var id int
+        id = Int(DBFind("notifications").Where("page_params->lot_status=? and page_params->lot_id=?", $Id, 0).One("id"))
+        if id > 0{
+            notifications_Close("notific_id", id)
+        }
+    }
     conditions {
         var lot map
         lot = DBFind("lots").Where("id=? and deleted=0", $Id).Row()
         if !lot {
             warning "Lot not found"
         }
-        if lot["status"] > 1 && lot["status"] != 5 {
-            warning "Bidding has already begun"
+        if lot["status"] > 0 && lot["status"] != 5 {
+            warning "You cannot delete a confirmed lot"
         }
         if lot["seller"] != $key_id {
             warning "You are not owner of the lot"
@@ -18,5 +25,6 @@ contract lots_Delete {
 
     action {
         DBUpdate("lots", $Id, "deleted", 1)
+        closeAdminNotify()
     }
 }

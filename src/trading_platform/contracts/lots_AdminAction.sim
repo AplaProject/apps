@@ -1,14 +1,29 @@
 contract lots_AdminAction {
     data {
-        Action int
+        Action string
         NotificId int
         Id int
         Comment string "optional"
     }
-
+    func notifyBuyers(lotId int, lotName string){
+        var rid closureType sender int textHeader pageName string params map
+        closureType = 2
+        sender = 1
+        textHeader = "Появился новый лот: " + lotName
+        pageName = "lots_view"
+        params["lot_id"] = lotId
+        params["note_for"] = "buyers"
+        params = JSONEncode(params)
+        rid = $buyerRoleId
+        notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, params)
+    }
     conditions {
         if $role_id != 1{
             warning "Access denied"
+        }
+        $buyerRoleId = Int(DBFind("roles").Where("role_name='Buyer'").One("id"))
+        if $buyerRoleId == 0{
+            warning "'Buyer' role not found"
         }
         $lot = DBFind("lots").Where("id=? and deleted=0", $Id).Row()
         if !$lot {
@@ -17,18 +32,19 @@ contract lots_AdminAction {
         if $lot["status"] > 1 {
             warning "Bidding has already begun"
         }
-        if $Action == 2 && Size($Comment) < 1 {
+        if $Action == "reject" && Size($Comment) < 1 {
             warning "Пожалуйста укажите причину отказа"
         }
     }
 
     action {
-        if $Action == 1 { // accept
+        if $Action == "accept" {
             DBUpdate("lots", $Id, "status", 1)
         }
-        if $Action == 2 { // reject
+        if $Action == "reject" {
             DBUpdate("lots", $Id, "status,comment", 5, $Comment)
         }
         notifications_Close("notific_id", $NotificId)
+        notifyBuyers($Id, $lot["name"])
     }
 }
