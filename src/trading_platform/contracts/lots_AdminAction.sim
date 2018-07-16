@@ -1,0 +1,34 @@
+contract lots_AdminAction {
+    data {
+        Action int
+        NotificId int
+        Id int
+        Comment string "optional"
+    }
+
+    conditions {
+        if $role_id != 1{
+            warning "Access denied"
+        }
+        $lot = DBFind("lots").Where("id=? and deleted=0", $Id).Row()
+        if !$lot {
+            warning "Lot not found"
+        }
+        if $lot["status"] > 1 {
+            warning "Bidding has already begun"
+        }
+        if $Action == 2 && Size($Comment) < 1 {
+            warning "Пожалуйста укажите причину отказа"
+        }
+    }
+
+    action {
+        if $Action == 1 { // accept
+            DBUpdate("lots", $Id, "status", 1)
+        }
+        if $Action == 2 { // reject
+            DBUpdate("lots", $Id, "status,comment", 5, $Comment)
+        }
+        notifications_Close("notific_id", $NotificId)
+    }
+}

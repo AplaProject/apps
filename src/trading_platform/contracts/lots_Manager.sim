@@ -36,6 +36,21 @@ contract lots_Manager {
         }
         return s
     }
+    func appendAll(items ...)array{
+        return items
+    }
+    func notifyAdmin(lotId int){
+        var rid closureType sender int textHeader pageName string params map
+        closureType = 2
+        sender = 1
+        textHeader = "Новый лот: требуется подтверждение"
+        pageName = "lots_view"
+        params["lot_id"] = lotId
+        params["lot_status"] = 0
+        params = JSONEncode(params)
+        rid = 1
+        notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, params)
+    }
     conditions {
         $Id = Int($Id)
         if !($Action == "create" || $Action == "edit") {
@@ -49,7 +64,7 @@ contract lots_Manager {
             if !$lot {
                 warning "Lot not found"
             }
-            if $lot["status"] > 0 {
+            if $lot["status"] > 1 {
                 warning "Bidding has already begun"
             }
             if $lot["seller"] != $key_id {
@@ -82,32 +97,15 @@ contract lots_Manager {
         // TODO: contractFileId генерировать внутри
         // contractFileId = @1UploadBinary("ApplicationId,Name,Data,DataMimeType", appId, "lot_contract", "application/pdf")
 
-        var fields string args array
-        args = Append(args,$Name)
-        args = Append(args,$Description)
-        args = Append(args,imageId)
-        args = Append(args,$dateStart)
-        args = Append(args,$dateEnd)
-        args = Append(args,$AmountStarting)
-        args = Append(args,$OrderMin)
-        args = Append(args,$OrderMax)
-        args = Append(args,contractFileId)
-        args = Append(args,$Count)
-        args = Append(args,$Weight)
-        args = Append(args,$WeightType)
-        args = Append(args,$Length)
-        args = Append(args,$Width)
-        args = Append(args,$Height)
-        args = Append(args,$TypeId)
-        args = Append(args,$catId)
-        args = Append(args,$Location)
-        args = Append(args,$Condition)
+        var fields string args array id int
+        args = appendAll($Name, $Description, imageId, $dateStart, $dateEnd, $AmountStarting, $OrderMin, $OrderMax, contractFileId, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition)
         fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight,weight_type,length,width,height,lots_type_id,category,location,condition"
         if $Action == "create"{
             fields = Sprintf("%v,timestamp date_creation,seller", fields)
             args = Append(args,$block_time)
             args = Append(args,$key_id)
-            DBInsert("lots", fields, ...args)
+            id = DBInsert("lots", fields, ...args)
+            notifyAdmin(id)
             return
         }
         if $Action == "edit"{

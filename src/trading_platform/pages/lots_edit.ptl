@@ -7,8 +7,8 @@ If(GetVar(Id)){
 
     DBFind(lots, src_lots).Where("id=#Id#").Vars(lot)
     SetVar(title, $lots_edit$)
-    SetVar(name, $lot_name$)
-    SetVar(description, $lot_description$)
+    SetVar(name, #lot_name#)
+    SetVar(description, #lot_description#)
     SetVar(amount_starting, Money(#lot_amount_starting#))
     SetVar(order_min, Money(#lot_order_min#))
     SetVar(order_max, Money(#lot_order_max#))
@@ -26,23 +26,23 @@ If(GetVar(Id)){
     SetVar(location,#lot_location#)
     SetVar(condition,#lot_condition#)
 
-    SetVar(TypeId,#lot_type_id#)
+    SetVar(TypeId,#lot_lots_type_id#)
     SetVar(CatId,#lot_category#)
 }
-SetTitle(#title#)
 
 
 Div(content-wrapper){
-    Div(breadcrumb){
-        LinkPage($lots_list$, lots_list)
-        Span(/,mh)
-        Span(Class: text-muted, Body: #title#)
-    }
+    If(GetVar(TypeId)){
+        SetTitle(#title#)
+        Div(breadcrumb){
+            LinkPage($lots_list$, lots_list)
+            Span(/,mh)
+            Span(Class: text-muted, Body: #title#)
+        }
 
-    Div(row){
-        Div(col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3){
-            Form(panel panel-primary){
-                If(GetVar(TypeId)){
+        Div(row){
+            Div(col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3){
+                Form(panel panel-primary){
                     DBFind(lots_types,src_type).Where("deleted=0 and id=#TypeId#").Vars(type)
 
                     Div(panel-heading){#title#}
@@ -205,37 +205,38 @@ Div(content-wrapper){
                         If(GetVar(Id)) {
                             Button(Body: $lots_back$, Class: btn btn-default pull-left, Page: lots_list)
                         }.Else{
-                            Button(Body: $lots_back$, Class: btn btn-default pull-left, Page: lots_edit, PageParams: "CatId=#CatId#")
+                            Button(Body: $lots_back$, Class: btn btn-default pull-left hidden-lg, Page: lots_edit, PageParams: "CatId=#CatId#").Popup(Width: 50, Header: "Выбор вида")
+                            Button(Body: $lots_back$, Class: btn btn-default pull-left hidden-sm hidden-md hidden-xs, Page: lots_edit, PageParams: "CatId=#CatId#").Popup(Width: 30, Header: "Выбор вида")
                         }
                         Button(Body: #BtnBody#, Class: btn btn-primary, Contract: lots_Manager, Page: lots_list, Params: "Action=#Action#,TypeId=#TypeId#")
                     }
-                }.Else{
-                    If(GetVar(CatId)){
-                        SetVar(Cat,AppParam(App: #application_id#, Name: lots_categories, Index: #CatId#))
-                        DBFind(lots_types,src_types).Where("deleted=0 and category=#CatId#")
-
-                        Div(panel-heading){$lots_cat$ LangRes(#Cat#): LangRes(lots_select_type)}
-                        Div(panel-body text-center){
-                            ForList(src_types){
-                                Button(Body: LangRes(#resource_name#), Class: btn btn-primary mr-sm mb-sm, Page: lots_edit, PageParams: "TypeId=#id#,CatId=#CatId#")
-                            }
-                        }
-                        Div(panel-footer text-left){
-                            Button(Body: $lots_back$, Class: btn btn-default, Page: lots_edit)
-                        }
-                    }.Else{
-                        AppParam(App: #application_id#, Name: lots_categories, Source: src_cats)
-                        Div(panel-heading){LangRes(lots_select_cat)}
-                        Div(panel-body text-center){
-                            ForList(src_cats){
-                                Button(Body: #name#, Class: btn btn-primary mr-sm mb-sm, Page: lots_edit, PageParams: "CatId=#id#")
-                            }
-                        }
-                        Div(panel-footer text-left){
-                            Button(Body: $lots_back$, Class: btn btn-default, Page: lots_list)
-                        }
-                    }
                 }
+            }
+        }
+
+    }.Else{
+        If(GetVar(CatId)){
+            SetVar(Cat,AppParam(App: #application_id#, Name: lots_categories, Index: #CatId#))
+            DBFind(lots_types,src_types).Where("deleted=0 and category=#CatId#")
+            Div(text-center form-group){
+                ForList(src_types){
+                    Button(Body: LangRes(#resource_name#), Class: btn btn-primary btn-block mr-sm mb-sm, Page: lots_edit, PageParams: "TypeId=#id#,CatId=#CatId#")
+                }
+            }
+            Div(text-left){
+                Button(Body: $lots_back$, Class: btn btn-default hidden-lg, Page: lots_edit).Popup(Width: 50, Header: "Выбор категории")
+                Button(Body: $lots_back$, Class: btn btn-default hidden-sm hidden-md hidden-xs, Page: lots_edit).Popup(Width: 30, Header: "Выбор категории")
+            }
+        }.Else{
+            AppParam(App: #application_id#, Name: lots_categories, Source: src_cats)
+            Div(text-center form-group){
+                ForList(src_cats){
+                    Button(Body: #name#, Class: btn btn-primary btn-block mr-sm mb-sm hidden-lg, Page: lots_edit, PageParams: "CatId=#id#").Popup(Width: 50, Header: "Выбор вида")
+                    Button(Body: #name#, Class: btn btn-primary btn-block mr-sm mb-sm hidden-sm hidden-md hidden-xs, Page: lots_edit, PageParams: "CatId=#id#").Popup(Width: 30, Header: "Выбор вида")
+                }
+            }
+            Div(text-left){
+                Button(Body: $lots_back$, Class: btn btn-default, Page: lots_list)
             }
         }
     }
