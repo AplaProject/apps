@@ -148,7 +148,7 @@ contract CrudCreate {
                 Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
                     Form(panel panel-primary){
                         Div(panel-heading){
-                            LangRes($data_input$)
+                            LangRes(data_input)
                         }
                         Div(panel-body){
                             If(GetVar(`+$ID+`)){
@@ -174,6 +174,59 @@ contract CrudCreate {
                             Button(Body: #btn_title#, Page: `+pageRecordsName+`, Class: btn btn-primary, Contract: `+contractEditName+`)
                         }
                     }
+                }
+            }
+        }`
+        return body
+    }
+    func getPageView(cols array, pageName, pageRecordsName string)string{
+        var body string i lenCols int
+        body = `DBFind(applications).Columns("id").Where("name='`+$appName+`' AND deleted=0").Vars(application)SetVar(title,$`+pageName+`_create$).(btn_title,$create$)`
+        cols = Append(cols, "id")
+        lenCols = Len(cols)
+        body = body+`
+        If(GetVar(`+$ID+`)){
+            DBFind(`+$tableName+`).Where("id=#`+$ID+`#").Vars(item)
+            SetVar(title,$`+pageName+`_view$)
+        }
+        SetTitle(#title#)
+        Div(content-wrapper){
+            Div(breadcrumb){
+                LinkPage(Body: $`+pageRecordsName+`$, Page: `+pageRecordsName+`)
+                Span(/, mh)
+                Span(#title#, text-muted)
+            }
+            If(GetVar(`+$ID+`)){
+                Div(row){
+                    Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
+                        Div(panel panel-primary){
+                            Div(panel-heading){
+                                LangRes(data_view)
+                            }
+                            Div(panel-body){`
+                            i=0
+                            while i<lenCols{
+                                body = body+`
+                                Div(row mt-sm){
+                                    Div(col-sm-4 mt-sm text-right text-bold){
+                                        LangRes(`+cols[i]+`)
+                                    }
+                                    Div(col-sm-8 text-left){
+                                        #item_`+cols[i]+`#)
+                                    }
+                                }`
+                                i=i+1
+                            }
+                            body = body+`
+                        }
+                        Div(panel-footer text-left){
+                            Button(Body: Back, Page: `+pageRecordsName+`, Class: btn btn-default)
+                        }
+                    }
+                }
+            }.Else{
+                Div(h3 text-center){
+                    LangRes(`+$prefix+`item_not_found)
                 }
             }
         }`
@@ -261,6 +314,7 @@ contract CrudCreate {
         }`
         return body
     }
+
     func createExportItem(type, name, content string)map{
         var item map
         if !(content && name && type){
@@ -303,7 +357,16 @@ contract CrudCreate {
         if !$appName {
             warning "Application not found"
         }
+        var p1 p2 string
         $tableName = ToLower($tableName)
+        $prefix = getPrefix($appName)
+        $pagePrefix = $prefix + trim_s($tableName)
+        p1 = toCamel($prefix, false)
+        p2 = toCamel(trim_s($tableName), false)
+        $contractPrefix = p1
+        if p1 != p2{
+            $contractPrefix = p1 + p2
+        }
 
         var pageInputTypes contractInputTypes map
         pageInputTypes["text"] = "text"
@@ -336,28 +399,28 @@ contract CrudCreate {
         cols = JSONDecode($table["columns"])
         colsNames = GetMapKeys(cols)
 
-        var pageRecordsName pageName pageEditName contractEditName contractDeleteName contractName prefix string
-        prefix = getPrefix($appName)
-        pageRecordsName = prefix + $tableName
-        pageName = prefix + trim_s($tableName)
-        pageEditName = pageName + "_edit"
-        contractName = toCamel(prefix, false) + toCamel(trim_s($tableName), false)
-        contractEditName = contractName + "Edit"
-        contractDeleteName = contractName + "Delete"
+        var names map pageRecords pageEdit pageView contractDelete contractEdit string
+        names["pageRecords"] = $prefix + $tableName
 
-        var pageRecords pageEdit contractDelete contractEdit string
-        pageRecords = generatePageRecords(colsNames, pageEditName, pageRecordsName, contractDeleteName)
-        pageEdit = getPageEdit(colsNames, pageName, pageRecordsName, contractEditName)
+        names["pageEdit"] = $pagePrefix + "_edit"
+        names["pageView"] = $pagePrefix + "_view"
+        names["contractEdit"] = $contractPrefix + "Edit"
+        names["contractDelete"] = $contractPrefix + "Delete"
 
-        contractDelete = getContractDelete(contractDeleteName, colsNames)
-        contractEdit = getContractEdit(contractEditName, colsNames)
+        pageRecords = generatePageRecords(colsNames, names["pageEdit"], names["pageRecords"], names["contractDelete"])
+        pageEdit = getPageEdit(colsNames, $pagePrefix, names["pageRecords"], names["contractEdit"])
+        pageView = getPageView(colsNames, $pagePrefix, names["pageRecords"])
+
+        contractDelete = getContractDelete(names["contractDelete"], colsNames)
+        contractEdit = getContractEdit(names["contractEdit"], colsNames)
 
         export(
             $appName,
-            createExportItem("pages", pageRecordsName, pageRecords),
-            createExportItem("pages", pageEditName, pageEdit),
-            createExportItem("contracts", contractEditName, contractEdit),
-            createExportItem("contracts", contractDeleteName, contractDelete)
+            createExportItem("pages", names["pageRecords"], pageRecords),
+            createExportItem("pages", names["pageEdit"], pageEdit),
+            createExportItem("pages", names["pageView"], pageView),
+            createExportItem("contracts", names["contractEdit"], contractEdit),
+            createExportItem("contracts", names["contractDelete"], contractDelete)
         )
 
     }
