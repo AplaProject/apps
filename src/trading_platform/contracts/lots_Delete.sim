@@ -2,11 +2,24 @@ contract lots_Delete {
     data {
         Id int
     }
-    func closeAdminNotify(){
-        var id int
-        id = Int(DBFind("notifications").Where("page_params->lot_status=? and page_params->lot_id=?", $Id, 0).One("id"))
-        if id > 0{
-            notifications_Close("notific_id", id)
+    func closeNotes(){
+        var notes array i lenNotes int note map
+        notes = DBFind("notifications").Where("page_params->lot_id=?", $Id).Columns("id")
+        lenNotes = Len(notes)
+        while i<lenNotes{
+            note = notes[i]
+            notifications_Close("notific_id", Int(note["id"]))
+            i=i+1
+        }
+    }
+    func removeTracks(){
+        var tracks array i lenTracks int track map
+        tracks = DBFind("lots_tracks").Where("lot_id=?", $Id).Columns("id")
+        lenTracks = Len(tracks)
+        while i<lenTracks{
+            track = tracks[i]
+            DBUpdate("lots_tracks", Int(track["id"]), "deleted", 1)
+            i=i+1
         }
     }
     conditions {
@@ -25,6 +38,7 @@ contract lots_Delete {
 
     action {
         DBUpdate("lots", $Id, "deleted", 1)
-        closeAdminNotify()
+        closeNotes()
+        removeTracks()
     }
 }
