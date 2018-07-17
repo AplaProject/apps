@@ -109,19 +109,21 @@ Div(content-wrapper){
                     AppParam(App: #application_id#, Name: lots_status, Index: #status_index#)
                 }
             }.Custom(_actions){
+                SetVar(track_id,)
                 DBFind(lots_tracks).Where("lot_id=#id# and key_id=#key_id# and deleted=0").Vars(track)
                 Div(text-right text-nowrap){
-                    If(And(#status#>1,#status#<#rejected_status#)){
-                        If(#r_role_name#=="Buyer"){
+                    If(#r_role_name#=="Buyer"){
+                        If(And(#status#>1,#status#<#rejected_status#)){
                             Button(Class: btn btn-primary, Body: $lots_bid$, Page: lots_list)
-                        }
-                    }.Else{
-                        If(And(#r_role_name#=="Buyer",#status#!=#rejected_status#)){
+                        }.ElseIf(#status#==1){
                             If(#track_id#>0){
+                                Button(Class: btn btn-default, Body: $lots_unsubscribe$, Page: lots_list, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#id#")
                             }.Else{
-                                Button(Class: btn btn-primary, Body: $lots_subscribe$, Page: lots_list)
+                                Button(Class: btn btn-primary, Body: $lots_subscribe$, Page: lots_list, Contract: lots_BuyerAction, Params: "Action=track_accept,Id=#id#")
                             }
-                        }.ElseIf(And(#seller#==#key_id#,#r_role_name#=="Seller",#status#<1)){
+                        }
+                    }.ElseIf(And(#seller#==#key_id#,#r_role_name#=="Seller")){
+                        If(#status#<1){
                             Button(Class: btn btn-default fa fa-edit mr-sm, Page: lots_edit, PageParams: "Id=#id#")
                             Button(Class: btn btn-danger fa fa-trash, Page: lots_list, Contract: lots_Delete, Params: "Id=#id#").Alert($lots_delete_auction$, $lots_yes$, $lots_no$)
                         }

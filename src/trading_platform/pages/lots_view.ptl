@@ -19,6 +19,7 @@ Div(content-wrapper){
         DBFind(lots,lot).Where("id=#Id#").Vars(lot)
         DBFind(lots_types,src_type).Where("deleted=0 and id=#lot_lots_type_id#").Vars(type)
         DBFind(roles).Columns("role_name").Where("id=#role_id#").Vars(r)
+        DBFind(lots_tracks).Where("lot_id=#Id# and key_id=#key_id# and deleted=0").Vars(track)
 
         Div(row){
             Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
@@ -64,7 +65,7 @@ Div(content-wrapper){
                                 }
                             }.ElseIf(And(#r_role_name#=="Buyer",#notific_id#>0)){
                                 Div(form-group text-left){
-                                    Button(Body: "Не интересует", Page: lots_view, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#,NotificId=#notific_id#,Comment=", Class: btn btn-default, PageParams: "Id=#Id#")
+                                    Button(Body: "Не интересует", Page: lots_view, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#,NotificId=#notific_id#", Class: btn btn-default, PageParams: "Id=#Id#")
                                     Button(Body: "Отслеживать", Page: lots_view, Params: "Action=track_accept,NotificId=#notific_id#,Id=#Id#",PageParams: "Id=#Id#", Contract: lots_BuyerAction, Class: btn btn-success pull-right)
                                 }
                             }
@@ -201,11 +202,17 @@ Div(content-wrapper){
                         Div(form-group){
                             If(#lot_deleted#==0) {
                                 If(#r_role_name#=="Buyer"){
-                                    Div(list-group-item text-center){
-                                        If(#lot_status#==0){
-                                            Button(Class: btn btn-primary btn-block, Body: $lots_subscribe$, Page: lots_list)
-                                        }.Else{
-                                            Button(Class: btn btn-primary btn-block, Body: $lots_bid$, Page: lots_list)
+                                    If(#comment#=="пока отключено"){
+                                        Div(list-group-item text-center){
+                                            If(#lot_status#==1){
+                                                If(#track_id#>0){
+                                                    Button(Body: $lots_unsubscribe$, Class: btn btn-default btn-block, Page: lots_view, PageParams: "Id=#Id#", Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#")
+                                                }.Else{
+                                                    Button(Body: $lots_subscribe$, Class: btn btn-primary btn-block, Page: lots_view,PageParams: "Id=#Id#", Contract: lots_BuyerAction, Params: "Action=track_accept,Id=#Id#")
+                                                }
+                                            }.ElseIf(#lot_status#>1){
+                                                Button(Class: btn btn-primary btn-block, Body: $lots_bid$, Page: lots_list)
+                                            }
                                         }
                                     }
                                 }.ElseIf(#r_role_name#=="Seller"){
