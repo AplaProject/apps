@@ -1,0 +1,364 @@
+contract CrudCreate {
+    data {
+        tableName string
+    }
+
+    func toUpper(s string) string {
+        var conv map
+        conv["q"] = "Q"
+        conv["a"] = "A"
+        conv["z"] = "Z"
+        conv["w"] = "W"
+        conv["s"] = "S"
+        conv["x"] = "X"
+        conv["e"] = "E"
+        conv["d"] = "D"
+        conv["c"] = "C"
+        conv["r"] = "R"
+        conv["f"] = "F"
+        conv["v"] = "V"
+        conv["t"] = "T"
+        conv["g"] = "G"
+        conv["b"] = "B"
+        conv["y"] = "Y"
+        conv["h"] = "H"
+        conv["n"] = "N"
+        conv["u"] = "U"
+        conv["j"] = "J"
+        conv["m"] = "M"
+        conv["i"] = "I"
+        conv["k"] = "K"
+        conv["o"] = "O"
+        conv["l"] = "L"
+        conv["p"] = "P"
+        var i int res b string
+        while i < Size(s){
+            b = Substr(s, i, 1)
+            if conv[b]{
+                res = res + conv[b]
+            }else{
+                res = res + b
+            }
+            i=i+1
+        }
+        return res
+    }
+    func toCamel(t string, lowerFirstLetter bool) string{
+        var parts array i int
+        parts = Split(t, "_")
+        while i < Len(parts){
+            if i == 0 && lowerFirstLetter {
+                parts[i] = ToLower(parts[i])
+            }else{
+                parts[i] = toUpper(Substr(parts[i], 0, 1)) + ToLower(Substr(parts[i], 1, Size(parts[i])))
+            }
+            i=i+1
+        }
+        return Join(parts, "")
+    }
+    func getPaginator() string{
+        var body string
+        body = `
+        DBFind(`+$tableName+`).Count(count)
+        If(#page#>0){
+            SetVar(prev_page,Calculate(#page#-1)
+        }.Else{
+            SetVar(page,0).(prev_page,0)
+        }
+        SetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#count#/#per_page#)).(next_page,#last_page#)
+        If(#count#>Calculate(#off#+#per_page#)){
+            SetVar(next_page,Calculate(#page#+1)
+        }
+        Div(button-group){
+            If(#page#>0){
+                Button(Body:"1", Class:btn btn-default, Page:#page_name#, PageParams: "page=0")
+            }.Else{
+                Button(Body:"1", Class:btn btn-default disabled)
+            }
+            If(#page#>1){
+                Button(Body:Calculate(#prev_page#+1),Class:btn btn-default, Page:#page_name#, PageParams:"page=#prev_page#")
+            }
+            If(And(#page#>0,#page#<#last_page#)){
+                Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)
+            }
+            If(#next_page#<#last_page#){
+                Button(Body:Calculate(#next_page#+1),Class:btn btn-default,Page:#page_name#, PageParams:"page=#next_page#")
+            }
+            If(#page#<#last_page#){
+                Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:#page_name#, PageParams:"page=#last_page#")
+            }.ElseIf(#last_page#>0){
+                Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)
+            }
+        }`
+
+        return body
+    }
+    func generatePageRecords(cols array, pageEditName thisPageName contractDeleteName string) string{
+        var body string
+        body = `DBFind(applications).Columns("id").Where("name='`+$appName+`' AND deleted=0").Vars(application)
+        SetTitle($`+thisPageName+`$)
+        SetVar(page_name,`+thisPageName+`)
+        Div(content-wrapper){
+            AddToolButton(Title: Create, Page: `+pageEditName+`, Icon: icon-plus)
+            `+getPaginator()+`
+            Div(panel panel-primary){
+                Div(panel-body){
+                    Div(table-responsive){
+                        DBFind(`+$tableName+`,src_`+$tableName+`).Offset(#off#).Order(id).Custom(_actions){
+                            Div(text-right text-nowrap){
+                                Button(Class: btn btn-default fa fa-edit mr-sm, Page: `+pageEditName+`, PageParams: "`+$ID+`=#id#")
+                                Button(Class: btn btn-danger fa fa-trash, Page: `+thisPageName+`, Contract: `+contractDeleteName+`, Params: "`+$ID+`=#id#").Alert($delete_alert$, $yes$, $no$)
+                            }
+                        }
+                        Table(src_`+$tableName+`,"`+Join(cols,",")+`,=_actions")
+                    }
+                }
+            }
+        }`
+        return body
+    }
+    func trim_s(s string)string{
+        if Substr(s, Size(s)-1, 1) == "s"{
+            return Substr(s, 0, Size(s)-1)
+        }
+        return s
+    }
+    func getPageEdit(cols array, pageName, pageRecordsName, contractEditName string)string{
+        var body string i lenCols int
+        body = `DBFind(applications).Columns("id").Where("name='`+$appName+`' AND deleted=0").Vars(application)SetVar(title,$`+pageName+`_create$).(btn_title,$create$)`
+        lenCols = Len(cols)
+        while i < lenCols{
+            body = body + `SetVar(item_`+cols[i]+`,)`
+            i=i+1
+        }
+        body = body+`
+        If(GetVar(`+$ID+`)){
+            DBFind(`+$tableName+`).Where("id=#`+$ID+`#").Vars(item)
+            SetVar(title,$`+pageName+`_edit$)
+            SetVar(btn_title,$edit$)
+        }
+        SetTitle(#title#)
+        Div(content-wrapper){
+            Div(breadcrumb){
+                LinkPage(Body: $`+pageRecordsName+`$, Page: `+pageRecordsName+`)
+                Span(/, mh)
+                Span(#title#, text-muted)
+            }
+            Div(row){
+                Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
+                    Form(panel panel-primary){
+                        Div(panel-heading){
+                            LangRes($data_input$)
+                        }
+                        Div(panel-body){
+                            If(GetVar(`+$ID+`)){
+                                Input(Name: `+$ID+`, Type:hidden, Value: #`+$ID+`#)
+                            }`
+                            i=0
+                            while i<lenCols{
+                                body = body+`
+                                Div(row mt-sm){
+                                    Div(col-sm-4 mt-sm text-right){
+                                        LangRes(`+cols[i]+`)
+                                    }
+                                    Div(col-sm-8 text-left){
+                                        Input(Name: `+toCamel(cols[i], $lowerFirst)+`, Type:`+$pageInputTypes[GetColumnType($tableName, cols[i])]+`, Value: #item_`+cols[i]+`#)
+                                    }
+                                }`
+                                i=i+1
+                            }
+                            body = body+`
+                        }
+                        Div(panel-footer text-right){
+                            Button(Body: Back, Page: `+pageRecordsName+`, Class: btn btn-default pull-left)
+                            Button(Body: #btn_title#, Page: `+pageRecordsName+`, Class: btn btn-primary, Contract: `+contractEditName+`)
+                        }
+                    }
+                }
+            }
+        }`
+        return body
+    }
+    func getPrefix(appName string)string{
+        var temp array
+        temp = Split(appName, " ")
+        return ToLower(temp[0]+"_")
+    }
+    func getMapValues(m map, keys array) array {
+        var values array i keysLen int key string
+        keysLen = Len(keys)
+        while i < keysLen {
+            key = keys[i]
+            values = Append(values, m[key])
+            i=i+1
+        }
+        return values
+    }
+    func getContractDelete(name string, cols array)string{
+        var body dColName string i lenCols int
+        lenCols = Len(cols)
+        while i<lenCols{
+            if "delete" == cols[i] || "deleted" == cols[i]{
+                dColName = cols[i]
+            }
+            i=i+1
+        }
+        if !dColName{
+            return ""
+        }
+        body = `contract `+name+` {
+            data {
+                `+ $ID +` int
+            }
+            conditions {
+                if !DBFind("`+$tableName+`").Where("id=? and `+dColName+`=0", $`+$ID+`).One("id") {
+                    warning "Record not found"
+                }
+            }
+            action {
+                DBUpdate("`+$tableName+`", $`+ $ID +`, "`+dColName+`", 1)
+            }
+        }`
+        return body
+    }
+    func globJoin(cols array)string{
+        var body array i lenCols int
+        lenCols = Len(cols)
+        while i<lenCols{
+            body = Append(body, "$"+toCamel(cols[i], $lowerFirst))
+            i=i+1
+        }
+        return Join(body, ",")
+    }
+    func getContractEdit(name string, cols array)string{
+        var body dColName string i lenCols int
+        lenCols = Len(cols)
+        body = `contract `+name+` {
+            data {
+                `+$ID+` string "optional"`
+                while i<lenCols{
+                    body = body+`
+                    `+toCamel(cols[i], $lowerFirst)+` ` +$contractInputTypes[GetColumnType($tableName, cols[i])]
+                    i=i+1
+                }
+                body = body + `
+            }
+            conditions {
+                $`+$ID+` = Int($`+$ID+`)
+                if $`+$ID+` > 0{
+                    if !DBFind("`+$tableName+`").Where("id=?", $`+$ID+`).One("id") {
+                        warning "Record not found"
+                    }
+                }
+            }
+            action {
+                if $`+$ID+` > 0{
+                    DBUpdate("`+$tableName+`", $`+$ID+`, "`+Join(cols, ",")+`",`+globJoin(cols)+`)
+                }else{
+                    DBInsert("`+$tableName+`", "`+Join(cols, ",")+`",`+globJoin(cols)+`)
+                }
+            }
+        }`
+        return body
+    }
+    func createExportItem(type, name, content string)map{
+        var item map
+        if !(content && name && type){
+            return item
+        }
+        if type == "pages"{
+            item["Menu"] = "default_menu"
+        }
+
+        item["Conditions"] = "true"
+        item["Value"] = content
+        item["Name"] = name
+        item["Type"] = type
+        return item
+    }
+    func export(name string, items ...){
+        var app item map i lenItems int ar array
+        lenItems = Len(items)
+        app["name"] = name
+        while i<lenItems{
+            item = items[i]
+            if item["Value"] {
+                ar = Append(ar, item)
+            }
+            i=i+1
+        }
+        app["data"] = ar
+        @1UploadBinary("Name,Data,ApplicationId,DataMimeType", "export "+name, JSONEncode(app), $appId, "application/json")
+    }
+    conditions {
+        $table = DBFind("tables").Columns("columns").Where("name=?", $tableName).Row()
+        if !$table{
+            warning "Table not found"
+        }
+        $lowerFirst = true // first letter for input global variables
+        $ID = toCamel("id", $lowerFirst)
+
+        $appId = Int(DBFind("tables").Where("name=?", $tableName).Columns("app_id").One("app_id"))
+        $appName = DBFind("applications").Where("id=?", $appId).Columns("name").One("name")
+        if !$appName {
+            warning "Application not found"
+        }
+        $tableName = ToLower($tableName)
+
+        var pageInputTypes contractInputTypes map
+        pageInputTypes["text"] = "text"
+        pageInputTypes["number"] = "number"
+        pageInputTypes["money"] = "number"
+        pageInputTypes["varchar"] = "text"
+        pageInputTypes["datetime"] = "date"
+        pageInputTypes["double"] = "number"
+        pageInputTypes["character"] = "text"
+        pageInputTypes["json"] = "textarea"
+        pageInputTypes["bytea"] = "file"
+        pageInputTypes["uuid"] = "text"
+
+        contractInputTypes["text"] = "string"
+        contractInputTypes["number"] = "int"
+        contractInputTypes["money"] = "money"
+        contractInputTypes["varchar"] = "string"
+        contractInputTypes["datetime"] = "string"
+        contractInputTypes["double"] = "float"
+        contractInputTypes["character"] = "string"
+        contractInputTypes["json"] = "string"
+        contractInputTypes["bytea"] = "bytes"
+        contractInputTypes["uuid"] = "string"
+
+        $pageInputTypes = pageInputTypes
+        $contractInputTypes = contractInputTypes
+    }
+    action {
+        var cols colsNames colsTypes array
+        cols = JSONDecode($table["columns"])
+        colsNames = GetMapKeys(cols)
+
+        var pageRecordsName pageName pageEditName contractEditName contractDeleteName contractName prefix string
+        prefix = getPrefix($appName)
+        pageRecordsName = prefix + $tableName
+        pageName = prefix + trim_s($tableName)
+        pageEditName = pageName + "_edit"
+        contractName = toCamel(prefix, false) + toCamel(trim_s($tableName), false)
+        contractEditName = contractName + "Edit"
+        contractDeleteName = contractName + "Delete"
+
+        var pageRecords pageEdit contractDelete contractEdit string
+        pageRecords = generatePageRecords(colsNames, pageEditName, pageRecordsName, contractDeleteName)
+        pageEdit = getPageEdit(colsNames, pageName, pageRecordsName, contractEditName)
+
+        contractDelete = getContractDelete(contractDeleteName, colsNames)
+        contractEdit = getContractEdit(contractEditName, colsNames)
+
+        export(
+            $appName,
+            createExportItem("pages", pageRecordsName, pageRecords),
+            createExportItem("pages", pageEditName, pageEdit),
+            createExportItem("contracts", contractEditName, contractEdit),
+            createExportItem("contracts", contractDeleteName, contractDelete)
+        )
+
+    }
+}
