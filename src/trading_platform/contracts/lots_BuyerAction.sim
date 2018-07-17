@@ -8,20 +8,26 @@ contract lots_BuyerAction {
         if !DBFind("roles").Where("role_name='Buyer' and id=?", $role_id).One("id") {
             warning "Access denied"
         }
-        $lot = DBFind("lots").Where("id=? and deleted=0", $Id).Row()
+        $lot = DBFind("lots").Where("id=?", $Id).Row()
         if !$lot {
             warning "Lot not found"
         }
-        if $lot["status"] < 2 {
-            warning "Bidding has not begun"
-        }
+        $track = DBFind("lots_tracks").Where("key_id=? and lot_id=?", $key_id, $Id).Row()
     }
 
     action {
-        if $Action == "accept" {
+        if $Action == "track_accept" {
+            if !$track {
+                DBInsert("lots_tracks", "key_id,lot_id", $key_id, $Id)
+            }else{
+                DBUpdate("lots_tracks", Int($track["id"]), "deleted", 0)
+            }
         }
-        if $Action == "reject" {
+        if $Action == "track_reject" {
+            if $track {
+                DBUpdate("lots_tracks", Int($track["id"]), "deleted", 1)
+            }
         }
-        // notifications_Close("notific_id", $NotificId)
+        notifications_Close("notific_id", $NotificId)
     }
 }
