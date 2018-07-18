@@ -1,34 +1,31 @@
 contract RopeWorksCalculate {
     data {}
-    func getFindAll(table, where, columns string) array {
+    func extend(a, b array)array{
+        var i lena lenb int
+        lena = Len(a)
+        lenb = Len(b)
+        while i<lenb{
+            a[lena+i] = b[i]
+            i=i+1
+        }
+        return a
+    }
+    func findAll(table, where, columns string) array {
         var full parts array limit offset int
         limit = 250
-        if where = ""{
-            where = "id>0"
-        }
         while true {
-            if columns == "*"{
-                parts = DBFind(table).Where(where).Offset(offset).Limit(limit).Order("id")
-            }else{
-                parts = DBFind(table).Where(where).Columns(columns).Offset(offset).Limit(limit).Order("id")
-            }
+            parts = DBFind(table).Where(where).Columns(columns).Offset(offset).Limit(limit)
             if Len(parts) > 0 {
                 if Len(full) == 0 {
                     full = parts
                 }else{
-                    var i lenParts int
-                    lenParts = Len(parts)
-                    while i < lenParts {
-                        full = Append(full, parts[i])
-                        i = i+1
-                    }
+                    full = extend(full, parts)
                 }
             }else{
                 break
             }
             offset = offset+limit
         }
-        // Println("find all", table, Len(full))
         return full
     }
     func getAbsFloat(n float) float{
@@ -71,7 +68,7 @@ contract RopeWorksCalculate {
 
     action {
         var works array cols op string i lenWorks int work workPrev coil drilling map
-        works = getFindAll("rope_works", "", cols)
+        works = findAll("rope_works", "id>0", cols)
         lenWorks = Len(works)
 
         var w1 w2 d1 d2 cl bw pw float
@@ -96,15 +93,12 @@ contract RopeWorksCalculate {
             d2 = safeFloat(work["depth_final"])
 
             // "Наработка Lн, тк.м"
-            // Println("Наработка Lн, тк.м")
             work["work_started"] = (w1 * (d1 + cl) + (4 * d1 * bw))/1000.0
 
             // "Наработка Lк, т.км"
-            // Println("Наработка Lк, т.км")
             work["work_final"] = (w2 * (d2 + cl) + (4 * d2 * bw))/1000.0
 
             // "Наработка за операцию, т.км"
-            // Println("Наработка за операцию, т.км")
             work["work_operation"] = 0
             if op == "Подъем"{
                 work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*0.5
@@ -139,7 +133,6 @@ contract RopeWorksCalculate {
 
 
             // "Наработка нарастающая до перепуска"
-            // Println("Наработка нарастающая до перепуска")
             if work["operation"] == 1 {
                 work["work_bypass"] = work["work_operation"]
             }else{
@@ -150,7 +143,6 @@ contract RopeWorksCalculate {
                 }
             }
             // "Наработка нарастающая на бухту"
-            // Println("Наработка нарастающая на бухту")
             if work["operation"] == 1 {
                 work["work_coil"] = work["work_bypass"] + pw
             }else{

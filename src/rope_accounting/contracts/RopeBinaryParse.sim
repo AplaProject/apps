@@ -3,7 +3,6 @@ contract RopeBinaryParse {
         Id string "optional"
     }
     func getWorkIndexes(cells array) map{
-        Println("getWorkIndexes")
         var indexes map i cellsLen int s string
         // default indexes
         indexes["operation_date"] = 3
@@ -50,7 +49,6 @@ contract RopeBinaryParse {
         return indexes
     }
     func parseWorks(titleCell string, rows array) array {
-        Println("parseWorks")
         var i rowsLen int resultRows selectedRows array canCopy bool
         rowsLen = Len(rows)
         while i < rowsLen {
@@ -102,7 +100,6 @@ contract RopeBinaryParse {
         return resultRows
     }
     func parseCoil(rows array) map {
-        Println("parseCoil")
         var coil map i int row array
         i = 7 // start coil info
         while i < 9 { // end coil info
@@ -121,7 +118,6 @@ contract RopeBinaryParse {
         return coil
     }
     func parseDrilling(rows array) map {
-        Println("parseDrilling")
         var drilling map i int row array
         i = 3 // start drilling info
         while i < 9 { // end drilling info
@@ -166,7 +162,6 @@ contract RopeBinaryParse {
         return values
     }
     func storeCoil(coil map) int {
-        Println("storeCoil")
         var id int
         id = Int(DBFind("rope_coils").Where("certificate=? and diameter=?", coil["certificate"], coil["diameter"]).One("id"))
         if id == 0{
@@ -178,7 +173,6 @@ contract RopeBinaryParse {
         return id
     }
     func storeDrilling(drilling map) int {
-        Println("storeDrilling")
         var id int
         id = Int(DBFind("rope_drillings").Where("filial=? and expedition=? and brigade=?", drilling["filial"], drilling["expedition"], drilling["brigade"]).One("id"))
         if id == 0{
@@ -190,7 +184,6 @@ contract RopeBinaryParse {
         return id
     }
     func storeWorksDepths(coilId, drillingId int, works array) {
-        Println("storeWorksDepths", coilId, drillingId)
         var i worksLen int workId depthId workKeys depthKeys depthWorkKeys fields string values array work map
         worksLen = Len(works)
         workKeys = "operation_type,weight_final,weight_started,bypass_bracing,timestamp operation_date,operation"
@@ -205,7 +198,6 @@ contract RopeBinaryParse {
                 values = Append(values,drillingId)
                 values = Append(values,coilId)
                 fields = workKeys + ",rope_drilling_id,rope_coil_id"
-                // Println("rope_works", fields, values...)
                 DBInsert("rope_works", fields, values...)
             }
             depthId = DBFind("rope_depths").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", coilId, drillingId, work["operation"]).One("id")
@@ -222,7 +214,17 @@ contract RopeBinaryParse {
             i=i+1
         }
     }
-    func getFindAll(table, where, columns string) array {
+    func extend(a, b array)array{
+        var i lena lenb int
+        lena = Len(a)
+        lenb = Len(b)
+        while i<lenb{
+            a[lena+i] = b[i]
+            i=i+1
+        }
+        return a
+    }
+    func findAll(table, where, columns string) array {
         var full parts array limit offset int
         limit = 250
         while true {
@@ -231,12 +233,7 @@ contract RopeBinaryParse {
                 if Len(full) == 0 {
                     full = parts
                 }else{
-                    var i lenParts int
-                    lenParts = Len(parts)
-                    while i < lenParts {
-                        full = Append(full, parts[i])
-                        i = i+1
-                    }
+                    full = extend(full, parts)
                 }
             }else{
                 break
@@ -246,21 +243,30 @@ contract RopeBinaryParse {
         return full
     }
     func updateDepths(coilId, drillingId int) {
-        Println("updateDepths",coilId, drillingId)
         var startedIds startedValues finalIds finalValues depths array i depthsLen int depth map columns string
         columns = Sprintf("id,%v,%v", $startedField, $finalField)
-        depths = getFindAll("rope_depths", Sprintf("rope_coil_id=%v and rope_drilling_id=%v and operation>0", coilId, drillingId), columns)
+        depths = findAll("rope_depths", Sprintf("rope_coil_id=%v and rope_drilling_id=%v and operation>0", coilId, drillingId), columns)
         depthsLen = Len(depths)
-        Println("depthsLen",depthsLen)
+        var buf array m res map
         while i < depthsLen {
             depth = depths[i]
             startedIds = Append(startedIds, depth["id"])
             finalIds = Append(finalIds, depth["id"])
             startedValues = Append(startedValues, depth[$startedField])
             finalValues = Append(finalValues, depth[$finalField])
+            if i>10{
+                m["StartedIds"] = startedIds
+                m["StartedValues"] = startedValues
+                m["FinalIds"] = finalIds
+                m["FinalValues"] = finalValues
+                buf = Append(buf, m)
+                var m map
+            }
             i=i+1
         }
-        RopeDepthsUpdate("StartedIds,StartedValues,FinalIds,FinalValues", startedIds, startedValues, finalIds, finalValues)
+        res["data"] = buf
+        buffer_Manager("Action,Key,Val", "set", "rope_import", JSONEncode(res))
+        // RopeDepthsUpdate("StartedIds,StartedValues,FinalIds,FinalValues", startedIds, startedValues, finalIds, finalValues)
     }
 
     conditions {
@@ -278,7 +284,6 @@ contract RopeBinaryParse {
         mid = Int(AppParam(appId, "rope_manufacturer_role_id"))
         sid = Int(AppParam(appId, "rope_servicer_role_id"))
         pid = Int(AppParam(appId, "rope_producer_role_id"))
-        Println("$role_id == mid",$role_id == mid)
         if $role_id == mid {
             $startedField = "manufacturer_started"
             $finalField = "manufacturer_final"
@@ -291,7 +296,6 @@ contract RopeBinaryParse {
             $startedField = "producer_started"
             $finalField = "producer_final"
         }
-        Println($this_contract)
     }
     action {
         var line count sheet drillingId coilId int rows works array coil drilling map
