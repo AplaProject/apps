@@ -6,65 +6,24 @@ contract RopeDepthsUpdate {
         FinalValues array
     }
 
-    func getFindAll(table, where, columns string) array {
-        var full parts array limit offset int
-        limit = 250
-        while true {
-            parts = DBFind(table).Where(where).Columns(columns).Offset(offset).Limit(limit).Order("id")
-            if Len(parts) > 0 {
-                if Len(full) == 0 {
-                    full = parts
-                }else{
-                    var i lenParts int
-                    lenParts = Len(parts)
-                    while i < lenParts {
-                        full = Append(full, parts[i])
-                        i = i+1
-                    }
-                }
-            }else{
-                break
-            }
-            offset = offset+limit
-        }
-        return full
-    }
-    func getAbsFloat(n float) float{
+    func absF(n float) float{
         if n < 0{
             return -1 * n
         }
         return n
     }
-    func isEqualWithErrorRate(rate float, nums ...) bool {
-        var i sum numsLen int res bool avg absError float
+    func isEqual(a, b int) bool {
+        var res bool avg float
         res = true
-        numsLen = Len(nums)
-        if rate == 0 {
-            while i < numsLen{
-                if i > 0{
-                    if nums[i] != nums[i-1]{
-                        res = false
-                        break
-                    }
-                }
-                i = i + 1
+        if $errorRate == 0 {
+            if a != b{
+                res = false
+                break
             }
         }else{
-            while i < numsLen{
-                sum = sum + nums[i]
-                i = i + 1
-            }
-            avg = Float(sum) / numsLen
-            i = 0
+            avg = Float(a+b) / 2
             if avg != 0{
-                while i < numsLen{
-                    absError = getAbsFloat(Float(nums[i]) - avg)
-                    res = absError/avg <= rate
-                    if !res {
-                        break
-                    }
-                    i = i + 1
-                }
+                res = absF(a-avg)/avg <= $errorRate && absF(b-avg)/avg <= $errorRate
             }
         }
         return res
@@ -86,7 +45,7 @@ contract RopeDepthsUpdate {
         if 0 == a && a == b && b == c && c == a {
             return true
         }
-        return isEqualWithErrorRate($errorRate, a,b) || isEqualWithErrorRate($errorRate, a,c) || isEqualWithErrorRate($errorRate, b,c)
+        return isEqual(a,b) || isEqual(a,c) || isEqual(b,c)
     }
     func notesRefresh(did, cid string){
         var depthsLen i notesLen int notes array note map
@@ -143,7 +102,6 @@ contract RopeDepthsUpdate {
         lenIds = Len(ids)
         var id value int row map did cid where string
         while i < lenIds {
-            Println(i)
             id = Int(ids[i])
             value = Int(values[i])
             if id > 0{

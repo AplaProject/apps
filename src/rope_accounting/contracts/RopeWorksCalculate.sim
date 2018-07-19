@@ -37,9 +37,7 @@ contract RopeWorksCalculate {
     func safeFloat(num ...)float{
         var res float
         if Len(num) != 0{
-            if !num[0] {
-                res = 0.0
-            }else{
+            if num[0] {
                 res = Float(num[0])
             }
         }
@@ -67,6 +65,7 @@ contract RopeWorksCalculate {
     }
 
     action {
+        Println($this_contract)
         var works array cols op string i lenWorks int work workPrev coil drilling map
         works = findAll("rope_works", "id>0", cols)
         lenWorks = Len(works)
@@ -99,48 +98,38 @@ contract RopeWorksCalculate {
             work["work_final"] = (w2 * (d2 + cl) + (4 * d2 * bw))/1000.0
 
             // "Наработка за операцию, т.км"
-            work["work_operation"] = 0
             if op == "Подъем"{
                 work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*0.5
-            }
-            if op == "Спуск"{
+            }elif op == "Спуск"{
                 work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*0.5
-            }
-            if op == "СПО"{
+            }elif op == "СПО"{
                 work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])
-            }
-            if op == "Бурение"{
+            }elif op == "Бурение"{
                 work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*3
-            }
-            if op == "Отбор керна"{
+            }elif op == "Отбор керна"{
                 work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*2
-            }
-            if op == "Проработка"{
+            }elif op == "Проработка"{
                 work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*2
-            }
-            if op == "Шаблонировка"{
+            }elif op == "Шаблонировка"{
                 work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])*2
-            }
-            if op == "Спуск обсадной колонны"{
+            }elif op == "Спуск обсадной колонны"{
                 work["work_operation"] = work["work_final"]*0.5
-            }
-            if op == "Технологическое СПО" {
+            }elif op == "Технологическое СПО" {
                 work["work_operation"] = getAbsFloat(work["work_final"] - work["work_started"])
-            }
-            if op == "Аварийные работы"{
+            }elif op == "Аварийные работы"{
                 work["work_operation"] = work["work_final"]*2
+            }else{
+                work["work_operation"] = 0
             }
 
 
             // "Наработка нарастающая до перепуска"
             if work["operation"] == 1 {
                 work["work_bypass"] = work["work_operation"]
+            }elif work["work_operation"] == 0 {
+                work["work_bypass"] = 0
             }else{
-                if work["work_operation"] == 0 {
-                    work["work_bypass"] = 0
-                }else{
-                    work["work_bypass"] = work["work_operation"] + workPrev["work_bypass"]
-                }
+                work["work_bypass"] = work["work_operation"] + workPrev["work_bypass"]
             }
             // "Наработка нарастающая на бухту"
             if work["operation"] == 1 {

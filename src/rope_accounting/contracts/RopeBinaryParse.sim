@@ -19,29 +19,21 @@ contract RopeBinaryParse {
             s = ToLower(TrimSpace(cells[i]))
             if HasPrefix(s, "дата") && Contains(s,"операции"){
                 indexes["operation_date"] = i
-            }
-            if HasPrefix(s, "№") && Contains(s,"операции"){
+            }elif HasPrefix(s, "№") && Contains(s,"операции"){
                 indexes["operation"] = i
-            }
-            if HasPrefix(s, "вид") && Contains(s,"работ") && Contains(s,"рейса"){
+            }elif HasPrefix(s, "вид") && Contains(s,"работ") && Contains(s,"рейса"){
                 indexes["operation_type"] = i
-            }
-            if HasPrefix(s, "глубина") && Contains(s,"начала"){
+            }elif HasPrefix(s, "глубина") && Contains(s,"начала"){
                 indexes["depth_started"] = i
-            }
-            if HasPrefix(s, "глубина") && Contains(s,"конце") {
+            }elif HasPrefix(s, "глубина") && Contains(s,"конце") {
                 indexes["depth_final"] = i
-            }
-            if HasPrefix(s, "вес") && Contains(s,"крюке") && Contains(s,"начале"){
+            }elif HasPrefix(s, "вес") && Contains(s,"крюке") && Contains(s,"начале"){
                 indexes["weight_started"] = i
-            }
-            if HasPrefix(s, "вес") && Contains(s,"крюке") && Contains(s,"конце"){
+            }elif HasPrefix(s, "вес") && Contains(s,"крюке") && Contains(s,"конце"){
                 indexes["weight_final"] = i
-            }
-            if HasPrefix(s, "перепуск") && Contains(s,"перетяжка"){
+            }elif HasPrefix(s, "перепуск") && Contains(s,"перетяжка"){
                 indexes["bypass_bracing"] = i
-            }
-            if s == "примечание" {
+            }elif s == "примечание" {
                 break
             }
             i=i+1
@@ -107,8 +99,7 @@ contract RopeBinaryParse {
             if i == 7 {
                 coil["certificate"] = row[6]
                 coil["diameter"] = Int(row[9])
-            }
-            if i == 8 {
+            }elif i == 8 {
                 coil["length_full"] = Int(row[6])
                 coil["length_rigging"] = Int(row[7])
                 coil["previous_workout"] = Int(row[17])
@@ -124,18 +115,14 @@ contract RopeBinaryParse {
             row = rows[i]
             if i == 3 {
                 drilling["filial"] = row[6]
-            }
-            if i == 4 {
+            }elif i == 4 {
                 drilling["expedition"] = row[6]
-            }
-            if i == 5 {
+            }elif i == 5 {
                 drilling["brigade"] = row[6]
-            }
-            if i == 6 {
+            }elif i == 6 {
                 drilling["master"] = row[6]
                 drilling["block_weight"] = Int(row[17])
-            }
-            if i == 7 {
+            }elif i == 7 {
                 if row[17] == ""{
                     drilling["candle_length"] = 0.0
                 }else{
@@ -247,25 +234,22 @@ contract RopeBinaryParse {
         columns = Sprintf("id,%v,%v", $startedField, $finalField)
         depths = findAll("rope_depths", Sprintf("rope_coil_id=%v and rope_drilling_id=%v and operation>0", coilId, drillingId), columns)
         depthsLen = Len(depths)
-        var buf array m res map
+        var buf array m map
         while i < depthsLen {
             depth = depths[i]
             startedIds = Append(startedIds, depth["id"])
             finalIds = Append(finalIds, depth["id"])
             startedValues = Append(startedValues, depth[$startedField])
             finalValues = Append(finalValues, depth[$finalField])
-            if i>10{
-                m["StartedIds"] = startedIds
-                m["StartedValues"] = startedValues
-                m["FinalIds"] = finalIds
-                m["FinalValues"] = finalValues
-                buf = Append(buf, m)
-                var m map
-            }
             i=i+1
         }
-        res["data"] = buf
-        buffer_Manager("Action,Key,Val", "set", "rope_import", JSONEncode(res))
+        m["StartedIds"] = JSONEncode(startedIds)
+        m["StartedValues"] = JSONEncode(startedValues)
+        m["FinalIds"] = JSONEncode(finalIds)
+        m["FinalValues"] = JSONEncode(finalValues)
+        buf = Append(buf, m)
+        
+        buffer_Manager("Action,Key,Val", "set", "rope_import", JSONEncode(buf))
         // RopeDepthsUpdate("StartedIds,StartedValues,FinalIds,FinalValues", startedIds, startedValues, finalIds, finalValues)
     }
 
@@ -284,15 +268,16 @@ contract RopeBinaryParse {
         mid = Int(AppParam(appId, "rope_manufacturer_role_id"))
         sid = Int(AppParam(appId, "rope_servicer_role_id"))
         pid = Int(AppParam(appId, "rope_producer_role_id"))
+        
         if $role_id == mid {
             $startedField = "manufacturer_started"
             $finalField = "manufacturer_final"
-        }
-        if $role_id == sid {
+        
+        }elif $role_id == sid {
             $startedField = "servicer_started"
             $finalField = "servicer_final"
-        }
-        if $role_id == pid {
+        
+        }elif $role_id == pid {
             $startedField = "producer_started"
             $finalField = "producer_final"
         }
