@@ -1,20 +1,44 @@
 DBFind(applications).Columns("id").Where("name='Rope accounting' AND deleted=0").Vars(application)
-DBFind(roles).Columns("role_name").Where("id=#role_id#").Vars(r)
+DBFind(roles).Columns("role_name").Where("id=#role_id#").Vars(role)
+
+SetVar(r1,AppParam(App:#application_id#, Name: rope_manufacturer_role_id))
+SetVar(r2,AppParam(App:#application_id#, Name: rope_producer_role_id))
+SetVar(r3,AppParam(App:#application_id#, Name: rope_servicer_role_id))
+DBFind(binaries).Where("(name='xlsm_rid#r1#' or name='xlsm_rid#r2#' or name='xlsm_rid#r3#') and app_id=#application_id#").Order("id desc").Count(import_count)
+If(#import_count#==3){
+    SetVar(next_page,rope_depths)
+}.Else{
+    SetVar(next_page,rope_imports)
+}
 
 DBFind(binaries,binaries).Custom(_actions){
-    Div(text-right){
-        Button(Body: $rope_import$, Page: rope_works, Class: btn btn-primary, Contract: RopeBinaryParse, Params: "Id=#id#")
+    If(#name#==xlsm_rid#r1#){
+        SetVar(rid,#r1#)
+    }.ElseIf(#name#==xlsm_rid#r2#){
+        SetVar(rid,#r2#)
+    }.ElseIf(#name#==xlsm_rid#r3#){
+        SetVar(rid,#r3#)
     }
-}.Where("name='#r_role_name#_data_xlsm' and app_id=#application_id#").Order("id desc")
-AddToolButton(Title: "Загрузить файл", Icon: fa fa-upload, Page: rope_upload)
+    If(And(#role_id#==#rid#,#member_id#==#key_id#)){
+        Div(text-right){
+            Button(Body: $rope_import$, Page: #next_page#, Class: btn btn-primary, Contract: RopeBinaryParse, Params: "Id=#id#")
+        }
+    }
+}.Custom(_name){
+    DBFind(roles,rid).Columns("role_name").Where("id=#rid#").Vars(rid)
+    Span(загруженный файл импорта от роли "#rid_role_name#")
+}.Where("(name='xlsm_rid#r1#' or name='xlsm_rid#r2#' or name='xlsm_rid#r3#') and app_id=#application_id#").Order("id desc")
+
+
 Div(content-wrapper){
-    SetTitle("Импортирование загрузки")
+    SetTitle("#role_role_name#: загрузка файла импорта")
+    Button(Body: Span(Class:fa fa-upload) Добавить файл, Class: btn btn-link pull-right, Page: rope_upload).Popup(40, "Выбор файла")
     Div(row){
         Div(col-sm-10 col-sm-offset-1 col-lg-8 col-lg-offset-2){
             Div(panel panel-primary){
                 Div(panel-body){
                     Div(table-responsive){
-                        Table(binaries, "=name,=data,=_actions")
+                        Table(binaries, "=_name,=data,=_actions")
                     }
                 }
             }

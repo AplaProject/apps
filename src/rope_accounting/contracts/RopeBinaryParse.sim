@@ -2,6 +2,16 @@ contract RopeBinaryParse {
     data {
         Id string "optional"
     }
+    func appendAll(a array, b ...)array{
+        var i lena lenb int
+        lena = Len(a)
+        lenb = Len(b)
+        while i<lenb{
+            a[lena+i] = b[i]
+            i=i+1
+        }
+        return a
+    }
     func getWorkIndexes(cells array) map{
         var indexes map i cellsLen int s string
         // default indexes
@@ -171,46 +181,32 @@ contract RopeBinaryParse {
         return id
     }
     func storeWorksDepths(coilId, drillingId int, works array) {
-        var i worksLen int workId depthId workKeys depthKeys depthWorkKeys fields string values array work map
+        var i worksLen int workId depthId fieldsWork fieldsDepth depthWorkKeys fields string values array work map
         worksLen = Len(works)
-        workKeys = "operation_type,weight_final,weight_started,bypass_bracing,timestamp operation_date,operation"
-        depthWorkKeys = "depth_started,depth_final"
-        depthKeys = Sprintf("%v,%v,rope_drilling_id,rope_coil_id", $startedField, $finalField)
 
+        fieldsWork = "operation_type,weight_final,weight_started,bypass_bracing,timestamp operation_date,operation"
+        fieldsDepth = Sprintf("%v,%v", $startedField, $finalField)
         while i < worksLen {
             work = works[i]
-            workId = DBFind("rope_works").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", coilId, drillingId, work["operation"]).One("id")
+            workId = DBFind("rope_works").Columns("id").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", coilId, drillingId, work["operation"]).One("id")
             if !workId {
-                values = getMapValues(work, Split(workKeys, ","))
-                values = Append(values,drillingId)
-                values = Append(values,coilId)
-                fields = workKeys + ",rope_drilling_id,rope_coil_id"
+                values = getMapValues(work, Split(fieldsWork, ","))
+                values = appendAll(values,drillingId,coilId)
+                fields = fieldsWork + ",rope_drilling_id,rope_coil_id"
                 DBInsert("rope_works", fields, values...)
             }
-            depthId = DBFind("rope_depths").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", coilId, drillingId, work["operation"]).One("id")
-            values = getMapValues(work, Split(depthWorkKeys, ","))
-            values = Append(values,drillingId)
-            values = Append(values,coilId)
-            values = Append(values,work["operation"])
-            fields = depthKeys + ",operation"
+            depthId = DBFind("rope_depths").Columns("id").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", coilId, drillingId, work["operation"]).One("id")
             if !depthId {
-                DBInsert("rope_depths", fields, values...)
-            }else{
-                DBUpdate("rope_depths", Int(depthId), fields, values...)
+                depthId = DBInsert("rope_depths", "rope_coil_id,rope_drilling_id,operation,manufacturer_final,manufacturer_started,producer_final,producer_started,servicer_final,servicer_started", coilId, drillingId, work["operation"],-1,-1,-1,-1,-1,-1)
             }
+
+            values = getMapValues(work, Split("depth_started,depth_final", ","))
+            DBUpdate("rope_depths", Int(depthId), fieldsDepth, values...)
+
             i=i+1
         }
     }
-    func extend(a, b array)array{
-        var i lena lenb int
-        lena = Len(a)
-        lenb = Len(b)
-        while i<lenb{
-            a[lena+i] = b[i]
-            i=i+1
-        }
-        return a
-    }
+
     func findAll(table, where, columns string) array {
         var full parts array limit offset int
         limit = 250
@@ -220,7 +216,7 @@ contract RopeBinaryParse {
                 if Len(full) == 0 {
                     full = parts
                 }else{
-                    full = extend(full, parts)
+                    full = appendAll(full, parts...)
                 }
             }else{
                 break
@@ -248,7 +244,7 @@ contract RopeBinaryParse {
         m["FinalIds"] = JSONEncode(finalIds)
         m["FinalValues"] = JSONEncode(finalValues)
         buf = Append(buf, m)
-        
+
         buffer_Manager("Action,Key,Val", "set", "rope_import", JSONEncode(buf))
         // RopeDepthsUpdate("StartedIds,StartedValues,FinalIds,FinalValues", startedIds, startedValues, finalIds, finalValues)
     }
@@ -268,15 +264,15 @@ contract RopeBinaryParse {
         mid = Int(AppParam(appId, "rope_manufacturer_role_id"))
         sid = Int(AppParam(appId, "rope_servicer_role_id"))
         pid = Int(AppParam(appId, "rope_producer_role_id"))
-        
+
         if $role_id == mid {
             $startedField = "manufacturer_started"
             $finalField = "manufacturer_final"
-        
+
         }elif $role_id == sid {
             $startedField = "servicer_started"
             $finalField = "servicer_final"
-        
+
         }elif $role_id == pid {
             $startedField = "producer_started"
             $finalField = "producer_final"
