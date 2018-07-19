@@ -2,6 +2,21 @@ DBFind(applications).Columns("id").Where("name='Rope accounting' AND deleted=0")
 DBFind(rope_works).Count(count)
 SetTitle($rope_works$)
 SetVar(page_name,rope_works)
+SetVar(r1,AppParam(App:#application_id#, Name: rope_manufacturer_role_id))
+SetVar(r2,AppParam(App:#application_id#, Name: rope_producer_role_id))
+SetVar(r3,AppParam(App:#application_id#, Name: rope_servicer_role_id))
+DBFind(roles).Where("id=#r1#").Columns("role_name").Vars(rid1)
+DBFind(roles).Where("id=#r2#").Columns("role_name").Vars(rid2)
+DBFind(roles).Where("id=#r3#").Columns("role_name").Vars(rid3)
+DBFind(binaries).Where("name='xlsm_rid#r1#' and app_id=#application_id#").Columns("id").Vars(count1)
+DBFind(binaries).Where("name='xlsm_rid#r2#' and app_id=#application_id#").Columns("id").Vars(count2)
+DBFind(binaries).Where("name='xlsm_rid#r3#' and app_id=#application_id#").Columns("id").Vars(count3)
+DBFind(binaries).Where("(name='xlsm_rid#r1#' or name='xlsm_rid#r2#' or name='xlsm_rid#r3#') and app_id=#application_id#").Count(import_count)
+SetVar(missed_r1,"'#rid1_role_name#'").(missed_r2,"'#rid2_role_name#'").(missed_r3,"'#rid3_role_name#'")
+If(#count1_id#>0){SetVar(missed_r1,)}
+If(#count2_id#>0){SetVar(missed_r2,)}
+If(#count3_id#>0){SetVar(missed_r3,)}
+
 If(#page#>0){
     SetVar(prev_page,Calculate(#page#-1)
 }.Else{
@@ -11,9 +26,17 @@ SetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#cou
 If(#count#>Calculate(#off#+#per_page#)){
     SetVar(next_page,Calculate(#page#+1)
 }
+
 Div(content-wrapper){
     Div(text-right){
-        Button(Body: $rope_recalculate$, Class: btn btn-default, Page: #page_name#, Contract: RopeWorksCalculate)
+        If(#import_count#==3){
+            Button(Body: Рассчитать наработку, Class: btn btn-default, Page: #page_name#, Contract: RopeWorksCalculate)
+        }.Else{
+            Div(text-muted text-center){
+                загружено файлов: #import_count#, для расчета 'Учета наработки' необходимо загрузить 3 файла. По одному файлу от каждой роли: '#rid1_role_name#', '#rid2_role_name#', '#rid3_role_name#'
+                Не получено загрузки от: #missed_r1# #missed_r1# #missed_r3#
+            }
+        }
     }
     Div(button-group){
         If(#page#>0){

@@ -1,6 +1,22 @@
 DBFind(applications).Columns("id").Where("name='Rope accounting' AND deleted=0").Vars(application)
 SetTitle($rope_depths$)
 DBFind(rope_depths).Where("deleted=0 and (status_final=0 or status_started=0)").Count(count)
+
+SetVar(r1,AppParam(App:#application_id#, Name: rope_manufacturer_role_id))
+SetVar(r2,AppParam(App:#application_id#, Name: rope_producer_role_id))
+SetVar(r3,AppParam(App:#application_id#, Name: rope_servicer_role_id))
+DBFind(roles).Where("id=#r1#").Columns("role_name").Vars(rid1)
+DBFind(roles).Where("id=#r2#").Columns("role_name").Vars(rid2)
+DBFind(roles).Where("id=#r3#").Columns("role_name").Vars(rid3)
+DBFind(binaries).Where("name='xlsm_rid#r1#' and app_id=#application_id#").Columns("id").Vars(count1)
+DBFind(binaries).Where("name='xlsm_rid#r2#' and app_id=#application_id#").Columns("id").Vars(count2)
+DBFind(binaries).Where("name='xlsm_rid#r3#' and app_id=#application_id#").Columns("id").Vars(count3)
+DBFind(binaries).Where("(name='xlsm_rid#r1#' or name='xlsm_rid#r2#' or name='xlsm_rid#r3#') and app_id=#application_id#").Count(import_count)
+SetVar(missed_r1,"'#rid1_role_name#'").(missed_r2,"'#rid2_role_name#'").(missed_r3,"'#rid3_role_name#'")
+If(#count1_id#>0){SetVar(missed_r1,)}
+If(#count2_id#>0){SetVar(missed_r2,)}
+If(#count3_id#>0){SetVar(missed_r3,)}
+
 SetVar(page_name,rope_depths)
 If(#page#>0){
     SetVar(prev_page,Calculate(#page#-1)
@@ -16,10 +32,10 @@ Div(content-wrapper){
     Div(text-right){
         DBFind(buffer_data,data).Where("key='rope_import' and member_id=#key_id#").Vars(buf)
         If(And(#buf_id#>0,#count#>0)){
-            Button(Body: "Автокоррекция", Class: btn btn-default, Page: rope_works).CompositeContract(Name:RopeDepthsUpdateWrapper, Data: #buf_value#).CompositeContract(Name:RopeWorksCalculate)
+            Button(Body: "Проверить конфликты", Class: btn btn-default, Page: rope_works).CompositeContract(Name:RopeDepthsUpdateWrapper, Data: #buf_value#)
         }
     }
-    If(#count#>0){
+    If(And(#count#>0,#import_count#==3)){
         Div(button-group){
             If(#page#>0){
                 Button(Body:"1", Class:btn btn-default, Page:#page_name#, PageParams: "page=0")
@@ -80,9 +96,12 @@ Div(content-wrapper){
                 }
             }
             Div(panel-footer text-right){
-                Button(Class: btn btn-primary, Body: send, Page: rope_depths, Contract: RopeDepthsUpdate, Params: "Id=#id#,Value=#servicer_final#,Type=final")
+                Button(Class: btn btn-primary, Body: Отправить, Page: rope_depths, Contract: RopeDepthsUpdate, Params: "Id=#id#,Value=#servicer_final#,Type=final")
             }
         }
+    }.ElseIf(And(#count#>0,#import_count#<2)){
+        Недостаточно данных для рассчета правильных значений глубины
+        Не получено загрузки от: #missed_r1# #missed_r1# #missed_r3#
     }.Else{
         Div(row){
             Div(text-center h3){
