@@ -49,8 +49,8 @@ contract RopeDepthsUpdate {
     }
     func notesRefresh(did, cid string){
         var depthsLen i notesLen int notes array note map
-        depthsLen = Len(DBFind("rope_depths").Where("deleted=0 and rope_drilling_id=? and rope_coil_id=? and (status_started=0 or status_final=0) and operation>0", did, cid))
-        notes = DBFind("notifications").Where("page_params->rope_drilling_id=? and page_params->rope_coil_id=?", did, cid)
+        depthsLen = Len(DBFind("rope_depths").Where("deleted=0 and drilling_id=? and coil_id=? and (status_started=0 or status_final=0) and operation>0", did, cid))
+        notes = DBFind("notifications").Where("page_params->drilling_id=? and page_params->coil_id=?", did, cid)
         notesLen = Len(notes)
 
         if depthsLen == 0 && notesLen > 0{
@@ -68,8 +68,8 @@ contract RopeDepthsUpdate {
                 sender = 1
                 textHeader = "Need your action: correct depths"
                 pageName = "rope_depths"
-                params["rope_drilling_id"] = did
-                params["rope_coil_id"] = cid
+                params["drilling_id"] = did
+                params["coil_id"] = cid
                 params = JSONEncode(params)
                 rid = Int(AppParam($appId, "rope_manufacturer_role_id"))
                 notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, params)
@@ -106,15 +106,15 @@ contract RopeDepthsUpdate {
             value = Int(values[i])
             if id > 0{
                 row = DBFind("rope_depths").Where("id=?", id).Row()
-                if !(did == row["rope_drilling_id"] || cid == row["rope_coil_id"]){
-                    did = row["rope_drilling_id"]
-                    cid = row["rope_coil_id"]
+                if !(did == row["drilling_id"] || cid == row["coil_id"]){
+                    did = row["drilling_id"]
+                    cid = row["coil_id"]
                     notesRefresh(did, cid)
                 }
                 row[depthField] = value
                 if isSameDepth(row, type) {
                     var workId int
-                    workId = Int(DBFind("rope_works").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", cid, did, row["operation"]).One("id"))
+                    workId = Int(DBFind("rope_works").Where("coil_id=? and drilling_id=? and operation=?", cid, did, row["operation"]).One("id"))
                     if workId > 0{
                         DBUpdate("rope_works", workId, workField, value)
                         DBUpdate("rope_depths", id, fields, 1, value, value)

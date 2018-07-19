@@ -2,6 +2,7 @@ contract RopeBinaryParse {
     data {
         Id string "optional"
     }
+
     func appendAll(a array, b ...)array{
         var i lena lenb int
         lena = Len(a)
@@ -12,56 +13,75 @@ contract RopeBinaryParse {
         }
         return a
     }
-    func getWorkIndexes(cells array) map{
-        var indexes map i cellsLen int s string
-        // default indexes
-        indexes["operation_date"] = 3
-        indexes["operation"] = 4
-        indexes["operation_type"] = 5
-        indexes["depth_started"] = 6
-        indexes["depth_final"] = 7
-        indexes["weight_started"] = 9
-        indexes["weight_final"] = 10
-        indexes["bypass_bracing"] = 17
+    func findAll(table, where, columns string) array {
+        var full parts array limit offset int
+        limit = 250
+        while true {
+            parts = DBFind(table).Where(where).Columns(columns).Offset(offset).Limit(limit)
+            if Len(parts) > 0 {
+                if Len(full) == 0 {
+                    full = parts
+                }else{
+                    full = appendAll(full, parts...)
+                }
+            }else{
+                break
+            }
+            offset = offset+limit
+        }
+        return full
+    }
+    func parseIdx(cells array) map{
+        var idx map i cellsLen int s string
+        // default idx
+        idx["operation_date"] = 3
+        idx["operation"] = 4
+        idx["operation_type"] = 5
+        idx["depth_started"] = 6
+        idx["depth_final"] = 7
+        idx["weight_started"] = 9
+        idx["weight_final"] = 10
+        idx["bypass_bracing"] = 17
         cellsLen = Len(cells)
         while i < cellsLen{
-            // correction indexes
+            // correction idx
             s = ToLower(TrimSpace(cells[i]))
             if HasPrefix(s, "дата") && Contains(s,"операции"){
-                indexes["operation_date"] = i
+                idx["operation_date"] = i
             }elif HasPrefix(s, "№") && Contains(s,"операции"){
-                indexes["operation"] = i
+                idx["operation"] = i
             }elif HasPrefix(s, "вид") && Contains(s,"работ") && Contains(s,"рейса"){
-                indexes["operation_type"] = i
+                idx["operation_type"] = i
             }elif HasPrefix(s, "глубина") && Contains(s,"начала"){
-                indexes["depth_started"] = i
+                idx["depth_started"] = i
             }elif HasPrefix(s, "глубина") && Contains(s,"конце") {
-                indexes["depth_final"] = i
+                idx["depth_final"] = i
             }elif HasPrefix(s, "вес") && Contains(s,"крюке") && Contains(s,"начале"){
-                indexes["weight_started"] = i
+                idx["weight_started"] = i
             }elif HasPrefix(s, "вес") && Contains(s,"крюке") && Contains(s,"конце"){
-                indexes["weight_final"] = i
+                idx["weight_final"] = i
             }elif HasPrefix(s, "перепуск") && Contains(s,"перетяжка"){
-                indexes["bypass_bracing"] = i
+                idx["bypass_bracing"] = i
             }elif s == "примечание" {
                 break
             }
             i=i+1
         }
-        return indexes
+        return idx
     }
-    func parseWorks(titleCell string, rows array) array {
-        var i rowsLen int resultRows selectedRows array canCopy bool
-        rowsLen = Len(rows)
-        while i < rowsLen {
-            var cells array c cellsLen notEmptyCellCount int
-            cells = rows[i]
-            cellsLen = Len(cells)
-            while c < cellsLen {
-                if Size(cells[c]) > 0{
+    func parseWorks(anchor string, rows array) array {
+        var i lenRows lenRow c int row resultRows selectedRows array canCopy bool
+        lenRows = Len(rows)
+        lenRow = 18 //idx["bypass_bracing"] = 17
+        while i < lenRows {
+            var notEmptyCellCount int
+            row = rows[i]
+            c = 0
+            while c < lenRow {
+                if Size(row[c]) > 0{
                     notEmptyCellCount = notEmptyCellCount+1
                 }
-                if titleCell == cells[c] {
+                if anchor == row[c] {
                     canCopy = true
                 }
                 c = c+1
@@ -74,25 +94,25 @@ contract RopeBinaryParse {
             }
             i = i+1
         }
-        var indexes map
-        indexes = getWorkIndexes(selectedRows[0])
-        rowsLen = Len(selectedRows)
+        var idx map
+        idx = parseIdx(selectedRows[0])
+        lenRows = Len(selectedRows)
         i = 1
-        while i < rowsLen {
-            var work map row array
+        while i < lenRows {
+            var work map
             row = selectedRows[i]
-            work["depth_final"] = Int(row[indexes["depth_final"]])
-            work["depth_started"] = Int(row[indexes["depth_started"]])
-            work["weight_final"] = Int(row[indexes["weight_final"]])
-            work["weight_started"] = Int(row[indexes["weight_started"]])
-            work["bypass_bracing"] = Int(row[indexes["bypass_bracing"]])
-            work["operation_type"] = row[indexes["operation_type"]]
-            work["operation_date"] = Int(row[indexes["operation_date"]])
+            work["depth_final"] = Int(row[idx["depth_final"]])
+            work["depth_started"] = Int(row[idx["depth_started"]])
+            work["weight_final"] = Int(row[idx["weight_final"]])
+            work["weight_started"] = Int(row[idx["weight_started"]])
+            work["bypass_bracing"] = Int(row[idx["bypass_bracing"]])
+            work["operation_type"] = row[idx["operation_type"]]
+            work["operation_date"] = Int(row[idx["operation_date"]])
             if work["operation_date"] != 0{
                 // https://stackoverflow.com/a/6154953
                 work["operation_date"] = (work["operation_date"] - 25569) * 86400
             }
-            work["operation"] = Int(row[indexes["operation"]])
+            work["operation"] = Int(row[idx["operation"]])
             if work["operation"] {
                 // stored data row only if has operation
                 resultRows = Append(resultRows, work)
@@ -188,16 +208,16 @@ contract RopeBinaryParse {
         fieldsDepth = Sprintf("%v,%v", $startedField, $finalField)
         while i < worksLen {
             work = works[i]
-            workId = DBFind("rope_works").Columns("id").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", coilId, drillingId, work["operation"]).One("id")
+            workId = DBFind("rope_works").Columns("id").Where("coil_id=? and drilling_id=? and operation=?", coilId, drillingId, work["operation"]).One("id")
             if !workId {
                 values = getMapValues(work, Split(fieldsWork, ","))
                 values = appendAll(values,drillingId,coilId)
-                fields = fieldsWork + ",rope_drilling_id,rope_coil_id"
+                fields = fieldsWork + ",drilling_id,coil_id"
                 DBInsert("rope_works", fields, values...)
             }
-            depthId = DBFind("rope_depths").Columns("id").Where("rope_coil_id=? and rope_drilling_id=? and operation=?", coilId, drillingId, work["operation"]).One("id")
+            depthId = DBFind("rope_depths").Columns("id").Where("coil_id=? and drilling_id=? and operation=?", coilId, drillingId, work["operation"]).One("id")
             if !depthId {
-                depthId = DBInsert("rope_depths", "rope_coil_id,rope_drilling_id,operation,manufacturer_final,manufacturer_started,producer_final,producer_started,servicer_final,servicer_started", coilId, drillingId, work["operation"],-1,-1,-1,-1,-1,-1)
+                depthId = DBInsert("rope_depths", "coil_id,drilling_id,operation,manufacturer_final,manufacturer_started,producer_final,producer_started,servicer_final,servicer_started", coilId, drillingId, work["operation"],-1,-1,-1,-1,-1,-1)
             }
 
             values = getMapValues(work, Split("depth_started,depth_final", ","))
@@ -206,29 +226,10 @@ contract RopeBinaryParse {
             i=i+1
         }
     }
-
-    func findAll(table, where, columns string) array {
-        var full parts array limit offset int
-        limit = 250
-        while true {
-            parts = DBFind(table).Where(where).Columns(columns).Offset(offset).Limit(limit)
-            if Len(parts) > 0 {
-                if Len(full) == 0 {
-                    full = parts
-                }else{
-                    full = appendAll(full, parts...)
-                }
-            }else{
-                break
-            }
-            offset = offset+limit
-        }
-        return full
-    }
     func updateDepths(coilId, drillingId int) {
         var startedIds startedValues finalIds finalValues depths array i depthsLen int depth map columns string
         columns = Sprintf("id,%v,%v", $startedField, $finalField)
-        depths = findAll("rope_depths", Sprintf("rope_coil_id=%v and rope_drilling_id=%v and operation>0", coilId, drillingId), columns)
+        depths = findAll("rope_depths", Sprintf("coil_id=%v and drilling_id=%v and operation>0", coilId, drillingId), columns)
         depthsLen = Len(depths)
         var buf array m map
         while i < depthsLen {
@@ -248,15 +249,49 @@ contract RopeBinaryParse {
         buffer_Manager("Action,Key,Val", "set", "rope_import", JSONEncode(buf))
         // RopeDepthsUpdate("StartedIds,StartedValues,FinalIds,FinalValues", startedIds, startedValues, finalIds, finalValues)
     }
+    func updateUpload(coilId, drillingId int){
+        var fields values array
+        $inf["coil_id"] = coilId
+        $inf["drilling_id"] = drillingId
+        $inf["imported_at"] = $time
+        fields = GetMapKeys($inf)
+        values = getMapValues($inf, fields)
+        DBUpdate("rope_uploads", Int($inf["id"]), Join(fields, ","), values...)
+
+        var uploads array i lenUploads int upload roles map
+        uploads = DBFind("rope_uploads").Where("drilling_id=? and coil_id=? and deleted_at=0 and imported_at>0 and finaled_at=0", drillingId, coilId)
+        lenUploads = Len(uploads)
+        while i<lenUploads{
+            upload = uploads[i]
+            roles[Str(upload["rid"])] = 1
+            i=i+1
+        }
+        var count int
+        count = Len(GetMapKeys(roles))
+        Println(count)
+        if count >=3 {
+            i=0
+            while i<lenUploads{
+                upload = uploads[i]
+                DBUpdate("rope_uploads", Int(upload["id"]), "finaled_at", $time)
+                i=i+1
+            }
+        }
+    }
 
     conditions {
         $Id = Int($Id)
         if $Id == 0 {
             $Id = Int(DBFind("buffer_data").Where("key='rope_upload' and member_id=?", $key_id).One("value"))
         }
-        $binId = Int(DBFind("binaries").Where("id=?", $Id).One("id"))
+        $inf = DBFind("rope_uploads").Where("id=?",$Id).Row()
+        if !$inf {
+            warning "Uploaded file not found"
+        }
+        $inf = JSONDecode(JSONEncode($inf))
+        $binId = Int(DBFind("binaries").Where("id=?", $inf["binary_id"]).One("id"))
         if $binId == 0 {
-            warning "File not found"
+            warning "Binary file not found"
         }
         RopeRolesCondition()
         var appId mid sid pid int
@@ -290,7 +325,9 @@ contract RopeBinaryParse {
 
         coilId = storeCoil(coil)
         drillingId = storeDrilling(drilling)
+
         storeWorksDepths(coilId, drillingId, works)
         updateDepths(coilId, drillingId)
+        updateUpload(coilId, drillingId)
     }
 }

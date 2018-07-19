@@ -1,0 +1,23 @@
+SetVar(r1,AppParam(App:#application_id#, Name: rope_manufacturer_role_id))
+SetVar(r2,AppParam(App:#application_id#, Name: rope_producer_role_id))
+SetVar(r3,AppParam(App:#application_id#, Name: rope_servicer_role_id))
+DBFind(roles).Where("id=#r1#").Columns("role_name").Vars(rid1)
+DBFind(roles).Where("id=#r2#").Columns("role_name").Vars(rid2)
+DBFind(roles).Where("id=#r3#").Columns("role_name").Vars(rid3)
+DBFind(rope_uploads).Where("rid=#r1# and deleted_at=0 and finaled_at=0").Columns("id").Vars(count1)
+DBFind(rope_uploads).Where("rid=#r2# and deleted_at=0 and finaled_at=0").Columns("id").Vars(count2)
+DBFind(rope_uploads).Where("rid=#r3# and deleted_at=0 and finaled_at=0").Columns("id").Vars(count3)
+DBFind(rope_uploads).Where("deleted_at=0 and finaled_at=0 and uploaded_at>0 and imported_at>0 and (rid=#r1# or rid=#r2# or rid=#r3#)").Count(import_count)
+DBFind(rope_uploads).Where("deleted_at=0 and finaled_at=0 and uploaded_at>0 and (rid=#r1# or rid=#r2# or rid=#r3#)").Count(load_count)
+
+SetVar(missed_r1,"'#rid1_role_name#'").(missed_r2,"'#rid2_role_name#'").(missed_r3,"'#rid3_role_name#'")
+
+If(#count1_id#>0){SetVar(missed_r1,)}
+If(#count2_id#>0){SetVar(missed_r2,)}
+If(#count3_id#>0){SetVar(missed_r3,)}
+If(#rus_comment#==1){
+    _переменные_
+    отсутствующие в системе файл импорта у роли: missed_r1, missed_r2, missed_r3
+    количество загруженных  файлов: load_count
+    количество импортированных файлов: import_count
+}
