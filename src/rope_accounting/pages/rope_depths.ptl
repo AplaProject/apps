@@ -1,7 +1,8 @@
 DBFind(applications).Columns("id").Where("name='Rope accounting' AND deleted=0").Vars(application)
 SetTitle($rope_depths$)
 DBFind(rope_depths).Where("deleted=0 and (status_final=0 or status_started=0)").Count(count)
-
+DBFind(rope_drillings,drillings).Columns("id,filial").Where("deleted=0").Count(d_count).Custom(_name){#filial#}
+DBFind(rope_coils,coils).Columns("id,certificate").Where("deleted=0").Count(c_count).Custom(_name){#certificate#}
 Include(rope_common)
 
 SetVar(page_name,rope_depths)
@@ -23,24 +24,47 @@ Div(content-wrapper){
                 Button(Body: "Сверить данные", Class: btn btn-default, Page: rope_works).CompositeContract(Name:RopeDepthsUpdateWrapper, Data: #buf_value#)
             }
         }
+        If(And(#count#>0,Or(#c_count#>0,#d_count#>1))){
+            Form(form-group mt){
+                Div(row){
+                    Div(col-sm-5){
+                        Label(For: DrillingId){Выбрать буровую}
+                        Select(Name: DrillingId, Source: drillings, NameColumn: _name, ValueColumn: id, Value: #DrillingId#)
+                    }
+                    Div(col-sm-7){
+                        Label(For: CoilId){Выбрать  бухту}
+                        Div(input-group){
+                            Select(Name: CoilId, Source: coils, NameColumn: _name, ValueColumn: id, Value: #CoilId#)
+                            Div(input-group-btn){
+                                Button(Body: Span(Class:fa fa-search), Class: btn btn-default, Page: #page_name#, PageParams: "CoilId=Val(CoilId),DrillingId=Val(DrillingId)")
+                                If(Or(GetVar(DrillingId),GetVar(CoilId))){
+                                    Button(Body: Span(Class: fa fa-remove), Class: btn btn-default, Page: #page_name#)
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }.Style(max-width:600px;)
+        }
         If(#count#>0){
             Div(button-group){
                 If(#page#>0){
-                    Button(Body:"1", Class:btn btn-default, Page:#page_name#, PageParams: "page=0")
+                    Button(Body:"1", Class:btn btn-default, Page:#page_name#, PageParams: "page=0,CoilId=#CoilId#,DrillingId=#DrillingId#")
                 }.Else{
                     Button(Body:"1", Class:btn btn-default disabled)
                 }
                 If(#page#>1){
-                    Button(Body:Calculate(#prev_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#prev_page#")
+                    Button(Body:Calculate(#prev_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#prev_page#,CoilId=#CoilId#,DrillingId=#DrillingId#")
                 }
                 If(And(#page#>0,#page#<#last_page#)){
                     Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)
                 }
                 If(#next_page#<#last_page#){
-                    Button(Body:Calculate(#next_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#next_page#")
+                    Button(Body:Calculate(#next_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#next_page#,CoilId=#CoilId#,DrillingId=#DrillingId#")
                 }
                 If(#page#<#last_page#){
-                    Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#last_page#")
+                    Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#last_page#,CoilId=#CoilId#,DrillingId=#DrillingId#")
                 }.ElseIf(#last_page#>0){
                     Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)
                 }
