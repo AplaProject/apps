@@ -82,6 +82,26 @@ contract RopeDepthsUpdate {
             }
         }
     }
+    func finaledImports(did, cid string){
+        var uploads array i lenUploads int upload roles map
+        uploads = DBFind("rope_uploads").Where("drilling_id=? and coil_id=? and deleted_at=0 and imported_at>0 and finaled_at=0", did, cid)
+        lenUploads = Len(uploads)
+        while i<lenUploads{
+            upload = uploads[i]
+            roles[Str(upload["rid"])] = 1
+            i=i+1
+        }
+        var count int
+        count = Len(GetMapKeys(roles))
+        if count >=3 {
+            i=0
+            while i<lenUploads{
+                upload = uploads[i]
+                DBUpdate("rope_uploads", Int(upload["id"]), "finaled_at", $time)
+                i=i+1
+            }
+        }
+    }
     func calculateValues(type string){
         Println("calculateValues", type)
         var ids values array i lenIds int depthField fields workField string
@@ -110,6 +130,7 @@ contract RopeDepthsUpdate {
                     did = row["drilling_id"]
                     cid = row["coil_id"]
                     notesRefresh(did, cid)
+                    finaledImports(did, cid)
                 }
                 row[depthField] = value
                 if isSameDepth(row, type) {
