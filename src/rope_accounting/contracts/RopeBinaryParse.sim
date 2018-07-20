@@ -94,7 +94,7 @@ contract RopeBinaryParse {
             }
             i = i+1
         }
-        var idx map
+        var idx map date string
         idx = parseIdx(selectedRows[0])
         lenRows = Len(selectedRows)
         i = 1
@@ -107,10 +107,24 @@ contract RopeBinaryParse {
             work["weight_started"] = Int(row[idx["weight_started"]])
             work["bypass_bracing"] = Int(row[idx["bypass_bracing"]])
             work["operation_type"] = row[idx["operation_type"]]
-            work["operation_date"] = Int(row[idx["operation_date"]])
-            if work["operation_date"] != 0{
-                // https://stackoverflow.com/a/6154953
-                work["operation_date"] = (work["operation_date"] - 25569) * 86400
+            date = row[idx["operation_date"]]
+            if $asTimestamp {
+                if Contains(date, "-"){
+                    $asTimestamp = false
+                }
+            }
+            if $asTimestamp{
+                work["operation_date"] = Int(date)
+                if work["operation_date"] != 0{
+                    // https://stackoverflow.com/a/6154953
+                    work["operation_date"] = (work["operation_date"] - 25569) * 86400
+                }
+            }else{
+                if date != ""{
+                    work["operation_date"] = date
+                }else{
+                    work["operation_date"] = "NULL"
+                }
             }
             work["operation"] = Int(row[idx["operation"]])
             if work["operation"] {
@@ -203,8 +217,12 @@ contract RopeBinaryParse {
     func storeWorksDepths(coilId, drillingId int, works array) {
         var i worksLen int workId depthId fieldsWork fieldsDepth depthWorkKeys fields string values array work map
         worksLen = Len(works)
+        if $asTimestamp{
+            fieldsWork = "operation_type,weight_final,weight_started,bypass_bracing,timestamp operation_date,operation"
+        }else{
+            fieldsWork = "operation_type,weight_final,weight_started,bypass_bracing,operation_date,operation"
+        }
 
-        fieldsWork = "operation_type,weight_final,weight_started,bypass_bracing,timestamp operation_date,operation"
         fieldsDepth = Sprintf("%v,%v", $startedField, $finalField)
         while i < worksLen {
             work = works[i]
@@ -268,6 +286,7 @@ contract RopeBinaryParse {
         if !$inf {
             warning "Uploaded file not found"
         }
+        $asTimestamp = true
         $inf = JSONDecode(JSONEncode($inf))
         $binId = Int(DBFind("binaries").Where("id=?", $inf["binary_id"]).One("id"))
         if $binId == 0 {
