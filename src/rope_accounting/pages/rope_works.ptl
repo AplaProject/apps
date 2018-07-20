@@ -2,7 +2,7 @@ DBFind(applications).Columns("id").Where("name='Rope accounting' AND deleted=0")
 SetTitle($rope_works$)
 SetVar(page_name,rope_works)
 
-Include(rope_roles)
+Include(rope_common)
 Div(content-wrapper){
     If(And(#r1#>0,#r2#>0,#r3#>0)){
         SetVar(where,"deleted=0")
@@ -23,19 +23,16 @@ Div(content-wrapper){
         Div(text-right){
             If(#import_count#>=3){
                 Button(Body: Рассчитать наработку, Class: btn btn-default, Page: #page_name#, Contract: RopeWorksCalculate, PageParams: "CoilId=#CoilId#,DrillingId=#DrillingId#")
-            }.Else{
-                Div(text-muted text-center){
-                    Div(){
-                        загружено файлов: #load_count#
-                    }
-                    Div(){
-                        импортированно файлов: #import_count#
-                    }
-                    Div(){
-                        для расчета 'Учета наработки' необходимо импортировать всего 3 файла. По одному файлу от каждой роли: '#rid1_role_name#', '#rid2_role_name#', '#rid3_role_name#'
-                    }
+            }
+            Div(text-muted text-center){
+                If(And(#finaled_count#>=3,#import_count#<3)){
+                    Div(){Начата новая сессия импорта файлов}
+                }
+                If(#import_count#<3){
                     If(Or(#missed_r1#!="",#missed_r2#!="",#missed_r3#!="")){
-                        Не получено загрузки от: #missed_r1# #missed_r2# #missed_r3#
+                        Div(){
+                            Не получено загрузки от: #missed_r1# #missed_r2# #missed_r3#
+                        }
                     }
                 }
             }
@@ -51,7 +48,7 @@ Div(content-wrapper){
             SetVar(next_page,Calculate(#page#+1)
         }
         If(Or(#c_count#>0,#d_count#>1)){
-            Form(form-group){
+            Form(form-group mt){
                 Div(row){
                     Div(col-sm-5){
                         Label(For: CoilId){Выбрать бухту}
