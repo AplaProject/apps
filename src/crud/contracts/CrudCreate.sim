@@ -2,6 +2,9 @@ contract CrudCreate {
     data {
         tableName string
     }
+    func toCap(s string) string{
+        return ToUpper(Substr(s, 0, 1)) + ToLower(Substr(s, 1, Size(s)))
+    }
     func toCamel(t string, lowerFirstLetter bool) string{
         // Println("toCamel")
         var parts array i int
@@ -10,11 +13,89 @@ contract CrudCreate {
             if i == 0 && lowerFirstLetter {
                 parts[i] = ToLower(parts[i])
             }else{
-                parts[i] = ToUpper(Substr(parts[i], 0, 1)) + ToLower(Substr(parts[i], 1, Size(parts[i])))
+                parts[i] = toCap(parts[i])
             }
             i=i+1
         }
         return Join(parts, "")
+    }
+    func pageInputTypes()map{
+        var m map
+        m["text"] = "text"
+        m["number"] = "number"
+        m["money"] = "number"
+        m["varchar"] = "text"
+        m["datetime"] = "date"
+        m["double"] = "number"
+        m["character"] = "text"
+        m["json"] = "textarea"
+        m["bytea"] = "file"
+        m["uuid"] = "text"
+        return m
+    }
+    func contractInputTypes()map{
+        var m map
+        m["text"] = "string"
+        m["number"] = "int"
+        m["money"] = "money"
+        m["varchar"] = "string"
+        m["datetime"] = "string"
+        m["double"] = "float"
+        m["character"] = "string"
+        m["json"] = "string"
+        m["bytea"] = "bytes"
+        m["uuid"] = "string"
+        return m
+    }
+    func getColsTypes()array{
+        var a array i int
+        while i<$lenCols{
+            a[i] = GetColumnType($tableName, $cols[i])
+            i=i+1
+        }
+        return a
+    }
+    func getCamelCols()array{
+        var a array i int
+        while i<$lenCols{
+            a[i] = toCamel($cols[i], $lowerFirst)
+            i=i+1
+        }
+        return a
+    }
+    func globJoin(cols array)string{
+        // Println("globJoin")
+        var body array i lenCols int
+        lenCols = Len(cols)
+        while i<lenCols{
+            body = Append(body, "$"+toCamel(cols[i], $lowerFirst))
+            i=i+1
+        }
+        return Join(body, ",")
+    }
+    func trim_s(s string)string{
+        // Println("trim_s")
+        if Substr(s, Size(s)-1, 1) == "s"{
+            return Substr(s, 0, Size(s)-1)
+        }
+        return s
+    }
+    func getPrefix(appName string)string{
+        // Println("getPrefix")
+        var temp array
+        temp = Split(appName, " ")
+        return ToLower(temp[0]+"_")
+    }
+    func getMapValues(m map, keys array) array {
+        // Println("getMapValues")
+        var values array i keysLen int key string
+        keysLen = Len(keys)
+        while i < keysLen {
+            key = keys[i]
+            values = Append(values, m[key])
+            i=i+1
+        }
+        return values
     }
     func getPaginator() string{
         // Println("getPaginator")
@@ -54,7 +135,7 @@ contract CrudCreate {
 
         return body
     }
-    func getPageRecords(cols array, names map) string{
+    func getPageRecords(names map) string{
         // Println("getPageRecords")
         var pageEdit pageView this contractDelete string
         pageEdit = names["pageEdit"]
@@ -78,29 +159,23 @@ contract CrudCreate {
                                 Button(Class: btn btn-danger fa fa-trash, Page: `+this+`, Contract: `+contractDelete+`, Params: "`+$ID+`=#id#").Alert($delete_alert$, $yes$, $no$)
                             }
                         }
-                        Table(src_`+$tableName+`,"`+Join(cols,",")+`,=_actions")
+                        Table(src_`+$tableName+`,"`+$csvCols+`,=_actions")
                     }
                 }
             }
         }`
         return body
     }
-    func trim_s(s string)string{
-        // Println("trim_s")
-        if Substr(s, Size(s)-1, 1) == "s"{
-            return Substr(s, 0, Size(s)-1)
-        }
-        return s
-    }
-    func getPageEdit(cols array, names map)string{
+
+    func getPageEdit(names map)string{
         // Println("getPageEdit")
-        var body pageRecords contractEdit string i lenCols int
+        var body pageRecords contractEdit string i int
         pageRecords =  names["pageRecords"]
         contractEdit =  names["contractEdit"]
-        body = `DBFind(applications).Columns("id").Where("name='`+$appName+`' AND deleted=0").Vars(application)SetVar(title,$create$).(btn_title,$create$)`
-        lenCols = Len(cols)
-        while i < lenCols{
-            body = body + `SetVar(item_`+cols[i]+`,)`
+        body = `DBFind(applications).Columns("id").Where("name='`+$appName+`' AND deleted=0").Vars(application)
+        SetVar(title,$create$).(btn_title,$create$)`
+        while i < $lenCols{
+            body = body + `.(item_`+$cols[i]+`,)`
             i=i+1
         }
         body = body+`
@@ -119,21 +194,21 @@ contract CrudCreate {
                 Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
                     Form(panel panel-primary){
                         Div(panel-heading){
-                            LangRes(data_input)
+                            LangRes(`+$prefix+`data_input)
                         }
                         Div(panel-body){
                             If(GetVar(`+$ID+`)){
                                 Input(Name: `+$ID+`, Type:hidden, Value: #`+$ID+`#)
                             }`
                             i=0
-                            while i<lenCols{
+                            while i<$lenCols{
                                 body = body+`
                                 Div(row mt-sm){
                                     Div(col-sm-4 mt-sm text-right){
-                                        LangRes(`+cols[i]+`)
+                                        LangRes(`+$prefix+$cols[i]+`)
                                     }
                                     Div(col-sm-8 text-left){
-                                        Input(Name: `+toCamel(cols[i], $lowerFirst)+`, Type:`+$pTypes[GetColumnType($tableName, cols[i])]+`, Value: #item_`+cols[i]+`#)
+                                        Input(Name: `+$camelCols[i]+`, Type:`+$pTypes[$types[i]]+`, Value: #item_`+$cols[i]+`#)
                                     }
                                 }`
                                 i=i+1
@@ -150,11 +225,10 @@ contract CrudCreate {
         }`
         return body
     }
-    func getPageView(cols array, names map)string{
+    func getPageView(names map)string{
         // Println("getPageView")
-        var body pageRecords string i lenCols int
+        var body pageRecords string i int
         pageRecords = names["pageRecords"]
-        lenCols = Len(cols)
         body = body+`
         DBFind(applications).Columns("id").Where("name='`+$appName+`' AND deleted=0").Vars(application)
         If(GetVar(`+$ID+`)){
@@ -173,18 +247,18 @@ contract CrudCreate {
                     Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
                         Div(panel panel-primary){
                             Div(panel-heading){
-                                LangRes(data_view)
+                                LangRes(`+$prefix+`data_view)
                             }
                             Div(panel-body){`
                             i=0
-                            while i<lenCols{
+                            while i<$lenCols{
                                 body = body+`
                                 Div(row mt-sm){
                                     Div(col-sm-4 mt-sm text-right text-bold){
-                                        LangRes(`+cols[i]+`)
+                                        LangRes(`+$prefix+$cols[i]+`)
                                     }
                                     Div(col-sm-8 text-left){
-                                        #item_`+cols[i]+`#
+                                        #item_`+$cols[i]+`#
                                     }
                                 }
                                 `
@@ -192,7 +266,7 @@ contract CrudCreate {
                             }
                             body = body+`}
                             Div(panel-footer text-left){
-                                Button(Body: Back, Page: `+pageRecords+`, Class: btn btn-default)
+                                Button(Body: LangRes(`+$prefix+`back), Page: `+pageRecords+`, Class: btn btn-default)
                             }
                         }
                     }
@@ -205,30 +279,13 @@ contract CrudCreate {
         }`
         return body
     }
-    func getPrefix(appName string)string{
-        // Println("getPrefix")
-        var temp array
-        temp = Split(appName, " ")
-        return ToLower(temp[0]+"_")
-    }
-    func getMapValues(m map, keys array) array {
-        // Println("getMapValues")
-        var values array i keysLen int key string
-        keysLen = Len(keys)
-        while i < keysLen {
-            key = keys[i]
-            values = Append(values, m[key])
-            i=i+1
-        }
-        return values
-    }
-    func getContractDelete(name string, cols array)string{
+
+    func getContractDelete(name string)string{
         // Println("getContractDelete")
-        var body dColName string i lenCols int
-        lenCols = Len(cols)
-        while i<lenCols{
-            if "delete" == cols[i] || "deleted" == cols[i]{
-                dColName = cols[i]
+        var body dColName string i int
+        while i<$lenCols{
+            if "delete" == $cols[i] || "deleted" == $cols[i]{
+                dColName = $cols[i]
             }
             i=i+1
         }
@@ -250,26 +307,16 @@ contract CrudCreate {
         }`
         return body
     }
-    func globJoin(cols array)string{
-        // Println("globJoin")
-        var body array i lenCols int
-        lenCols = Len(cols)
-        while i<lenCols{
-            body = Append(body, "$"+toCamel(cols[i], $lowerFirst))
-            i=i+1
-        }
-        return Join(body, ",")
-    }
-    func getContractEdit(name string, cols array)string{
+
+    func getContractEdit(name string)string{
         // Println("getContractEdit")
-        var body dColName string i lenCols int
-        lenCols = Len(cols)
+        var body dColName string i int
         body = `contract `+name+` {
             data {
                 `+$ID+` string "optional"`
-                while i<lenCols{
+                while i<$lenCols{
                     body = body+`
-                    `+toCamel(cols[i], $lowerFirst)+` ` +$cTypes[GetColumnType($tableName, cols[i])]
+                    `+$camelCols[i]+` ` +$cTypes[$types[i]]
                     i=i+1
                 }
                 body = body + `
@@ -284,15 +331,25 @@ contract CrudCreate {
             }
             action {
                 if $`+$ID+` > 0{
-                    DBUpdate("`+$tableName+`", $`+$ID+`, "`+Join(cols, ",")+`",`+globJoin(cols)+`)
+                    DBUpdate("`+$tableName+`", $`+$ID+`, "`+$csvCols+`",`+globJoin($cols)+`)
                 }else{
-                    DBInsert("`+$tableName+`", "`+Join(cols, ",")+`",`+globJoin(cols)+`)
+                    DBInsert("`+$tableName+`", "`+$csvCols+`",`+globJoin($cols)+`)
                 }
             }
         }`
         return body
     }
-
+    func createLang(s string) map{
+        s = toCap(Replace(s, "_", " "))
+        "{\"en\": \"New value\", \"ru\": \"Новое значение\"}",
+    }
+    func createLangs() array{
+        var res array m map
+        while i<$lenCols{
+            i=i+1
+        }
+        return res
+    }
     func createExportItem(type, name, content string)map{
         // Println("createExportItem")
         var item map
@@ -302,9 +359,13 @@ contract CrudCreate {
         if type == "pages"{
             item["Menu"] = "default_menu"
         }
+        if type == "languages"{
+            item["Trans"] = content
+        }else{
+            item["Value"] = content
+            item["Conditions"] = "true"
+        }
 
-        item["Conditions"] = "true"
-        item["Value"] = content
         item["Name"] = name
         item["Type"] = type
         return item
@@ -317,7 +378,7 @@ contract CrudCreate {
         app["name"] = $appName
         while i<lenItems{
             item = items[i]
-            if item["Value"] {
+            if item["Name"] {
                 ar = Append(ar, item)
             }
             i=i+1
@@ -325,40 +386,13 @@ contract CrudCreate {
         app["data"] = ar
         @1UploadBinary("Name,Data,ApplicationId,DataMimeType", fileName, JSONEncode(app), $appId, "application/json")
     }
-    func pageInputTypes()map{
-        var m map
-        m["text"] = "text"
-        m["number"] = "number"
-        m["money"] = "number"
-        m["varchar"] = "text"
-        m["datetime"] = "date"
-        m["double"] = "number"
-        m["character"] = "text"
-        m["json"] = "textarea"
-        m["bytea"] = "file"
-        m["uuid"] = "text"
-        return m
-    }
-    func contractInputTypes()map{
-        var m map
-        m["text"] = "string"
-        m["number"] = "int"
-        m["money"] = "money"
-        m["varchar"] = "string"
-        m["datetime"] = "string"
-        m["double"] = "float"
-        m["character"] = "string"
-        m["json"] = "string"
-        m["bytea"] = "bytes"
-        m["uuid"] = "string"
-        return m
-    }
+
     conditions {
         $table = DBFind("tables").Columns("columns").Where("name=?", $tableName).Row()
         if !$table{
             warning "Table not found"
         }
-        $lowerFirst = true // first letter for input global variables
+        $lowerFirst = false // first letter for input global variables
         $ID = toCamel("id", $lowerFirst)
 
         $appId = Int(DBFind("tables").Where("name=?", $tableName).Columns("app_id").One("app_id"))
@@ -366,7 +400,7 @@ contract CrudCreate {
         if !$appName {
             warning "Application not found"
         }
-        
+
         $tableName = ToLower($tableName)
         $prefix = getPrefix($appName)
 
@@ -380,26 +414,30 @@ contract CrudCreate {
 
         $pTypes = pageInputTypes()
         $cTypes = contractInputTypes()
+        var columns array
+        columns = JSONDecode($table["columns"])
+        $cols = GetMapKeys(columns)
+        $lenCols = Len($cols)
+        $camelCols = getCamelCols()
+        $types = getColsTypes()
+        $csvCols = Join($cols,",")
     }
     action {
-        var cols colsNames array names map pageRecords pageEdit pageView contractDelete contractEdit string
-
-        cols = JSONDecode($table["columns"])
-        colsNames = GetMapKeys(cols)
-
+        var names map pageRecords pageEdit pageView contractDelete contractEdit string langs array
         names["pageRecords"] = $prefix + $tableName
         names["pageEdit"] = $pagePrefix + "edit"
         names["pageView"] = $pagePrefix + "view"
         names["contractEdit"] = $contractPrefix + "Edit"
         names["contractDelete"] = $contractPrefix + "Delete"
 
-        pageRecords = getPageRecords(colsNames, names)
-        pageEdit = getPageEdit(colsNames, names)
-        pageView = getPageView(colsNames, names)
+        pageRecords = getPageRecords(names)
+        pageEdit = getPageEdit(names)
+        pageView = getPageView(names)
 
-        contractDelete = getContractDelete(names["contractDelete"], colsNames)
-        contractEdit = getContractEdit(names["contractEdit"], colsNames)
+        contractDelete = getContractDelete(names["contractDelete"])
+        contractEdit = getContractEdit(names["contractEdit"])
 
+        langs = createLangs()
         export(
             createExportItem("pages", names["pageRecords"], pageRecords),
             createExportItem("pages", names["pageEdit"], pageEdit),
