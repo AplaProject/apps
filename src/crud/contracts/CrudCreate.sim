@@ -3,7 +3,7 @@ contract CrudCreate {
         tableName string
     }
     func toCamel(t string, lowerFirstLetter bool) string{
-        Println("toCamel")
+        // Println("toCamel")
         var parts array i int
         parts = Split(t, "_")
         while i < Len(parts){
@@ -17,7 +17,7 @@ contract CrudCreate {
         return Join(parts, "")
     }
     func getPaginator() string{
-        Println("getPaginator")
+        // Println("getPaginator")
         var body string
         body = `
         DBFind(`+$tableName+`).Count(count)
@@ -55,7 +55,7 @@ contract CrudCreate {
         return body
     }
     func getPageRecords(cols array, names map) string{
-        Println("getPageRecords")
+        // Println("getPageRecords")
         var pageEdit pageView this contractDelete string
         pageEdit = names["pageEdit"]
         pageView = names["pageView"]
@@ -86,14 +86,14 @@ contract CrudCreate {
         return body
     }
     func trim_s(s string)string{
-        Println("trim_s")
+        // Println("trim_s")
         if Substr(s, Size(s)-1, 1) == "s"{
             return Substr(s, 0, Size(s)-1)
         }
         return s
     }
     func getPageEdit(cols array, names map)string{
-        Println("getPageEdit")
+        // Println("getPageEdit")
         var body pageRecords contractEdit string i lenCols int
         pageRecords =  names["pageRecords"]
         contractEdit =  names["contractEdit"]
@@ -133,7 +133,7 @@ contract CrudCreate {
                                         LangRes(`+cols[i]+`)
                                     }
                                     Div(col-sm-8 text-left){
-                                        Input(Name: `+toCamel(cols[i], $lowerFirst)+`, Type:`+$pageInputTypes[GetColumnType($tableName, cols[i])]+`, Value: #item_`+cols[i]+`#)
+                                        Input(Name: `+toCamel(cols[i], $lowerFirst)+`, Type:`+$pTypes[GetColumnType($tableName, cols[i])]+`, Value: #item_`+cols[i]+`#)
                                     }
                                 }`
                                 i=i+1
@@ -151,17 +151,17 @@ contract CrudCreate {
         return body
     }
     func getPageView(cols array, names map)string{
-        Println("getPageView")
+        // Println("getPageView")
         var body pageRecords string i lenCols int
         pageRecords = names["pageRecords"]
-        cols = Append(cols, "id")
         lenCols = Len(cols)
         body = body+`
         DBFind(applications).Columns("id").Where("name='`+$appName+`' AND deleted=0").Vars(application)
         If(GetVar(`+$ID+`)){
             DBFind(`+$tableName+`).Where("id=#`+$ID+`#").Vars(item)
         }
-        SetTitle(title,$view$ ##`+$ID+`#)
+        SetVar(title,$`+$prefix+`view$ ##`+$ID+`#)
+        SetTitle(#title#,$view$ ##`+$ID+`#)
         Div(content-wrapper){
             Div(breadcrumb){
                 LinkPage(Body: $`+pageRecords+`$, Page: `+pageRecords+`)
@@ -206,13 +206,13 @@ contract CrudCreate {
         return body
     }
     func getPrefix(appName string)string{
-        Println("getPrefix")
+        // Println("getPrefix")
         var temp array
         temp = Split(appName, " ")
         return ToLower(temp[0]+"_")
     }
     func getMapValues(m map, keys array) array {
-        Println("getMapValues")
+        // Println("getMapValues")
         var values array i keysLen int key string
         keysLen = Len(keys)
         while i < keysLen {
@@ -223,7 +223,7 @@ contract CrudCreate {
         return values
     }
     func getContractDelete(name string, cols array)string{
-        Println("getContractDelete")
+        // Println("getContractDelete")
         var body dColName string i lenCols int
         lenCols = Len(cols)
         while i<lenCols{
@@ -251,7 +251,7 @@ contract CrudCreate {
         return body
     }
     func globJoin(cols array)string{
-        Println("globJoin")
+        // Println("globJoin")
         var body array i lenCols int
         lenCols = Len(cols)
         while i<lenCols{
@@ -261,7 +261,7 @@ contract CrudCreate {
         return Join(body, ",")
     }
     func getContractEdit(name string, cols array)string{
-        Println("getContractEdit")
+        // Println("getContractEdit")
         var body dColName string i lenCols int
         lenCols = Len(cols)
         body = `contract `+name+` {
@@ -269,7 +269,7 @@ contract CrudCreate {
                 `+$ID+` string "optional"`
                 while i<lenCols{
                     body = body+`
-                    `+toCamel(cols[i], $lowerFirst)+` ` +$contractInputTypes[GetColumnType($tableName, cols[i])]
+                    `+toCamel(cols[i], $lowerFirst)+` ` +$cTypes[GetColumnType($tableName, cols[i])]
                     i=i+1
                 }
                 body = body + `
@@ -294,7 +294,7 @@ contract CrudCreate {
     }
 
     func createExportItem(type, name, content string)map{
-        Println("createExportItem")
+        // Println("createExportItem")
         var item map
         if !(content && name && type){
             return item
@@ -310,7 +310,7 @@ contract CrudCreate {
         return item
     }
     func export(items ...){
-        Println("export")
+        // Println("export")
         var app item map i lenItems int ar array fileName string
         fileName = Sprintf("%v.json", Replace(ToLower($appName), " ", "_"))
         lenItems = Len(items)
@@ -325,6 +325,34 @@ contract CrudCreate {
         app["data"] = ar
         @1UploadBinary("Name,Data,ApplicationId,DataMimeType", fileName, JSONEncode(app), $appId, "application/json")
     }
+    func pageInputTypes()map{
+        var m map
+        m["text"] = "text"
+        m["number"] = "number"
+        m["money"] = "number"
+        m["varchar"] = "text"
+        m["datetime"] = "date"
+        m["double"] = "number"
+        m["character"] = "text"
+        m["json"] = "textarea"
+        m["bytea"] = "file"
+        m["uuid"] = "text"
+        return m
+    }
+    func contractInputTypes()map{
+        var m map
+        m["text"] = "string"
+        m["number"] = "int"
+        m["money"] = "money"
+        m["varchar"] = "string"
+        m["datetime"] = "string"
+        m["double"] = "float"
+        m["character"] = "string"
+        m["json"] = "string"
+        m["bytea"] = "bytes"
+        m["uuid"] = "string"
+        return m
+    }
     conditions {
         $table = DBFind("tables").Columns("columns").Where("name=?", $tableName).Row()
         if !$table{
@@ -338,42 +366,20 @@ contract CrudCreate {
         if !$appName {
             warning "Application not found"
         }
-        var p1 p2 string
+        
         $tableName = ToLower($tableName)
         $prefix = getPrefix($appName)
-        $pagePrefix = $prefix + trim_s($tableName) + "_"
-        p1 = toCamel($prefix, false)
-        p2 = toCamel(trim_s($tableName), false)
-        $contractPrefix = p1
-        if p1 != p2{
-            $contractPrefix = p1 + p2
+
+        if HasPrefix($tableName, $prefix){
+            $pagePrefix = trim_s($tableName) + "_"
+            $contractPrefix = toCamel($prefix, false)
+        }else{
+            $pagePrefix = $prefix + trim_s($tableName) + "_"
+            $contractPrefix = toCamel($prefix, false) + toCamel(trim_s($tableName), false)
         }
 
-        var pageTypes contractTypes map
-        pageTypes["text"] = "text"
-        pageTypes["number"] = "number"
-        pageTypes["money"] = "number"
-        pageTypes["varchar"] = "text"
-        pageTypes["datetime"] = "date"
-        pageTypes["double"] = "number"
-        pageTypes["character"] = "text"
-        pageTypes["json"] = "textarea"
-        pageTypes["bytea"] = "file"
-        pageTypes["uuid"] = "text"
-
-        contractTypes["text"] = "string"
-        contractTypes["number"] = "int"
-        contractTypes["money"] = "money"
-        contractTypes["varchar"] = "string"
-        contractTypes["datetime"] = "string"
-        contractTypes["double"] = "float"
-        contractTypes["character"] = "string"
-        contractTypes["json"] = "string"
-        contractTypes["bytea"] = "bytes"
-        contractTypes["uuid"] = "string"
-
-        $pageInputTypes = pageTypes
-        $contractInputTypes = contractTypes
+        $pTypes = pageInputTypes()
+        $cTypes = contractInputTypes()
     }
     action {
         var cols colsNames array names map pageRecords pageEdit pageView contractDelete contractEdit string
