@@ -6,7 +6,11 @@ contract CrudCreate {
         var i lenb int
         lenb = Len(b)
         while i<lenb{
-            a = Append(a, b[i])
+            if GetType(b[i]) == "[]interface {}"{
+                a = appendAll(a, b[i]...)
+            }else{
+                a = Append(a, b[i])
+            }
             i=i+1
         }
         return a
@@ -54,6 +58,17 @@ contract CrudCreate {
         m["json"] = "string"
         m["bytea"] = "bytes"
         m["uuid"] = "string"
+        return m
+    }
+    func ruTrans()map{
+        var m map
+        m["item_not_found"] = "Объект не найден"
+        m["back"] = "Назад"
+        m["data_view"] = "Просмотр данных"
+        m["data_input"] = "Ввод данных"
+        m["edit"] = "Редактировать"
+        m["save"] = "Сохранить"
+        m["view"] = "Просмотр"
         return m
     }
     func getColsTypes()array{
@@ -182,7 +197,7 @@ contract CrudCreate {
         pageRecords =  names["pageRecords"]
         contractEdit =  names["contractEdit"]
         body = `DBFind(applications).Columns("id").Where("name='`+$appName+`' AND deleted=0").Vars(application)
-        SetVar(title,$create$).(btn_title,$create$)`
+        SetVar(title,$`+$prefix+`create$).(btn_title,$`+$prefix+`create$)`
         while i < $lenCols{
             body = body + `.(item_`+$cols[i]+`,)`
             i=i+1
@@ -190,7 +205,7 @@ contract CrudCreate {
         body = body+`
         If(GetVar(`+$ID+`)){
             DBFind(`+$tableName+`).Where("id=#`+$ID+`#").Vars(item)
-            SetVar(title,$edit$).(btn_title,$edit$)
+            SetVar(title,$`+$prefix+`edit$ ##`+$ID+`#).(btn_title,$`+$prefix+`save$)
         }
         SetTitle(#title#)
         Div(content-wrapper){
@@ -225,7 +240,7 @@ contract CrudCreate {
                             body = body+`
                         }
                         Div(panel-footer text-right){
-                            Button(Body: Back, Page: `+pageRecords+`, Class: btn btn-default pull-left)
+                            Button(Body: LangRes(`+$prefix+`back), Page: `+pageRecords+`, Class: btn btn-default pull-left)
                             Button(Body: #btn_title#, Page: `+pageRecords+`, Class: btn btn-primary, Contract: `+contractEdit+`)
                         }
                     }
@@ -244,7 +259,7 @@ contract CrudCreate {
             DBFind(`+$tableName+`).Where("id=#`+$ID+`#").Vars(item)
         }
         SetVar(title,$`+$prefix+`view$ ##`+$ID+`#)
-        SetTitle(#title#,$view$ ##`+$ID+`#)
+        SetTitle(#title#)
         Div(content-wrapper){
             Div(breadcrumb){
                 LinkPage(Body: $`+pageRecords+`$, Page: `+pageRecords+`)
@@ -263,7 +278,7 @@ contract CrudCreate {
                             while i<$lenCols{
                                 body = body+`
                                 Div(row mt-sm){
-                                    Div(col-sm-4 mt-sm text-right text-bold){
+                                    Div(col-sm-4 text-right text-bold){
                                         LangRes(`+$prefix+$cols[i]+`)
                                     }
                                     Div(col-sm-8 text-left){
@@ -350,23 +365,50 @@ contract CrudCreate {
     }
     func makeLang(s string) map{
         var item trans map
-        item["name"] = $prefix + Replace(s, " ", "_")
+        if HasPrefix(s, $prefix){
+            item["Name"] = Replace(s, " ", "_")
+        }else{
+            item["Name"] = $prefix + Replace(s, " ", "_")
+        }
         trans["en"] = toCap(Replace(s, "_", " "))
-        item["Trans"] = trans
+        if $ruTrans[s]{
+            trans["ru"] = $ruTrans[s]
+        }
+        item["Trans"] = JSONEncode(trans)
         item["Type"] = "languages"
         return item
     }
-    func createLangs() array{
-        var res array m map
-        res = appendAll(res, makeLang("item_not_found"),makeLang("back"),makeLang("data_view"),makeLang("data_input"))
+    func makeMenu(name string) map{
+        var menu map
+        menu["Name"] = "default_menu"
+        menu["Value"] = Sprintf("MenuItem(Title: %v, Page: %v, Icon:fa fa-list-ul)", toCap(Replace(name, "_", " ")), name)
+        menu["Conditions"] = `ContractAccess("@1EditMenu")`
+        menu["Type"] = "menu"
+        return menu
+    }
+    func createLangs(names array) array{
+        var res array m map i int
+        res = appendAll(
+            res,
+            makeLang("item_not_found"),
+            makeLang("back"),
+            makeLang("data_view"),
+            makeLang("data_input"),
+            makeLang("edit"),
+            makeLang("save"),
+            makeLang("view"),
+            makeLang(names["pageRecords"]),
+            makeLang(names["pageEdit"]),
+            makeLang(names["pageView"])
+        )
         while i<$lenCols{
             res = Append(res, makeLang($cols[i]))
             i=i+1
         }
         return res
     }
-    func createExportItem(type, name, content string)map{
-        // Println("createExportItem")
+    func makeItem(type, name, content string)map{
+        // Println("makeItem")
         var item map
         if !(content && name && type){
             return item
@@ -374,31 +416,28 @@ contract CrudCreate {
         if type == "pages"{
             item["Menu"] = "default_menu"
         }
-        if type == "languages"{
-            item["Trans"] = content
-        }else{
-            item["Value"] = content
-            item["Conditions"] = "true"
-        }
 
+        item["Value"] = content
+        item["Conditions"] = "true"
         item["Name"] = name
         item["Type"] = type
         return item
     }
     func export(items ...){
         // Println("export")
-        var app item map i lenItems int ar array fileName string
+        var app item menu map i lenItems int res array fileName string
         fileName = Sprintf("%v.json", Replace(ToLower($appName), " ", "_"))
         lenItems = Len(items)
         app["name"] = $appName
         while i<lenItems{
             item = items[i]
-            if item["Name"] {
-                ar = Append(ar, item)
+            if item["Type"] {
+                res = Append(res, item)
             }
             i=i+1
         }
-        app["data"] = ar
+
+        app["data"] = res
         @1UploadBinary("Name,Data,ApplicationId,DataMimeType", fileName, JSONEncode(app), $appId, "application/json")
     }
 
@@ -436,10 +475,14 @@ contract CrudCreate {
         $camelCols = getCamelCols()
         $types = getColsTypes()
         $csvCols = Join($cols,",")
+        $ruTrans = ruTrans()
     }
     action {
         var names map pageRecords pageEdit pageView contractDelete contractEdit string langs array
         names["pageRecords"] = $prefix + $tableName
+        if HasPrefix($tableName, $prefix){
+            names["pageRecords"] = $tableName
+        }
         names["pageEdit"] = $pagePrefix + "edit"
         names["pageView"] = $pagePrefix + "view"
         names["contractEdit"] = $contractPrefix + "Edit"
@@ -451,14 +494,15 @@ contract CrudCreate {
 
         contractDelete = getContractDelete(names["contractDelete"])
         contractEdit = getContractEdit(names["contractEdit"])
-
-        langs = createLangs()
+        langs = createLangs(names)
         export(
-            createExportItem("pages", names["pageRecords"], pageRecords),
-            createExportItem("pages", names["pageEdit"], pageEdit),
-            createExportItem("pages", names["pageView"], pageView),
-            createExportItem("contracts", names["contractEdit"], contractEdit),
-            createExportItem("contracts", names["contractDelete"], contractDelete)
+            makeItem("pages", names["pageRecords"], pageRecords),
+            makeItem("pages", names["pageEdit"], pageEdit),
+            makeItem("pages", names["pageView"], pageView),
+            makeItem("contracts", names["contractEdit"], contractEdit),
+            makeItem("contracts", names["contractDelete"], contractDelete),
+            makeMenu(names["pageRecords"]),
+            langs...
         )
     }
 }
