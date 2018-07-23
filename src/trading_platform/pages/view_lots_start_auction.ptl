@@ -4,6 +4,9 @@ Div(Class: content-wrapper){
             DBFind("notifications").Columns("id,page_params->lot_id,page_params->rate_broken").WhereId(#notific_id#).Vars(src)
             DBFind("lots").WhereId(#src_page_params_lot_id#).Vars(lot_)
             DBFind(roles).Columns("id,role_name").Where("id=#role_id#").Vars(r)
+            If(#src_page_params_lot_id#>0){
+                DBFind(lots_tracks).Where("lot_id=#src_page_params_lot_id# and key_id=#key_id# and deleted=0").Vars(track)
+            }
             If(#r_role_name# == "Seller"){
                 Span(Class:h4 text-bold,Body:Аукцион закончен)
             }.ElseIf(#src_page_params_rate_broken# == 1){
@@ -35,8 +38,11 @@ Div(Class: content-wrapper){
                     }
                 }
             }
-            Div(panel-footer text-center){    
-                Button(Class:btn btn-default btn-block,Body:"Перейти к аукциону",Contract:notifications_Close,Params:"notific_id=#notific_id#",Page:lots_view,PageParams:"Id=#src_page_params_lot_id#") 
+            Div(panel-footer text-right){
+                If(#track_id#>0){
+                    Button(Body: $lots_unsubscribe$, Class: btn btn-default pull-left, Page: lots_list, PageParams: "Id=#Id#", Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#")
+                }
+                Button(Class:btn btn-primary, Body:"Перейти к аукциону",Contract:notifications_Close,Params:"notific_id=#notific_id#",Page:lots_view,PageParams:"Id=#src_page_params_lot_id#")
             }
         }
     }
