@@ -1,0 +1,52 @@
+contract lots_Sign {
+    data {
+        lot_id int
+        actions string
+        notific_id string "optional"
+    }
+    conditions {
+        $notific_id = Int($notific_id)
+        $lot = DBFind("lots").Where("id=?", $lot_id).Row()
+        if !$lot {
+            warning "Не удается подписать контракт: лот не найден"
+        }
+        if $lot["status"] != 3 {
+            warning "Не удается подписать контракт: контракт уже подписан"
+        }
+    }
+    action {
+        var params map
+        params["lot_id"] = $lot_id
+        if $actions == "buyer_accept" {
+            if $lot["buyer"] == $key_id {
+                notifications_Send("member_id,sender,text_header,page_name,params_map", $lot["seller"], 1, "Покупатель подписал контракт", "lots_view", JSONEncode(params))
+                var buyer map
+                buyer = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=? and buyer_id=?", $lot_id, $lot["buyer"]).Row()
+                DBUpdate("buyers", Int(buyer["id"]), "status", 1)
+
+                DBUpdate("keys", Int(buyer["buyer_id"]), "-deposit", buyer["amount"])
+                DBUpdate("keys", Int($lot["seller"]), "+amount", buyer["amount"])
+                
+                var buyers array i int
+                buyers = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=?", $lot_id)
+                while i < Len(buyers) {
+                    buyer = buyers[i]
+                    DBUpdate("keys", Int(buyer["buyer_id"]), "+amount,-deposit", buyer["amount"], buyer["amount"])
+                    i = i + 1
+                }
+                DBUpdate("lots", $lot_id, "status", 4)
+            }
+        }
+        if $actions == "buyer_reject" {
+            if $lot["buyer"] == $key_id {
+                var buyer map
+                buyer = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=? and buyer_id=?", $lot_id, $lot["buyer"]).Row()
+                DBUpdate("buyers", Int(buyer["id"]), "status", -1)
+                lots_Close("id", $lot_id)
+            }
+        }
+        if $notific_id > 0{
+            notifications_Close("notific_id", $notific_id)
+        }
+    }
+}

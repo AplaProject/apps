@@ -1,0 +1,76 @@
+contract platform_Acceptance {
+    data {
+        rname string
+        member_id int
+        notific_id int
+    }
+    func getMemberInfo(kid int) map {
+            var res member map
+            member = DBFind("members").Where("id=?", kid).Row()
+            if member {
+                res["member_id"] = member["id"]
+                res["member_name"] = member["member_name"]
+                res["image_id"] = member["image_id"]
+            }else{
+                member = DBFind("keys").Where("id=?", kid).Row()
+                if member {
+                    res["member_id"] = member["id"]
+                    res["member_name"] = IdToAddress(Int(member["id"]))
+                    res["image_id"] = 0
+                }
+            }
+            return res
+        }
+    conditions {
+        //actually we should find role from "string" and check it's RoleID and then transfer string data to RoleID "int"
+        $rid = DBFind("roles").Columns("id,role_name").Where("role_name=?", $rname).One("id")
+        if $rid != nil {
+            Println($rname)
+        }
+        //check role exist
+        $role = DBFind("roles").Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Where("id=?", $rid).Row()
+        if !$role {
+            warning "Role not found"
+        }
+        //check member_id
+        if !DBFind("keys").Where("id=?", $member_id).Row() {
+            warning "Key not found"
+        }
+        //check if role not deleted
+        if $role["deleted"] == 1 {
+            warning "This role has been deleted. The appointment of members is impossible"
+        }
+        //special Rules
+        var specialRules map prev_contract string stack array
+        stack = JSONDecode(JSONEncode($stack))
+        prev_contract = stack[0]
+        if Len(stack)>2{
+            prev_contract = stack[Len(stack)-2]
+        }
+        specialRules["@1sysparams_AcceptValidator"] = "Validator"
+        specialRules["@1sysparams_DelegateRefresh"] = "Delegate"
+        specialRules["@1sysparams_CandidateValidatorRequest"] = "Candidate for validators"
+        specialRules["@1voting_TemplateRun"] = "Investor with voting rights"
+        specialRules["@1tokenrefund_Start"] = "Investor with voting rights"
+        if specialRules[prev_contract] != $role["role_name"] {
+            Roles_CheckAccess("rid", $rid)
+        }
+    }
+    action {
+        var role member appointer map
+        role["id"] = $role["id"]
+        role["type"] = $role["role_type"]
+        role["name"] = $role["role_name"]
+        role["image_id"] = $role["image_id"]
+
+        member = getMemberInfo($member_id)
+        appointer = getMemberInfo($key_id)
+
+        DBInsert("roles_participants", "role,member,appointed,timestamp date_created", role, member, appointer, $block_time)
+        DBUpdate("notifications", $notific_id, "timestamp date_closed,closed", $block_time, 1)
+        
+        var notific_params map
+        notific_params["role"] = $rname
+        notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", $member_id, 1, "icon icon-user-follow", "Ваша заявка на роль была успешно одобрена", "Подробнее", "platform_role_success", notific_params)
+    }
+}

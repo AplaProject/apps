@@ -1,0 +1,88 @@
+contract AuctionProcess {
+    data {
+        step_rate money
+        lot_id int
+    }
+    conditions {
+        $lot_map = DBFind("lots").Where("id=$", $lot_id).Row()
+        if ($lot_map["type_bargain"] == 1){
+            if ($step_rate < $lot_map["order_min"]){
+                info("Ставка не может быть меньше минимальной")
+            }
+            if ($step_rate > $lot_map["order_max"]){
+                info("Ставка не может быть больше максимальной")
+            }
+        }
+
+        if ($lot_map["type_bargain"] == 2){
+            $step_rate = Money($lot_map["amount_starting"])
+        }
+
+        var percentrate money
+        percentrate = $step_rate / Money(100)
+    
+        var checkamount money
+        checkamount = DBFind("keys").Where("id = ?",$key_id).One("amount")
+        
+        if ($lot_map["type_bargain"] == 2){
+            if(percentrate + $step_rate > checkamount){
+                info("На счету недостаточно средств")
+            }
+        }
+
+        if ($lot_map["type_bargain"] == 1){
+            if ($lot_map["amount_max"] == 0){
+                if(percentrate + $step_rate + Money($lot_map["amount_starting"]) > checkamount){
+                    info("На счету недостаточно средств")
+                }
+            }
+            if (Money($lot_map["amount_max"]) > 0){
+                if(percentrate + $step_rate + Money($lot_map["amount_max"]) > checkamount){
+                    info("На счету недостаточно средств")
+                }
+            }
+        }
+    }
+    action {
+        var percentrate money
+        percentrate = $step_rate / Money(100)
+
+        if ($lot_map["type_bargain"] == 1){
+            if (Money($lot_map["amount_max"]) == Money(0)){
+                var firstrate money
+                firstrate = $step_rate + Money($lot_map["amount_starting"])
+                DBUpdate("keys",$key_id,"-amount,+deposit",firstrate,firstrate)
+                DBUpdate("lots",$lot_id,"amount_max",firstrate)
+                DBInsert("buyers","amount,lot_id,buyer_id",firstrate,$lot_id,$key_id)
+            }
+            if (Money($lot_map["amount_max"]) > Money(0)){
+                var secondrate money
+                secondrate = $step_rate + Money($lot_map["amount_max"])
+
+               /* $send_notif_rate_broken = DBFind("buyers").Where("lot_id=$",$lot_id).Order("id ASC").One("buyer_id")
+                info($send_notif_rate_broken)*/
+
+                $user_map = DBFind("buyers").Where("buyer_id=$ and lot_id=$",$key_id,$lot_id).Row()
+                
+                DBUpdate("keys",$key_id,"-amount,+deposit",secondrate,secondrate)
+                DBUpdate("lots",$lot_id,"amount_max",secondrate)
+
+                if(Int($user_map["buyer_id"]) > 0){
+                    DBUpdate("buyers",$user_map["id"],"amount",secondrate)
+                }
+                if(Int($user_map["buyer_id"]) <= 0){
+                    DBInsert("buyers","amount,lot_id,buyer_id",secondrate,$lot_id,$key_id)
+                }
+            }
+            DBUpdate("keys",$key_id,"-amount", percentrate)
+            DBUpdate("keys",8688112858732142464,"+amount", percentrate)
+        }
+
+        if ($lot_map["type_bargain"] == 2){
+            DBUpdate("keys",$key_id,"-amount", percentrate)
+            DBUpdate("keys",8688112858732142464,"+amount", percentrate)
+            DBUpdate("keys",$key_id,"-amount,+deposit",$step_rate,$step_rate)
+            DBInsert("buyers","amount,lot_id,buyer_id",$step_rate,$lot_id,$key_id)
+        }
+    }
+}
