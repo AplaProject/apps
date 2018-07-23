@@ -7,10 +7,10 @@ contract AuctionProcess {
         $lot_map = DBFind("lots").Where("id=$", $lot_id).Row()
         if ($lot_map["type_bargain"] == 1){
             if ($step_rate < $lot_map["order_min"]){
-                info("РЎС‚Р°РІРєР° РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РјРµРЅСЊС€Рµ РјРёРЅРёРјР°Р»СЊРЅРѕР№")
+                info("Ставка не может быть меньше минимальной")
             }
             if ($step_rate > $lot_map["order_max"]){
-                info("РЎС‚Р°РІРєР° РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ Р±РѕР»СЊС€Рµ РјР°РєСЃРёРјР°Р»СЊРЅРѕР№")
+                info("Ставка не может быть больше максимальной")
             }
         }
 
@@ -26,19 +26,19 @@ contract AuctionProcess {
         
         if ($lot_map["type_bargain"] == 2){
             if(percentrate + $step_rate > checkamount){
-                info("РќР° СЃС‡РµС‚Сѓ РЅРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ СЃСЂРµРґСЃС‚РІ")
+                info("На счету недостаточно средств")
             }
         }
 
         if ($lot_map["type_bargain"] == 1){
             if ($lot_map["amount_max"] == 0){
                 if(percentrate + $step_rate + Money($lot_map["amount_starting"]) > checkamount){
-                    info("РќР° СЃС‡РµС‚Сѓ РЅРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ СЃСЂРµРґСЃС‚РІ")
+                    info("На счету недостаточно средств")
                 }
             }
             if (Money($lot_map["amount_max"]) > 0){
                 if(percentrate + $step_rate + Money($lot_map["amount_max"]) > checkamount){
-                    info("РќР° СЃС‡РµС‚Сѓ РЅРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ СЃСЂРµРґСЃС‚РІ")
+                    info("На счету недостаточно средств")
                 }
             }
         }
@@ -58,9 +58,14 @@ contract AuctionProcess {
             if (Money($lot_map["amount_max"]) > Money(0)){
                 var secondrate money
                 secondrate = $step_rate + Money($lot_map["amount_max"])
+                
+                //notific of a high rate
+                $send_notif_rate_broken = DBFind("buyers").Where("lot_id=$",$lot_id).Order("id DESC").One("buyer_id")
+                var notific_params map
+                notific_params["lot_id"] = $lot_id
+                notific_params["rate_broken"] = 1
+                notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", Int($send_notif_rate_broken), 1, "icon icon-envelope", "Ваша ставка перебита", "Подробнее", "view_lots_start_auction", notific_params)
 
-               /* $send_notif_rate_broken = DBFind("buyers").Where("lot_id=$",$lot_id).Order("id ASC").One("buyer_id")
-                info($send_notif_rate_broken)*/
 
                 $user_map = DBFind("buyers").Where("buyer_id=$ and lot_id=$",$key_id,$lot_id).Row()
                 
