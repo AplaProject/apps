@@ -3,7 +3,7 @@ contract lots_Close {
         id int
     }
     conditions {
-        $lot = DBFind("lots").Columns("id,seller,deleted,type_bargain").WhereId($id).Row()
+        $lot = DBFind("lots").Columns("id,seller,deleted,type_bargain,name,description").WhereId($id).Row()
         if !$lot {
             warning "Не удается закрыть лот: лот не найден"
         }
@@ -23,7 +23,21 @@ contract lots_Close {
             DBUpdate("lots", $id, "status", 5)
             notifications_Send("member_id,sender,text_header,page_name,params_map", $lot["seller"], 1, "Лот не продан: нет покупателей", "lots_view", JSONEncode(params))
         }else{
-            DBUpdate("lots", $id, "status,amount_final,buyer", 3, buyer["amount"], buyer["buyer_id"])
+            var contract_text string buyer_member, seller_member map
+            buyer_member = DBFind("members").Columns("member_name").WhereId(Int(buyer["buyer_id"])).Row()
+            seller_member = DBFind("members").Columns("member_name").WhereId(Int($lot["seller"])).Row()
+            contract_text = Sprintf("Договор купли-продажи по лоту № %v\n", $lot["id"])
+
+            contract_text = contract_text + "\nПродавец\n"
+            contract_text = contract_text + Sprintf("Имя: %v\n", seller_member["member_name"])
+
+            contract_text = contract_text + "\nПокупатель\n"
+            contract_text = contract_text + Sprintf("Имя: %v\n", buyer_member["member_name"])
+
+            contract_text = contract_text + "\nОписание лота\n"
+            contract_text = contract_text + Sprintf("Наименование: %v\n", $lot["name"])
+            contract_text = contract_text + Sprintf("Описание: %v\n", $lot["description"])
+            DBUpdate("lots", $id, "status,amount_final,buyer,contract_text", 3, buyer["amount"], buyer["buyer_id"], contract_text)
             notifications_Send("member_id,sender,text_header,page_name,params_map", buyer["buyer_id"], 1, "Ваша ставка победила: необходимо подтверждение", "lots_view", JSONEncode(params))
         }
     }
