@@ -14,6 +14,7 @@ contract lots_Sign {
             warning "Не удается подписать контракт: контракт уже подписан"
         }
         $user = DBFind("keys").WhereId($key_id).Row()
+        $lot = JSONDecode(JSONEncode($lot))
     }
     action {
         var params map
@@ -36,9 +37,11 @@ contract lots_Sign {
                     DBUpdate("keys", Int(buyer["buyer_id"]), "+amount,-deposit", buyer["amount"], buyer["amount"])
                     i = i + 1
                 }
-                $lot["contract_text"] = Sprintf("%v \n Подпись покупателя: %v \n Дата подписания: %v", $lot["contract_text"], $user["pub"], $BlockTime)
-                $lot["contract_text"] = Sprintf("%v \n [%v]", $lot["contract_text"], Sha256($lot["contract_text"]))
-                DBUpdate("lots", $lot_id, "status,contract_text", 4, $lot["contract_text"])
+                var contract_hash string
+                contract_hash = Sha256($lot["contract_text"])
+                $lot["contract_text"] = Sprintf("%v \n Подпись покупателя: %v \n Дата подписания: %v", $lot["contract_text"], Sha256($user["pub"]), " ")
+                $lot["contract_text"] = Sprintf("%v \n [%v]", $lot["contract_text"], contract_hash)
+                DBUpdate("lots", $lot_id, "status,contract_text,contract_hash,buyer_sign,timestamp date_sign", 4, $lot["contract_text"], contract_hash, 1, $time)
             }
         }
         if $actions == "buyer_reject" {
