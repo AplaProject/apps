@@ -22,7 +22,7 @@ contract lots_Sign {
         
         if $actions == "buyer_accept" {
             if $lot["buyer"] == $key_id {
-                notifications_Send("member_id,sender,text_header,page_name,params_map", $lot["seller"], 1, "Покупатель подписал контракт", "lots_view", JSONEncode(params))
+                notifications_Send("member_id,sender,text_header,page_name,params_map", $lot["seller"], 1, "Покупатель подписал контракт", "lots_view_contract", JSONEncode(params))
                 var buyer map
                 buyer = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=? and buyer_id=?", $lot_id, $lot["buyer"]).Row()
                 DBUpdate("buyers", Int(buyer["id"]), "status", 1)
@@ -54,6 +54,7 @@ contract lots_Sign {
         }
         if $actions == "seller_accept" {
             if $lot["seller"] == $key_id {
+				notifications_Send("member_id,sender,text_header,page_name,params_map", $lot["buyer"], 1, "Продавец подписал контракт", "lots_view_contract", JSONEncode(params))
                 var contract_text string
                 contract_text = Sprintf("%v \n Подпись продавца: %v", $lot["contract_text"], Sha256($user["pub"]))
                 DBUpdate("lots", $lot_id, "seller_sign,contract_text", 1, contract_text)
