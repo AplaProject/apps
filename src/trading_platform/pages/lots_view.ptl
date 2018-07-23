@@ -60,18 +60,18 @@ Div(content-wrapper){
                                 SetVar(status_class,text-danger)
                             }.ElseIf(And(#status_index#==1,#role_id#==1,#notific_id#>0)){
                                 Div(form-group text-left){
-                                    Button(Body: "РћС‚РєР»РѕРЅРёС‚СЊ", Page: lots_reject, PageParams: "NotificId=#notific_id#,Id=#Id#", Class: btn btn-danger).Popup(Width: 40, Header: "РџРѕР¶Р°Р»СѓР№СЃС‚Р° СѓРєР°Р¶РёС‚Рµ РїСЂРёС‡РёРЅСѓ РѕС‚РєР°Р·Р°")
-                                    Button(Body: "РџСЂРёРЅСЏС‚СЊ", Page: lots_view, Contract: lots_AdminAction, Params: "Action=accept,Id=#Id#,NotificId=#notific_id#,Comment=", Class: btn btn-success pull-right, PageParams: "Id=#Id#")
+                                    Button(Body: "Отклонить", Page: lots_reject, PageParams: "NotificId=#notific_id#,Id=#Id#", Class: btn btn-danger).Popup(Width: 40, Header: "Пожалуйста укажите причину отказа")
+                                    Button(Body: "Принять", Page: lots_view, Contract: lots_AdminAction, Params: "Action=accept,Id=#Id#,NotificId=#notific_id#,Comment=", Class: btn btn-success pull-right, PageParams: "Id=#Id#")
                                 }
                             }.ElseIf(And(#status_index#==4,#key_id#==#lot_buyer#)){
                                 Div(form-group text-left){
-                                    Button(Body: "РћС‚РєР»РѕРЅРёС‚СЊ", Contract: lots_Sign, Params: "actions=buyer_reject,lot_id=#Id#,notific_id=#notific_id#", Page: lots_view, PageParams: "Id=#Id#", Class: btn btn-danger)
-                                    Button(Body: "РџСЂРёРЅСЏС‚СЊ", Contract: lots_Sign, Params: "actions=buyer_accept,lot_id=#Id#,notific_id=#notific_id#", Page: lots_view, PageParams: "Id=#Id#", Class: btn btn-success pull-right)
+                                    Button(Body: "Отклонить", Contract: lots_Sign, Params: "actions=buyer_reject,lot_id=#Id#,notific_id=#notific_id#", Page: lots_view, PageParams: "Id=#Id#", Class: btn btn-danger)
+                                    Button(Body: "Принять", Contract: lots_Sign, Params: "actions=buyer_accept,lot_id=#Id#,notific_id=#notific_id#", Page: lots_view, PageParams: "Id=#Id#", Class: btn btn-success pull-right)
                                 }
                             }.ElseIf(And(#r_role_name#=="Buyer",#notific_id#>0)){
                                 Div(form-group text-left){
-                                    Button(Body: "РќРµ РёРЅС‚РµСЂРµСЃСѓРµС‚", Page: lots_view, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#,NotificId=#notific_id#", Class: btn btn-default, PageParams: "Id=#Id#")
-                                    Button(Body: "РћС‚СЃР»РµР¶РёРІР°С‚СЊ", Page: lots_view, Params: "Action=track_accept,NotificId=#notific_id#,Id=#Id#",PageParams: "Id=#Id#", Contract: lots_BuyerAction, Class: btn btn-success pull-right)
+                                    Button(Body: "Не интересует", Page: lots_view, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#,NotificId=#notific_id#", Class: btn btn-default, PageParams: "Id=#Id#")
+                                    Button(Body: "Отслеживать", Page: lots_view, Params: "Action=track_accept,NotificId=#notific_id#,Id=#Id#",PageParams: "Id=#Id#", Contract: lots_BuyerAction, Class: btn btn-success pull-right)
                                 }
                             }
                             Div(#status_class#){
@@ -155,7 +155,7 @@ Div(content-wrapper){
                                 If(#lot_type_bargain# == 2){
                                     Div(row mt-sm t4){
                                         Div(col-md-6 text-right){
-                                            Span(Body: "Р¦РµРЅР°")
+                                            Span(Body: "Цена")
                                         }
                                         Div(col-md-6 text-left){
                                             Money(#lot_amount_starting#)
@@ -164,7 +164,7 @@ Div(content-wrapper){
                                 }.Else{
                                     Div(row mt-sm t4){
                                         Div(col-md-6 text-right){
-                                            Span("РўРёРї С‚РѕСЂРіР°")
+                                            Span("Тип торга")
                                         }
                                         Div(col-md-6 text-left){
                                             Span(Body: AppParam(App:#application_id#, Name:bargain_type, Index: #lot_type_bargain#))
@@ -218,13 +218,41 @@ Div(content-wrapper){
                                     }
                                 }
                             }
+                            If(And(#lot_status#==2,#r_role_name#=="Buyer",#lot_type_bargain# == 1)){                            
+                                Div(list-group-item text-center){
+                                    Div(row mt-sm t4){
+                                        Div(col-md-12){
+                                            Span("Сделать ставку")
+                                        }
+                                    }
+                                    Div(row mt-sm){
+                                        Div(col-md-2 mt-sm text-left){
+                                            Span(Class: h4,Body:"Ставка")
+                                        }
+                                        Div(col-md-10 text-left){
+                                            Input(Name: StepRate,Type: number)
+                                        }
+                                    }.Style(padding-top:10px;)
+                                    Div(row mt-sm){
+                                        Div(col-md-12){
+                                            DBFind("buyers").Where("lot_id = #Id#").Order("id DESC").Vars(rate_hight_)
+                                            If(#rate_hight__buyer_id# == #key_id#){
+                                                Button(Class: btn btn-success pull-right disabled,Body: "Сделать ставку")
+                                            }.Else{
+                                                Button(Class: btn btn-success pull-right,Body: "Сделать ставку",Contract:AuctionProcess,Page:lots_list,Params:"step_rate=Val(StepRate),lot_id=#Id#")
+                                            }
+                                            Button(Class: btn btn-default pull-left,Body: "Назад",Page:lots_list)
+                                        }
+                                    }.Style(padding-top:15px;padding-bottom:10px;)
+                                }
+                            }
                             If(#lot_status# >= 3){
                                 Div(list-group-item text-center){
                                     Div(row){
                                         Div(col-md-12 mt-sm text-center){
-                                            Span(Class: h4, Body:"Р РµР№С‚РёРЅРі СЃС‚Р°РІРѕРє")
+                                            Span(Class: h4, Body:"Рейтинг ставок")
                                         }
-                                        DBFind(Name: buyers, Source: src_buyers).Where(lot_id = #Id#).Order(amount DESC, id ASC).Custom(custom_buyer_id){
+                                        DBFind(Name: buyers, Source: src_buyers).Where("lot_id = #Id#").Order(amount DESC, id ASC).Custom(custom_buyer_id){
                                         DBFind(members).Columns("id,member_name,image_id").Where("id=#buyer_id#").Vars(member)
                                         If(Or(#member_id#>0,#member_id#<0)){
                                         }.Else{
@@ -242,18 +270,18 @@ Div(content-wrapper){
                                         Money(#amount#)
                                     }.Custom(custom_status){
                                         If(#status# == -1){
-                                            Span(Class: text-danger, Body: "РћС‚РєР°Р·")
+                                            Span(Class: text-danger, Body: "Отказ")
                                         }
                                         If(And(#status# == 0, #lot_buyer# == #buyer_id#)){
-                                            Span(Class: text-warning, Body: "РћР¶РёРґР°РЅРёРµ РїРѕРґРїРёСЃРё")
+                                            Span(Class: text-warning, Body: "Ожидание подписи")
                                         }.ElseIf(#status# == 0){
-                                            Span(Body: "РџСЂРµС‚РµРЅРґРµРЅС‚")
+                                            Span(Body: "Претендент")
                                         }
                                         If(#status# == 1){
-                                            Span(Class: text-success, Body: "РџРѕР±РµРґРёС‚РµР»СЊ")
+                                            Span(Class: text-success, Body: "Победитель")
                                         }
                                     }
-                                    Table(src_buyers, "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ=custom_buyer_id,РЎС‚Р°РІРєР°=custom_amount,РЎС‚Р°С‚СѓСЃ=custom_status").Style(padding-left:10px;)
+                                    Table(src_buyers, "Пользователь=custom_buyer_id,Ставка=custom_amount,Статус=custom_status").Style(padding-left:10px;)
                                     }
                                 }
                             }
@@ -261,12 +289,12 @@ Div(content-wrapper){
                                 Div(list-group-item text-center){
                                     Div(row){
                                         Div(col-md-12 mt-sm text-center){
-                                            Span(Class: h4,Body:"РџСЂРµС‚РµРЅРґРµРЅС‚С‹ РЅР° РїРѕРєСѓРїРєСѓ")
+                                            Span(Class: h4,Body:"Претенденты на покупку")
                                         }
                                         DBFind("buyers",Source: src_buyers).Columns("id,lot_id,buyer_id").Custom(wallet_byer){
                                             Span(Address(#buyer_id#))
                                         }.Where(lot_id=#Id#)
-                                        Table(Source:src_buyers,Columns:"ID СЃС‚Р°РІРєРё=id,РќРѕРјРµСЂ РєРѕС€РµР»СЊРєР°=wallet_byer").Style(padding-left:10px;)
+                                        Table(Source:src_buyers,Columns:"ID ставки=id,Номер кошелька=wallet_byer").Style(padding-left:10px;)
                                     }
                                 }                    
                                 Div(list-group-item text-center){
@@ -274,11 +302,11 @@ Div(content-wrapper){
                                         Div(col-md-12){
                                             DBFind("buyers").Where("buyer_id = #key_id# and lot_id = #Id#").Vars(rate_).Order("id")
                                             If(#rate__id# > 0){
-                                                Button(Class: btn btn-success pull-right disabled,Body: "РљСѓРїРёС‚СЊ")
+                                                Button(Class: btn btn-success pull-right disabled,Body: "Купить")
                                             }.Else{
-                                                Button(Class: btn btn-success pull-right,Body: "РљСѓРїРёС‚СЊ",Contract:AuctionProcess,Page:lots_list,Params:"step_rate=0,lot_id=#Id#")
+                                                Button(Class: btn btn-success pull-right,Body: "Купить",Contract:AuctionProcess,Page:lots_list,Params:"step_rate=0,lot_id=#Id#")
                                             }
-                                            Button(Class: btn btn-default pull-left,Body: "РќР°Р·Р°Рґ",Page:lots_list)
+                                            Button(Class: btn btn-default pull-left,Body: "Назад",Page:lots_list)
                                         }
                                     }
                                 }
@@ -291,7 +319,7 @@ Div(content-wrapper){
                         Div(form-group){
                             If(#lot_deleted#==0) {
                                 If(#r_role_name#=="Buyer"){
-                                    If(#comment#=="РїРѕРєР° РѕС‚РєР»СЋС‡РµРЅРѕ"){
+                                    If(#comment#=="пока отключено"){
                                         Div(list-group-item text-center){
                                             If(#lot_status#==1){
                                                 If(#track_id#>0){
@@ -315,11 +343,11 @@ Div(content-wrapper){
                                     }
                                 }.ElseIf(And(#role_id#==1,#lot_status#==1)){
                                     Div(list-group-item text-center){
-                                        Button(Class: btn btn-success btn-block, Body: "РќР°С‡Р°С‚СЊ С‚РѕСЂРіРё", Page: lots_list,Contract: AuctionProccessEdit,Params: "lot_id=#Id#")
+                                        Button(Class: btn btn-success btn-block, Body: "Начать торги", Page: lots_list,Contract: AuctionProccessEdit,Params: "lot_id=#Id#")
                                     }
                                 }.ElseIf(And(#role_id#==1,#lot_status#==2)){
                                     Div(list-group-item text-center){
-                                        Button(Class: btn btn-success btn-block, Body: "Р—Р°РєРѕРЅС‡РёС‚СЊ С‚РѕСЂРіРё", Page: lots_list,Contract: AuctionProccessEdit,Params: "lot_id=#Id#")
+                                        Button(Class: btn btn-success btn-block, Body: "Закончить торги", Page: lots_list,Contract: AuctionProccessEdit,Params: "lot_id=#Id#")
                                     }
                                 }
                             }
