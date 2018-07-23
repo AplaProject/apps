@@ -6,6 +6,8 @@ If(GetVar(notific_id)){}.Else{SetVar(notific_id,0)}
 
 SetVar(title,$land_record$)
 
+If(#admin#==1){}.Else{SetVar(admin, 0)}
+
 If(#LandId#>0){}.Else{SetVar(LandId, 1)}
 
 If(GetVar(LandId)){
@@ -19,7 +21,7 @@ SetTitle(#title#)
 Div(content-wrapper){
     Div(breadcrumb){
         Div(){
-            LinkPage(Body:$land_records$,Page: land_registry_records)
+            LinkPage(Body:$land_records$,Page: land_registry_records, PageParams: "admin=#admin#")
             Span(/).Style(margin-right: 10px; margin-left: 10px;)
             Span(#title#, text-muted)
         }
@@ -29,11 +31,13 @@ Div(content-wrapper){
             Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3 mt-sm text-left){
                 Div(panel panel-default){
                     Form(){
-                        Div(Class: list-group-item text-center){
-                            Span(Class: h3, Body: $land_record$ #GetVar(LandId))	
-                        }
                         Div(list-group-item){
-                            Map(MapType: hybrid, Hmap:300, Value: #entry_map_coords#)
+                            Div(h3){$land_record$ #GetVar(LandId)}
+                        }
+                        Div(row df f-valign){
+                            Div(col-sm-12){
+                                Map(MapType: hybrid, Hmap:300, Value: #entry_map_coords#)
+                            }
                         }
                         Div(list-group-item){
                             Div(row df f-valign){
@@ -42,6 +46,7 @@ Div(content-wrapper){
                                 }
                                 Div(col-md-6 mt-sm text-left h5){
                                     Div(){
+                                        Image(Src: #owner_avatar#, Alt: ava, Class: img-thumbnail img-circle).Style(max-width:40px;margin-right:10px;)
                                         Span(#owner_member_name#)
                                     }
                                 }
@@ -78,50 +83,41 @@ Div(content-wrapper){
                                     EcosysParam(Name: land_nature, Index: #entry_land_nature#)
                                 }
                             }
-                        }
-						Div(list-group-item){
-                            DBFind(Name: notifications, Source: src_alert).Where(page_params='LandId=#LandId#,second_request=1' and closed=0).Vars(alert)
+                            
+                            DBFind(Name: notifications, Source: src_alert).Where(page_params='LandId=#LandId#,admin=1,second_request=1' and closed=0).Vars(alert)
                             Div(row df){
-                                Div(col-md-5 mt-lg text-right h5){Strong($legal_status$:)}
-                                Div(col-md-3 mt-lg text-left h5){
+                                Div(col-md-5 mt-sm text-right h5){Strong($legal_status$:)}
+                                Div(col-md-7 mt-sm text-left h5){
                                     If(GetVar(alert_id)){
                                         SetVar(alert, 1)
                                     }.Else{
                                         SetVar(alert, 0)
                                     }
                                     Span(EcosysParam(Name: legal_status, Index: #entry_legal_status#)).Style(margin-right:10px;)
-                                }
-                                Div(col-md-4 mc-sm text-right h5){
                                     If(And(#entry_legal_status#!=1, #alert#==0)){
                                         Button(Contract: land_registry_SecondRequest, Body:$send_request$, Params: "LandId=#LandId#", Class: btn btn-default, Page: land_registry_view, PageParams: "LandId=#LandId#").Alert(Text:$ask_request_second$, ConfirmButton:$confirm$, CancelButton:$cancel$)
                                     }
                                 }
                             }
-                        }
-						Div(list-group-item){
+                            
                             Div(row df){
-                                Div(col-md-5 mt-lg text-right h5){Strong($encumbrance_certificate$:)}
-                                Div(col-md-3 mt-lg text-left h5){
+                                Div(col-md-5 mt-sm text-right h5){Strong($encumbrance_certificate$:)}
+                                Div(col-md-7 mt-sm text-left h5){
                                     Span(EcosysParam(Name: land_ec_status, Index: #entry_encumbrance_certificate#)).Style(padding-right:10px;)
-                                }
-                                Div(col-md-4 mc-sm text-right h5){
                                     If(And(#entry_encumbrance_certificate#!=1, #alert#==0)){
                                         Button(Contract: land_registry_SecondRequest, Body:$send_request$, Params: "LandId=#LandId#", Class: btn btn-default, Page: land_registry_view, PageParams: "LandId=#LandId#").Alert(Text:$ask_request_second$, ConfirmButton:$confirm$, CancelButton:$cancel$)
                                     }
                                 }
                             }
-                        }
-						Div(list-group-item){
+                            
                             Div(row df f-valign){
-                                Div(col-md-5 mt-lg text-right h5){Strong($consideration_value$:)}
-                                Div(col-md-3 mt-lg text-left h5){
+                                Div(col-md-5 mt-sm text-right h5){Strong($consideration_value$:)}
+                                Div(col-md-7 mt-sm text-left h5){
                                     If(#entry_price#>0){
                                         Span(#entry_price# INR).Style(padding-right:10px;)
                                     }.Else{
                                         $undefined$
                                     }
-                                }
-                                Div(col-md-4 mc-sm text-right h5){
                                     If(#ownership_owner_id#==#key_id#){
                                         Button(Page: land_registry_edit, Body:$change$, PageParams: "LandId=#LandId#", Class: btn btn-default)
                                     }
