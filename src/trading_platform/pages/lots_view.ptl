@@ -209,17 +209,19 @@ Div(content-wrapper){
                                             Money(#lot_order_max#)
                                         }
                                     }
-                                    Div(list-group-item text-center){
-                                        Div(row){
-                                            Div(col-md-12 mt-sm text-center){
-                                                Span(Class: h4,Body: $lots_bets$)
+                                    If(#status_index#>2){
+                                        Div(list-group-item text-center mt){
+                                            DBFind(buyers,src_buyers).Custom(_wallet){
+                                                Address(#buyer_id#)
+                                            }.Order("amount DESC").Where(lot_id=#Id#).Columns("id,lot_id,buyer_id,amount")
+                                            Div(row){
+                                                Div(col-md-12 mt-sm text-center){
+                                                    Span(Class: h4,Body: $lots_bets$)
+                                                }
+                                                Table(Source:src_buyers, Columns: "ID ставки=id,Номер кошелька=_wallet,Сумма=amount").Style(padding-left:10px;)
                                             }
-                                            DBFind("buyers",Source: src_buyers).Columns("id,lot_id,buyer_id,amount").Custom(wallet_byer){
-                                                Span(Address(#buyer_id#))
-                                            }.Order("amount DESC").Where(lot_id=#Id#)
-                                            Table(Source:src_buyers,Columns:"ID ставки=id,Номер кошелька=wallet_byer,Сумма=amount").Style(padding-left:10px;)
                                         }
-                                    }  
+                                    }
                                 }
                             }
                             If(#lot_contract_id#>0){
@@ -232,7 +234,7 @@ Div(content-wrapper){
                                     }
                                 }
                             }
-                            If(And(#lot_status#==2,#r_role_name#=="Buyer",#lot_type_bargain# == 1)){                            
+                            If(And(#lot_status#==2,#r_role_name#=="Buyer",#lot_type_bargain# == 1)){
                                 Div(list-group-item text-center){
                                     Div(row mt-sm t4){
                                         Div(col-md-12){
@@ -267,35 +269,35 @@ Div(content-wrapper){
                                             Span(Class: h4, Body: $lots_bets$)
                                         }
                                         DBFind(Name: buyers, Source: src_buyers).Where("lot_id = #Id#").Order(amount DESC, id ASC).Custom(custom_buyer_id){
-                                        DBFind(members).Columns("id,member_name,image_id").Where("id=#buyer_id#").Vars(member)
-                                        If(Or(#member_id#>0,#member_id#<0)){
-                                        }.Else{
-                                            SetVar(member_member_name,Address(#buyer_id#))
-                                        }
-                                        LinkPage(Class: center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#buyer_id#"){
-                                            If(#member_image_id#>0){
-                                                Image(Src: Binary().ById(#member_image_id#), Class: img-circle mr)
+                                            DBFind(members).Columns("id,member_name,image_id").Where("id=#buyer_id#").Vars(member)
+                                            If(Or(#member_id#>0,#member_id#<0)){
                                             }.Else{
-                                                Span(Class: fa icon-user fa-2x mr)
+                                                SetVar(member_member_name,Address(#buyer_id#))
                                             }
-                                            Span(#member_member_name#)
+                                            LinkPage(Class: center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#buyer_id#"){
+                                                If(#member_image_id#>0){
+                                                    Image(Src: Binary().ById(#member_image_id#), Class: img-circle mr)
+                                                }.Else{
+                                                    Span(Class: fa icon-user fa-2x mr)
+                                                }
+                                                Span(#member_member_name#)
+                                            }
+                                        }.Custom(custom_amount){
+                                            Money(#amount#)
+                                        }.Custom(custom_status){
+                                            If(#status# == -1){
+                                                Span(Class: text-danger, Body: "Отказ")
+                                            }
+                                            If(And(#status# == 0, #lot_buyer# == #buyer_id#)){
+                                                Span(Class: text-warning, Body: "Ожидание подписи")
+                                            }.ElseIf(#status# == 0){
+                                                Span(Body: "Претендент")
+                                            }
+                                            If(#status# == 1){
+                                                Span(Class: text-success, Body: "Победитель")
+                                            }
                                         }
-                                    }.Custom(custom_amount){
-                                        Money(#amount#)
-                                    }.Custom(custom_status){
-                                        If(#status# == -1){
-                                            Span(Class: text-danger, Body: "Отказ")
-                                        }
-                                        If(And(#status# == 0, #lot_buyer# == #buyer_id#)){
-                                            Span(Class: text-warning, Body: "Ожидание подписи")
-                                        }.ElseIf(#status# == 0){
-                                            Span(Body: "Претендент")
-                                        }
-                                        If(#status# == 1){
-                                            Span(Class: text-success, Body: "Победитель")
-                                        }
-                                    }
-                                    Table(src_buyers, "Пользователь=custom_buyer_id,Ставка=custom_amount,Статус=custom_status").Style(padding-left:10px;)
+                                        Table(src_buyers, "Пользователь=custom_buyer_id,Ставка=custom_amount,Статус=custom_status").Style(padding-left:10px;)
                                     }
                                 }
                             }
@@ -310,7 +312,7 @@ Div(content-wrapper){
                                         }.Where(lot_id=#Id#)
                                         Table(Source:src_buyers,Columns:"ID ставки=id,Номер кошелька=wallet_byer").Style(padding-left:10px;)
                                     }
-                                }                    
+                                }
                                 Div(list-group-item text-center){
                                     Div(row mt-sm){
                                         Div(col-md-12){
