@@ -1,0 +1,57 @@
+DBFind(applications).Columns("id").Where("name='Rope accounting' AND deleted=0").Vars(application)
+Include(rope_common)
+SetVar(page_name,rope_coils)
+Div(content-wrapper){
+    SetTitle($rope_coils$)
+    If(And(#r1#>0,#r2#>0,#r3#>0)){
+        AddToolButton(Title: $rope_create$, Page: rope_coil_edit, Icon: icon-plus)
+
+        DBFind(rope_coils).Count(count)
+        If(#page#>0){
+            SetVar(prev_page,Calculate(#page#-1)
+        }.Else{
+            SetVar(page,0).(prev_page,0)
+        }
+        SetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#count#/#per_page#)).(next_page,#last_page#)
+        If(#count#>Calculate(#off#+#per_page#)){
+            SetVar(next_page,Calculate(#page#+1)
+        }
+        Div(button-group){
+            If(#page#>0){
+                Button(Body:"1", Class:btn btn-default, Page:#page_name#, PageParams: "page=0")
+            }.Else{
+                Button(Body:"1", Class:btn btn-default disabled)
+            }
+            If(#page#>1){
+                Button(Body:Calculate(#prev_page#+1),Class:btn btn-default, Page:#page_name#, PageParams:"page=#prev_page#")
+            }
+            If(And(#page#>0,#page#<#last_page#)){
+                Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)
+            }
+            If(#next_page#<#last_page#){
+                Button(Body:Calculate(#next_page#+1),Class:btn btn-default,Page:#page_name#, PageParams:"page=#next_page#")
+            }
+            If(#page#<#last_page#){
+                Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:#page_name#, PageParams:"page=#last_page#")
+            }.ElseIf(#last_page#>0){
+                Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)
+            }
+        }
+        Div(panel panel-primary){
+            Div(panel-body){
+                Div(table-responsive){
+                    DBFind(rope_coils,src_rope_coils).Offset(#off#).Order(id).Custom(_actions){
+                        Div(text-right text-nowrap){
+                            Button(Class: btn btn-info fa fa-eye mr-sm, Page: rope_coil_view, PageParams: "id=#id#")
+                            Button(Class: btn btn-default fa fa-edit mr-sm, Page: rope_coil_edit, PageParams: "id=#id#")
+                            Button(Class: btn btn-danger fa fa-trash, Page: rope_coils, Contract: RopeCoilDelete, Params: "id=#id#").Alert($delete_alert$, $yes$, $no$)
+                        }
+                    }
+                    Table(src_rope_coils,"$rope_certificate$=certificate,$rope_length_full$=length_full,$rope_length_rigging$=length_rigging,$rope_previous_workout$=previous_workout,$rope_deleted$=deleted,$rope_diameter$=diameter,=_actions")
+                }
+            }
+        }
+    }.Else{
+        Include(rope_params_helper)
+    }
+}

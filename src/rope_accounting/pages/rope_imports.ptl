@@ -1,0 +1,83 @@
+DBFind(applications).Columns("id").Where("name='Rope accounting' AND deleted=0").Vars(application)
+DBFind(roles).Columns("role_name").Where("id=#role_id#").Vars(role)
+
+Include(rope_common)
+
+If(#import_count#==3){
+    SetVar(next_page,rope_depths)
+}.Else{
+    SetVar(next_page,rope_imports)
+}
+
+DBFind(rope_uploads,uploads).Custom(_actions){
+    Div(text-right){
+        If(And(#role_id#==#rid#,#key_id#==#kid#)){
+            If(#imported_at#>0){
+                Button(Body: $rope_import_again$, Page: #next_page#, Class: btn btn-default, Contract: RopeBinaryParse, Params: "Id=#id#")
+            }.Else{
+                Button(Body: $rope_import$, Page: #next_page#, Class: btn btn-primary, Contract: RopeBinaryParse, Params: "Id=#id#")
+            }
+        }
+    }
+}.Custom(_name){
+    DBFind(roles).Columns("role_name").Where("id=#rid#").Vars(rid)
+    Span($rope_import_from$ "#rid_role_name#")
+    If(#imported_at#>0){
+        Div(text-muted){
+            $rope_imported$
+        }
+    }
+}.Custom(_data){
+    DBFind(binaries,bin).Where("id=#binary_id#")
+    Table(bin,"=data")
+}.Where("deleted_at=0 and finaled_at=0").Order("id desc")
+
+
+SetTitle("#role_role_name#: загрузка файла импорта")
+Div(content-wrapper){
+    Div(row){
+        Div(col-sm-10 col-sm-offset-1){
+            Div(content-wrapper){
+                If(And(#r1#>0,#r2#>0,#r3#>0)){
+                    Div(panel panel-primary){
+                        Div(panel-heading){$rope_uploads$}
+                        Div(panel-body){
+                            If(#load_count#<3){
+                                Div(text-muted text-center){
+                                    Div(){
+                                        $rope_hint1$
+                                    }
+                                    Div() {
+                                        $rope_hint2$: '#rid1_role_name#', '#rid2_role_name#', '#rid3_role_name#'
+                                    }
+                                }
+                                Div(text-muted text-center){
+                                    $rope_hint3$: #missed_r1# #missed_r2# #missed_r3#
+                                }
+                            }
+                            Div(table-responsive){
+                                Table(uploads, "=_name,=_data,=_actions")
+                            }
+                        }
+                        Div(panel-footer text-right){
+                            If(#import_count#<3){
+                                Button(Body: Span(Class:fa fa-upload) $rope_file_add$, Class: btn btn-primary, Page: rope_upload).Popup(40, "Выбор файла")
+                            }.Else{
+                                Button(Body: Span(Class:fa fa-upload) $rope_file_add$, Class: btn btn-default, Page: rope_upload).Popup(40, "Выбор файла")
+                                DBFind(rope_depths).Where("deleted=0 and (status_final=0 or status_started=0)").Count(count)
+                                DBFind(buffer_data,data).Where("key='rope_import' and member_id=#key_id#").Vars(buf)
+                                If(#buf_id#>0){
+                                    Button(Body: "Проверить конфликты", Class: btn btn-primary, Page: rope_works).CompositeContract(Name:RopeDepthsUpdateWrapper, Data: #buf_value#)
+                                }
+                            }
+                        }
+                    }
+                }.Else{
+                    Include(rope_params_helper)
+                }
+            }
+        }
+    }.Style(
+        thead {display:none}
+    )
+}

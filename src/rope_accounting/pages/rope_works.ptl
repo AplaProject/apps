@@ -1,0 +1,163 @@
+DBFind(applications).Columns("id").Where("name='Rope accounting' AND deleted=0").Vars(application)
+SetTitle($rope_works$)
+SetVar(page_name,rope_works)
+
+Include(rope_common)
+Div(content-wrapper){
+    If(And(#r1#>0,#r2#>0,#r3#>0)){
+        SetVar(where,"deleted=0")
+        If(GetVar(CoilId)!=""){
+            SetVar(where,"#where# and coil_id=#CoilId#")
+        }.Else{
+            SetVar(CoilId,)
+        }
+        If(GetVar(DrillingId)!=""){
+            SetVar(where,"#where# and drilling_id=#DrillingId#")
+        }.Else{
+            SetVar(DrillingId,)
+        }
+        DBFind(rope_works).Count(count).Where(#where#)
+
+        DBFind(rope_drillings,drillings).Columns("id,filial").Where("deleted=0").Count(d_count).Custom(_name){#filial#}
+        DBFind(rope_coils,coils).Columns("id,certificate").Where("deleted=0").Count(c_count).Custom(_name){#certificate#}
+        DBFind(rope_depths).Where("deleted=0 and (status_final=0 or status_started=0)").Count(error_count)
+        Div(text-right){
+            If(And(#error_count#==0,Or(#import_count#>=3,#finaled_count#>=3))){
+                Button(Body: $rope_works_calculate$, Class: btn btn-default, Page: #page_name#, Contract: RopeWorksCalculate, PageParams: "CoilId=#CoilId#,DrillingId=#DrillingId#")
+            }
+        }
+
+        If(#page#>0){
+            SetVar(prev_page,Calculate(#page#-1)
+        }.Else{
+            SetVar(page,0).(prev_page,0)
+        }
+        SetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#count#/#per_page#)).(next_page,#last_page#)
+        If(#count#>Calculate(#off#+#per_page#)){
+            SetVar(next_page,Calculate(#page#+1)
+        }
+        If(Or(#c_count#>0,#d_count#>1)){
+            Form(form-group mt){
+                Div(row){
+                    Div(col-sm-5){
+                        Label(For: DrillingId){$rope_select_drilling$}
+                        Select(Name: DrillingId, Source: drillings, NameColumn: _name, ValueColumn: id, Value: #DrillingId#)
+                    }
+                    Div(col-sm-7){
+                        Label(For: CoilId){$rope_select_coil$}
+                        Div(input-group){
+                            Select(Name: CoilId, Source: coils, NameColumn: _name, ValueColumn: id, Value: #CoilId#)
+                            Div(input-group-btn){
+                                Button(Body: Span(Class:fa fa-search), Class: btn btn-default, Page: #page_name#, PageParams: "CoilId=Val(CoilId),DrillingId=Val(DrillingId)")
+                                If(Or(GetVar(DrillingId),GetVar(CoilId))){
+                                    Button(Body: Span(Class: fa fa-remove), Class: btn btn-default, Page: #page_name#)
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }.Style(max-width:600px;)
+        }
+        If(#count#>0){
+            Div(button-group){
+                If(#page#>0){
+                    Button(Body:"1", Class:btn btn-default, Page:#page_name#, PageParams: "page=0,CoilId=#CoilId#,DrillingId=#DrillingId#")
+                }.Else{
+                    Button(Body:"1", Class:btn btn-default disabled)
+                }
+                If(#page#>1){
+                    Button(Body:Calculate(#prev_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#prev_page#,CoilId=#CoilId#,DrillingId=#DrillingId#")
+                }
+                If(And(#page#>0,#page#<#last_page#)){
+                    Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)
+                }
+                If(#next_page#<#last_page#){
+                    Button(Body:Calculate(#next_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#next_page#,CoilId=#CoilId#,DrillingId=#DrillingId#")
+                }
+                If(#page#<#last_page#){
+                    Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: "page=#last_page#,CoilId=#CoilId#,DrillingId=#DrillingId#")
+                }.ElseIf(#last_page#>0){
+                    Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)
+                }
+            }
+            SetVar(ask,?)
+            Div(panel panel-primary){
+                Div(panel-body){
+                    Div(table-responsive){
+                        DBFind(rope_works,works).Where(#where#).Offset(#off#).Order(id).Custom(_date){
+                            Div(text-nowrap){
+                                DateTime(#operation_date#, DD-MM-YYYY)
+                            }
+                        }.Custom(_type){
+                            Div(text-nowrap){
+                                #operation_type#
+                            }
+                        }.Custom(_wb){
+                            SetVar(wb,Calculate(#work_bypass#, Prec:0))
+                            If(#wb#!="wrong expression"){
+                                #wb#
+                            }.Else{
+                                #ask#
+                            }
+                        }.Custom(_ws){
+                            SetVar(ws,Calculate(#work_started#, Prec:0))
+                            If(#ws#!="wrong expression"){
+                                #ws#
+                            }.Else{
+                                #ask#
+                            }
+                        }.Custom(_wf){
+                            SetVar(wf,Calculate(#work_final#, Prec:0))
+                            If(#wf#!="wrong expression"){
+                                #wf#
+                            }.Else{
+                                #ask#
+                            }
+                        }.Custom(_wo){
+                            SetVar(wo,Calculate(#work_operation#, Prec:0))
+                            If(#wo#!="wrong expression"){
+                                #wo#
+                            }.Else{
+                                #ask#
+                            }
+                        }.Custom(_wc){
+                            SetVar(wc,Calculate(#work_coil#, Prec:0))
+                            If(#wc#!="wrong expression"){
+                                #wc#
+                            }.Else{
+                                #ask#
+                            }
+                        }.Custom(_d1){
+                            If(#depth_started#<0){
+                                #ask#
+                            }.Else{
+                                #depth_started#
+                            }
+                        }.Custom(_d2){
+                            If(#depth_final#<0){
+                                #ask#
+                            }.Else{
+                                #depth_final#
+                            }
+                        }
+                        Table(works,"$rope_drilling_id$=drilling_id,$rope_coil_id$=coil_id,$rope_operation$=operation,$rope_operation_date$=_date,$rope_operation_type$=_type,$rope_depth_started$=_d1,$rope_depth_final$=_d2,$rope_weight_started$=weight_started,$rope_weight_final$=weight_final,$rope_work_started$=_ws, $rope_work_final$=_wf, $rope_work_operation$=_wo, $rope_work_bypass$=_wb, $rope_work_coil$=_wc,$rope_bypass_bracing$=bypass_bracing")
+                    }
+                }
+            }
+        }.Else{
+            Div(panel panel-primary){
+                Div(panel-body){
+                    Div(h3 text-center){
+                        $rope_data_not_loaded$
+                    }
+                }
+                Div(panel-footer text-right){
+                    Button(Body: Span(Class:fa fa-upload) $rope_upload$, Page: rope_imports, Class: btn btn-primary)
+                }
+            }
+        }
+    }.Else{
+        Include(rope_params_helper)
+    }
+}
