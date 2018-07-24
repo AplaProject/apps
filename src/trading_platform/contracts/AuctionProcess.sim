@@ -6,39 +6,58 @@ contract AuctionProcess {
     conditions {
         $lot_map = DBFind("lots").Where("id=$", $lot_id).Row()
         if ($lot_map["type_bargain"] == 1){
-            if ($step_rate < $lot_map["order_min"]){
-                info("Ñòàâêà íå ìîæåò áûòü ìåíüøå ìèíèìàëüíîé")
+            if (Money($lot_map["amount_max"]) == Money(0)){
+                if ($step_rate < Money($lot_map["amount_starting"]) + Money($lot_map["order_min"])){
+                    info("Ð¡Ñ‚Ð°Ð²ÐºÐ° Ð½Ðµ Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ð¼ÐµÐ½ÑŒÑˆÐµ Ð¼Ð¸Ð½Ð¸Ð¼Ð°Ð»ÑŒÐ½Ð¾Ð¹")
+                }
+                if ($step_rate > Money($lot_map["amount_starting"]) + Money($lot_map["order_max"])){
+                    info("Ð¡Ñ‚Ð°Ð²ÐºÐ° Ð½Ðµ Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ð±Ð¾Ð»ÑŒÑˆÐµ Ð¼Ð°ÐºÑÐ¸Ð¼Ð°Ð»ÑŒÐ½Ð¾Ð¹")
+                }
             }
-            if ($step_rate > $lot_map["order_max"]){
-                info("Ñòàâêà íå ìîæåò áûòü áîëüøå ìàêñèìàëüíîé")
+            if (Money($lot_map["amount_max"]) > Money(0)){
+                if ($step_rate < Money($lot_map["amount_max"]) + Money($lot_map["order_min"])){
+                    info("Ð¡Ñ‚Ð°Ð²ÐºÐ° Ð½Ðµ Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ð¼ÐµÐ½ÑŒÑˆÐµ Ð¼Ð¸Ð½Ð¸Ð¼Ð°Ð»ÑŒÐ½Ð¾Ð¹")
+                }
+                if ($step_rate > Money($lot_map["amount_max"]) + Money($lot_map["order_max"])){
+                    info("Ð¡Ñ‚Ð°Ð²ÐºÐ° Ð½Ðµ Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ð±Ð¾Ð»ÑŒÑˆÐµ Ð¼Ð°ÐºÑÐ¸Ð¼Ð°Ð»ÑŒÐ½Ð¾Ð¹")
+                }
             }
         }
-
         if ($lot_map["type_bargain"] == 2){
             $step_rate = Money($lot_map["amount_starting"])
         }
-
+        
         var percentrate money
         percentrate = $step_rate / Money(100)
     
         var checkamount money
-        checkamount = DBFind("keys").Where("id = ?",$key_id).One("amount")
+        checkamount = Money(DBFind("keys").Where("id = ?",$key_id).One("amount"))
+        
+        $checksumm = DBFind("buyers").Where("lot_id=$ and buyer_id=$",$lot_id,$key_id).Order("id DESC").One("amount")
+        $checkdep = Money(DBFind("keys").Where("id = ?",$key_id).One("deposit"))
         
         if ($lot_map["type_bargain"] == 2){
-            if(percentrate + $step_rate > checkamount){
-                info("Íà ñ÷åòó íåäîñòàòî÷íî ñðåäñòâ")
+            if(percentrate + $step_rate + $checkdep > checkamount){
+                info("ÐÐ° ÑÑ‡ÐµÑ‚Ñƒ Ð½ÐµÐ´Ð¾ÑÑ‚Ð°Ñ‚Ð¾Ñ‡Ð½Ð¾ ÑÑ€ÐµÐ´ÑÑ‚Ð²")
             }
         }
-
+        
         if ($lot_map["type_bargain"] == 1){
-            if ($lot_map["amount_max"] == 0){
-                if(percentrate + $step_rate + Money($lot_map["amount_starting"]) > checkamount){
-                    info("Íà ñ÷åòó íåäîñòàòî÷íî ñðåäñòâ")
+            if (Money($lot_map["amount_max"]) == Money(0)){
+                if(percentrate + $step_rate + $checkdep > checkamount){
+                    info("ÐÐ° ÑÑ‡ÐµÑ‚Ñƒ Ð½ÐµÐ´Ð¾ÑÑ‚Ð°Ñ‚Ð¾Ñ‡Ð½Ð¾ ÑÑ€ÐµÐ´ÑÑ‚Ð²")
                 }
             }
-            if (Money($lot_map["amount_max"]) > 0){
-                if(percentrate + $step_rate + Money($lot_map["amount_max"]) > checkamount){
-                    info("Íà ñ÷åòó íåäîñòàòî÷íî ñðåäñòâ")
+            if (Money($lot_map["amount_max"]) > Money(0)){
+                if(!$checksumm){
+                    if(percentrate + $step_rate + $checkdep > checkamount){
+                        info("ÐÐ° ÑÑ‡ÐµÑ‚Ñƒ Ð½ÐµÐ´Ð¾ÑÑ‚Ð°Ñ‚Ð¾Ñ‡Ð½Ð¾ ÑÑ€ÐµÐ´ÑÑ‚Ð²")
+                    }
+                }
+                if(Money($checksumm) > Money(0)){
+                    if(Money(percentrate)+ Money($checkdep) + (Money($step_rate) - Money($checksumm)) > Money(checkamount)){
+                        info("ÐÐ° ÑÑ‡ÐµÑ‚Ñƒ Ð½ÐµÐ´Ð¾ÑÑ‚Ð°Ñ‚Ð¾Ñ‡Ð½Ð¾ ÑÑ€ÐµÐ´ÑÑ‚Ð²")
+                    }
                 }
             }
         }
@@ -49,34 +68,37 @@ contract AuctionProcess {
 
         if ($lot_map["type_bargain"] == 1){
             if (Money($lot_map["amount_max"]) == Money(0)){
-                var firstrate money
-                firstrate = $step_rate + Money($lot_map["amount_starting"])
-                DBUpdate("keys",$key_id,"-amount,+deposit",firstrate,firstrate)
-                DBUpdate("lots",$lot_id,"amount_max",firstrate)
-                DBInsert("buyers","amount,lot_id,buyer_id",firstrate,$lot_id,$key_id)
+                DBUpdate("keys",$key_id,"+deposit",$step_rate)
+                DBUpdate("lots",$lot_id,"amount_max",$step_rate)
+                DBInsert("buyers","amount,lot_id,buyer_id",$step_rate,$lot_id,$key_id)
             }
             if (Money($lot_map["amount_max"]) > Money(0)){
+
+                $user_map = DBFind("buyers").Where("buyer_id=$ and lot_id=$",$key_id,$lot_id).Row()
                 var secondrate money
-                secondrate = $step_rate + Money($lot_map["amount_max"])
-                
+
+                if($user_map["buyer_id"]){
+                    secondrate = $step_rate - Money($checksumm)
+                }
+                if(!$user_map["buyer_id"]){
+                    secondrate = $step_rate
+                }
                 //notific of a high rate
-                $send_notif_rate_broken = DBFind("buyers").Where("lot_id=$",$lot_id).Order("id DESC").One("buyer_id")
+                $send_notif_rate_broken = DBFind("buyers").Where("lot_id=$",$lot_id).Order("amount DESC").One("buyer_id")
                 var notific_params map
                 notific_params["lot_id"] = $lot_id
                 notific_params["rate_broken"] = 1
-                notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", Int($send_notif_rate_broken), 1, "icon icon-envelope", "Âàøà ñòàâêà ïåðåáèòà", "Ïîäðîáíåå", "view_lots_start_auction", notific_params)
+                notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", Int($send_notif_rate_broken), 1, "icon icon-envelope", "Ð’Ð°ÑˆÐ° ÑÑ‚Ð°Ð²ÐºÐ° Ð¿ÐµÑ€ÐµÐ±Ð¸Ñ‚Ð°", "ÐŸÐ¾Ð´Ñ€Ð¾Ð±Ð½ÐµÐµ", "view_lots_start_auction", notific_params)
 
-
-                $user_map = DBFind("buyers").Where("buyer_id=$ and lot_id=$",$key_id,$lot_id).Row()
-                
-                DBUpdate("keys",$key_id,"-amount,+deposit",secondrate,secondrate)
-                DBUpdate("lots",$lot_id,"amount_max",secondrate)
-
-                if(Int($user_map["buyer_id"]) > 0){
-                    DBUpdate("buyers",$user_map["id"],"amount",secondrate)
+                if($user_map["buyer_id"]){
+                    DBUpdate("keys",$key_id,"+deposit",secondrate)
+                    DBUpdate("lots",$lot_id,"amount_max",$step_rate)
+                    DBUpdate("buyers",Int($user_map["id"]),"amount",$step_rate)
                 }
-                if(Int($user_map["buyer_id"]) <= 0){
-                    DBInsert("buyers","amount,lot_id,buyer_id",secondrate,$lot_id,$key_id)
+                if(!$user_map["buyer_id"]){
+                    DBUpdate("keys",$key_id,"+deposit",secondrate)
+                    DBUpdate("lots",$lot_id,"amount_max",$step_rate)
+                    DBInsert("buyers","amount,lot_id,buyer_id",$step_rate,$lot_id,$key_id)
                 }
             }
             DBUpdate("keys",$key_id,"-amount", percentrate)
@@ -86,7 +108,7 @@ contract AuctionProcess {
         if ($lot_map["type_bargain"] == 2){
             DBUpdate("keys",$key_id,"-amount", percentrate)
             DBUpdate("keys",8688112858732142464,"+amount", percentrate)
-            DBUpdate("keys",$key_id,"-amount,+deposit",$step_rate,$step_rate)
+            DBUpdate("keys",$key_id,"+deposit",$step_rate)
             DBInsert("buyers","amount,lot_id,buyer_id",$step_rate,$lot_id,$key_id)
         }
     }
