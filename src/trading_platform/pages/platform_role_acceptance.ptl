@@ -1,6 +1,4 @@
-Div(content-wrapper){
-    SetTitle(Membership Request)
-	
+Div(content-wrapper){	
 	DBFind(Name: notifications, Source: src_notific).Columns("page_params->request_id,sender->image_id,sender->member_id,sender->member_name,page_params->role").Where("id = #notific_id#").Vars(notific)
     
     If(#prefix_image_id#>0){
@@ -11,7 +9,7 @@ Div(content-wrapper){
         Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
             Form(panel panel-default){
                 Div(panel-heading text-center){
-                    Span(Class: h3, Body: Membership Request)
+                    Span(Class: h3, Body: Новый запрос на присвоение роли)
                 }
                 Div(panel-body){
                     Div(form-group){
@@ -23,17 +21,95 @@ Div(content-wrapper){
 									Span(Class: fa icon-user fa-5x)
 								}
 								Div(m0 h3 text-bold){#notific_sender_member_name#}
-							
+                                DBFind(Name: members, Source: src_member).Columns("id,image_id,member_name,name_first,name_middle,name_last,company_name,company_position,member_info->information").Where("id=#notific_sender_member_id#").Vars(prefix)
+                                Div(Class: panel-heading, Body: Профиль кандидата)
+                                    Div(Class: list-group-item) {
+                                        Div(Class: row df f-valign) {
+                                            Div(Class: text-center) {
+                                                Label(Body: ID кандидата:)Span(Class: h5, Body: " #prefix_id#")
+                                            }
+                                        }
+                                    }
+                                    Div(Class: list-group-item) {
+                                        Div(Class: row df f-valign) {
+                                            Div(Class: text-center) {
+                                                Label(Body: Системное имя:)Span(Class: h5, Body: " #prefix_member_name#")
+                                            }
+                                        }
+                                    }
+                                    If(#prefix_name_first#>0){
+                                        Div(Class: list-group-item) {
+                                            Div(Class: row df f-valign) {
+                                            Div(Class: text-center) {
+                                                    Label(Body: Имя:)Span(Class: h5, Body: " #prefix_name_first#")
+                                                }
+                                            }
+                                        }
+                                    }
+                                    If(#prefix_name_middle#>0){
+                                        Div(Class: list-group-item) {
+                                            Div(Class: row df f-valign) {
+                                            Div(Class: col-md-3 mt-sm text-center) {
+                                                    Label(Body: Фамилия:)Span(Class: h5, Body: " #prefix_name_middle#")
+                                                }
+                                            }
+                                        }
+                                    }
+                                    If(#prefix_name_last#>0){
+                                        Div(Class: list-group-item) {
+                                            Div(Class: row df f-valign) {
+                                            Div(Class: text-center) {
+                                                    Label(Body: Отчество:)Span(Class: h5, Body: " #prefix_name_last#")
+                                                }
+                                            }
+                                        }
+                                    }
+                                    If(#prefix_company_name#>0){
+                                        Div(Class: list-group-item) {
+                                            Div(Class: row df f-valign) {
+                                            Div(Class: text-center) {
+                                                    Label(Body: Компания:)Span(Class: h5, Body: " #prefix_company_name#")
+                                                }
+                                            }
+                                        }
+                                    }
+                                    If(#prefix_company_position#>0){
+                                        Div(Class: list-group-item) {
+                                            Div(Class: row df f-valign) {
+                                                Div(Class: col-md-3 mt-sm text-center) {
+                                                    Label(Body: Должность:)Span(Class: h5, Body: " #prefix_company_position#")
+                                                }
+                                            }
+                                        }
+                                    }
+                                    If(#prefix_member_info_information#>0){
+                                        Div(Class: list-group-item) {
+                                            Div(Class: row df f-valign) {
+                                                Div(Class: text-center) {
+                                                    Label(Body: О себе:)Span(Class: h5, Body: " #prefix_member_info_information#")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                     Div(list-group-item text-center){
-                        Div(text-muted m0 h5, Body: "Request approvale for role")
-                        Span(Class: h5 text-bold, Body: #notific_page_params_role#)
+                        If(#notific_page_params_role# == Buyer){
+                            Div(text-muted m0 h5, Body: Одобрить на роль "Покупатель")
+                        }
+                        If(#notific_page_params_role# == Seller){
+                            Div(text-muted m0 h5, Body: Одобрить на роль "Продавец")
+                        }
+                        If(And(#notific_page_params_role# != Buyer,#notific_page_params_role# != Seller)){
+                            Div(text-muted m0 h5, Body: "Place role here as param")
+                                Span(Class: h5 text-bold, Body: #notific_page_params_role#)
+                        }
                     }
 					Div(list-group-item text-center){
-                        Button(Class: btn btn-success, Body: Accept, Contract: platform_Acceptance, Page: profile_view, Params: "rname=#notific_page_params_role#, member_id=#notific_sender_member_id#, notific_id=#notific_id#")
-                        Button(Class: btn btn-danger, Body: Reject, Contract: platform_Decline, Page: profile_view, Params: "rname=#notific_page_params_role#, member_id=#notific_sender_member_id#, notific_id=#notific_id#")
+                        Button(Class: btn btn-success, Body: Принять, Contract: platform_Acceptance, Page: roles_list,  Params: "rname=#notific_page_params_role#, member_id=#notific_sender_member_id#, notific_id=#notific_id#")
+                        Button(Class: btn btn-danger, Body: Отказать, Contract: platform_Decline, Page: roles_list, Params: "rname=#notific_page_params_role#, member_id=#notific_sender_member_id#, notific_id=#notific_id#")
                     }
                 }
             }

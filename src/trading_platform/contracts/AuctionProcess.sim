@@ -7,19 +7,25 @@ contract AuctionProcess {
         $lot_map = DBFind("lots").Where("id=$", $lot_id).Row()
         if ($lot_map["type_bargain"] == 1){
             if (Money($lot_map["amount_max"]) == Money(0)){
+                if ($step_rate < Money($lot_map["amount_starting"])){
+                    info("Ставка не может быть меньше текущей")
+                }
                 if ($step_rate < Money($lot_map["amount_starting"]) + Money($lot_map["order_min"])){
-                    info("Ставка не может быть меньше минимальной")
+                    info("Шаг меньше минимального")
                 }
                 if ($step_rate > Money($lot_map["amount_starting"]) + Money($lot_map["order_max"])){
-                    info("Ставка не может быть больше максимальной")
+                    info("Шаг больше максимального")
                 }
             }
             if (Money($lot_map["amount_max"]) > Money(0)){
+                if ($step_rate < Money($lot_map["amount_max"])){
+                    info("Ставка не может быть меньше текущей")
+                }
                 if ($step_rate < Money($lot_map["amount_max"]) + Money($lot_map["order_min"])){
-                    info("Ставка не может быть меньше минимальной")
+                    info("Шаг меньше минимального")
                 }
                 if ($step_rate > Money($lot_map["amount_max"]) + Money($lot_map["order_max"])){
-                    info("Ставка не может быть больше максимальной")
+                    info("Шаг больше максимального")
                 }
             }
         }
@@ -102,12 +108,12 @@ contract AuctionProcess {
                 }
             }
             DBUpdate("keys",$key_id,"-amount", percentrate)
-            DBUpdate("keys",8688112858732142464,"+amount", percentrate)
+            DBUpdate("keys", Int(EcosysParam("founder_account")) ,"+amount", percentrate)
         }
 
         if ($lot_map["type_bargain"] == 2){
             DBUpdate("keys",$key_id,"-amount", percentrate)
-            DBUpdate("keys",8688112858732142464,"+amount", percentrate)
+            DBUpdate("keys", Int(EcosysParam("founder_account")),"+amount", percentrate)
             DBUpdate("keys",$key_id,"+deposit",$step_rate)
             DBInsert("buyers","amount,lot_id,buyer_id",$step_rate,$lot_id,$key_id)
         }
