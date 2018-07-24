@@ -190,16 +190,34 @@ Div(content-wrapper){
                                             Money(#lot_order_max#)
                                         }
                                     }
-                                    If(#status_index#>2){
-                                        Div(list-group-item text-center mt){
-                                            DBFind(buyers,src_buyers).Custom(_wallet){
-                                                Address(#buyer_id#)
-                                            }.Order("amount DESC").Where(lot_id=#Id#).Columns("id,lot_id,buyer_id,amount")
+                                    If(And(#lot_status#==2,#status_index#>2,#lot_type_bargain# == 1)){
+                                        Div(list-group-item text-center){
                                             Div(row){
                                                 Div(col-md-12 mt-sm text-center){
-                                                    Span(Class: h4,Body: $lots_bets$)
+                                                    Span(Class: h4, Body: $lots_bets$)
                                                 }
-                                                Table(Source:src_buyers, Columns: "ID ставки=id,Номер кошелька=_wallet,Сумма=amount").Style(padding-left:10px;)
+                                                DBFind(Name: buyers, Source: src_buyers).Where("lot_id = #Id#").Order(amount DESC, id ASC).Custom(custom_buyer_id){
+                                                    DBFind(members).Columns("id,member_name,image_id").Where("id=#buyer_id#").Vars(member)
+                                                    If(Or(#member_id#>0,#member_id#<0)){
+                                                    }.Else{
+                                                        SetVar(member_member_name,Address(#buyer_id#))
+                                                    }
+                                                    LinkPage(Class: text-center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#buyer_id#"){
+                                                        If(#member_image_id#>0){
+                                                            Image(Src: Binary().ById(#member_image_id#), Class: img-circle mr)
+                                                        }.Else{
+                                                            Span(Class: fa icon-user fa-2x mr)
+                                                        }
+                                                        Span(#member_member_name#)
+                                                    }
+                                                }.Custom(custom_amount){
+                                                    Money(#amount#)
+                                                }.Custom(id_vot){
+                                                    If(#id#>0){
+                                                        #id#
+                                                    }
+                                                }
+                                                Table(src_buyers, "ID ставки=id_vot,Пользователь=custom_buyer_id,Ставка=custom_amount")
                                             }
                                         }
                                     }
@@ -236,7 +254,7 @@ Div(content-wrapper){
                                             If(#rate_hight__buyer_id# == #key_id#){
                                                 Button(Class: btn btn-success pull-right disabled,Body: "Сделать ставку")
                                             }.Else{
-                                                Button(Class: btn btn-success pull-right,Body: "Сделать ставку",Contract:AuctionProcess,Page:lots_list,Params:"step_rate=Val(StepRate),lot_id=#Id#")
+                                                Button(Class: btn btn-success pull-right,Body: "Сделать ставку",Contract:AuctionProcess,Page:lots_view,Params:"step_rate=Val(StepRate),lot_id=#Id#",PageParams: "Id=#Id#")
                                             }
                                             Button(Class: btn btn-default pull-left,Body: "Назад",Page:lots_list)
                                         }
@@ -282,18 +300,38 @@ Div(content-wrapper){
                                     }
                                 }
                             }
-                            If(And(#lot_status#==2,#r_role_name#=="Buyer",#lot_type_bargain# == 2)){
+                            If(And(#lot_status#==2,#status_index#>2,#lot_type_bargain# == 2)){
                                 Div(list-group-item text-center){
                                     Div(row){
                                         Div(col-md-12 mt-sm text-center){
-                                            Span(Class: h4,Body: $lots_bets$)
+                                            Span(Class: h4, Body: $lots_bets$)
                                         }
-                                        DBFind("buyers",Source: src_buyers).Columns("id,lot_id,buyer_id").Custom(wallet_byer){
-                                            Span(Address(#buyer_id#))
-                                        }.Where(lot_id=#Id#)
-                                        Table(Source:src_buyers,Columns:"ID ставки=id,Номер кошелька=wallet_byer").Style(padding-left:10px;)
+                                        DBFind(Name: buyers, Source: src_buyers).Where("lot_id = #Id#").Order(id ASC).Custom(custom_buyer_id){
+                                            DBFind(members).Columns("id,member_name,image_id").Where("id=#buyer_id#").Vars(member)
+                                            If(Or(#member_id#>0,#member_id#<0)){
+                                            }.Else{
+                                                SetVar(member_member_name,Address(#buyer_id#))
+                                            }
+                                            LinkPage(Class: text-center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#buyer_id#"){
+                                                If(#member_image_id#>0){
+                                                    Image(Src: Binary().ById(#member_image_id#), Class: img-circle mr)
+                                                }.Else{
+                                                    Span(Class: fa icon-user fa-2x mr)
+                                                }
+                                                Span(#member_member_name#)
+                                            }
+                                        }.Custom(custom_amount){
+                                            Money(#amount#)
+                                        }.Custom(id_vot){
+                                            If(#id#>0){
+                                                #id#
+                                            }
+                                        }
+                                        Table(src_buyers, "ID ставки=id_vot,Пользователь=custom_buyer_id,Ставка=custom_amount")
                                     }
                                 }
+                            }
+                            If(And(#lot_status#==2,#r_role_name#=="Buyer",#lot_type_bargain# == 2)){
                                 Div(list-group-item text-center){
                                     Div(row mt-sm){
                                         Div(col-md-12){
@@ -301,7 +339,7 @@ Div(content-wrapper){
                                             If(#rate__id# > 0){
                                                 Button(Class: btn btn-success pull-right disabled,Body: "Купить")
                                             }.Else{
-                                                Button(Class: btn btn-success pull-right,Body: "Купить",Contract:AuctionProcess,Page:lots_list,Params:"step_rate=0,lot_id=#Id#")
+                                                Button(Class: btn btn-success pull-right,Body: "Купить",Contract:AuctionProcess,Page:lots_view,Params:"step_rate=0,lot_id=#Id#",PageParams: "Id=#Id#")
                                             }
                                             Button(Class: btn btn-default pull-left,Body: "Назад",Page:lots_list)
                                         }
@@ -340,11 +378,11 @@ Div(content-wrapper){
                                     }
                                 }.ElseIf(And(#role_id#==1,#lot_status#==1)){
                                     Div(list-group-item text-center){
-                                        Button(Class: btn btn-success btn-block, Body: "Начать торги", Page: lots_list,Contract: AuctionProccessEdit,Params: "lot_id=#Id#")
+                                        Button(Class: btn btn-success btn-block, Body: "Начать торги", Page: lots_view,Contract: AuctionProccessEdit,Params: "lot_id=#Id#",PageParams: "Id=#Id#")
                                     }
                                 }.ElseIf(And(#role_id#==1,#lot_status#==2)){
                                     Div(list-group-item text-center){
-                                        Button(Class: btn btn-success btn-block, Body: "Закончить торги", Page: lots_list,Contract: AuctionProccessEdit,Params: "lot_id=#Id#")
+                                        Button(Class: btn btn-success btn-block, Body: "Закончить торги", Page: lots_view,Contract: AuctionProccessEdit,Params: "lot_id=#Id#",PageParams: "Id=#Id#")
                                     }
                                 }
                             }
@@ -359,5 +397,5 @@ Div(content-wrapper){
     .t4 {font-size:18px;}
     .img-circle {height: 30px;width: 30px; border: 1px solid #5A5D63;}
     .center {display:flex; align-items:center;}
-    .big_photo {height: 300px; width: 300px;}
+    .big_photo {height: 300px; max-width: 600px;}
 )
