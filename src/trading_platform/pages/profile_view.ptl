@@ -1,0 +1,184 @@
+If(Or(#v_member_id#>0,#v_member_id#<0)){
+}.Else{
+    SetVar(Name: v_member_id, Value: #key_id#)
+}
+DBFind(Name: members, Source: src_member).Columns("id,image_id,member_name,name_first,name_middle,name_last,company_name,company_position,member_info->information").Where("id=#v_member_id#").Vars(prefix)
+
+If(Or(#prefix_id#>0,#prefix_id#<0)){
+}.Else{
+    SetVar(Name: prefix_member_name, Value: "")
+}
+Div(Class: panel panel-primary) {
+    Div(Class: panel-heading, Body: Ваш профиль)
+            Div(Class: list-group-item) {
+                Div(Class: row df f-valign) {
+                    Div(Class: col-md-3 mt-sm text-right) {
+                        Label(Body: Ваш ID:)Span(Class: h5, Body: " #prefix_id#")
+                    }
+                }
+            }
+            Div(Class: list-group-item) {
+                Div(Class: row df f-valign) {
+                    Div(Class: col-md-3 mt-sm text-right) {
+                        Label(Body: Системное имя:)Span(Class: h5, Body: " #prefix_member_name#")
+                    }
+                }
+            }
+            If(#prefix_name_first#>0){
+                Div(Class: list-group-item) {
+                    Div(Class: row df f-valign) {
+                        Div(Class: col-md-3 mt-sm text-right) {
+                            Label(Body: Имя:)Span(Class: h5, Body: " #prefix_name_first#")
+                        }
+                    }
+                }
+            }
+            If(#prefix_name_middle#>0){
+                Div(Class: list-group-item) {
+                    Div(Class: row df f-valign) {
+                        Div(Class: col-md-3 mt-sm text-right) {
+                            Label(Body: Фамилия:)Span(Class: h5, Body: " #prefix_name_middle#")
+                        }
+                    }
+                }
+            }
+            If(#prefix_name_last#>0){
+                Div(Class: list-group-item) {
+                    Div(Class: row df f-valign) {
+                        Div(Class: col-md-3 mt-sm text-right) {
+                            Label(Body: Отчество:)Span(Class: h5, Body: " #prefix_name_last#")
+                        }
+                    }
+                }
+            }
+            If(#prefix_company_name#>0){
+                Div(Class: list-group-item) {
+                    Div(Class: row df f-valign) {
+                        Div(Class: col-md-3 mt-sm text-right) {
+                            Label(Body: Компания:)Span(Class: h5, Body: " #prefix_company_name#")
+                        }
+                    }
+                }
+            }
+            If(#prefix_company_position#>0){
+                Div(Class: list-group-item) {
+                    Div(Class: row df f-valign) {
+                        Div(Class: col-md-3 mt-sm text-right) {
+                            Label(Body: Должность:)Span(Class: h5, Body: " #prefix_company_position#")
+                        }
+                    }
+                }
+            }
+            If(#prefix_member_info_information#>0){
+                Div(Class: list-group-item) {
+                    Div(Class: row df f-valign) {
+                        Div(Class: col-md-3 mt-sm text-right) {
+                            Label(Body: О себе:)Span(Class: h5, Body: " #prefix_member_info_information#")
+                        }
+                    }
+                }
+            }
+            Div(Class: panel-footer text-right) {
+                Button(Class: btn btn-primary, Body: NYIEdit)
+            }
+        }
+Div(Class: panel panel-primary) {
+    Div(Class: panel-heading, Body: Управление)
+        DBFind(Name: roles_participants, Source: src_check).Columns("id").Where("member->member_id='#v_member_id#' and deleted=0").Vars(check)
+            If(#check_id#>0){
+                DBFind(Name: roles_participants, Source: src_roles).Columns("role->id,role->name").Where("member->member_id='#v_member_id#' and deleted=0").Order("id")
+                Div(Class: list-group-item) {
+                    Div(Class: row df f-valign) {
+                        Div(Class: text-center) {
+                            Label(Body: Доступные роли:)
+                                ForList(src_roles){
+                                    LinkPage(Page: roles_view, PageParams: "v_role_id=#role.id#"){
+                                        Span(Class: h5, Body: " #role.name#")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }.Else{
+                    LinkPage(Page: platform_role_selection){
+                        Span(Class: h5, Body: "Подать заявку на роль")
+                    }
+                }
+                DBFind(Name: keys, Source: src_keys).Where("id=#v_member_id#").Vars(tokens)
+                    Div(Class: list-group-item) {
+                        Div(Class: row df f-valign) {
+                            Div(Class: text-center) {
+                                Label(Body: Реквизиты:)Span(Class: h5, Body: Address(#tokens_id#))
+                            }
+                        }
+                    }
+                    Div(Class: list-group-item) {
+                        Div(Class: row df f-valign) {
+                            Div(Class: text-center) {
+                                Label(Body: Баланс:)Span(Class: h5, Body: " #tokens_amount#")
+                            }
+                        }
+                    }
+                    Div(Class: list-group-item) {
+                        Div(Class: row df f-valign) {
+                            Div(Class: text-center) {
+                                Label(Body: Депозит:)Span(Class: h5, Body: " #tokens_deposit#")
+                            }
+                        }
+                    }
+    Div(Class: panel-footer text-right) {
+        Div(Class: col-sm-4 mt-sm text-right) {
+            Button(Class: btn btn-primary, Contract: ContractName, Body: NYIRole)
+        }.Style(margin-bottom: 10px;)
+        Div(Class: col-sm-4 mt-sm text-right) {
+            Button(Class: btn btn-primary, Contract: ContractName, Body: NYIMoneyRequest)
+        }.Style(margin-bottom: 10px;)
+        Div(Class: col-sm-4 mt-sm text-right) {
+            Button(Class: btn btn-primary, Contract: ContractName, Body: NYIMoneyTransfer)
+        }.Style(margin-bottom: 10px;)
+    }
+}   
+Div(Class: panel panel-primary) {
+    Div(Class: panel-heading, Body: Ваши активные лоты)
+        DBFind(roles).Where("id=#role_id#").Columns("role_name").Vars(r)
+            If(#r_role_name#=="Seller") {
+                DBFind(lots, src_lots).Where("seller=#key_id# and deleted=0 and status=2").Custom(_photo){
+                    Image(Src: Binary().ById(#photo#), Class:photo)
+                }.Custom(_date_creation){
+                    DateTime(#date_creation#, DD.MM.YYYY)
+                }.Custom(_date_start){
+                    DateTime(#date_start#, DD.MM.YYYY)
+                }.Custom(_date_end){
+                    DateTime(#date_end#, DD.MM.YYYY)
+                }.Custom(_amount_starting){
+                    Money(#amount_starting#)
+                }.Custom(_amount_final){
+                    If(#type_bargain# == 2){
+                        Money(#amount_starting#)
+                    }.Else{
+                        Money(#amount_final#)
+                    }
+                }.Custom(_name){
+                Div(text-left){
+                    LinkPage(Class: text-primary h5 text-bold, Page: lots_view, PageParams: "Id=#id#", Body: #name#)
+                }}
+                Div(list-group-item text-center){
+                    Div(table-responsive){
+                        Table(src_lots,"ID=id,Название=_name,Фото=_photo,Продавец=_seller,Дата создания=_date_creation,Дата начала торгов=_date_start,Дата окончания торгов=_date_end,Стартовая сумма=_amount_starting,Конечная сумма=_amount_final,$lots_status$=_status,=_actions")
+                    }.Style(
+                        th,td {text-align:center;}
+                        .img-circle {height: 30px;width: 30px; border: 1px solid #5A5D63;}
+                        .center {display:flex; align-items:center;}
+                        .photo {height: 30px; width: 30px;}
+                    )
+                }
+                Div(Class: panel-footer text-right) {
+                    Div(Class: col-sm-4 mt-sm text-right) {
+                        Button(Class: btn btn-primary, Contract: ContractName, Body: NYIEnded)
+                    }.Style(margin-bottom: 10px;)
+                    Div(Class: col-sm-4 mt-sm text-right) {
+                        Button(Class: btn btn-primary, Contract: ContractName, Body: NYISuccess)
+                    }.Style(margin-bottom: 10px;)
+                }
+            }
+}
