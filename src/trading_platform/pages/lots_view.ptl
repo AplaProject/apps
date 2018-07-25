@@ -22,7 +22,7 @@ Div(content-wrapper){
         DBFind(lots_tracks).Where("lot_id=#Id# and key_id=#key_id# and deleted=0").Vars(track)
 
         Div(row){
-            Div(col-sm-10 col-sm-offset-1 col-lg-6 col-lg-offset-3){
+            Div(col-sm-10 col-sm-offset-1 col-lg-8 col-lg-offset-2){
                 Form(panel panel-default){
                     Div(panel-heading text-center){
                         If(#lot_deleted#==1){
@@ -54,18 +54,18 @@ Div(content-wrapper){
                             }
                         }
                         Div(list-group-item text-center){
-                            If(#status_index# == 5){
-                            }.ElseIf(And(#status_index#==1,#role_id#==1,#notific_id#>0)){
-                                Div(form-group text-left){
-                                    Button(Body: "Отклонить", Page: lots_reject, PageParams: "NotificId=#notific_id#,Id=#Id#", Class: btn btn-danger).Popup(Width: 40, Header: "Пожалуйста укажите причину отказа")
-                                    Button(Body: "Принять", Page: lots_view, Contract: lots_AdminAction, Params: "Action=accept,Id=#Id#,NotificId=#notific_id#,Comment=", Class: btn btn-success pull-right, PageParams: "Id=#Id#")
+                                If(#status_index# == 5){
+                                }.ElseIf(And(#status_index#==1,#role_id#==1,#notific_id#>0)){
+                                    Div(form-group text-left){
+                                        Button(Body: "Отклонить", Page: lots_reject, PageParams: "NotificId=#notific_id#,Id=#Id#", Class: btn btn-danger).Popup(Width: 40, Header: "Пожалуйста укажите причину отказа")
+                                        Button(Body: "Принять", Page: lots_view, Contract: lots_AdminAction, Params: "Action=accept,Id=#Id#,NotificId=#notific_id#,Comment=", Class: btn btn-success pull-right, PageParams: "Id=#Id#")
+                                    }
+                                }.ElseIf(And(#r_role_name#=="Buyer",#notific_id#>0)){
+                                    Div(form-group text-left){
+                                        Button(Body: "Не интересует", Page: lots_view, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#,NotificId=#notific_id#", Class: btn btn-default, PageParams: "Id=#Id#")
+                                        Button(Body: "Отслеживать", Page: lots_list, Params: "Action=track_accept,NotificId=#notific_id#,Id=#Id#",PageParams: "Id=#Id#", Contract: lots_BuyerAction, Class: btn btn-success pull-right)
+                                    }
                                 }
-                            }.ElseIf(And(#r_role_name#=="Buyer",#notific_id#>0)){
-                                Div(form-group text-left){
-                                    Button(Body: "Не интересует", Page: lots_view, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#,NotificId=#notific_id#", Class: btn btn-default, PageParams: "Id=#Id#")
-                                    Button(Body: "Отслеживать", Page: lots_list, Params: "Action=track_accept,NotificId=#notific_id#,Id=#Id#",PageParams: "Id=#Id#", Contract: lots_BuyerAction, Class: btn btn-success pull-right)
-                                }
-                            }
                         }
                         Div(form-group){
                             Div(list-group-item text-center){
@@ -82,9 +82,8 @@ Div(content-wrapper){
                                     Div(col-md-6 text-right){
                                         LangRes(lots_description)
                                     }
-                                    Div(col-md-6 text-left description){
+                                    Div(col-md-6 text-left){
                                         #lot_description#
-                                        Div(noize)
                                     }
                                 }
 
@@ -231,30 +230,24 @@ Div(content-wrapper){
                             }
                             If(And(#lot_status#==2,#r_role_name#=="Buyer",#lot_type_bargain# == 1)){
                                 Div(list-group-item text-center){
-                                    Div(row mt-sm t4){
-                                        Div(col-md-12){
-                                            Span("Сделать ставку")
-                                        }
-                                    }
                                     Div(row mt-sm){
-                                        Div(col-md-2 mt-sm text-left){
-                                            Span(Class: h4,Body:"Ставка")
-                                        }
-                                        Div(col-md-10 text-left){
-                                            Input(Name: StepRate,Type: number)
+                                        Div(col-md-12){
+                                            Div(input-group){
+                                                Div(input-group-addon){
+                                                    Span(Class: h4,Body:"Ставка")
+                                                }
+                                                Input(Name: StepRate,Type: number)
+                                                Div(input-group-btn){
+                                                    DBFind("buyers").Where("lot_id = #Id#").Order("amount DESC").Vars(rate_hight_)
+                                                    If(#rate_hight__buyer_id# == #key_id#){
+                                                        Button(Class: btn btn-success pull-right disabled,Body: "Сделать ставку")
+                                                    }.Else{
+                                                        Button(Class: btn btn-success pull-right,Body: "Сделать ставку",Contract:AuctionProcess,Page:lots_view,Params:"step_rate=Val(StepRate),lot_id=#Id#",PageParams: "Id=#Id#")
+                                                    }
+                                                }
+                                            }
                                         }
                                     }.Style(padding-top:10px;)
-                                    Div(row mt-sm){
-                                        Div(col-md-12){
-                                            DBFind("buyers").Where("lot_id = #Id#").Order("amount DESC").Vars(rate_hight_)
-                                            If(#rate_hight__buyer_id# == #key_id#){
-                                                Button(Class: btn btn-success pull-right disabled,Body: "Сделать ставку")
-                                            }.Else{
-                                                Button(Class: btn btn-success pull-right,Body: "Сделать ставку",Contract:AuctionProcess,Page:lots_view,Params:"step_rate=Val(StepRate),lot_id=#Id#",PageParams: "Id=#Id#")
-                                            }
-                                            Button(Class: btn btn-default pull-left,Body: "Назад",Page:lots_list)
-                                        }
-                                    }.Style(padding-top:15px;padding-bottom:10px;)
                                 }
                             }
                             If(#lot_status# >= 3){
@@ -342,9 +335,8 @@ Div(content-wrapper){
                                     }
                                 }
                             }
-                            Div(text-right mt){
-                                Button(Class: btn btn-info hidden-lg, Body: $lots_view_info$, Page: lots_view_info, PageParams: "notific_id=#notific_id#,Id=#Id#,").Popup(Header:"#lot_name#", Width: 50)
-                                Button(Class: btn btn-info hidden-sm hidden-md hidden-xs, Body: $lots_view_info$, Page: lots_view_info, PageParams: "notific_id=#notific_id#,Id=#Id#").Popup(Header:"#lot_name#", Width: 40)
+                            Div(mt-lg text-center){
+                                Button(Class: btn btn-link, Body: $lots_view_info$, Page: lots_view_info, PageParams: "notific_id=#notific_id#,Id=#Id#").Popup(Header:"#lot_name#", Width: 40)
                             }
                         }
                         Div(form-group){
@@ -394,16 +386,4 @@ Div(content-wrapper){
     .img-circle {height: 30px;width: 30px; border: 1px solid #5A5D63;}
     .center {display:flex; align-items:center;}
     .big_photo {height: 300px; max-width: 600px;}
-    .description {
-        max-height: 200px;
-        overflow: hidden;
-        position:relative;
-    }
-    .description .noize {
-        position: absolute;
-        bottom: 0;
-        height: 40px;
-        width: 100%;
-        background: linear-gradient(0, #ffffff, #ffffff30);
-    }
 )
