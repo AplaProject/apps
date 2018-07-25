@@ -12,21 +12,20 @@ Div(content-wrapper){
 
     SetVar(Where,"deleted=0").(rejected_status,5)
     If(GetVar(Search)){
-        If(GetVar(Status)!=""){
-            SetVar(Where,"#Where# and name='#Search#' and status=#Status#")
+        If(GetVar(Status)){
+            SetVar(Where,"deleted=0 and name='#Search#' and status=#Status#")
         }.Else{
-            SetVar(Where,"#Where# and name='#Search#'")
+            SetVar(Where,"deleted=0 and name='#Search#'")
         }
     }.Else{
-        If(GetVar(Status)!=""){
-            SetVar(Where,"#Where# and status=#Status#")
+        If(GetVar(Status)){
+            SetVar(Where,"deleted=0 and status=#Status#")
         }
         SetVar(Search,)
     }
 
     Div(text-right){
         Data(status_icons, "Icon"){
-            fa fa-question
             fa fa-hourglass-start
             fa fa-hourglass-half
             fa fa-hourglass-end
@@ -38,7 +37,7 @@ Div(content-wrapper){
             Button(Class: fa fa-times mr-sm btn bg-danger, Page: lots_list)
         }
         ForList(status_icons){
-            SetVar(status,Calculate(#status_icons_index#-1))
+            SetVar(status,Calculate(#status_icons_index#))
             If(#Status#==#status#){
                 Button(Class: #Icon# mr-sm btn bg-gray-lighter, Page: lots_list, PageParams: "Status=#status#,Search=#Search#")
             }.Else{
@@ -90,9 +89,10 @@ Div(content-wrapper){
             }.Custom(_date_start){
                 DateTime(#date_start#, DD.MM.YY) \ DateTime(#date_end#, DD.MM.YY)
             }.Custom(_date_end){
-                
             }.Custom(_amount_starting){
-                Money(#amount_starting#)
+                Div(Body:Money(#amount_starting#))
+            }.Custom(_stps){
+                Div(Class:h6, Body:Money(#order_min#) \ Money(#order_max#))
             }.Custom(_amount_final){
                 SetVar(status_index, Calculate(#status# + 1))
                 SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
@@ -136,7 +136,7 @@ Div(content-wrapper){
                 Div(col-md-12){
                     If(#lots_count#>0){
                         Div(table-responsive){
-                            Table(src_lots,"ID=id,$lots_name$=_name,$photo$=_photo,$seller$=_seller,Начало \ Окончание=_date_start,$amount_starting$=_amount_starting,$amount_final$=_amount_final,$lots_status$=_status,=_actions")
+                            Table(src_lots,"ID=id,$lots_name$=_name,$photo$=_photo,$seller$=_seller,Начало \ Окончание=_date_start,$amount_starting$=_amount_starting,Шаг (Min\Max)=_stps,$amount_final$=_amount_final,$lots_status$=_status,=_actions")
                         }
                     }.Else{
                         Div(text-center h3){
