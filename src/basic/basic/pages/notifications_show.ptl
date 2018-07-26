@@ -1,0 +1,46 @@
+DBFind(applications).Columns("name,id").Where("name='Basic application'").Vars(application)
+SetTitle($notifications_show$)
+
+SetVar(type,0).(header,).(body,)
+Div(content-wrapper){
+
+    If(#notific_id#>0){
+        DBFind(notifications).Columns("id,notification->type,notification->header,notification->body,date_start_processing,closed").Where("id=#notific_id#").Vars(note)
+        SetVar(type,#note_notification_type#)
+        SetVar(header,#note_notification_header#)
+        SetVar(body,#note_notification_body#)
+
+
+        Div(row){
+            Div(col-md-6 col-md-offset-3){
+                Form(panel panel-primary){
+                    Div(panel-heading text-center){
+                        #header#
+                    }
+                    Div(panel-body){
+                        #body#
+                    }
+                    Div(panel-footer text-right){
+                        If(#type# == 1){
+                            If(#note_closed# == 0){
+                                Button(Body: LangRes(understand), Class: btn btn-primary, Contract: @1notifications_Close, Params: "notific_id=#notific_id#", Page: default_page)
+                            }
+                        }.ElseIf(#type# == 2){
+                            If(#note_closed#==0){
+                                If(#note_date_start_processing#==""){
+                                    Button(Body: LangRes(begin), Class: btn btn-primary, Contract: @1notifications_Process, Params: "notific_id=#notific_id#", Page: default_page).Alert(Text: $want_start_processing_notification$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                                }.Else{
+                                    Button(Body: LangRes(close), Class: btn btn-primary, Contract: @1notifications_Close, Params: "notific_id=#notific_id#", Page: default_page).Alert(Text: $want_close_notification$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }.Else{
+        Div(md-12 alert alert-danger text-center){
+            LangRes(attention)
+        }
+    }
+}
