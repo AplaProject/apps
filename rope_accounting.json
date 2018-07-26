@@ -1,1 +1,582 @@
-
+{
+    "name": "Rope accounting",
+    "data": [
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "SetVar(r1,AppParam(App:#application_id#, Name: rope_manufacturer_role_id))\nSetVar(r2,AppParam(App:#application_id#, Name: rope_producer_role_id))\nSetVar(r3,AppParam(App:#application_id#, Name: rope_servicer_role_id))\nDBFind(roles).Where(\"id=#r1#\").Columns(\"role_name\").Vars(rid1)\nDBFind(roles).Where(\"id=#r2#\").Columns(\"role_name\").Vars(rid2)\nDBFind(roles).Where(\"id=#r3#\").Columns(\"role_name\").Vars(rid3)\nDBFind(rope_uploads).Where(\"rid=#r1# and deleted_at=0 and finaled_at=0\").Columns(\"id\").Vars(count1)\nDBFind(rope_uploads).Where(\"rid=#r2# and deleted_at=0 and finaled_at=0\").Columns(\"id\").Vars(count2)\nDBFind(rope_uploads).Where(\"rid=#r3# and deleted_at=0 and finaled_at=0\").Columns(\"id\").Vars(count3)\nDBFind(rope_uploads).Where(\"deleted_at=0 and finaled_at=0 and uploaded_at>0 and imported_at>0 and (rid=#r1# or rid=#r2# or rid=#r3#)\").Count(import_count)\nDBFind(rope_uploads).Where(\"deleted_at=0 and finaled_at=0 and uploaded_at>0 and (rid=#r1# or rid=#r2# or rid=#r3#)\").Count(load_count)\nDBFind(rope_uploads).Where(\"deleted_at=0 and finaled_at>0 and (rid=#r1# or rid=#r2# or rid=#r3#)\").Count(finaled_count)\n\nSetVar(missed_r1,\"'#rid1_role_name#'\").(missed_r2,\"'#rid2_role_name#'\").(missed_r3,\"'#rid3_role_name#'\")\n\nIf(#count1_id#>0){SetVar(missed_r1,)}\nIf(#count2_id#>0){SetVar(missed_r2,)}\nIf(#count3_id#>0){SetVar(missed_r3,)}\nIf(#rus_comment#==1){\n    отсутствующие в системе файл импорта у роли: missed_r1, missed_r2, missed_r3\n    количество загруженных  файлов: load_count\n    количество импортированных файлов: import_count\n    количество успешно обсчитанных файлов: finaled_count\n}",
+            "Name": "rope_common",
+            "Type": "blocks"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "Div(panel panel-default){\n    Div(panel-body){\n        Div(text-muted text-center){\n            $rope_parameters_not_set$\n        }\n        If(#r1#==0){\n            Div(text-center){\n                DBFind(\"app_params\").Where(\"app_id=#application_id# and name='rope_manufacturer_role_id'\").Vars(man)\n                Div(text-muted text-center){\n                    LinkPage(Page: app_params_edit, PageParams: \"id=#man_id#\"){\n                        $rope_param_not_set$ 'rope_manufacturer_role_id'\n                    }\n                }\n            }\n        }\n        If(#r2#==0){\n            DBFind(\"app_params\").Where(\"app_id=#application_id# and name='rope_producer_role_id'\").Vars(pro)\n            Div(text-center){\n                LinkPage(Page: app_params_edit, PageParams: \"id=#pro_id#\"){\n                    $rope_param_not_set$ 'rope_producer_role_id'\n                }\n            }\n        }\n        If(#r3#==0){\n            Div(text-center){\n                DBFind(\"app_params\").Where(\"app_id=#application_id# and name='rope_servicer_role_id'\").Vars(ser)\n                LinkPage(Page: app_params_edit, PageParams: \"id=#ser_id#\"){\n                    $rope_param_not_set$ 'rope_servicer_role_id'\n                }\n            }\n        }\n    }\n}",
+            "Name": "rope_params_helper",
+            "Type": "blocks"
+        },
+        {
+            "Conditions": "ContractAccess(\"@1EditMenu\")",
+            "Value": "DBFind(applications).Columns(\"id\").Where(\"name='Rope accounting' AND deleted=0\").Vars(application)\nSetVar(r1,AppParam(App:#application_id#, Name: rope_manufacturer_role_id))\nSetVar(r2,AppParam(App:#application_id#, Name: rope_producer_role_id))\nSetVar(r3,AppParam(App:#application_id#, Name: rope_servicer_role_id))\n\nIf(And(#role_id#>0,Or(#role_id#==1,#role_id#==#r1#,#role_id#==#r2#,#role_id#==#r3#))){\n    MenuItem(Title: \"Загрузка файла импорта\", Page: rope_imports, Icon:\"fa fa-upload\")\n    MenuItem(Title: \"Таблица наработки\", Page:rope_works, Icon:\"icon-list\")\n    MenuItem(Title: \"Буровые\", Page: rope_drillings, Icon:\"icon-list\")\n    MenuItem(Title: \"Бухты\", Page: rope_coils, Icon:\"icon-list\")\n}",
+            "Name": "default_menu",
+            "Type": "menu"
+        },
+        {
+            "Name": "rope_all_depths_ok",
+            "Trans": "{\n    \"ru\": \"Рассогласования показаний датчиков глубины не найдено\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_back",
+            "Trans": "{\n    \"ru\": \"Назад\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_block_weight",
+            "Trans": "{\n    \"ru\": \"Вес блока\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_block_weight_full",
+            "Trans": "{\n    \"ru\": \"Вес талевого блока + вертлюга или ВСП\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_brigade",
+            "Trans": "{\n    \"ru\": \"Бригада\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_bypass_bracing",
+            "Trans": "{\n    \"ru\": \"Перепуск-Перетяжка. м\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_cancel",
+            "Trans": "{\n    \"ru\": \"Отмена\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_candle_length",
+            "Trans": "{\n    \"ru\": \"Длина свечи\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_certificate",
+            "Trans": "{\n    \"ru\": \"Сертификат\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_coil_id",
+            "Trans": "{\n    \"ru\": \"Номер бухты\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_coils",
+            "Trans": "{\n    \"ru\": \"Бухты\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_create",
+            "Trans": "{\n    \"ru\": \"Создать\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_data_confirmed",
+            "Trans": "{\n    \"ru\": \"данные подтверждены\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_data_conflict",
+            "Trans": "{\n    \"ru\": \"конфликт данных\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_data_input",
+            "Trans": "{\n    \"ru\": \"Ввод данных\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_data_not_loaded",
+            "Trans": "{\n    \"ru\": \"Данные не загружены\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_data_upload",
+            "Trans": "{\n    \"ru\": \"Загрузка данных\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_data_view",
+            "Trans": "{\n    \"ru\": \"Просмотр данных\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_deleted",
+            "Trans": "{\n    \"ru\": \"Удалено\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_depth_final",
+            "Trans": "{\n    \"ru\": \"Глубина в конце операции\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_depth_started",
+            "Trans": "{\n    \"ru\": \"Глубина начала операции\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_depths",
+            "Trans": "{\n    \"ru\": \"Таблица голосования за глубину при рассогласовании показаний датчиков\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_diameter",
+            "Trans": "{\n    \"ru\": \"Диаметр\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_drilling_create",
+            "Trans": "{\n    \"ru\": \"Новая буровая\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_drilling_edit",
+            "Trans": "{\n    \"ru\": \"Изменить буровую\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_drilling_id",
+            "Trans": "{\n    \"ru\": \"Номер буровой\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_drillings",
+            "Trans": "{\n    \"ru\": \"Буровые\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_drillings_not_found",
+            "Trans": "{\n    \"ru\": \"Буровых не найдено\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_edit",
+            "Trans": "{\n    \"ru\": \"Редактировать\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_expedition",
+            "Trans": "{\n    \"ru\": \"Экспедиция\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_file_add",
+            "Trans": "{\n    \"ru\": \"Добавить файл\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_filial",
+            "Trans": "{\n    \"ru\": \"Филиал\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_hint1",
+            "Trans": "{\n    \"ru\": \"Для расчета 'Учета наработки' необходимо загрузить 3 файла.\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_hint2",
+            "Trans": "{\n    \"ru\": \"По одному файлу от каждой роли\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_hint3",
+            "Trans": "{\n    \"ru\": \"Не получено загрузки от\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_hint4",
+            "Trans": "{\n    \"ru\": \"Недостаточно данных для рассчета правильных значений глубины\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_id",
+            "Trans": "{\n    \"ru\": \"ID\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_import",
+            "Trans": "{\n    \"ru\": \"Импортировать\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_import_again",
+            "Trans": "{\n    \"ru\": \"Импортировать еще раз\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_import_from",
+            "Trans": "{\n    \"ru\": \"файл импорта от роли\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_imported",
+            "Trans": "{\n    \"ru\": \"импортированно\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_imports",
+            "Trans": "{\n    \"ru\": \"Импортирование загрузки\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_length_full",
+            "Trans": "{\n    \"ru\": \"Каната в бухте\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_length_rigging",
+            "Trans": "{\n    \"ru\": \"Каната в остатке\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_manufacturer",
+            "Trans": "{\n    \"ru\": \"производитель\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_master",
+            "Trans": "{\n    \"ru\": \"Мастер\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_name",
+            "Trans": "{\n    \"ru\": \"Название\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_operation",
+            "Trans": "{\n    \"ru\": \"Номер операции\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_operation_date",
+            "Trans": "{\n    \"ru\": \"Дата операции\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_operation_type",
+            "Trans": "{\n    \"ru\": \"Вид работ рейса\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_param_not_set",
+            "Trans": "{\n    \"ru\": \"не установлен параметр\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_parameters_not_set",
+            "Trans": "{\n    \"ru\": \"отсутствуют необходимые для нормальной работы параметры приложения\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_previous_workout",
+            "Trans": "{\n    \"ru\": \"Предыдущая наработка\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_producer",
+            "Trans": "{\n    \"ru\": \"добытчик\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_recalculate",
+            "Trans": "{\n    \"ru\": \"Пересчитать\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_rigging",
+            "Trans": "{\n    \"ru\": \"Остаток\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_save",
+            "Trans": "{\n    \"ru\": \"Сохранить\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_select_coil",
+            "Trans": "{\n    \"ru\": \"Выбрать бухту\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_select_drilling",
+            "Trans": "{\n    \"ru\": \"Выбрать буровую\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_send",
+            "Trans": "{\n    \"ru\": \"Отправить\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_servicer",
+            "Trans": "{\n    \"ru\": \"наладчик\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_tkm",
+            "Trans": "{\n    \"ru\": \"т.км\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_ton",
+            "Trans": "{\n    \"ru\": \"тонны\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_upload",
+            "Trans": "{\n    \"ru\": \"Загрузить\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_uploads",
+            "Trans": "{\n    \"ru\": \"Список загрузок\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_view",
+            "Trans": "{\n    \"ru\": \"Просмотр бухты\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_weight_final",
+            "Trans": "{\n    \"ru\": \"Вес на крюке макс. в конце операции. т\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_weight_started",
+            "Trans": "{\n    \"ru\": \"Вес на крюке макс. в начале операции. т\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_work_bypass",
+            "Trans": "{\n    \"ru\": \"Наработка нарастающая до перепуска\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_work_coil",
+            "Trans": "{\n    \"ru\": \"Наработка нарастающая на бухту\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_work_final",
+            "Trans": "{\n    \"ru\": \"Наработка Lк. т.км\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_work_operation",
+            "Trans": "{\n    \"ru\": \"Наработка за операцию. т.км\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_work_started",
+            "Trans": "{\n    \"ru\": \"Наработка Lн. тк.м\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_works",
+            "Trans": "{\n    \"ru\": \"Учет наработки\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_works_calculate",
+            "Trans": "{\n    \"ru\": \"Рассчитать наработку\"\n}",
+            "Type": "languages"
+        },
+        {
+            "Name": "rope_coils",
+            "Columns": "[\n    {\n        \"conditions\": \"true\",\n        \"name\": \"certificate\",\n        \"type\": \"varchar\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"deleted\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"diameter\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"length_full\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"length_rigging\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"previous_workout\",\n        \"type\": \"number\"\n    }\n]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}",
+            "Type": "tables"
+        },
+        {
+            "Name": "rope_depths",
+            "Columns": "[\n    {\n        \"conditions\": \"true\",\n        \"name\": \"deleted\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"operation\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"drilling_id\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"coil_id\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"manufacturer_final\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"manufacturer_started\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"servicer_final\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"servicer_started\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"producer_final\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"producer_started\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"status_started\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"status_final\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"depth_final\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"depth_started\",\n        \"type\": \"number\"\n    }\n]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}",
+            "Type": "tables"
+        },
+        {
+            "Name": "rope_drillings",
+            "Columns": "[\n    {\n        \"conditions\": \"true\",\n        \"name\": \"filial\",\n        \"type\": \"varchar\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"deleted\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"expedition\",\n        \"type\": \"varchar\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"brigade\",\n        \"type\": \"varchar\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"master\",\n        \"type\": \"varchar\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"block_weight\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"candle_length\",\n        \"type\": \"double\"\n    }\n    \n]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}",
+            "Type": "tables"
+        },
+        {
+            "Name": "rope_uploads",
+            "Columns": "[\n    {\n        \"conditions\": \"true\",\n        \"name\": \"deleted_at\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"finaled_at\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"uploaded_at\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"imported_at\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"kid\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"rid\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"file_name\",\n        \"type\": \"varchar\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"drilling_id\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"coil_id\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"binary_id\",\n        \"type\": \"number\"\n    }\n]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}",
+            "Type": "tables"
+        },
+        {
+            "Name": "rope_works",
+            "Columns": "[\n    {\n        \"conditions\": \"true\",\n        \"name\": \"deleted\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"depth_final\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"depth_started\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"weight_final\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"weight_started\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"bypass_bracing\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"operation_date\",\n        \"type\": \"datetime\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"operation\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"drilling_id\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"coil_id\",\n        \"type\": \"number\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"operation_type\",\n        \"type\": \"varchar\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"work_started\",\n        \"type\": \"double\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"work_final\",\n        \"type\": \"double\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"work_operation\",\n        \"type\": \"double\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"work_bypass\",\n        \"type\": \"double\"\n    },\n    {\n        \"conditions\": \"true\",\n        \"name\": \"work_coil\",\n        \"type\": \"double\"\n    }\n]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}",
+            "Type": "tables"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "0.01",
+            "Name": "rope_depth_error_rate",
+            "Type": "app_params"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "0",
+            "Name": "rope_manufacturer_role_id",
+            "Type": "app_params"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "0",
+            "Name": "rope_producer_role_id",
+            "Type": "app_params"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "0",
+            "Name": "rope_servicer_role_id",
+            "Type": "app_params"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "Div()",
+            "Name": "default_page",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "DBFind(applications).Columns(\"id\").Where(\"name='Rope accounting' AND deleted=0\").Vars(application)\nSetVar(title,$rope_create$).(btn_title,$rope_create$)\nSetVar(item_certificate,)\nSetVar(item_length_full,)\nSetVar(item_length_rigging,)\nSetVar(item_previous_workout,)\nSetVar(item_deleted,)\nSetVar(item_diameter,)\nDiv(content-wrapper){\n    If(GetVar(id)){\n        DBFind(rope_coils).Where(\"id=#id#\").Vars(item)\n        SetVar(title,$rope_edit$)\n        SetVar(btn_title,$rope_save$)\n    }\n    SetTitle(#title#)\n    Div(breadcrumb){\n        LinkPage(Body: $rope_coils$, Page: rope_coils)\n        Span(/, mh)\n        Span(#title#, text-muted)\n    }\n    Div(row){\n        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){\n            Form(panel panel-primary){\n                Div(panel-heading){\n                    LangRes(rope_data_input)\n                }\n                Div(panel-body){\n                    If(GetVar(id)){\n                        Input(Name: id, Type:hidden, Value: #id#)\n                    }\n                    Div(row mt-sm){\n                        Div(col-sm-4 mt-sm text-right){\n                            LangRes(rope_certificate)\n                        }\n                        Div(col-sm-8 text-left){\n                            Input(Name: certificate, Type:text, Value: #item_certificate#)\n                        }\n                    }\n                    Div(row mt-sm){\n                        Div(col-sm-4 mt-sm text-right){\n                            LangRes(rope_length_full)\n                        }\n                        Div(col-sm-8 text-left){\n                            Input(Name: lengthFull, Type:number, Value: #item_length_full#)\n                        }\n                    }\n                    Div(row mt-sm){\n                        Div(col-sm-4 mt-sm text-right){\n                            LangRes(rope_length_rigging)\n                        }\n                        Div(col-sm-8 text-left){\n                            Input(Name: lengthRigging, Type:number, Value: #item_length_rigging#)\n                        }\n                    }\n                    Div(row mt-sm){\n                        Div(col-sm-4 mt-sm text-right){\n                            LangRes(rope_previous_workout)\n                            (LangRes(rope_tkm))\n                        }\n                        Div(col-sm-8 text-left){\n                            Input(Name: previousWorkout, Type:number, Value: #item_previous_workout#)\n                        }\n                    }\n                    Div(row mt-sm){\n                        Div(col-sm-4 mt-sm text-right){\n                            LangRes(rope_diameter)\n                        }\n                        Div(col-sm-8 text-left){\n                            Input(Name: diameter, Type:number, Value: #item_diameter#)\n                        }\n                    }\n                }\n                Div(panel-footer text-right){\n                    Button(Body: $rope_back$, Page: rope_coils, Class: btn btn-default pull-left)\n                    Button(Body: #btn_title#, Page: rope_coils, Class: btn btn-primary, Contract: RopeCoilEdit)\n                }\n            }\n        }\n    }\n}",
+            "Name": "rope_coil_edit",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "\nDBFind(applications).Columns(\"id\").Where(\"name='Rope accounting' AND deleted=0\").Vars(application)\nIf(GetVar(id)){\n    DBFind(rope_coils).Where(\"id=#id#\").Vars(item)\n}\nSetTitle($rope_view$ ##id#)\nDiv(content-wrapper){\n    Div(breadcrumb){\n        LinkPage(Body: $rope_coils$, Page: rope_coils)\n        Span(/, mh)\n        Span($rope_view$, text-muted)\n    }\n    If(GetVar(id)){\n        Div(row){\n            Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){\n                Div(panel panel-primary){\n                    Div(panel-heading){\n                        LangRes(rope_data_view)\n                    }\n                    Div(panel-body){\n                        Div(row mt-sm){\n                            Div(col-sm-4 text-right text-bold){\n                                LangRes(rope_certificate)\n                            }\n                            Div(col-sm-8 text-left){\n                                #item_certificate#\n                            }\n                        }\n\n                        Div(row mt-sm){\n                            Div(col-sm-4 text-right text-bold){\n                                LangRes(rope_length_full)\n                            }\n                            Div(col-sm-8 text-left){\n                                #item_length_full#\n                            }\n                        }\n\n                        Div(row mt-sm){\n                            Div(col-sm-4 text-right text-bold){\n                                LangRes(rope_length_rigging)\n                            }\n                            Div(col-sm-8 text-left){\n                                #item_length_rigging#\n                            }\n                        }\n\n                        Div(row mt-sm){\n                            Div(col-sm-4 text-right text-bold){\n                                LangRes(rope_previous_workout)\n                            }\n                            Div(col-sm-8 text-left){\n                                #item_previous_workout#\n                            }\n                        }\n\n                        Div(row mt-sm){\n                            Div(col-sm-4 text-right text-bold){\n                                LangRes(rope_deleted)\n                            }\n                            Div(col-sm-8 text-left){\n                                #item_deleted#\n                            }\n                        }\n\n                        Div(row mt-sm){\n                            Div(col-sm-4 text-right text-bold){\n                                LangRes(rope_diameter)\n                            }\n                            Div(col-sm-8 text-left){\n                                #item_diameter#\n                            }\n                        }\n\n                        Div(row mt-sm){\n                            Div(col-sm-4 text-right text-bold){\n                                LangRes(rope_id)\n                            }\n                            Div(col-sm-8 text-left){\n                                #item_id#\n                            }\n                        }\n                    }\n                    Div(panel-footer text-left){\n                        Button(Body: $rope_back$, Page: rope_coils, Class: btn btn-default)\n                    }\n                }\n            }\n        }\n    }.Else{\n        Div(h3 text-center){\n            LangRes(rope_item_not_found)\n        }\n    }\n}",
+            "Name": "rope_coil_view",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "DBFind(applications).Columns(\"id\").Where(\"name='Rope accounting' AND deleted=0\").Vars(application)\nInclude(rope_common)\nSetVar(page_name,rope_coils)\nDiv(content-wrapper){\n    SetTitle($rope_coils$)\n    If(And(#r1#>0,#r2#>0,#r3#>0)){\n        AddToolButton(Title: $rope_create$, Page: rope_coil_edit, Icon: icon-plus)\n\n        DBFind(rope_coils).Count(count)\n        If(#page#>0){\n            SetVar(prev_page,Calculate(#page#-1)\n        }.Else{\n            SetVar(page,0).(prev_page,0)\n        }\n        SetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#count#/#per_page#)).(next_page,#last_page#)\n        If(#count#>Calculate(#off#+#per_page#)){\n            SetVar(next_page,Calculate(#page#+1)\n        }\n        Div(button-group){\n            If(#page#>0){\n                Button(Body:\"1\", Class:btn btn-default, Page:#page_name#, PageParams: \"page=0\")\n            }.Else{\n                Button(Body:\"1\", Class:btn btn-default disabled)\n            }\n            If(#page#>1){\n                Button(Body:Calculate(#prev_page#+1),Class:btn btn-default, Page:#page_name#, PageParams:\"page=#prev_page#\")\n            }\n            If(And(#page#>0,#page#<#last_page#)){\n                Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)\n            }\n            If(#next_page#<#last_page#){\n                Button(Body:Calculate(#next_page#+1),Class:btn btn-default,Page:#page_name#, PageParams:\"page=#next_page#\")\n            }\n            If(#page#<#last_page#){\n                Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:#page_name#, PageParams:\"page=#last_page#\")\n            }.ElseIf(#last_page#>0){\n                Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)\n            }\n        }\n        Div(panel panel-primary){\n            Div(panel-body){\n                Div(table-responsive){\n                    DBFind(rope_coils,src_rope_coils).Offset(#off#).Order(id).Custom(_actions){\n                        Div(text-right text-nowrap){\n                            Button(Class: btn btn-info fa fa-eye mr-sm, Page: rope_coil_view, PageParams: \"id=#id#\")\n                            Button(Class: btn btn-default fa fa-edit mr-sm, Page: rope_coil_edit, PageParams: \"id=#id#\")\n                            Button(Class: btn btn-danger fa fa-trash, Page: rope_coils, Contract: RopeCoilDelete, Params: \"id=#id#\").Alert($delete_alert$, $yes$, $no$)\n                        }\n                    }\n                    Table(src_rope_coils,\"$rope_certificate$=certificate,$rope_length_full$=length_full,$rope_length_rigging$=length_rigging,$rope_previous_workout$=previous_workout,$rope_deleted$=deleted,$rope_diameter$=diameter,=_actions\")\n                }\n            }\n        }\n    }.Else{\n        Include(rope_params_helper)\n    }\n}",
+            "Name": "rope_coils",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "DBFind(applications).Columns(\"id\").Where(\"name='Rope accounting' AND deleted=0\").Vars(application)\nSetTitle($rope_depths$)\nDBFind(rope_depths).Where(\"deleted=0 and (status_final=0 or status_started=0)\").Count(count)\nDBFind(rope_drillings,drillings).Columns(\"id,filial\").Where(\"deleted=0\").Count(d_count).Custom(_name){#filial#}\nDBFind(rope_coils,coils).Columns(\"id,certificate\").Where(\"deleted=0\").Count(c_count).Custom(_name){#certificate#}\nInclude(rope_common)\n\nSetVar(page_name,rope_depths)\nIf(#page#>0){\n    SetVar(prev_page,Calculate(#page#-1)\n}.Else{\n    SetVar(page,0).(prev_page,0)\n}\nSetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#count#/#per_page#)).(next_page,#last_page#)\nIf(#count#>Calculate(#off#+#per_page#)){\n    SetVar(next_page,Calculate(#page#+1)\n}\n\nDiv(content-wrapper){\n    If(And(#r1#>0,#r2#>0,#r3#>0)){\n        Div(text-right){\n            DBFind(buffer_data,data).Where(\"key='rope_import' and member_id=#key_id#\").Vars(buf)\n            If(And(#buf_id#>0,#count#>0)){\n                Button(Body: \"Сверить данные\", Class: btn btn-default, Page: rope_works).CompositeContract(Name:RopeDepthsUpdateWrapper, Data: #buf_value#)\n            }\n        }\n        If(And(#count#>0,Or(#c_count#>0,#d_count#>1))){\n            Form(form-group mt){\n                Div(row){\n                    Div(col-sm-5){\n                        Label(For: DrillingId){$rope_select_drilling$}\n                        Select(Name: DrillingId, Source: drillings, NameColumn: _name, ValueColumn: id, Value: #DrillingId#)\n                    }\n                    Div(col-sm-7){\n                        Label(For: CoilId){$rope_select_coil$}\n                        Div(input-group){\n                            Select(Name: CoilId, Source: coils, NameColumn: _name, ValueColumn: id, Value: #CoilId#)\n                            Div(input-group-btn){\n                                Button(Body: Span(Class:fa fa-search), Class: btn btn-default, Page: #page_name#, PageParams: \"CoilId=Val(CoilId),DrillingId=Val(DrillingId)\")\n                                If(Or(GetVar(DrillingId),GetVar(CoilId))){\n                                    Button(Body: Span(Class: fa fa-remove), Class: btn btn-default, Page: #page_name#)\n                                }\n                            }\n                        }\n\n                    }\n                }\n            }.Style(max-width:600px;)\n        }\n        If(#count#>0){\n            Div(button-group){\n                If(#page#>0){\n                    Button(Body:\"1\", Class:btn btn-default, Page:#page_name#, PageParams: \"page=0,CoilId=#CoilId#,DrillingId=#DrillingId#\")\n                }.Else{\n                    Button(Body:\"1\", Class:btn btn-default disabled)\n                }\n                If(#page#>1){\n                    Button(Body:Calculate(#prev_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: \"page=#prev_page#,CoilId=#CoilId#,DrillingId=#DrillingId#\")\n                }\n                If(And(#page#>0,#page#<#last_page#)){\n                    Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)\n                }\n                If(#next_page#<#last_page#){\n                    Button(Body:Calculate(#next_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: \"page=#next_page#,CoilId=#CoilId#,DrillingId=#DrillingId#\")\n                }\n                If(#page#<#last_page#){\n                    Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: \"page=#last_page#,CoilId=#CoilId#,DrillingId=#DrillingId#\")\n                }.ElseIf(#last_page#>0){\n                    Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)\n                }\n            }\n            Form(panel panel-primary){\n                Div(panel-body){\n                    Div(row){\n                        Div(col-md-12){\n                            Div(table-responsive){\n\n                                DBFind(rope_depths, src_depths).Custom(_started){\n                                    If(#status_started#==0){\n                                        If(And(#manufacturer_started#==#producer_started#,#producer_started#==#servicer_started#)){\n                                            ArrayToSource(src_started#id#, [#manufacturer_started#])\n                                        }.Else{\n                                            ArrayToSource(src_started#id#, [#manufacturer_started#,#producer_started#,#servicer_started#])\n                                        }\n                                        Select(Name: StartedValues, Source: src_started#id#,NameColumn: value, ValueColumn: value)\n                                        Input(Name: StartedIds, Type:hidden, Value: #id#)\n                                    }.Else{\n                                        Div(text-success){LangRes(rope_data_confirmed)}\n                                        #depth_started#\n                                        Input(Name: StartedValues, Type:hidden, Value: 0)\n                                        Input(Name: StartedIds, Type:hidden, Value: 0)\n                                    }\n                                }.Custom(_final){\n                                    If(#status_final#==0){\n                                        If(And(#manufacturer_started#==#producer_started#,#producer_started#==#servicer_started#)){\n                                            ArrayToSource(src_started#id#, [#manufacturer_started#])\n                                        }.Else{\n                                            ArrayToSource(src_final#id#, [#manufacturer_final#,#producer_final#,#servicer_final#])\n                                        }\n                                        Select(Name: FinalValues, Source: src_final#id#,NameColumn: value, ValueColumn: value)\n                                        Input(Name: FinalIds, Type:hidden, Value: #id#)\n                                    }.Else{\n                                        Div(text-success){LangRes(rope_data_confirmed)}\n                                        #depth_final#\n                                        Input(Name: FinalValues, Type:hidden, Value: 0)\n                                        Input(Name: FinalIds, Type:hidden, Value: 0)\n                                    }\n                                }.Where(\"deleted=0 and (status_final=0 or status_started=0)\").Order(\"id\").Offset(#off#)\n                                Table(src_depths,\"id,$rope_drilling_id$=drilling_id,$rope_coil_id$=coil_id,$rope_operation$=operation,$rope_depth_started$=_started,$rope_depth_final$=_final\")\n                            }\n                        }\n                    }\n                }\n                Div(panel-footer text-right){\n                    Button(Class: btn btn-primary, Body: $rope_send$, Page: rope_depths, Contract: RopeDepthsUpdate, Params: \"Id=#id#,Value=#servicer_final#,Type=final\")\n                }\n            }\n        }.ElseIf(And(#count#>0,#import_count#<2)){\n            Div(){\n                $rope_hint1$\n            }\n            Div(){\n                $rope_hint3$: #missed_r1# #missed_r2# #missed_r3#\n            }\n        }.Else{\n            Div(row){\n                Div(text-center h3){\n                    LangRes(rope_all_depths_ok)\n                }\n            }\n        }\n    }.Else{\n        Include(rope_params_helper)\n    }\n}.Style(\n    th,td {text-align:center;}\n    .radio {display:inline-block;margin-right:10px;}\n)",
+            "Name": "rope_depths",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "DBFind(applications).Columns(\"id\").Where(\"name='Rope accounting' AND deleted=0\").Vars(application)\nSetVar(left_col,\"col-sm-4 mt-sm text-right\").(right_col,\"col-sm-8 text-left\")\n\nSetVar(title,$rope_drilling_create$)\nSetVar(btn_title,$rope_create$)\nSetVar(drilling_filial,).(drilling_expedition,).(drilling_brigade,).(drilling_master,).(drilling_block_weight,).(drilling_candle_length,)\nIf(GetVar(Id)){\n    DBFind(rope_drillings).Where(\"id=#Id#\").Vars(drilling)\n    SetVar(title,$rope_drilling_edit$)\n    SetVar(btn_title,$rope_save$)\n}\nSetTitle(#title#)\nDiv(content-wrapper){\n    Div(breadcrumb){\n        LinkPage(Body: $rope_drillings$, Page: rope_drillings)\n        Span(/, mh-sm)\n        Span(#title#, text-muted)\n    }\n    Div(row){\n        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){\n            Form(panel panel-primary){\n                Div(panel-heading){\n                    LangRes($rope_data_input$)\n                }\n                Div(panel-body){\n                    If(GetVar(Id)){\n                        Input(Name: Id, Type:hidden, Value: #Id#)\n                    }\n                    Div(row mt-sm){\n                        Div(#left_col#){\n                            LangRes(rope_filial)\n                        }\n                        Div(#right_col#){\n                            Input(Name: Filial, Value: #drilling_filial#)\n                        }\n                    }\n                    Div(row mt-sm){\n                        Div(#left_col#){\n                            LangRes(rope_expedition)\n                        }\n                        Div(#right_col#){\n                            Input(Name: Expedition, Value: #drilling_expedition#)\n                        }\n                    }\n                    Div(row mt-sm){\n                        Div(#left_col#){\n                            LangRes(rope_brigade)\n                        }\n                        Div(#right_col#){\n                            Input(Name: Brigade, Value: #drilling_brigade#)\n                        }\n                    }\n                    Div(row mt-sm){\n                        Div(#left_col#){\n                            LangRes(rope_master)\n                        }\n                        Div(#right_col#){\n                            Input(Name: Master, Value: #drilling_master#)\n                        }\n                    }\n                    Div(row mt-sm){\n                        Div(#left_col#){\n                            $rope_block_weight_full$, $rope_ton$\n                        }\n                        Div(#right_col#){\n                            Input(Name: BlockWeight, Type: number, Value: #drilling_block_weight#)\n                        }\n                    }\n                    Div(row mt-sm){\n                        Div(#left_col#){\n                            LangRes(rope_candle_length)\n                        }\n                        Div(#right_col#){\n                            Input(Name: CandleLength, Type:number, Value: #drilling_candle_length#)\n                        }\n                    }\n                }\n                Div(panel-footer text-right){\n                    Button(Body: #btn_title#, Page: rope_drillings, Class: btn btn-primary, Contract: RopeDrillingEdit)\n                }\n            }\n        }\n    }\n}",
+            "Name": "rope_drilling_edit",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "DBFind(applications).Columns(\"id\").Where(\"name='Rope accounting' AND deleted=0\").Vars(application)\nInclude(rope_common)\nDBFind(rope_drillings,drillings).Count(count_drillings).Custom(_actions){\n    Div(text-right){\n        Button(Page: rope_drilling_edit, Class: btn btn-default fa fa-pencil mr-sm, PageParams: \"Id=#id#\")\n        Button(Page: rope_drilling_edit, Class: btn btn-danger fa fa-trash, Contract: RopeDrillingDelete, Params: \"Id=#id#\")\n    }\n}\nSetTitle($rope_drillings$)\nDiv(content-wrapper){\n    If(And(#r1#>0,#r2#>0,#r3#>0)){\n        AddToolButton(Title: $rope_create$, Icon: icon-plus, Page: rope_drilling_edit)\n        Div(panel panel-primary){\n            If(#count_drillings#>0){\n                Div(panel-body){\n                    Div(table-responsive){\n                        Table(drillings,\"$rope_filial$=filial,$rope_expedition$=expedition,$rope_brigade$=brigade,$rope_master$=master,$rope_block_weight$=block_weight,$rope_candle_length$=candle_length,=_actions\")\n                    }\n                }\n            }.Else{\n                Div(row){\n                    Div(text-center h3){\n                        LangRes(rope_drillings_not_found)\n                    }\n                }\n            }\n        }\n    }.Else{\n        Include(rope_params_helper)\n    }\n}",
+            "Name": "rope_drillings",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "DBFind(applications).Columns(\"id\").Where(\"name='Rope accounting' AND deleted=0\").Vars(application)\nDBFind(roles).Columns(\"role_name\").Where(\"id=#role_id#\").Vars(role)\n\nInclude(rope_common)\n\nIf(#import_count#==3){\n    SetVar(next_page,rope_depths)\n}.Else{\n    SetVar(next_page,rope_imports)\n}\n\nDBFind(rope_uploads,uploads).Custom(_actions){\n    Div(text-right){\n        If(And(#role_id#==#rid#,#key_id#==#kid#)){\n            If(#imported_at#>0){\n                Button(Body: $rope_import_again$, Page: #next_page#, Class: btn btn-default, Contract: RopeBinaryParse, Params: \"Id=#id#\")\n            }.Else{\n                Button(Body: $rope_import$, Page: #next_page#, Class: btn btn-primary, Contract: RopeBinaryParse, Params: \"Id=#id#\")\n            }\n        }\n    }\n}.Custom(_name){\n    DBFind(roles).Columns(\"role_name\").Where(\"id=#rid#\").Vars(rid)\n    Span($rope_import_from$ \"#rid_role_name#\")\n    If(#imported_at#>0){\n        Div(text-muted){\n            $rope_imported$\n        }\n    }\n}.Custom(_data){\n    DBFind(binaries,bin).Where(\"id=#binary_id#\")\n    Table(bin,\"=data\")\n}.Where(\"deleted_at=0 and finaled_at=0\").Order(\"id desc\")\n\n\nSetTitle(\"#role_role_name#: загрузка файла импорта\")\nDiv(content-wrapper){\n    Div(row){\n        Div(col-sm-10 col-sm-offset-1){\n            Div(content-wrapper){\n                If(And(#r1#>0,#r2#>0,#r3#>0)){\n                    Div(panel panel-primary){\n                        Div(panel-heading){$rope_uploads$}\n                        Div(panel-body){\n                            If(#load_count#<3){\n                                Div(text-muted text-center){\n                                    Div(){\n                                        $rope_hint1$\n                                    }\n                                    Div() {\n                                        $rope_hint2$: '#rid1_role_name#', '#rid2_role_name#', '#rid3_role_name#'\n                                    }\n                                }\n                                Div(text-muted text-center){\n                                    $rope_hint3$: #missed_r1# #missed_r2# #missed_r3#\n                                }\n                            }\n                            Div(table-responsive){\n                                Table(uploads, \"=_name,=_data,=_actions\")\n                            }\n                        }\n                        Div(panel-footer text-right){\n                            If(#import_count#<3){\n                                Button(Body: Span(Class:fa fa-upload) $rope_file_add$, Class: btn btn-primary, Page: rope_upload).Popup(40, \"Выбор файла\")\n                            }.Else{\n                                Button(Body: Span(Class:fa fa-upload) $rope_file_add$, Class: btn btn-default, Page: rope_upload).Popup(40, \"Выбор файла\")\n                                DBFind(rope_depths).Where(\"deleted=0 and (status_final=0 or status_started=0)\").Count(count)\n                                DBFind(buffer_data,data).Where(\"key='rope_import' and member_id=#key_id#\").Vars(buf)\n                                If(#buf_id#>0){\n                                    Button(Body: \"Проверить конфликты\", Class: btn btn-primary, Page: rope_works).CompositeContract(Name:RopeDepthsUpdateWrapper, Data: #buf_value#)\n                                }\n                            }\n                        }\n                    }\n                }.Else{\n                    Include(rope_params_helper)\n                }\n            }\n        }\n    }.Style(\n        thead {display:none}\n    )\n}",
+            "Name": "rope_imports",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "Form(){\n    Div(form-group){\n        Input(Name: Data, Type: file)\n    }\n    Div(text-left){\n        Button(Body: $rope_cancel$, Page: rope_imports, Class: btn btn-default)\n        Button(Body: $rope_upload$, Page: rope_imports, Class: pull-right btn btn-primary, Contract: RopeUpload)\n    }\n}",
+            "Name": "rope_upload",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "DBFind(applications).Columns(\"id\").Where(\"name='Rope accounting' AND deleted=0\").Vars(application)\nSetTitle($rope_works$)\nSetVar(page_name,rope_works)\n\nInclude(rope_common)\nDiv(content-wrapper){\n    If(And(#r1#>0,#r2#>0,#r3#>0)){\n        SetVar(where,\"deleted=0\")\n        If(GetVar(CoilId)!=\"\"){\n            SetVar(where,\"#where# and coil_id=#CoilId#\")\n        }.Else{\n            SetVar(CoilId,)\n        }\n        If(GetVar(DrillingId)!=\"\"){\n            SetVar(where,\"#where# and drilling_id=#DrillingId#\")\n        }.Else{\n            SetVar(DrillingId,)\n        }\n        DBFind(rope_works).Count(count).Where(#where#)\n\n        DBFind(rope_drillings,drillings).Columns(\"id,filial\").Where(\"deleted=0\").Count(d_count).Custom(_name){#filial#}\n        DBFind(rope_coils,coils).Columns(\"id,certificate\").Where(\"deleted=0\").Count(c_count).Custom(_name){#certificate#}\n        DBFind(rope_depths).Where(\"deleted=0 and (status_final=0 or status_started=0)\").Count(error_count)\n        Div(text-right){\n            If(And(#error_count#==0,Or(#import_count#>=3,#finaled_count#>=3))){\n                Button(Body: $rope_works_calculate$, Class: btn btn-default, Page: #page_name#, Contract: RopeWorksCalculate, PageParams: \"CoilId=#CoilId#,DrillingId=#DrillingId#\")\n            }\n        }\n\n        If(#page#>0){\n            SetVar(prev_page,Calculate(#page#-1)\n        }.Else{\n            SetVar(page,0).(prev_page,0)\n        }\n        SetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#count#/#per_page#)).(next_page,#last_page#)\n        If(#count#>Calculate(#off#+#per_page#)){\n            SetVar(next_page,Calculate(#page#+1)\n        }\n        If(Or(#c_count#>0,#d_count#>1)){\n            Form(form-group mt){\n                Div(row){\n                    Div(col-sm-5){\n                        Label(For: DrillingId){$rope_select_drilling$}\n                        Select(Name: DrillingId, Source: drillings, NameColumn: _name, ValueColumn: id, Value: #DrillingId#)\n                    }\n                    Div(col-sm-7){\n                        Label(For: CoilId){$rope_select_coil$}\n                        Div(input-group){\n                            Select(Name: CoilId, Source: coils, NameColumn: _name, ValueColumn: id, Value: #CoilId#)\n                            Div(input-group-btn){\n                                Button(Body: Span(Class:fa fa-search), Class: btn btn-default, Page: #page_name#, PageParams: \"CoilId=Val(CoilId),DrillingId=Val(DrillingId)\")\n                                If(Or(GetVar(DrillingId),GetVar(CoilId))){\n                                    Button(Body: Span(Class: fa fa-remove), Class: btn btn-default, Page: #page_name#)\n                                }\n                            }\n                        }\n\n                    }\n                }\n            }.Style(max-width:600px;)\n        }\n        If(#count#>0){\n            Div(button-group){\n                If(#page#>0){\n                    Button(Body:\"1\", Class:btn btn-default, Page:#page_name#, PageParams: \"page=0,CoilId=#CoilId#,DrillingId=#DrillingId#\")\n                }.Else{\n                    Button(Body:\"1\", Class:btn btn-default disabled)\n                }\n                If(#page#>1){\n                    Button(Body:Calculate(#prev_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: \"page=#prev_page#,CoilId=#CoilId#,DrillingId=#DrillingId#\")\n                }\n                If(And(#page#>0,#page#<#last_page#)){\n                    Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)\n                }\n                If(#next_page#<#last_page#){\n                    Button(Body:Calculate(#next_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: \"page=#next_page#,CoilId=#CoilId#,DrillingId=#DrillingId#\")\n                }\n                If(#page#<#last_page#){\n                    Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:#page_name#, PageParams: \"page=#last_page#,CoilId=#CoilId#,DrillingId=#DrillingId#\")\n                }.ElseIf(#last_page#>0){\n                    Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)\n                }\n            }\n            SetVar(ask,?)\n            Div(panel panel-primary){\n                Div(panel-body){\n                    Div(table-responsive){\n                        DBFind(rope_works,works).Where(#where#).Offset(#off#).Order(id).Custom(_date){\n                            Div(text-nowrap){\n                                DateTime(#operation_date#, DD-MM-YYYY)\n                            }\n                        }.Custom(_type){\n                            Div(text-nowrap){\n                                #operation_type#\n                            }\n                        }.Custom(_wb){\n                            SetVar(wb,Calculate(#work_bypass#, Prec:0))\n                            If(#wb#!=\"wrong expression\"){\n                                #wb#\n                            }.Else{\n                                #ask#\n                            }\n                        }.Custom(_ws){\n                            SetVar(ws,Calculate(#work_started#, Prec:0))\n                            If(#ws#!=\"wrong expression\"){\n                                #ws#\n                            }.Else{\n                                #ask#\n                            }\n                        }.Custom(_wf){\n                            SetVar(wf,Calculate(#work_final#, Prec:0))\n                            If(#wf#!=\"wrong expression\"){\n                                #wf#\n                            }.Else{\n                                #ask#\n                            }\n                        }.Custom(_wo){\n                            SetVar(wo,Calculate(#work_operation#, Prec:0))\n                            If(#wo#!=\"wrong expression\"){\n                                #wo#\n                            }.Else{\n                                #ask#\n                            }\n                        }.Custom(_wc){\n                            SetVar(wc,Calculate(#work_coil#, Prec:0))\n                            If(#wc#!=\"wrong expression\"){\n                                #wc#\n                            }.Else{\n                                #ask#\n                            }\n                        }.Custom(_d1){\n                            If(#depth_started#<0){\n                                #ask#\n                            }.Else{\n                                #depth_started#\n                            }\n                        }.Custom(_d2){\n                            If(#depth_final#<0){\n                                #ask#\n                            }.Else{\n                                #depth_final#\n                            }\n                        }\n                        Table(works,\"$rope_drilling_id$=drilling_id,$rope_coil_id$=coil_id,$rope_operation$=operation,$rope_operation_date$=_date,$rope_operation_type$=_type,$rope_depth_started$=_d1,$rope_depth_final$=_d2,$rope_weight_started$=weight_started,$rope_weight_final$=weight_final,$rope_work_started$=_ws, $rope_work_final$=_wf, $rope_work_operation$=_wo, $rope_work_bypass$=_wb, $rope_work_coil$=_wc,$rope_bypass_bracing$=bypass_bracing\")\n                    }\n                }\n            }\n        }.Else{\n            Div(panel panel-primary){\n                Div(panel-body){\n                    Div(h3 text-center){\n                        $rope_data_not_loaded$\n                    }\n                }\n                Div(panel-footer text-right){\n                    Button(Body: Span(Class:fa fa-upload) $rope_upload$, Page: rope_imports, Class: btn btn-primary)\n                }\n            }\n        }\n    }.Else{\n        Include(rope_params_helper)\n    }\n}",
+            "Name": "rope_works",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract RopeRolesCondition {\n    data {}\n\n    conditions {\n        var appId int rid1 rid2 rid3 string\n        appId = Int(DBFind(\"applications\").Columns(\"id\").Where(\"name='Rope accounting'\").One(\"id\"))\n        rid1 = Int(AppParam(appId, \"rope_manufacturer_role_id\"))\n        rid2 = Int(AppParam(appId, \"rope_producer_role_id\"))\n        rid3 = Int(AppParam(appId, \"rope_servicer_role_id\"))\n        if rid1 == 0 {\n            warning \"'rope_manufacturer_role_id' not set\"\n        }\n        if rid2 == 0 {\n            warning \"'rope_producer_role_id' not set\"\n        }\n        if rid3 == 0 {\n            warning \"'rope_servicer_role_id' not set\"\n        }\n        if rid1 == rid2 || rid1 == rid3 || rid2 == rid3 {\n            warning \"Invalid set roles\"\n        }\n        if !($role_id == rid1 || $role_id == rid2 || $role_id == rid3){\n            warning \"Your role not allowed for this action\"\n        }\n    }\n}",
+            "Name": "RopeRolesCondition",
+            "Type": "contracts"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract RopeCoilDelete {\n    data {\n        id int\n    }\n    conditions {\n        if !DBFind(\"rope_coils\").Where(\"id=? and deleted=0\", $id).One(\"id\") {\n            warning \"Record not found\"\n        }\n    }\n    action {\n        DBUpdate(\"rope_coils\", $id, \"deleted\", 1)\n    }\n}",
+            "Name": "RopeCoilDelete",
+            "Type": "contracts"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract RopeCoilEdit {\n    data {\n        id string \"optional\"\n        certificate string\n        lengthFull int\n        lengthRigging int\n        previousWorkout int\n        deleted int\n        diameter int\n    }\n    conditions {\n        $id = Int($id)\n        if $id > 0{\n            if !DBFind(\"rope_coils\").Where(\"id=?\", $id).One(\"id\") {\n                warning \"Record not found\"\n            }\n        }\n    }\n    action {\n        if $id > 0{\n            DBUpdate(\"rope_coils\", $id, \"certificate,length_full,length_rigging,previous_workout,deleted,diameter\",$certificate,$lengthFull,$lengthRigging,$previousWorkout,$deleted,$diameter)\n        }else{\n            DBInsert(\"rope_coils\", \"certificate,length_full,length_rigging,previous_workout,deleted,diameter\",$certificate,$lengthFull,$lengthRigging,$previousWorkout,$deleted,$diameter)\n        }\n    }\n}",
+            "Name": "RopeCoilEdit",
+            "Type": "contracts"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract RopeBinaryParse {\n    data {\n        Id string \"optional\"\n    }\n\n    func appendAll(a array, b ...)array{\n        var i lena lenb int\n        lena = Len(a)\n        lenb = Len(b)\n        while i<lenb{\n            a = Append(a, b[i])\n            i=i+1\n        }\n        return a\n    }\n    func findAll(table, where, columns string) array {\n        var full parts array limit offset int\n        limit = 250\n        while true {\n            parts = DBFind(table).Where(where).Columns(columns).Offset(offset).Limit(limit)\n            if Len(parts) > 0 {\n                if Len(full) == 0 {\n                    full = parts\n                }else{\n                    full = appendAll(full, parts...)\n                }\n            }else{\n                break\n            }\n            offset = offset+limit\n        }\n        return full\n    }\n    func parseIdx(cells array) map{\n        var idx map i cellsLen int s string\n        // default idx\n        idx[\"operation_date\"] = 3\n        idx[\"operation\"] = 4\n        idx[\"operation_type\"] = 5\n        idx[\"depth_started\"] = 6\n        idx[\"depth_final\"] = 7\n        idx[\"weight_started\"] = 9\n        idx[\"weight_final\"] = 10\n        idx[\"bypass_bracing\"] = 17\n        cellsLen = Len(cells)\n        while i < cellsLen{\n            // correction idx\n            s = ToLower(TrimSpace(cells[i]))\n            if HasPrefix(s, \"дата\") && Contains(s,\"операции\"){\n                idx[\"operation_date\"] = i\n            }elif HasPrefix(s, \"№\") && Contains(s,\"операции\"){\n                idx[\"operation\"] = i\n            }elif HasPrefix(s, \"вид\") && Contains(s,\"работ\") && Contains(s,\"рейса\"){\n                idx[\"operation_type\"] = i\n            }elif HasPrefix(s, \"глубина\") && Contains(s,\"начала\"){\n                idx[\"depth_started\"] = i\n            }elif HasPrefix(s, \"глубина\") && Contains(s,\"конце\") {\n                idx[\"depth_final\"] = i\n            }elif HasPrefix(s, \"вес\") && Contains(s,\"крюке\") && Contains(s,\"начале\"){\n                idx[\"weight_started\"] = i\n            }elif HasPrefix(s, \"вес\") && Contains(s,\"крюке\") && Contains(s,\"конце\"){\n                idx[\"weight_final\"] = i\n            }elif HasPrefix(s, \"перепуск\") && Contains(s,\"перетяжка\"){\n                idx[\"bypass_bracing\"] = i\n            }elif s == \"примечание\" {\n                break\n            }\n            i=i+1\n        }\n        return idx\n    }\n    func parseWorks(anchor string, rows array) array {\n        var i lenRows lenRow c int row resultRows selectedRows array canCopy bool\n        lenRows = Len(rows)\n        lenRow = 18 //idx[\"bypass_bracing\"] = 17\n        while i < lenRows {\n            var notEmptyCellCount int\n            row = rows[i]\n            c = 0\n            while c < lenRow {\n                if Size(row[c]) > 0{\n                    notEmptyCellCount = notEmptyCellCount+1\n                }\n                if anchor == row[c] {\n                    canCopy = true\n                }\n                c = c+1\n            }\n            if canCopy && notEmptyCellCount > 0 {\n                selectedRows = Append(selectedRows, rows[i])\n            }\n            if canCopy && notEmptyCellCount == 0 {\n                break\n            }\n            i = i+1\n        }\n        var idx map date string\n        idx = parseIdx(selectedRows[0])\n        lenRows = Len(selectedRows)\n        i = 1\n        while i < lenRows {\n            var work map\n            row = selectedRows[i]\n            work[\"depth_final\"] = Int(row[idx[\"depth_final\"]])\n            work[\"depth_started\"] = Int(row[idx[\"depth_started\"]])\n            work[\"weight_final\"] = Int(row[idx[\"weight_final\"]])\n            work[\"weight_started\"] = Int(row[idx[\"weight_started\"]])\n            work[\"bypass_bracing\"] = Int(row[idx[\"bypass_bracing\"]])\n            work[\"operation_type\"] = row[idx[\"operation_type\"]]\n            date = row[idx[\"operation_date\"]]\n            if $asTimestamp {\n                if Contains(date, \"-\"){\n                    $asTimestamp = false\n                }\n            }\n            if $asTimestamp{\n                work[\"operation_date\"] = Int(date)\n                if work[\"operation_date\"] != 0{\n                    // https://stackoverflow.com/a/6154953\n                    work[\"operation_date\"] = (work[\"operation_date\"] - 25569) * 86400\n                }\n            }else{\n                if date != \"\"{\n                    work[\"operation_date\"] = date\n                }else{\n                    work[\"operation_date\"] = \"NULL\"\n                }\n            }\n            work[\"operation\"] = Int(row[idx[\"operation\"]])\n            if work[\"operation\"] {\n                // stored data row only if has operation\n                resultRows = Append(resultRows, work)\n            }\n            i=i+1\n        }\n        return resultRows\n    }\n    func parseCoil(rows array) map {\n        var coil map i int row array\n        i = 7 // start coil info\n        while i < 9 { // end coil info\n            row = rows[i]\n            if i == 7 {\n                coil[\"certificate\"] = row[6]\n                coil[\"diameter\"] = Int(row[9])\n            }elif i == 8 {\n                coil[\"length_full\"] = Int(row[6])\n                coil[\"length_rigging\"] = Int(row[7])\n                coil[\"previous_workout\"] = Int(row[17])\n            }\n            i = i+1\n        }\n        return coil\n    }\n    func parseDrilling(rows array) map {\n        var drilling map i int row array\n        i = 3 // start drilling info\n        while i < 9 { // end drilling info\n            row = rows[i]\n            if i == 3 {\n                drilling[\"filial\"] = row[6]\n            }elif i == 4 {\n                drilling[\"expedition\"] = row[6]\n            }elif i == 5 {\n                drilling[\"brigade\"] = row[6]\n            }elif i == 6 {\n                drilling[\"master\"] = row[6]\n                drilling[\"block_weight\"] = Int(row[17])\n            }elif i == 7 {\n                if row[17] == \"\"{\n                    drilling[\"candle_length\"] = 0.0\n                }else{\n                    drilling[\"candle_length\"] = Float(row[17])\n                }\n            }\n            i = i+1\n        }\n        return drilling\n    }\n    func getMapValues(m map, keys array) array {\n        var values array i keysLen int key string\n        keysLen = Len(keys)\n        while i < keysLen {\n            key = keys[i]\n            if Contains(key, \" \"){\n                var splittedKey array\n                splittedKey = Split(key, \" \")\n                key = splittedKey[1]\n            }\n            values = Append(values, m[key])\n            i=i+1\n        }\n        return values\n    }\n    func storeCoil(coil map) int {\n        var id int\n        id = Int(DBFind(\"rope_coils\").Where(\"certificate=? and diameter=?\", coil[\"certificate\"], coil[\"diameter\"]).One(\"id\"))\n        if id == 0{\n            var keys values array\n            keys = GetMapKeys(coil)\n            values = getMapValues(coil, keys)\n            id = DBInsert(\"rope_coils\", Join(keys, \",\"), values...)\n        }\n        return id\n    }\n    func storeDrilling(drilling map) int {\n        var id int\n        id = Int(DBFind(\"rope_drillings\").Where(\"filial=? and expedition=? and brigade=?\", drilling[\"filial\"], drilling[\"expedition\"], drilling[\"brigade\"]).One(\"id\"))\n        if id == 0{\n            var keys values array\n            keys = GetMapKeys(drilling)\n            values = getMapValues(drilling, keys)\n            id = DBInsert(\"rope_drillings\", Join(keys, \",\"), values...)\n        }\n        return id\n    }\n    func storeWorksDepths(coilId, drillingId int, works array) {\n        var i worksLen int workId depthId fieldsWork fieldsDepth depthWorkKeys fields string values array work map\n        worksLen = Len(works)\n        if $asTimestamp{\n            fieldsWork = \"operation_type,weight_final,weight_started,bypass_bracing,timestamp operation_date,operation\"\n        }else{\n            fieldsWork = \"operation_type,weight_final,weight_started,bypass_bracing,operation_date,operation\"\n        }\n\n        fieldsDepth = Sprintf(\"%v,%v\", $startedField, $finalField)\n        while i < worksLen {\n            work = works[i]\n            workId = DBFind(\"rope_works\").Columns(\"id\").Where(\"coil_id=? and drilling_id=? and operation=?\", coilId, drillingId, work[\"operation\"]).One(\"id\")\n            if !workId {\n                values = getMapValues(work, Split(fieldsWork, \",\"))\n                values = appendAll(values,drillingId,coilId, -1, -1)\n                fields = fieldsWork + \",drilling_id,coil_id,depth_started,depth_final\"\n                DBInsert(\"rope_works\", fields, values...)\n            }\n            depthId = DBFind(\"rope_depths\").Columns(\"id\").Where(\"coil_id=? and drilling_id=? and operation=?\", coilId, drillingId, work[\"operation\"]).One(\"id\")\n            if !depthId {\n                depthId = DBInsert(\"rope_depths\", \"coil_id,drilling_id,operation,manufacturer_final,manufacturer_started,producer_final,producer_started,servicer_final,servicer_started\", coilId, drillingId, work[\"operation\"],-1,-1,-1,-1,-1,-1)\n            }\n\n            values = getMapValues(work, Split(\"depth_started,depth_final\", \",\"))\n            DBUpdate(\"rope_depths\", Int(depthId), fieldsDepth, values...)\n\n            i=i+1\n        }\n    }\n    func updateDepths(coilId, drillingId int) {\n        var startedIds startedValues finalIds finalValues depths array i depthsLen int depth map columns string\n        columns = Sprintf(\"id,%v,%v\", $startedField, $finalField)\n        depths = findAll(\"rope_depths\", Sprintf(\"coil_id=%v and drilling_id=%v and operation>0\", coilId, drillingId), columns)\n        depthsLen = Len(depths)\n        var buf array m map\n        while i < depthsLen {\n            depth = depths[i]\n            startedIds = Append(startedIds, depth[\"id\"])\n            finalIds = Append(finalIds, depth[\"id\"])\n            startedValues = Append(startedValues, depth[$startedField])\n            finalValues = Append(finalValues, depth[$finalField])\n            i=i+1\n        }\n        m[\"StartedIds\"] = JSONEncode(startedIds)\n        m[\"StartedValues\"] = JSONEncode(startedValues)\n        m[\"FinalIds\"] = JSONEncode(finalIds)\n        m[\"FinalValues\"] = JSONEncode(finalValues)\n        buf = Append(buf, m)\n\n        buffer_Manager(\"Action,Key,Val\", \"set\", \"rope_import\", JSONEncode(buf))\n        // RopeDepthsUpdate(\"StartedIds,StartedValues,FinalIds,FinalValues\", startedIds, startedValues, finalIds, finalValues)\n    }\n    func updateUpload(coilId, drillingId int){\n        var fields values array\n        $inf[\"coil_id\"] = coilId\n        $inf[\"drilling_id\"] = drillingId\n        $inf[\"imported_at\"] = $time\n        fields = GetMapKeys($inf)\n        values = getMapValues($inf, fields)\n        DBUpdate(\"rope_uploads\", Int($inf[\"id\"]), Join(fields, \",\"), values...)\n    }\n\n    conditions {\n        $Id = Int($Id)\n        if $Id == 0 {\n            $Id = Int(DBFind(\"buffer_data\").Where(\"key='rope_upload' and member_id=?\", $key_id).One(\"value\"))\n        }\n        $inf = DBFind(\"rope_uploads\").Where(\"id=?\",$Id).Row()\n        if !$inf {\n            warning \"Uploaded file not found\"\n        }\n        $asTimestamp = true\n        $binId = Int(DBFind(\"binaries\").Where(\"id=?\", $inf[\"binary_id\"]).One(\"id\"))\n        if $binId == 0 {\n            warning \"Binary file not found\"\n        }\n        RopeRolesCondition()\n        var appId mid sid pid int\n        appId = Int(DBFind(\"applications\").Columns(\"id\").Where(\"name='Rope accounting'\").One(\"id\"))\n        mid = Int(AppParam(appId, \"rope_manufacturer_role_id\"))\n        sid = Int(AppParam(appId, \"rope_servicer_role_id\"))\n        pid = Int(AppParam(appId, \"rope_producer_role_id\"))\n\n        if $role_id == mid {\n            $startedField = \"manufacturer_started\"\n            $finalField = \"manufacturer_final\"\n\n        }elif $role_id == sid {\n            $startedField = \"servicer_started\"\n            $finalField = \"servicer_final\"\n\n        }elif $role_id == pid {\n            $startedField = \"producer_started\"\n            $finalField = \"producer_final\"\n        }\n    }\n    action {\n        var line count sheet drillingId coilId int rows works array coil drilling map\n        sheet = 1\n        count = Int(Str(GetRowsCountXLSX($binId, sheet)))\n        rows = GetDataFromXLSX($binId, line, count, sheet)\n\n        coil = parseCoil(rows)\n        drilling = parseDrilling(rows)\n        works = parseWorks(\"Месторождение\", rows)\n\n        coilId = storeCoil(coil)\n        drillingId = storeDrilling(drilling)\n\n        storeWorksDepths(coilId, drillingId, works)\n        updateDepths(coilId, drillingId)\n        updateUpload(coilId, drillingId)\n    }\n}",
+            "Name": "RopeBinaryParse",
+            "Type": "contracts"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract RopeDepthsUpdate {\n    data {\n        StartedIds array\n        StartedValues array\n        FinalIds array\n        FinalValues array\n    }\n\n    func absF(n float) float{\n        if n < 0{\n            return -1 * n\n        }\n        return n\n    }\n    func isEqual(a, b int) bool {\n        var res bool avg float\n        res = true\n        if $errorRate == 0 {\n            if a != b{\n                res = false\n                break\n            }\n        }else{\n            avg = Float(a+b) / 2\n            if avg != 0{\n                res = absF(a-avg)/avg <= $errorRate && absF(b-avg)/avg <= $errorRate\n            }\n        }\n        return res\n    }\n    func isSameDepth(m map, depthType string) bool{\n        var a b c int\n        if depthType == \"started\" {\n            a = Int(m[\"manufacturer_started\"])\n            b = Int(m[\"servicer_started\"])\n            c = Int(m[\"producer_started\"])\n        }else{\n            a = Int(m[\"manufacturer_final\"])\n            b = Int(m[\"servicer_final\"])\n            c = Int(m[\"producer_final\"])\n        }\n        if a < 0 || b < 0 || c < 0 {\n            return false\n        }\n        if 0 == a && a == b && b == c && c == a {\n            return true\n        }\n        return isEqual(a,b) || isEqual(a,c) || isEqual(b,c)\n    }\n    func notesRefresh(did, cid string){\n        var depthsLen i notesLen int notes array note map\n        depthsLen = Len(DBFind(\"rope_depths\").Where(\"deleted=0 and drilling_id=? and coil_id=? and (status_started=0 or status_final=0) and operation>0\", did, cid))\n        notes = DBFind(\"notifications\").Where(\"page_params->drilling_id=? and page_params->coil_id=?\", did, cid)\n        notesLen = Len(notes)\n\n        if depthsLen == 0 && notesLen > 0{\n            // closing notes\n            while i < notesLen {\n                note = notes[i]\n                notifications_Close(\"notific_id\", Int(note[\"id\"]))\n                i = i + 1\n            }\n        }else{\n            if depthsLen > 0 && notesLen == 0{\n                // sending notes\n                var rid closureType sender int textHeader pageName string params map\n                closureType = 2\n                sender = 1\n                textHeader = \"Need your action: correct depths\"\n                pageName = \"rope_depths\"\n                params[\"drilling_id\"] = did\n                params[\"coil_id\"] = cid\n                params = JSONEncode(params)\n                rid = Int(AppParam($appId, \"rope_manufacturer_role_id\"))\n                notifications_Send(\"rid,closure_type,sender,text_header,page_name,params_map\", rid, closureType, sender, textHeader, pageName, params)\n\n                rid = Int(AppParam($appId, \"rope_servicer_role_id\"))\n                notifications_Send(\"rid,closure_type,sender,text_header,page_name,params_map\", rid, closureType, sender, textHeader, pageName, params)\n\n                rid = Int(AppParam($appId, \"rope_producer_role_id\"))\n                notifications_Send(\"rid,closure_type,sender,text_header,page_name,params_map\", rid, closureType, sender, textHeader, pageName, params)\n            }\n        }\n    }\n    func finaledImports(did, cid string){\n        var uploads array i lenUploads int upload roles map\n        uploads = DBFind(\"rope_uploads\").Where(\"drilling_id=? and coil_id=? and deleted_at=0 and imported_at>0 and finaled_at=0\", did, cid)\n        lenUploads = Len(uploads)\n        while i<lenUploads{\n            upload = uploads[i]\n            roles[Str(upload[\"rid\"])] = 1\n            i=i+1\n        }\n        var count int\n        count = Len(GetMapKeys(roles))\n        if count >=3 {\n            i=0\n            while i<lenUploads{\n                upload = uploads[i]\n                DBUpdate(\"rope_uploads\", Int(upload[\"id\"]), \"finaled_at\", $time)\n                i=i+1\n            }\n        }\n    }\n    func calculateValues(type string){\n        Println(\"calculateValues\", type)\n        var ids values array i lenIds int depthField fields workField string\n        depthField = Sprintf(\"%v_%v\", $userRoles[Str($role_id)], type)\n\n        if type == \"started\"{\n            ids = $StartedIds\n            values = $StartedValues\n            fields = Sprintf(\"status_started,depth_started,%v\", depthField)\n            workField = \"depth_started\"\n        }\n        if type == \"final\"{\n            ids = $FinalIds\n            values = $FinalValues\n            fields = Sprintf(\"status_final,depth_final,%v\", depthField)\n            workField = \"depth_final\"\n        }\n        lenIds = Len(ids)\n        var id value int row map did cid where string\n        while i < lenIds {\n            id = Int(ids[i])\n            value = Int(values[i])\n            if id > 0{\n                row = DBFind(\"rope_depths\").Where(\"id=?\", id).Row()\n                if !(did == row[\"drilling_id\"] || cid == row[\"coil_id\"]){\n                    did = row[\"drilling_id\"]\n                    cid = row[\"coil_id\"]\n                }\n                row[depthField] = value\n                if isSameDepth(row, type) {\n                    var workId int\n                    workId = Int(DBFind(\"rope_works\").Where(\"coil_id=? and drilling_id=? and operation=?\", cid, did, row[\"operation\"]).One(\"id\"))\n                    if workId > 0{\n                        DBUpdate(\"rope_works\", workId, workField, value)\n                        DBUpdate(\"rope_depths\", id, fields, 1, value, value)\n                    }\n                }else{\n                    DBUpdate(\"rope_depths\", id, depthField, value)\n                }\n            }\n            i = i + 1\n        }\n        var drillings coils array d c lenDrillings lenCoils int drilling coil map\n        drillings = DBFind(\"rope_drillings\").Where(\"deleted=0\").Columns(\"id\")\n        coils = DBFind(\"rope_coils\").Where(\"deleted=0\").Columns(\"id\")\n        lenCoils = Len(coils)\n        lenDrillings = Len(drillings)\n        while d < lenDrillings{\n            drilling = drillings[d]\n            while c < lenCoils{\n                coil = coils[c]\n                notesRefresh(drilling[\"id\"], coil[\"id\"])\n                finaledImports(drilling[\"id\"], coil[\"id\"])\n                c=c+1\n            }\n            d=d+1\n        }\n    }\n\n    conditions {\n        RopeRolesCondition()\n        $appId = Int(DBFind(\"applications\").Columns(\"id\").Where(\"name='Rope accounting'\").One(\"id\"))\n        var userRoles map\n        userRoles[AppParam($appId, \"rope_manufacturer_role_id\")] = \"manufacturer\"\n        userRoles[AppParam($appId, \"rope_servicer_role_id\")] = \"servicer\"\n        userRoles[AppParam($appId, \"rope_producer_role_id\")] = \"producer\"\n        $userRoles = userRoles\n        $errorRate = Float(AppParam($appId, \"rope_depth_error_rate\"))\n    }\n\n    action {\n        calculateValues(\"started\")\n        calculateValues(\"final\")\n    }\n}",
+            "Name": "RopeDepthsUpdate",
+            "Type": "contracts"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract RopeDrillingDelete {\n    data {\n        Id int\n    }\n\n    conditions {\n        if !DBFind(\"rope_drillings\").Where(\"id=?\", $Id).One(\"id\"){\n            warning \"The drilling not found\"\n        }\n    }\n    action {\n        DBUpdate(\"rope_drillings\", $Id, \"deleted\", 1)\n    }\n}",
+            "Name": "RopeDrillingDelete",
+            "Type": "contracts"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract RopeDrillingEdit {\n    data {\n        Id string \"optional\"\n        Filial string\n        Expedition string\n        Brigade string\n        Master string \"optional\"\n        BlockWeight int\n        CandleLength float\n    }\n\n    conditions {\n        $Id = Int($Id)\n        var appId int\n        appId = Int(DBFind(\"applications\").Columns(\"id\").Where(\"name='Rope accounting'\").One(\"id\"))\n        if DBFind(\"rope_drillings\").Where(\"deleted=0 and filial=?\",$Filial).One(\"id\"){\n            warning \"The filial name of the drill is already in use, please specify another name\"\n        }\n        if $Id > 0 {\n            if !DBFind(\"rope_drillings\").Where(\"id=?\", $Id).One(\"id\"){\n                warning \"The drilling not found\"\n            }\n        }\n    }\n    action {\n        if $Id > 0 {\n            DBUpdate(\"rope_drillings\", $Id, \"filial,expedition,brigade,master,block_weight,candle_length\", $Filial, $Expedition, $Brigade, $Master, $BlockWeight, $CandleLength)\n        }else{\n            DBInsert(\"rope_drillings\", \"filial,expedition,brigade,master,block_weight,candle_length\", $Filial, $Expedition, $Brigade, $Master, $BlockWeight, $CandleLength)\n        }\n    }\n}",
+            "Name": "RopeDrillingEdit",
+            "Type": "contracts"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract RopeDepthsUpdateWrapper {\n    data {\n        StartedIds string\n        StartedValues string\n        FinalIds string\n        FinalValues string\n    }\n\n    conditions {}\n\n    action {\n        RopeDepthsUpdate(\n            \"StartedIds,StartedValues,FinalIds,FinalValues\",\n            JSONDecode($StartedIds),\n            JSONDecode($StartedValues),\n            JSONDecode($FinalIds),\n            JSONDecode($FinalValues)\n        )\n    }\n}",
+            "Name": "RopeDepthsUpdateWrapper",
+            "Type": "contracts"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract RopeUpload {\n    data {\n        Data string \"file\"\n    }\n    func pack(items ...)array{\n        return items\n    }\n    func updateUpload(bid int, name string){\n        var inf map fields string values array\n        inf = DBFind(\"rope_uploads\").Where(\"binary_id=?\", bid).Row()\n        fields = \"kid,rid,file_name,binary_id,uploaded_at\"\n        values = pack($key_id, $role_id, name, bid, $time)\n        if inf {\n            DBUpdate(\"rope_uploads\", bid, fields, values...)\n        }else{\n            DBInsert(\"rope_uploads\", fields, values...)\n        }\n    }\n    conditions {\n        $appId = Int(DBFind(\"applications\").Columns(\"id\").Where(\"name='Rope accounting'\").One(\"id\"))\n        RopeRolesCondition()\n    }\n    action {\n        var name string bid finaled_count int \n        finaled_count = Len(DBFind(\"rope_uploads\").Where(\"finaled_at>0\"))/3\n        name = Sprintf(\"rid_%v_%v-import.xlsm\", $role_id, finaled_count)\n        bid = @1UploadBinary(\"Name,Data,ApplicationId,DataMimeType\", name, $Data, $appId, $DataMimeType)\n\n        updateUpload(bid, name)\n    }\n}",
+            "Name": "RopeUpload",
+            "Type": "contracts"
+        },
+        {
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract RopeWorksCalculate {\n    data {}\n    func extend(a, b array)array{\n        var i lena lenb int\n        lena = Len(a)\n        lenb = Len(b)\n        while i<lenb{\n            a[lena+i] = b[i]\n            i=i+1\n        }\n        return a\n    }\n    func findAll(table, where string) array {\n        var full parts array limit offset int\n        limit = 250\n        while true {\n            parts = DBFind(table).Where(where).Offset(offset).Limit(limit)\n            if Len(parts) > 0 {\n                if Len(full) == 0 {\n                    full = parts\n                }else{\n                    full = extend(full, parts)\n                }\n            }else{\n                break\n            }\n            offset = offset+limit\n        }\n        return full\n    }\n    func getAbsFloat(n float) float{\n        if n < 0{\n            return -1 * n\n        }\n        return n\n    }\n    func safeFloat(num ...)float{\n        var res float\n        if Len(num) != 0{\n            if num[0] {\n                res = Float(num[0])\n            }\n        }\n        return res\n    }\n    func getMapValues(m map, keys array) array {\n        var values array i keysLen int key string\n        keysLen = Len(keys)\n        while i < keysLen {\n            key = keys[i]\n            values = Append(values, m[key])\n            i=i+1\n        }\n        return values\n    }\n    conditions {\n        RopeRolesCondition()\n        $appId = Int(DBFind(\"applications\").Columns(\"id\").Where(\"name='Rope accounting'\").One(\"id\"))\n        var userRoles map\n        userRoles[AppParam($appId, \"rope_manufacturer_role_id\")] = \"manufacturer\"\n        userRoles[AppParam($appId, \"rope_servicer_role_id\")] = \"servicer\"\n        userRoles[AppParam($appId, \"rope_producer_role_id\")] = \"producer\"\n        $userRoles = userRoles\n        $errorRate = safeFloat(AppParam($appId, \"rope_depth_error_rate\"))\n    }\n\n    action {\n        Println($this_contract)\n        var works array cols op string i lenWorks int work workPrev coil drilling map\n        works = findAll(\"rope_works\", \"id>0\")\n        lenWorks = Len(works)\n\n        var w1 w2 d1 d2 cl bw pw float\n        while i<lenWorks {\n            if i > 0 {\n                workPrev = work\n            }\n            work = works[i]\n            if work[\"coil_id\"] != coil[\"id\"]{\n                coil = DBFind(\"rope_coils\").Where(\"id=?\", work[\"coil_id\"]).Row()\n            }\n            if work[\"drilling_id\"] != drilling[\"id\"]{\n                drilling = DBFind(\"rope_drillings\").Where(\"id=?\", work[\"drilling_id\"]).Row()\n                cl = safeFloat(drilling[\"candle_length\"])\n                bw = safeFloat(drilling[\"block_weight\"])\n                pw = safeFloat(drilling[\"previous_workout\"])\n            }\n            op = work[\"operation_type\"]\n            w1 = safeFloat(work[\"weight_started\"])\n            w2 = safeFloat(work[\"weight_final\"])\n            d1 = safeFloat(work[\"depth_started\"])\n            if d1 == -1{\n                d1 = 0\n            }\n            d2 = safeFloat(work[\"depth_final\"])\n            if d2 == -1{\n                d2 = 0\n            }\n            // \"Наработка Lн, тк.м\"\n            work[\"work_started\"] = (w1 * (d1 + cl) + (4 * d1 * bw))/1000.0\n\n            // \"Наработка Lк, т.км\"\n            work[\"work_final\"] = (w2 * (d2 + cl) + (4 * d2 * bw))/1000.0\n\n            // \"Наработка за операцию, т.км\"\n            if op == \"Подъем\"{\n                work[\"work_operation\"] = getAbsFloat(work[\"work_final\"] - work[\"work_started\"])*0.5\n            }elif op == \"Спуск\"{\n                work[\"work_operation\"] = getAbsFloat(work[\"work_final\"] - work[\"work_started\"])*0.5\n            }elif op == \"СПО\"{\n                work[\"work_operation\"] = getAbsFloat(work[\"work_final\"] - work[\"work_started\"])\n            }elif op == \"Бурение\"{\n                work[\"work_operation\"] = getAbsFloat(work[\"work_final\"] - work[\"work_started\"])*3\n            }elif op == \"Отбор керна\"{\n                work[\"work_operation\"] = getAbsFloat(work[\"work_final\"] - work[\"work_started\"])*2\n            }elif op == \"Проработка\"{\n                work[\"work_operation\"] = getAbsFloat(work[\"work_final\"] - work[\"work_started\"])*2\n            }elif op == \"Шаблонировка\"{\n                work[\"work_operation\"] = getAbsFloat(work[\"work_final\"] - work[\"work_started\"])*2\n            }elif op == \"Спуск обсадной колонны\"{\n                work[\"work_operation\"] = work[\"work_final\"]*0.5\n            }elif op == \"Технологическое СПО\" {\n                work[\"work_operation\"] = getAbsFloat(work[\"work_final\"] - work[\"work_started\"])\n            }elif op == \"Аварийные работы\"{\n                work[\"work_operation\"] = work[\"work_final\"]*2\n            }else{\n                work[\"work_operation\"] = 0\n            }\n\n\n            // \"Наработка нарастающая до перепуска\"\n            if work[\"operation\"] == 1 {\n                work[\"work_bypass\"] = work[\"work_operation\"]\n            }elif work[\"work_operation\"] == 0 {\n                work[\"work_bypass\"] = 0\n            }else{\n                work[\"work_bypass\"] = work[\"work_operation\"] + workPrev[\"work_bypass\"]\n            }\n            // \"Наработка нарастающая на бухту\"\n            if work[\"operation\"] == 1 {\n                work[\"work_coil\"] = work[\"work_bypass\"] + pw\n            }else{\n                work[\"work_coil\"] = work[\"work_operation\"] + safeFloat(workPrev[\"work_coil\"])\n            }\n\n            var keys values array\n            if work[\"operation_date\"] == \"\"{\n                work[\"operation_date\"] = \"NULL\"\n            }\n            keys = GetMapKeys(work)\n            values = getMapValues(work, keys)\n            DBUpdate(\"rope_works\", Int(work[\"id\"]), Join(keys,\",\"), values...)\n            i=i+1\n        }\n\n    }\n}",
+            "Name": "RopeWorksCalculate",
+            "Type": "contracts"
+        }
+    ]
+}
