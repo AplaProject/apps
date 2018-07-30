@@ -1,78 +1,137 @@
 DBFind(applications).Columns("id").Where("name='Object generator' AND deleted=0").Vars(application)
-SetVar(title,$og_create$).(btn_title,$og_create$).(item_creator_roles,).(item_info,).(item_deleted,).(item_statuses,).(item_attributes,).(item_editor_roles,)
+DBFind(roles, src_roles).Columns("id,role_name").Where("deleted=0")
+
+SetVar(this_page,og_object_edit).(title,$og_create$).(btn_title,$og_create$).(item_creator_roles,).(item_info,).(item_deleted,).(item_statuses,).(item_attributes,).(item_editor_roles,)
 If(GetVar(Id)){
     DBFind(og_objects).Where("id=#Id#").Vars(item)
     SetVar(title,$og_edit$ ##Id#).(btn_title,$og_save$)
 }
-SetTitle(#title#)
-Div(content-wrapper){
-    Div(breadcrumb){
-        LinkPage(Body: $og_objects$, Page: og_objects)
-        Span(/, mh)
-        Span(#title#, text-muted)
+If(GetVar(Rid)){
+    If(GetVar(Rids)){
+        If(#Action#=="add"){
+            SetVar(Rids,"#Rids#,#Rid#")
+
+        }.ElseIf(#Action#=="sub"){
+            ArrayToSource(rids,[#Rids#])
+            SetVar(new_rids,)
+            ForList(rids){
+                #key#:#value#
+                If(#value#!=#Rid#){
+                    If(#new_rids#==""){
+                        SetVar(new_rids,#value#)
+                    }.Else{
+                        SetVar(new_rids,"#new_rids#,#value#")
+                    }
+                }
+            }
+            SetVar(Rids,#new_rids#)
+        }
+    }.Else{
+        SetVar(Rids,#Rid#)
     }
-    Div(row){
-        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
-            Form(panel panel-primary){
-                Div(panel-heading){
-                    LangRes(og_data_input)
+}.Else{
+    SetVar(Rid,).(Rids,)
+}
+
+Div(content-wrapper){
+    If(#Mode#=="edit_creator"){
+        Form(){
+            Div(input-group mb-sm){
+                Select(Name: Rid, Source: src_roles, NameColumn:role_name, ValueColumn: id)
+                Div(input-group-btn){
+                    Button(Class: btn btn-primary fa fa-plus, Page: #this_page#, PageParams:"Rid=Val(Rid),Rids=#Rids#,Action=add,Mode=#Mode#").Popup(50, "Edit creator role")
                 }
-                Div(panel-body){
-                    If(GetVar(Id)){
-                        Input(Name: Id, Type:hidden, Value: #Id#)
-                    }
-                    Div(row mt-sm){
-                        Div(col-sm-4 mt-sm text-right){
-                            LangRes(og_creator_roles)
-                        }
-                        Div(col-sm-8 text-left){
-                            Input(Name: CreatorRoles, Type:textarea, Value: #item_creator_roles#)
-                        }
-                    }
-                    Div(row mt-sm){
-                        Div(col-sm-4 mt-sm text-right){
-                            LangRes(og_info)
-                        }
-                        Div(col-sm-8 text-left){
-                            Input(Name: Info, Type:textarea, Value: #item_info#)
-                        }
-                    }
-                    Div(row mt-sm){
-                        Div(col-sm-4 mt-sm text-right){
-                            LangRes(og_deleted)
-                        }
-                        Div(col-sm-8 text-left){
-                            Input(Name: Deleted, Type:number, Value: #item_deleted#)
-                        }
-                    }
-                    Div(row mt-sm){
-                        Div(col-sm-4 mt-sm text-right){
-                            LangRes(og_statuses)
-                        }
-                        Div(col-sm-8 text-left){
-                            Input(Name: Statuses, Type:textarea, Value: #item_statuses#)
-                        }
-                    }
-                    Div(row mt-sm){
-                        Div(col-sm-4 mt-sm text-right){
-                            LangRes(og_attributes)
-                        }
-                        Div(col-sm-8 text-left){
-                            Input(Name: Attributes, Type:textarea, Value: #item_attributes#)
-                        }
-                    }
-                    Div(row mt-sm){
-                        Div(col-sm-4 mt-sm text-right){
-                            LangRes(og_editor_roles)
-                        }
-                        Div(col-sm-8 text-left){
-                            Input(Name: EditorRoles, Type:textarea, Value: #item_editor_roles#)
-                        }
-                    }
+            }
+            If(GetVar(Rids)){
+                DBFind(roles, src_rids).Columns("id,role_name").Where("deleted=0 and id in (#Rids#)")
+                ForList(src_rids){
+                    Button(Class: btn btn-default mr-sm mb-sm, Page: #this_page#, PageParams: "Rid=#id#,Rids=#Rids#,Action=sub,Mode=#Mode#", Body: Span(Class: fa fa-remove) #role_name#).Popup(50, "Edit creator role")
                 }
-                Div(panel-footer text-right){
-                    Button(Body: LangRes(og_back), Page: og_objects, Class: btn btn-default pull-left)
-                    Button(Body: #btn_title#, Page: og_objects, Class: btn btn-primary, Contract: OgEdit)
+            }
+            Div(){
+                Button(Body: LangRes(og_back), Page: #this_page#, Class: btn btn-default)
+                If(GetVar(Rids)){
+                    Button(Body: LangRes(save), Page: #this_page#, Class: btn btn-primary pull-right, PageParams:"CreatorRids=#Rids#")
+                }.Else{
+                    Button(Body: LangRes(save), Page: #this_page#, Class: btn btn-primary pull-right, PageParams:"CreatorRids=0")
+                }
+            }
+        }
+    }.Else{
+        DBFind(roles, src_creators).Columns("id,role_name").Where("deleted=0 and id in (#CreatorRids#)")
+
+        SetTitle(#title#)
+        Div(breadcrumb){
+            LinkPage(Body: $og_objects$, Page: og_objects)
+            Span(/, mh)
+            Span(#title#, text-muted)
+        }
+        Div(row){
+            Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
+                Form(panel panel-primary){
+                    Div(panel-heading){
+                        LangRes(og_data_input)
+                    }
+                    Div(panel-body){
+                        If(GetVar(Id)){
+                            Input(Name: Id, Type:hidden, Value: #Id#)
+                        }
+                        Div(row mt-sm){
+                            Div(col-sm-4 mt-sm text-right){
+                                LangRes(og_creator_roles)
+                                Button(Class: btn btn-default fa fa-edit ml, Page: #this_page#, PageParams:"Rid=,Rids=#CreatorRids#,Mode=edit_creator").Popup(50, "Edit creator role")
+                            }
+                            Div(col-sm-8 text-left){
+                                ForList(src_creators){
+                                    Div(mt-sm){#role_name#}
+                                }
+                            }
+                        }
+                        Div(row mt-sm){
+                            Div(col-sm-4 mt-sm text-right){
+                                LangRes(og_info)
+                            }
+                            Div(col-sm-8 text-left){
+                                Input(Name: Info, Type:textarea, Value: #item_info#)
+                            }
+                        }
+                        Div(row mt-sm){
+                            Div(col-sm-4 mt-sm text-right){
+                                LangRes(og_deleted)
+                            }
+                            Div(col-sm-8 text-left){
+                                Input(Name: Deleted, Type:number, Value: #item_deleted#)
+                            }
+                        }
+                        Div(row mt-sm){
+                            Div(col-sm-4 mt-sm text-right){
+                                LangRes(og_statuses)
+                            }
+                            Div(col-sm-8 text-left){
+                                Input(Name: Statuses, Type:textarea, Value: #item_statuses#)
+                            }
+                        }
+                        Div(row mt-sm){
+                            Div(col-sm-4 mt-sm text-right){
+                                LangRes(og_attributes)
+                            }
+                            Div(col-sm-8 text-left){
+                                Input(Name: Attributes, Type:textarea, Value: #item_attributes#)
+                            }
+                        }
+                        Div(row mt-sm){
+                            Div(col-sm-4 mt-sm text-right){
+                                LangRes(og_editor_roles)
+                            }
+                            Div(col-sm-8 text-left){
+                                Input(Name: EditorRoles, Type:textarea, Value: #item_editor_roles#)
+                            }
+                        }
+                    }
+                    Div(panel-footer text-right){
+                        Button(Body: LangRes(og_back), Page: og_objects, Class: btn btn-default pull-left)
+                        Button(Body: #btn_title#, Page: og_objects, Class: btn btn-primary, Contract: OgEdit)
+                    }
                 }
             }
         }
