@@ -1,37 +1,93 @@
 {
-    "name": "Block cron",
-    "data": [
-        {
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "MenuItem(Title:$blockcron_list$, Page:blockcron_list, Icon:\"icon-list\")",
-            "Name": "default_menu",
-            "Type": "menu"
-        },
-        {
-            "Name": "block_cron",
-            "Columns": "[\n    {\n        \"name\": \"next_block\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"interval\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"deleted\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"owner\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"start_block\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"contract_id\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"counter\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    },\n    {\n        \"name\": \"limited\",\n        \"type\": \"number\",\n        \"conditions\": \"true\"\n    }\n]",
-            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}",
-            "Type": "tables"
-        },
-        {
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "\r\nSetTitle($block_timer$)\r\nIf(GetVar(Id)){\r\n    SetVar(title,$edit$)\r\n    DBFind(block_cron).Where(\"id=#Id#\").Vars(cron)\r\n    DBFind(contracts).Where(\"id=#cron_contract_id#\").Columns(\"name,id,app_id\").Vars(contract)\r\n\r\n    Data(inputs, \"Name,Type,Res,Value,Desc\"){\r\n        Name,value,name,#contract_name#,\r\n        Id,value,id,#contract_id#,\r\n        AppId,value,app_id,#contract_app_id#,\r\n        StartBlock,number,start_block,#cron_start_block#,$tip_start_block$\r\n        Interval,number,interval_blocks,#cron_interval#,\r\n        Limit,number,limit,#cron_limited#,\r\n    }\r\n}.Else{\r\n    DBFind(buffer_data, src_buffer).Columns(\"value->app_id\").Where(\"key='export' and member_id=#key_id#\").Vars(buffer)\r\n    SetVar(contracts_limit,200)\r\n    If(#buffer_value_app_id#>0){\r\n        DBFind(contracts,src_contracts).Where(\"app_id=#buffer_value_app_id#\").Limit(#contracts_limit#)\r\n    }.Else{\r\n        DBFind(contracts,src_contracts).Limit(#contracts_limit#)\r\n    }\r\n    SetVar(title,$create$)\r\n    Data(inputs, \"Name,Type,Res,Src,Desc\"){\r\n        ContractId,select,id,src_contracts,\r\n        StartBlock,number,start_block,,$tip_start_block$\r\n        Interval,number,interval_blocks,,\r\n        Limit,number,limit,,\r\n    }\r\n}\r\n\r\nDiv(content-wrapper){\r\n    Div(breadcrumb){\r\n        LinkPage(Body: $blockcron_list$, Page: blockcron_list)\r\n        Span(/, mh-sm)\r\n        Span(#title#, text-muted)\r\n    }\r\n    Div(container){\r\n        Div(row){\r\n            Div(col-md-8 col-md-offset-2){\r\n                Form(panel panel-primary){\r\n                    Div(panel-heading){#title#}\r\n                    Div(panel-body){\r\n                        SetVar(Value,)\r\n                        ForList(inputs){\r\n                            Div(form-group){\r\n                                Div(row){\r\n                                    Div(col-md-3 text-right mt-sm){\r\n                                        Label(For:#Name#){LangRes(#Res#)}\r\n                                    }\r\n                                    Div(col-md-9 text-left){\r\n                                        If(#Type#==select){\r\n                                            Select(Name:#Name#, Source:#Src#, NameColumn: name, ValueColumn: id)\r\n                                        }.ElseIf(#Type#==number){\r\n                                            Input(Name: #Name#, Type: #Type#, Value:#Value#)\r\n                                        }.ElseIf(#Type#==value){\r\n                                            Div(mt-sm){\r\n                                                #Value#\r\n                                            }\r\n                                        }\r\n                                        If(#Desc#!=\"\"){\r\n                                            Div(text-muted small text-center){\r\n                                                #Desc#\r\n                                            }\r\n                                        }\r\n                                    }\r\n                                }\r\n                            }\r\n                        }\r\n                    }\r\n                    Div(panel-footer text-right){\r\n                        Button(Page:blockcron_list, Body: $back$, Class: btn btn-default pull-left)\r\n                        If(GetVar(Id)){\r\n                            Button(Contract: blockcron_Manager, Body: $update$, Class: btn btn-primary, Params: \"Id=#Id#,Action=update\", Page:blockcron_list)\r\n                        }.Else{\r\n                            Button(Contract:blockcron_Manager, Params:\"Action=create\", Body: $create$, Class: btn btn-primary, Page:blockcron_list)\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n}",
-            "Name": "blockcron",
-            "Menu": "default_menu",
-            "Type": "pages"
-        },
-        {
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "SetTitle($blockcron_list$)\r\nAddToolButton(Title: $create$, Icon:\"icon icon-clock\", Page:blockcron)\r\nDiv(content-wrapper){\r\n    Div(panel panel-primary){\r\n        Div(panel panel-body){\r\n            DBFind(block_cron,src_cron).Where(\"deleted=0 and owner=#key_id#\").Order(id desc).Custom(_actions){\r\n                Div(text-right){\r\n                    Div(input-group-btn){\r\n                        Button(Contract: blockcron_Manager, Class: btn btn-danger icon-trash, Params:\"Id=#id#,Action=delete\", Page:blockcron_list).Alert(Text: $want_delete_block_timer$,ConfirmButton:$yes$, CancelButton: $cancel$)\r\n                        Button(Class:btn btn-primary fa fa-edit, Page:blockcron, PageParams: \"Id=#id#\")\r\n                    }\r\n                }\r\n            }\r\n            Table(src_cron,\"$contract$ id=contract_id,$start_block$=start_block,$interval$=interval,$next_block$=next_block,$limit$=limited,$count$=counter,=_actions\")\r\n        }\r\n    }\r\n}",
-            "Name": "blockcron_list",
-            "Menu": "default_menu",
-            "Type": "pages"
-        },
-        {
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract blockcron_Manager {\n    data {\n        Action string\n        Id string \"optional\"\n        ContractId string \"optional\"\n        Limit string \"optional\"\n        StartBlock string \"optional\"\n        Interval string \"optional\"\n    }\n    conditions {\n        $Id = Int($Id)\n        $Limit = Int($Limit)\n        $StartBlock = Int($StartBlock)\n        $Interval = Int($Interval)\n        $ContractId = Int($ContractId)\n\n        if $Action != \"create\" {\n            if !DBFind(\"block_cron\").Where(\"owner=? and id=?\",$key_id, $Id).Row() {\n                warning \"Timer not found\"\n            }\n            if DBFind(\"contracts\").Where(\"id=?\", $ContractId) {\n                warning \"Contract not found\"\n            }\n        }\n        if $StartBlock < $block {\n            $StartBlock = $block + 1\n        }\n    }\n    action {\n        var count nextBlock int\n        nextBlock = $StartBlock + $Interval;\n        if $Action == \"create\"{\n            DBInsert(\"block_cron\", \"contract_id,owner,start_block,interval,limited,counter,next_block\", $ContractId,$key_id, $StartBlock, $Interval, $Limit, count, nextBlock)\n        }\n        if $Action == \"delete\"{\n            DBUpdate(\"block_cron\",$Id, \"deleted\", 1)\n        }\n        if $Action == \"update\"{\n            DBUpdate(\"block_cron\", $Id, \"start_block,interval,next_block,limited,counter\", $StartBlock,$Interval,nextBlock,$Limit,count)\n        }\n    }\n}",
-            "Name": "blockcron_Manager",
-            "Type": "contracts"
+            "name": "Block cron",
+            "data": [
+                {
+                "Type": "pages",
+                "Name": "blockcron_create",
+                "Value": "SetTitle($block_timer$)\r\n\r\nDBFind(buffer_data, src_buffer).Columns(\"value->app_id\").Where(\"key='export' and member_id=#key_id#\").Vars(buffer)\r\nSetVar(contracts_limit, 200)\r\nIf(#buffer_value_app_id#>0){\r\n    DBFind(Name: contracts, Source: src_contracts).Where(\"app_id=#buffer_value_app_id#\").Limit(#contracts_limit#)\r\n}.Else{\r\n    DBFind(contracts, src_contracts).Limit(#contracts_limit#)\r\n}\r\n\r\nDiv(content-wrapper){\r\n    Div(breadcrumb){\r\n        LinkPage(Body: $blockcron_list$, Page: blockcron_list)\r\n        Span(/, mh-sm)\r\n        Span($create$, text-muted)\r\n    }\r\n    Div(container){\r\n        Div(row){\r\n            Div(col-md-8 col-md-offset-2){\r\n                Form(panel panel-primary){\r\n                    Div(panel-heading){\r\n                        $create$\r\n                    }\r\n                    Div(panel-body){\r\n                        Div(form-group){\r\n                            Div(row){\r\n                                Div(col-md-3 text-right mt-sm){\r\n                                    Label(For: contract_name){\r\n                                        LangRes($contract$)\r\n                                    }\r\n                                }\r\n                                Div(col-md-9 text-left){\r\n                                    Select(Name: contract_name, Source: src_contracts, NameColumn: name, ValueColumn: name)\r\n                                }\r\n                            }\r\n                        }\r\n                        Div(form-group){\r\n                            Div(row){\r\n                                Div(col-md-3 text-right mt-sm){\r\n                                    Label(For: start_block){\r\n                                        LangRes($start_block$)\r\n                                    }\r\n                                }\r\n                                Div(col-md-9 text-left){\r\n                                    Input(Name: start_block, Type: number)\r\n                                }\r\n                            }\r\n                        }\r\n                        Div(form-group){\r\n                            Div(row){\r\n                                Div(col-md-3 text-right mt-sm){\r\n                                    Label(For: every_block){\r\n                                        LangRes($interval$)\r\n                                    }\r\n                                }\r\n                                Div(col-md-9 text-left){\r\n                                    Input(Name: every_block, Type: number)\r\n                                }\r\n                            }\r\n                        }\r\n                        Div(form-group){\r\n                            Div(row){\r\n                                Div(col-md-3 text-right mt-sm){\r\n                                    Label(For: limit){\r\n                                        LangRes($limit$)\r\n                                    }\r\n                                }\r\n                                Div(col-md-9 text-left){\r\n                                    Input(Name: limit, Type: number)\r\n                                }\r\n                            }\r\n                        }\r\n                    }\r\n                    Div(panel-footer text-right){\r\n                        Button(Page: blockcron_list, Body: $back$, Class: btn btn-default pull-left)\r\n                        Button(Contract: BlockCronCreate, Body: $create$, Class: btn btn-primary, Page: blockcron_list)\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n}",
+                "Conditions": "ContractConditions(\"MainCondition\")",
+                "Menu": "default_menu",
+                "Title": "",
+                "Trans": "",
+                "Columns": "",
+                "Permissions": ""
+            },
+{
+                "Type": "pages",
+                "Name": "blockcron_list",
+                "Value": "SetTitle($blockcron_list$)\r\nAddToolButton(Title: $create$, Icon:\"icon icon-clock\", Page:blockcron_create)\r\nDiv(content-wrapper){\r\n    Div(panel panel-primary){\r\n        Div(panel panel-body){\r\n            DBFind(delayed_contracts,src_cron).Columns(contract,every_block,counter).Where(\"key_id=#key_id# and not deleted\").Order(id desc).Custom(_actions){\r\n                Div(text-right){\r\n                    Div(input-group-btn){\r\n                        Button(Contract: BlockCronDelete, Class: btn btn-danger icon-trash, Params:\"id=#id#\", Page:blockcron_list).Alert(Text: $want_delete_block_timer$,ConfirmButton:$yes$, CancelButton: $cancel$)\r\n                        Button(Class:btn btn-primary fa fa-edit, Page:blockcron_edit, PageParams: \"id=#id#\")\r\n                    }\r\n                }\r\n            }\r\n            Table(src_cron,\"$contract$=contract,$interval$=every_block,$count$=counter,=_actions\")\r\n        }\r\n    }\r\n}",
+                "Conditions": "ContractConditions(\"MainCondition\")",
+                "Menu": "default_menu",
+                "Title": "",
+                "Trans": "",
+                "Columns": "",
+                "Permissions": ""
+            },
+{
+                "Type": "pages",
+                "Name": "blockcron_edit",
+                "Value": "SetTitle($block_timer$)\r\n\r\nIf(#id# > 0){\r\n    DBFind(Name: delayed_contracts).Columns(contract,every_block).WhereId(#id#).Vars(delayed_contract)\r\n}.Else{\r\n    SetVar(#delayed_contract_contract#, )\r\n    SetVar(#delayed_contract_every_block#, )\r\n}\r\n\r\nDiv(content-wrapper){\r\n    Div(breadcrumb){\r\n        LinkPage(Body: $blockcron_list$, Page: blockcron_list)\r\n        Span(/, mh-sm)\r\n        Span($create$, text-muted)\r\n    }\r\n    Div(container){\r\n        Div(row){\r\n            Div(col-md-8 col-md-offset-2){\r\n                Form(panel panel-primary){\r\n                    Div(panel-heading){\r\n                        $create$\r\n                    }\r\n                    Div(panel-body){\r\n                        Div(form-group){\r\n                            Div(row){\r\n                                Div(col-md-3 text-right mt-sm){\r\n                                    Label(For: contract){\r\n                                        LangRes($contract$)\r\n                                    }\r\n                                }\r\n                                Div(col-md-9 text-left){\r\n                                    Span(#delayed_contract_contract#)\r\n                                }\r\n                            }\r\n                        }\r\n                        Div(form-group){\r\n                            Div(row){\r\n                                Div(col-md-3 text-right mt-sm){\r\n                                    Label(For: every_block){\r\n                                        LangRes($interval$)\r\n                                    }\r\n                                }\r\n                                Div(col-md-9 text-left){\r\n                                    Input(Name: every_block, Type: number, Value: #delayed_contract_every_block#)\r\n                                }\r\n                            }\r\n                        }\r\n                    }\r\n                    Div(panel-footer text-right){\r\n                        Button(Page: blockcron_list, Body: $back$, Class: btn btn-default pull-left)\r\n                        Button(Contract: BlockCronEdit, Params: \"id=#id#\", Body: $save$, Class: btn btn-primary, Page: blockcron_list)\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n}",
+                "Conditions": "true",
+                "Menu": "default_menu",
+                "Title": "",
+                "Trans": "",
+                "Columns": "",
+                "Permissions": ""
+            },
+{
+                "Type": "contracts",
+                "Name": "BlockCronCreate",
+                "Value": "contract BlockCronCreate {\r\n    data {\r\n        contract_name string\r\n        limit int\r\n        start_block int\r\n        every_block int\r\n    }\r\n    conditions {\r\n        if $start_block < $block {\r\n            $start_block = $block + 1\r\n        }\r\n    }\r\n    action {\r\n        NewDelayedContract(\"Contract,EveryBlock,Conditions,BlockID,Limit\", $contract_name, $every_block, `ContractAccess(\"BlockCronEdit\")`, $start_block, $limit)\r\n    }\r\n}",
+                "Conditions": "true",
+                "Menu": "",
+                "Title": "",
+                "Trans": "",
+                "Columns": "",
+                "Permissions": ""
+            },
+{
+                "Type": "contracts",
+                "Name": "BlockCronEdit",
+                "Value": "contract BlockCronEdit {\n    data {\n        id int\n        every_block int\n    }\n    conditions {\n        if $every_block < 1 {\n            warning \"Interval less than 1\"\n        }\n    }\n    action {\n        EditDelayedContract(\"Id,EveryBlock\", $id, $contract_name)\n    }\n}",
+                "Conditions": "true",
+                "Menu": "",
+                "Title": "",
+                "Trans": "",
+                "Columns": "",
+                "Permissions": ""
+            },
+{
+                "Type": "contracts",
+                "Name": "BlockCronDelete",
+                "Value": "contract BlockCronDelete {\n    data {\n        id intt\n    }\n    conditions {\n    }\n    action {\n        EditDelayedContract(\"Id,Deleted\", $id, 1)\n    }\n}",
+                "Conditions": "true",
+                "Menu": "",
+                "Title": "",
+                "Trans": "",
+                "Columns": "",
+                "Permissions": ""
+            },
+{
+                "Type": "tables",
+                "Name": "block_cron",
+                "Value": "",
+                "Conditions": "ContractAccess(\"@1EditTable\")",
+                "Menu": "",
+                "Title": "",
+                "Trans": "",
+                "Columns": "[{\"conditions\":\"true\",\"name\":\"interval\",\"type\":\"number\"},{\"conditions\":\"true\",\"name\":\"next_block\",\"type\":\"number\"},{\"conditions\":\"true\",\"name\":\"contract_id\",\"type\":\"number\"},{\"conditions\":\"true\",\"name\":\"start_block\",\"type\":\"number\"},{\"conditions\":\"true\",\"name\":\"owner\",\"type\":\"number\"},{\"conditions\":\"true\",\"name\":\"counter\",\"type\":\"number\"},{\"conditions\":\"true\",\"name\":\"deleted\",\"type\":\"number\"},{\"conditions\":\"true\",\"name\":\"limited\",\"type\":\"number\"}]",
+                "Permissions": "{\"insert\": \"true\", \"update\": \"true\", \"new_column\": \"true\"}"
+            },
+{
+                "Type": "menu",
+                "Name": "default_menu",
+                "Value": "MenuItem(Title:Wallet, Page:profile_view, Icon:\"icon-wallet\")\r\nMenuGroup(Title:Multiwallet, Icon:\"icon-arrow-right\"){\r\n    MenuItem(Title:Create multiwallet, Page:multiwallet_create, Icon:\"fa icon-plus\")\r\n    MenuItem(Title:Atoorney list, Page:attorney_list, Icon:\"icon-list\")\r\n}\r\nMenuItem(Title:Notifications, Page:notifications_list, Icon:\"icon-flag\")\r\nMenuItem(Title:Membership, Page:members_list, Icon:\"fa icon-people\")\r\nMenuGroup(Title:Admin, Icon:\"icon-arrow-right\"){\r\n\tMenuItem(Title:Roles, Page:roles_list, Icon:\"fa fa-list-ul\")\r\n\tMenuItem(Title:Voting, Page:voting_list, Icon:\"fa fa-edit\")\r\n}\r\nMenuGroup(Title:Admin, Icon:\"icon-arrow-right\"){\r\n\tMenuItem(Title:Voting templates, Page:voting_templates, Icon:\"fa icon-pin\")\r\n    MenuItem(Title:Platform parameter,Page:sysparams_list, Icon:\"fa icon-settings\")\r\n    MenuItem(Title:Candidate for validators, Page:sysparams_candidates, Icon:\"icon-list\")\r\n    MenuItem(Title:Ecosystems list, Page:sysparams_ecos, Icon:\"icon-list\")\r\n    MenuItem(Title:Tokens refund list, Page:tokenrefund_list, Icon:\"icon-list\")\r\n\tMenuItem(Title:Ecosystems, Page:membership_ecosystems, Icon:\"fa fa-list-ul\")\r\n}\nMenuItem(Title:$blockcron_list$, Page:blockcron_list, Icon:\"icon-list\")",
+                "Conditions": "ContractConditions(\"MainCondition\")",
+                "Menu": "",
+                "Title": "default",
+                "Trans": "",
+                "Columns": "",
+                "Permissions": ""
+            }
+            ]
         }
-    ]
-}
