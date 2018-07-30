@@ -1,0 +1,52 @@
+DBFind(applications).Columns("id").Where("name='Object generator' AND deleted=0").Vars(application)
+SetTitle($og_objects$)
+SetVar(page_name,og_objects)
+Div(content-wrapper){
+    AddToolButton(Title: Create, Page: og_object_edit, Icon: icon-plus)
+
+    DBFind(og_objects).Count(count)
+    If(#page#>0){
+        SetVar(prev_page,Calculate(#page#-1)
+    }.Else{
+        SetVar(page,0).(prev_page,0)
+    }
+    SetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#count#/#per_page#)).(next_page,#last_page#)
+    If(#count#>Calculate(#off#+#per_page#)){
+        SetVar(next_page,Calculate(#page#+1)
+    }
+    Div(button-group){
+        If(#page#>0){
+            Button(Body:"1", Class:btn btn-default, Page:#page_name#, PageParams: "page=0")
+        }.Else{
+            Button(Body:"1", Class:btn btn-default disabled)
+        }
+        If(#page#>1){
+            Button(Body:Calculate(#prev_page#+1),Class:btn btn-default, Page:#page_name#, PageParams:"page=#prev_page#")
+        }
+        If(And(#page#>0,#page#<#last_page#)){
+            Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)
+        }
+        If(#next_page#<#last_page#){
+            Button(Body:Calculate(#next_page#+1),Class:btn btn-default,Page:#page_name#, PageParams:"page=#next_page#")
+        }
+        If(#page#<#last_page#){
+            Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:#page_name#, PageParams:"page=#last_page#")
+        }.ElseIf(#last_page#>0){
+            Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)
+        }
+    }
+    Div(panel panel-primary){
+        Div(panel-body){
+            Div(table-responsive){
+                DBFind(og_objects,src_og_objects).Offset(#off#).Order(id).Custom(_actions){
+                    Div(text-right text-nowrap){
+                        Button(Class: btn btn-info fa fa-eye mr-sm, Page: og_object_view, PageParams: "Id=#id#")
+                        Button(Class: btn btn-default fa fa-edit mr-sm, Page: og_object_edit, PageParams: "Id=#id#")
+                        Button(Class: btn btn-danger fa fa-trash, Page: og_objects, Contract: OgDelete, Params: "Id=#id#").Alert($delete_alert$, $yes$, $no$)
+                    }
+                }
+                Table(src_og_objects,"$og_creator_roles$=creator_roles,$og_info$=info,$og_deleted$=deleted,$og_statuses$=statuses,$og_attributes$=attributes,$og_editor_roles$=editor_roles,=_actions")
+            }
+        }
+    }
+}
