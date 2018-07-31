@@ -34,6 +34,12 @@ contract lots_SellerAction {
     func appendAll(items ...)array{
         return items
     }
+    func safeFloat(s string)float{
+        if s > 0 || s < 0{
+            return Float(s)
+        }
+        return 0.0
+    }
     func notifyAdmin(lotId int){
         var rid closureType sender int textHeader pageName string params map
         closureType = 2
@@ -47,16 +53,16 @@ contract lots_SellerAction {
         notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, params)
     }
     conditions {
-		$OrderMin = Money($OrderMin)
-		$OrderMax = Money($OrderMax)
-		if $TypeBargain == 1 {
-			if $OrderMin == 0 {
-				info("Минимальная ставка не указана")
-			}
-			if $OrderMax == 0 {
-				info("Максимальная ставка не указана")
-			}
-		}
+        $OrderMin = Money($OrderMin)
+        $OrderMax = Money($OrderMax)
+        if $TypeBargain == 1 {
+            if $OrderMin == 0 {
+                info("Минимальная ставка не указана")
+            }
+            if $OrderMax == 0 {
+                info("Максимальная ставка не указана")
+            }
+        }
         $Id = Int($Id)
         if !($Action == "create" || $Action == "edit") {
             warning "Lot: unknown action"
@@ -77,14 +83,14 @@ contract lots_SellerAction {
             }
 
         }
-        
+
         $mapLocation = JSONDecode($Location)
         $Location = $mapLocation["address"]
-        $Weight = Int($Weight)
+        $Weight = safeFloat($Weight)
         $WeightType = Int($WeightType)
-        $Length = Int($Length)
-        $Width = Int($Width)
-        $Height = Int($Height)
+        $Length = safeFloat($Length)
+        $Width = safeFloat($Width)
+        $Height = safeFloat($Height)
 
         if $OrderMin > $OrderMax {
             warning "Минимальная ставка больше максимальной"
@@ -102,20 +108,18 @@ contract lots_SellerAction {
             imageName = DBFind("binaries").Where("id=?", $lot["photo"]).One("name")
         }
         imageId = @1UploadBinary("ApplicationId,Name,Data", appId, imageName, $Photo)
-        // TODO: contractFileId генерировать внутри
-        // contractFileId = @1UploadBinary("ApplicationId,Name,Data,DataMimeType", appId, "lot_contract", "application/pdf")
 
         var fields string args array id int
-		if $TypeBargain == 1 {
-			info("1")
-			args = appendAll($Name, $Description, imageId, $dateStart, $dateEnd, $AmountStarting, $OrderMin, $OrderMax, contractFileId, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
-			fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight,weight_type,length,width,height,lots_type_id,category,location,condition,type_bargain,map_location"
-		}
-		if $TypeBargain == 2 {
-			info("2")
-			args = appendAll($Name, $Description, imageId, $dateStart, $dateEnd, $AmountStarting, contractFileId, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
-			fields = "name,description,photo,date_start,date_end,amount_starting,contract_id,unit_count,weight,weight_type,length,width,height,lots_type_id,category,location,condition,type_bargain,map_location"
-		}
+        if $TypeBargain == 1 {
+            info("1")
+            args = appendAll($Name, $Description, imageId, $dateStart, $dateEnd, $AmountStarting, $OrderMin, $OrderMax, contractFileId, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
+            fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain,map_location"
+        }
+        if $TypeBargain == 2 {
+            info("2")
+            args = appendAll($Name, $Description, imageId, $dateStart, $dateEnd, $AmountStarting, contractFileId, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
+            fields = "name,description,photo,date_start,date_end,amount_starting,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain,map_location"
+        }
         if $Action == "create"{
             fields = Sprintf("%v,timestamp date_creation,seller", fields)
             args = Append(args,$block_time)
