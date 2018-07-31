@@ -5,17 +5,25 @@ SetVar(this_page,og_object_edit).(title,$og_create$).(btn_title,$og_create$).(it
 If(GetVar(Id)){
     DBFind(og_objects).Where("id=#Id#").Vars(item)
     SetVar(title,$og_edit$ ##Id#).(btn_title,$og_save$)
+    
+    If(#comment#=="TODO:"){
+        добавить инициализацию Statuses, EditirRids, CreatorRids из модели
+    }
 }
 
 
 Div(content-wrapper){
     If(Or(#Mode#=="edit_creator",#Mode#=="edit_editor")){
         Include(og_edit_roles)
+    }.ElseIf(#Mode#=="edit_statuses"){
+        Include(og_edit_statuses)
     }.Else{
         If(GetVar(CreatorRids)).Else{SetVar(CreatorRids,0)}
         If(GetVar(EditorRids)).Else{SetVar(EditorRids,0)}
         DBFind(roles, creators).Columns("id,role_name").Where("deleted=0 and id in (#CreatorRids#)").Count(count_creators)
         DBFind(roles, editors).Columns("id,role_name").Where("deleted=0 and id in (#EditorRids#)").Count(count_editors)
+        If(GetVar(Statuses)).Else{SetVar(Statuses,{})}
+        JsonToSource(statuses,#Statuses#)
 
         SetTitle(#title#)
         Div(breadcrumb){
@@ -36,7 +44,7 @@ Div(content-wrapper){
                         Div(row mt-sm){
                             Div(col-sm-4 mt-sm text-right){
                                 LangRes(og_creator_roles)
-                                Button(Class: btn btn-link fa fa-edit ml p0, Page: #this_page#, PageParams:"Rid=,Rids=#CreatorRids#,EditorRids=#EditorRids#,Mode=edit_creator").Popup(50, $og_edit_creators$)
+                                Button(Class: btn btn-link fa fa-edit ml p0, Page: #this_page#, PageParams:"Rids=#CreatorRids#,EditorRids=#EditorRids#,Statuses=#Statuses#,Mode=edit_creator").Popup(50, $og_edit_creators$)
                             }
                             Div(col-sm-8 text-left mt-sm){
                                 ForList(creators){
@@ -50,7 +58,7 @@ Div(content-wrapper){
                         Div(row mt-sm){
                             Div(col-sm-4 mt-sm text-right){
                                 LangRes(og_editor_roles)
-                                Button(Class: btn btn-link fa fa-edit ml p0, Page: #this_page#, PageParams:"Rid=,Rids=#EditorRids#,CreatorRids=#CreatorRids#,Mode=edit_editor").Popup(50, $og_edit_editors$)
+                                Button(Class: btn btn-link fa fa-edit ml p0, Page: #this_page#, PageParams:"Rids=#EditorRids#,CreatorRids=#CreatorRids#,Statuses=#Statuses#,Mode=edit_editor").Popup(50, $og_edit_editors$)
                             }
                             Div(col-sm-8 text-left mt-sm){
                                 ForList(editors){
@@ -64,9 +72,15 @@ Div(content-wrapper){
                         Div(row mt-sm){
                             Div(col-sm-4 mt-sm text-right){
                                 LangRes(og_statuses)
+                                Button(Class: btn btn-link fa fa-edit ml p0, Page: #this_page#, PageParams:"Statuses=#Statuses#,CreatorRids=#CreatorRids#,EditorRids=#EditorRids#,Mode=edit_statuses").Popup(50, $og_edit_statuses$)
                             }
-                            Div(col-sm-8 text-left){
-                                Input(Name: Statuses, Type:textarea, Value: #item_statuses#)
+                            Div(col-sm-8 text-left mt-sm){
+                                ForList(statuses){
+                                    Span(#status_name#)
+                                    If(#statuses_index# < #count_editors#){
+                                        , Span(Class:mr-sm)
+                                    }
+                                }
                             }
                         }
                         Div(row mt-sm){
