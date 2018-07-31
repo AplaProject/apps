@@ -15,7 +15,6 @@ If(GetVar(Rid)){
             ArrayToSource(rids,[#Rids#])
             SetVar(new_rids,)
             ForList(rids){
-                #key#:#value#
                 If(#value#!=#Rid#){
                     If(#new_rids#==""){
                         SetVar(new_rids,#value#)
@@ -30,35 +29,47 @@ If(GetVar(Rid)){
         SetVar(Rids,#Rid#)
     }
 }.Else{
-    SetVar(Rid,).(Rids,)
+    SetVar(Rid,)
+    If(GetVar(Rids)){}.Else{SetVar(Rids,)}
 }
 
 Div(content-wrapper){
-    If(#Mode#=="edit_creator"){
+    If(Or(#Mode#=="edit_creator",#Mode#=="edit_editor")){
+        If(GetVar(Rids)){}.Else{SetVar(Rids,0)}
+        If(#Mode#=="edit_creator"){
+            SetVar(title,"Edit creator role")
+        }
+        If(#Mode#=="edit_editor"){
+            SetVar(title,"Edit editor role")
+        }
+
         Form(){
             Div(input-group mb-sm){
                 Select(Name: Rid, Source: src_roles, NameColumn:role_name, ValueColumn: id)
                 Div(input-group-btn){
-                    Button(Class: btn btn-primary fa fa-plus, Page: #this_page#, PageParams:"Rid=Val(Rid),Rids=#Rids#,Action=add,Mode=#Mode#").Popup(50, "Edit creator role")
+                    Button(Class: btn btn-primary fa fa-plus, Page: #this_page#, PageParams:"Rid=Val(Rid),Rids=#Rids#,Action=add,Mode=#Mode#,CreatorRids=#CreatorRids#,EditorRids=#EditorRids#").Popup(50, #title#)
                 }
             }
             If(GetVar(Rids)){
                 DBFind(roles, src_rids).Columns("id,role_name").Where("deleted=0 and id in (#Rids#)")
                 ForList(src_rids){
-                    Button(Class: btn btn-default mr-sm mb-sm, Page: #this_page#, PageParams: "Rid=#id#,Rids=#Rids#,Action=sub,Mode=#Mode#", Body: Span(Class: fa fa-remove) #role_name#).Popup(50, "Edit creator role")
+                    Button(Class: btn btn-default mr-sm mb-sm, Page: #this_page#, PageParams: "Rid=#id#,Rids=#Rids#,Action=sub,Mode=#Mode#,CreatorRids=#CreatorRids#,EditorRids=#EditorRids#", Body: Span(Class: fa fa-remove) #role_name#).Popup(50, #title#)
                 }
             }
-            Div(){
-                Button(Body: LangRes(og_back), Page: #this_page#, Class: btn btn-default)
-                If(GetVar(Rids)){
-                    Button(Body: LangRes(save), Page: #this_page#, Class: btn btn-primary pull-right, PageParams:"CreatorRids=#Rids#")
-                }.Else{
-                    Button(Body: LangRes(save), Page: #this_page#, Class: btn btn-primary pull-right, PageParams:"CreatorRids=0")
+            Div(text-right){
+                If(#Mode#=="edit_creator"){
+                    Button(Body: LangRes(save), Page: #this_page#, Class: btn btn-primary, PageParams:"CreatorRids=#Rids#,EditorRids=#EditorRids#")
+                }
+                If(#Mode#=="edit_editor"){
+                    Button(Body: LangRes(save), Page: #this_page#, Class: btn btn-primary, PageParams:"EditorRids=#Rids#,CreatorRids=#CreatorRids#")
                 }
             }
         }
     }.Else{
+        If(GetVar(CreatorRids)).Else{SetVar(CreatorRids,0)}
+        If(GetVar(EditorRids)).Else{SetVar(EditorRids,0)}
         DBFind(roles, src_creators).Columns("id,role_name").Where("deleted=0 and id in (#CreatorRids#)")
+        DBFind(roles, src_editors).Columns("id,role_name").Where("deleted=0 and id in (#EditorRids#)")
 
         SetTitle(#title#)
         Div(breadcrumb){
@@ -79,7 +90,7 @@ Div(content-wrapper){
                         Div(row mt-sm){
                             Div(col-sm-4 mt-sm text-right){
                                 LangRes(og_creator_roles)
-                                Button(Class: btn btn-default fa fa-edit ml, Page: #this_page#, PageParams:"Rid=,Rids=#CreatorRids#,Mode=edit_creator").Popup(50, "Edit creator role")
+                                Button(Class: btn btn-link fa fa-edit ml p0, Page: #this_page#, PageParams:"Rid=,Rids=#CreatorRids#,EditorRids=#EditorRids#,Mode=edit_creator").Popup(50, "Edit creator role")
                             }
                             Div(col-sm-8 text-left){
                                 ForList(src_creators){
@@ -89,18 +100,13 @@ Div(content-wrapper){
                         }
                         Div(row mt-sm){
                             Div(col-sm-4 mt-sm text-right){
-                                LangRes(og_info)
+                                LangRes(og_editor_roles)
+                                Button(Class: btn btn-link fa fa-edit ml p0, Page: #this_page#, PageParams:"Rid=,Rids=#EditorRids#,CreatorRids=#CreatorRids#,Mode=edit_editor").Popup(50, "Edit editor role")
                             }
                             Div(col-sm-8 text-left){
-                                Input(Name: Info, Type:textarea, Value: #item_info#)
-                            }
-                        }
-                        Div(row mt-sm){
-                            Div(col-sm-4 mt-sm text-right){
-                                LangRes(og_deleted)
-                            }
-                            Div(col-sm-8 text-left){
-                                Input(Name: Deleted, Type:number, Value: #item_deleted#)
+                                ForList(src_editors){
+                                    Div(mt-sm){#role_name#}
+                                }
                             }
                         }
                         Div(row mt-sm){
