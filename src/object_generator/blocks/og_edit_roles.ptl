@@ -1,0 +1,59 @@
+If(Or(#Mode#=="edit_creator",#Mode#=="edit_editor")){
+    If(GetVar(Rid)){
+        If(GetVar(Rids)){
+            If(#Action#=="add"){
+                SetVar(Rids,"#Rids#,#Rid#")
+
+            }.ElseIf(#Action#=="sub"){
+                ArrayToSource(rids,[#Rids#])
+                SetVar(new_rids,)
+                ForList(rids){
+                    If(#value#!=#Rid#){
+                        If(#new_rids#==""){
+                            SetVar(new_rids,#value#)
+                        }.Else{
+                            SetVar(new_rids,"#new_rids#,#value#")
+                        }
+                    }
+                }
+                SetVar(Rids,#new_rids#)
+            }
+        }.Else{
+            SetVar(Rids,#Rid#)
+        }
+    }.Else{
+        SetVar(Rid,)
+        If(GetVar(Rids)){}.Else{SetVar(Rids,)}
+    }
+
+    If(GetVar(Rids)){}.Else{SetVar(Rids,0)}
+    If(#Mode#=="edit_creator"){
+        SetVar(title,$og_edit_creators$)
+    }
+    If(#Mode#=="edit_editor"){
+        SetVar(title,$og_edit_editors$)
+    }
+
+    Form(){
+        Div(input-group mb-sm){
+            Select(Name: Rid, Source: src_roles, NameColumn:role_name, ValueColumn: id)
+            Div(input-group-btn){
+                Button(Class: btn btn-primary fa fa-plus, Page: #this_page#, PageParams:"Rid=Val(Rid),Rids=#Rids#,Action=add,Mode=#Mode#,CreatorRids=#CreatorRids#,EditorRids=#EditorRids#").Popup(50, #title#)
+            }
+        }
+        If(GetVar(Rids)){
+            DBFind(roles, src_rids).Columns("id,role_name").Where("deleted=0 and id in (#Rids#)")
+            ForList(src_rids){
+                Button(Class: btn btn-default mr-sm mb-sm, Page: #this_page#, PageParams: "Rid=#id#,Rids=#Rids#,Action=sub,Mode=#Mode#,CreatorRids=#CreatorRids#,EditorRids=#EditorRids#", Body: Span(Class: fa fa-remove) #role_name#).Popup(50, #title#)
+            }
+        }
+        Div(text-right){
+            If(#Mode#=="edit_creator"){
+                Button(Body: LangRes(save), Page: #this_page#, Class: btn btn-primary, PageParams:"CreatorRids=#Rids#,EditorRids=#EditorRids#")
+            }
+            If(#Mode#=="edit_editor"){
+                Button(Body: LangRes(save), Page: #this_page#, Class: btn btn-primary, PageParams:"EditorRids=#Rids#,CreatorRids=#CreatorRids#")
+            }
+        }
+    }
+}
