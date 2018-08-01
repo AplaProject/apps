@@ -1,15 +1,25 @@
 Div(content-wrapper){
+    DBFind(members, src_member).Columns("id,image_id,member_name,name_first,name_middle,name_last,company_name,company_position,member_info->information").Where("id=#key_id#").Vars(prefix)
+    If(Or(#prefix_id#>0,#prefix_id#<0)){
+    }.Else{
+        SetVar(prefix_member_name,)
+    }
+    DBFind(buffer_data).Columns("value->id").Where("key='avatar' and member_id=#key_id#").Vars(avatar)
+    If(#avatar_value_id#>0){
+        SetVar(AvatarId,#avatar_value_id#)
+    }.Else{
+        SetVar(AvatarId,#prefix_image_id#)
+    }
+
     Div(breadcrumb){
-        LinkPage(Профиль, profile_view)
+        If(#avatar_value_id#>0){
+            Button(Body:Профиль, Page: profile_view, Class: btn btn-link p0, Contract:@1buffer_Manager, Params: "Action=clean,Key=avatar")
+        }.Else{
+            LinkPage(Профиль, profile_view)
+        }
         Span(/).Style(margin-right: 10px; margin-left: 10px;)
         Span(Class: text-muted, Body: Редактирование)
     }
-    
-DBFind(Name: members, Source: src_member).Columns("id,image_id,member_name,name_first,name_middle,name_last,company_name,company_position,member_info->information").Where("id=#key_id#").Vars(prefix)
-    If(Or(#prefix_id#>0,#prefix_id#<0)){
-        }.Else{
-            SetVar(Name: prefix_member_name, Value: "")
-        }
     Div(row){
         Div(col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3){
             Form(panel panel-primary){
@@ -23,7 +33,7 @@ DBFind(Name: members, Source: src_member).Columns("id,image_id,member_name,name_
                                     Span(Class: text-danger, Body:*)
                                 }
                             }
-                            Div(col-md-9 mc-sm text-left){ 
+                            Div(col-md-9 mc-sm text-left){
                                 Input(Name: name_first, Value: "#prefix_name_first#").Validate(minLength:3, maxLength:60)
                                 InputErr(Name: name_first, Value: "#prefix_name_first#", minLength: "Значение не может быть менее 3-х букв!", maxLength: "Значение не может быть более 60-ти букв!")
                             }
@@ -80,8 +90,8 @@ DBFind(Name: members, Source: src_member).Columns("id,image_id,member_name,name_
                                 }
                             }
                             Div(col-md-9 mc-sm text-left){
-                                Input(Name: company_position,  Value: "#prefix_company_position#").Validate(minLength:3, maxLength:60)
-                                InputErr(Name: company_position,  Value: "#prefix_company_position#", minLength: "Значение не может быть менее 3-х букв!", maxLength: "Значение не может быть более 60-ти букв!")
+                                Input(Name: company_position, Value: "#prefix_company_position#").Validate(minLength:3, maxLength:60)
+                                InputErr(Name: company_position, Value: "#prefix_company_position#", minLength: "Значение не может быть менее 3-х букв!", maxLength: "Значение не может быть более 60-ти букв!")
                             }
                         }
                     }
@@ -98,7 +108,7 @@ DBFind(Name: members, Source: src_member).Columns("id,image_id,member_name,name_
                                     Input(Name: member_name, Value: #prefix_member_name#, Disabled: true)
                                 }.Else{
                                     Input(Name: member_name).Validate(minLength:5, maxLength:20)
-                                    InputErr(Name: member_name,  minLength: "Значение не может быть менее 5-ти букв!", maxLength: "Значение не может быть более 20-ти букв!")
+                                    InputErr(Name: member_name, minLength: "Значение не может быть менее 5-ти букв!", maxLength: "Значение не может быть более 20-ти букв!")
                                 }
                             }
                         }
@@ -106,17 +116,19 @@ DBFind(Name: members, Source: src_member).Columns("id,image_id,member_name,name_
                     Div(list-group-item){
                         Div(row){
                             Div(col-md-3 mt-sm text-right){
-                                Label(For: member_image){
-                                    Span(Body: Аватар)
-                                    Span(Class: text-danger, Body:*)
-                                    If(Or(#prefix_id#>0,#prefix_id#<0)){
-                                    }.Else{
-                                        Span(Class: text-danger, Body:*)
-                                    }
-                                }
+                                Strong(Аватар)
                             }
                             Div(col-md-9 mc-sm text-left){
-                                Input(Name: member_image, Type: file)
+                                If(#AvatarId#>0){
+                                    Image(Src:Binary().ById(#AvatarId#), Class: big_photo)
+                                }
+                                Div(mt-sm){
+                                    If(#AvatarId#>0){
+                                        Button(Body: "Загрузить новый аватар", Page: profile_upload_photo, Class: btn btn-link p0).Popup(45, "Загрузка изображения")
+                                    }.Else{
+                                        Button(Body: "Загрузить аватар", Page:  profile_upload_photo, Class: btn btn-link p0).Popup(45, "Загрузка изображения")
+                                    }
+                                }
                             }
                         }
                     }
@@ -138,9 +150,11 @@ DBFind(Name: members, Source: src_member).Columns("id,image_id,member_name,name_
                     }
                 }
                 Div(panel-footer text-right){
-                    Button(Body: Отправить, Class: btn btn-primary, Contract: Profile_Edit, Page: profile_view, Params: "member_id=#key_id#").Alert(Text: Хотите внести изменения?, ConfirmButton: Да, CancelButton: Нет, Icon: question)
+                    Button(Body: Отправить, Class: btn btn-primary, Contract: Profile_Edit, Page: profile_view, Params: "member_id=#key_id#,image_id=#AvatarId#").Alert(Text: Хотите внести изменения?, ConfirmButton: Да, CancelButton: Нет, Icon: question)
                 }
             }
         }
     }
-}
+}.Style(
+    .big_photo {height: 300px; max-width: 100%;}
+)

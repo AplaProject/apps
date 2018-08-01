@@ -7,11 +7,12 @@ contract Profile_Edit {
         company_name string
         company_position string
         member_name string
-        member_image bytes "file"
+        image_id string "optional"
         information string "optional"
     }
 
     conditions {
+        $image_id = Int($image_id)
         var app_name string
         app_name = "Basic application" 
 
@@ -29,18 +30,13 @@ contract Profile_Edit {
 
     action {
         var memberInfo map
-        var image_id int
-        var image_name string
-        image_name = "avatar" 
 
         if $member_map {
-            image_id = Int($member_map["image_id"]) 
-            image_id = @1UploadBinary("Name,Data,ApplicationId", image_name, $member_image, Int($app_id))
-            DBUpdate("members", Int($member_map["id"]), "member_info->information,image_id,name_first,name_middle,name_last,company_name,company_position", $information, image_id,$name_first,$name_middle,$name_last,$company_name,$company_position)
+            DBUpdate("members", Int($member_map["id"]), "member_info->information,image_id,name_first,name_middle,name_last,company_name,company_position", $information, $image_id,$name_first,$name_middle,$name_last,$company_name,$company_position)
         } else {
             memberInfo["information"] = $information
-            image_id = @1UploadBinary("Name,Data,ApplicationId", image_name, $member_image, Int($app_id))
-            DBInsert("members", "id,member_name,image_id,member_info,name_first,name_middle,name_last,company_name,company_position", $key_id, $member_name, image_id, memberInfo,$name_first,$name_middle,$name_last,$company_name,$company_position)
+            DBInsert("members", "id,member_name,image_id,member_info,name_first,name_middle,name_last,company_name,company_position", $key_id, $member_name, $image_id, memberInfo,$name_first,$name_middle,$name_last,$company_name,$company_position)
         }
+        @1buffer_Manager("Action,Key", "clean", "avatar")
     }
 }
