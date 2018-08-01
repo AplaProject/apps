@@ -1,7 +1,12 @@
 DBFind(applications).Columns("id").Where("name='Trading Platform' AND deleted=0").Vars(application)
 SetVar(title, $lots_create$).(name,).(description,).(amount_starting,).(order_min,).(order_max,).(date_start,).(date_end,).(time_start,).(time_end,).(contract_text,).(unit_count,).(weight,).(weight_type,).(length,).(width,).(height,).(condition,)
 SetVar(location,`{"zoom":8, "center":{"lat":55.452376,"lng":37.372236}}`)
-
+DBFind(buffer_data).Where("member_id=#key_id# and key='last_uploaded_image'").Columns("value->id,value->lot_id").Vars(image)
+If(#image_value_id#>0){
+    SetVar(PhotoId,#image_value_id#)
+}.Else{
+    SetVar(PhotoId,0)
+}
 
 SetVar(Action,"create").(BtnBody,LangRes(lots_create))
 If(GetVar(Id)){
@@ -30,8 +35,12 @@ If(GetVar(Id)){
     SetVar(type_bargain,#lot_type_bargain#)
     SetVar(TypeId,#lot_lots_type_id#)
     SetVar(CatId,#lot_category#)
+    If(#image_value_lot_id#==#Id#){}.Else{
+        SetVar(PhotoId,#lot_photo#)
+    }
+}.Else{
+    SetVar(Id,)
 }
-
 
 Div(content-wrapper){
     If(GetVar(TypeId)){
@@ -52,7 +61,7 @@ Div(content-wrapper){
                         If(GetVar(Id)) {
                             Input(Name: Id, Type: hidden, Value: #Id#)
                         }
-                        Div(list-group-item){
+                        Div(form-group){
                             Div(row mt-sm){
                                 Div(col-md-3 mt-sm text-right){
                                     Strong(LangRes(lots_cat))
@@ -72,6 +81,25 @@ Div(content-wrapper){
                                 }
                             }
                         }
+                        Div(form-group){
+                            Div(row mt-sm){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(For: Photo){LangRes(lots_photo)}
+                                }
+                                Div(col-md-9 text-left){
+                                    If(#PhotoId#>0){
+                                        Image(Src:Binary().ById(#PhotoId#), Class: big_photo)
+                                    }
+                                    Div(mt-sm){
+                                        If(#PhotoId#>0){
+                                            Button(Body: "Загрузить другое изображение", Page: lots_upload_photo, Class: btn btn-link p0, PageParams: "Id=#Id#,TypeId=#TypeId#,CatId=#CatId#").Popup(45, "Загрузка изображения")
+                                        }.Else{
+                                            Button(Body: "Загрузить изображение", Page: lots_upload_photo, Class: btn btn-link p0, PageParams: "Id=#Id#,TypeId=#TypeId#,CatId=#CatId#").Popup(50, "Загрузка изображения")
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         Div(list-group-item){
                             Div(row mt-sm){
                                 Div(col-md-3 mt-sm text-right){
@@ -87,14 +115,6 @@ Div(content-wrapper){
                                 }
                                 Div(col-md-9 text-left){
                                     Input(Name: Description, Type: textarea, Value: #description#)
-                                }
-                            }
-                            Div(row mt-sm){
-                                Div(col-md-3 mt-sm text-right){
-                                    Label(For: Photo){LangRes(lots_photo)}
-                                }
-                                Div(col-md-9 text-left){
-                                    Input(Name: Photo, Type: file)
                                 }
                             }
                             If(#lot_contract_id#>0){
@@ -194,7 +214,7 @@ Div(content-wrapper){
                             Div(row mt-sm){
                                 Div(col-md-3 mt-sm text-right){
                                     Label(For: OrderMin){LangRes(order_min)}
-									P(Class: text-muted,Body: "Только для торгов с повышением цен"
+                                    P(Class: text-muted,Body: "Только для торгов с повышением цен"
                                 }
                                 Div(col-md-9 text-left){
                                     Input(Name: OrderMin, Type: number, Value: #order_min#)
@@ -203,22 +223,25 @@ Div(content-wrapper){
                             Div(row mt-sm){
                                 Div(col-md-3 mt-sm text-right){
                                     Label(For: OrderMax){LangRes(order_max)}
-									P(Class: text-muted,Body: "Только для торгов с повышением цен"
+                                    P(Class: text-muted,Body: "Только для торгов с повышением цен"
                                 }
                                 Div(col-md-9 text-left){
                                     Input(Name: OrderMax, Type: number, Value: #order_max#)
                                 }.Style(padding-top:20px;)
                             }
                         }
-                    }
-                    Div(panel-footer text-right){
-                        If(GetVar(Id)) {
-                            Button(Body: $lots_back$, Class: btn btn-default pull-left, Page: lots_list)
-                        }.Else{
-                            Button(Body: $lots_back$, Class: btn btn-default pull-left hidden-lg, Page: lots_edit, PageParams: "CatId=#CatId#").Popup(Width: 50, Header: "Выбор вида")
-                            Button(Body: $lots_back$, Class: btn btn-default pull-left hidden-sm hidden-md hidden-xs, Page: lots_edit, PageParams: "CatId=#CatId#").Popup(Width: 40, Header: "Выбор вида")
+                        Div(panel-footer text-left){
+                            If(GetVar(Id)){
+                                If(And(#image_value_id#>0,#image_value_lot_id#==#Id#)){
+                                    Button(Body: $lots_back$, Class: btn btn-default, Page: lots_list, Contract: @1buffer_Manager, Params: "Action=clean,Key=last_uploaded_image")
+                                }.Else{
+                                    Button(Body: $lots_back$, Class: btn btn-default, Page: lots_list)
+                                }
+                            }.Else{
+                                Button(Body: $lots_back$, Class: btn btn-default, Page: lots_edit, PageParams: "CatId=#CatId#").Popup(Width: 45, Header: "Выбор вида")
+                            }
+                            Button(Body: #BtnBody#, Class: btn btn-primary pull-right, Contract: lots_SellerAction, Page: lots_list, Params: "Action=#Action#,TypeId=#TypeId#,PhotoId=#PhotoId#")
                         }
-                        Button(Body: #BtnBody#, Class: btn btn-primary, Contract: lots_SellerAction, Page: lots_list, Params: "Action=#Action#,TypeId=#TypeId#")
                     }
                 }
             }
@@ -233,15 +256,13 @@ Div(content-wrapper){
                 }
             }
             Div(text-left){
-                Button(Body: $lots_back$, Class: btn btn-default hidden-lg, Page: lots_edit).Popup(Width: 50, Header: "Выбор категории")
-                Button(Body: $lots_back$, Class: btn btn-default hidden-sm hidden-md hidden-xs, Page: lots_edit).Popup(Width: 40, Header: "Выбор категории")
+                Button(Body: $lots_back$, Class: btn btn-default, Page: lots_edit).Popup(Width: 45, Header: "Выбор категории")
             }
         }.Else{
             AppParam(App: #application_id#, Name: lots_categories, Source: src_cats)
             Div(text-center form-group){
                 ForList(src_cats){
-                    Button(Body: #name#, Class: btn btn-primary btn-block mr-sm mb-sm hidden-lg, Page: lots_edit, PageParams: "CatId=#id#").Popup(Width: 50, Header: "Выбор вида")
-                    Button(Body: #name#, Class: btn btn-primary btn-block mr-sm mb-sm hidden-sm hidden-md hidden-xs, Page: lots_edit, PageParams: "CatId=#id#").Popup(Width: 40, Header: "Выбор вида")
+                    Button(Body: #name#, Class: btn btn-primary btn-block mr-sm mb-sm, Page: lots_edit, PageParams: "CatId=#id#").Popup(Width: 45, Header: "Выбор вида")
                 }
             }
             Div(text-left){
@@ -249,4 +270,6 @@ Div(content-wrapper){
             }
         }
     }
-}
+}.Style(
+    .big_photo {height: 300px; max-width: 100%;}
+)

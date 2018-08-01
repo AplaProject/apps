@@ -2,10 +2,10 @@ contract lots_SellerAction {
     data {
         Action string
         Id string "optional"
+        PhotoId int
         TypeId int
         Name string
         Description string
-        Photo bytes "file"
         DateStart string "date"
         TimeStart string "date"
         DateEnd string "date"
@@ -53,6 +53,9 @@ contract lots_SellerAction {
         notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, params)
     }
     conditions {
+        if $PhotoId == 0{
+            warning "Пожалуйста добавьте изображение лота"
+        } 
         if $TypeBargain == 1 {
             if ($OrderMin == "") {
 				info("Минимальная ставка не указана")
@@ -107,23 +110,16 @@ contract lots_SellerAction {
     }
 
     action {
-        var appId imageId contractFileId int imageName string
-        appId = Int(DBFind("applications").Where("name = $ AND deleted = 0", "Trading Platform").One("id"))
-        imageName = Sprintf("%v_%v", $key_id, $time)
-        if $Id > 0 {
-            imageName = DBFind("binaries").Where("id=?", $lot["photo"]).One("name")
-        }
-        imageId = @1UploadBinary("ApplicationId,Name,Data", appId, imageName, $Photo)
-
         var fields string args array id int
         if $TypeBargain == 1 {
-            args = appendAll($Name, $Description, imageId, $dateStart, $dateEnd, $AmountStarting, $OrderMin, $OrderMax, contractFileId, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
+            args = appendAll($Name, $Description, $PhotoId, $dateStart, $dateEnd, $AmountStarting, $OrderMin, $OrderMax, 0, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
             fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain,map_location"
         }
         if $TypeBargain == 2 {
-            args = appendAll($Name, $Description, imageId, $dateStart, $dateEnd, $AmountStarting, contractFileId, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
+            args = appendAll($Name, $Description, $PhotoId, $dateStart, $dateEnd, $AmountStarting, 0, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
             fields = "name,description,photo,date_start,date_end,amount_starting,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain,map_location"
         }
+        @1buffer_Manager("Action,Key", "clean", "last_uploaded_image")
         if $Action == "create"{
             fields = Sprintf("%v,timestamp date_creation,seller", fields)
             args = Append(args,$block_time)

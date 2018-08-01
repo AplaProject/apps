@@ -1,0 +1,26 @@
+contract LotsUploadPhoto {
+    data {
+        Photo bytes "file"
+        LotId string "optional"
+    }
+    conditions {
+        $LotId = Int($LotId)
+        // if $LotId > 0 {
+        //     var photoId int
+        //     photoId = Int(DBFind("lots").Where("id=? and deleted=0", $LotId).One("photo"))
+        //     $imageName = DBFind("binaries").Where("id=?", photoId).One("name")
+        // }else{
+        // }
+        $imageName = Str($time)
+    }
+
+    action {
+        var appId imageId int image map
+        appId = Int(DBFind("applications").Where("name='Trading Platform' and deleted=0").One("id"))
+        imageId = @1UploadBinary("ApplicationId,Name,Data", appId, $imageName, $Photo)
+        image["id"] = imageId
+        image["lot_id"] = $LotId
+
+        @1buffer_Manager("Action,Key,Val", "set", "last_uploaded_image", JSONEncode(image))
+    }
+}
