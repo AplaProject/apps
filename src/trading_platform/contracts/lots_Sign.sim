@@ -24,12 +24,15 @@ contract lots_Sign {
             if $lot["buyer"] == $key_id {
                 notifications_Send("member_id,sender,text_header,page_name,params_map", $lot["seller"], 1, "Покупатель подписал контракт", "lots_view_contract", JSONEncode(params))
                 var buyer map
-                buyer = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=? and buyer_id=?", $lot_id, $lot["buyer"]).Row()
+                buyer = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=? and buyer_id=? and status != -1", $lot_id, $lot["buyer"]).Order("amount DESC").Row()
                 DBUpdate("buyers", Int(buyer["id"]), "status", 1)
                 
                 DBUpdate("keys", Int($lot["seller"]), "+amount", buyer["amount"])
                 DBUpdate("keys", Int($lot["buyer"]), "-amount", buyer["amount"])
-                
+                //info($lot["type_bargain"])
+                /*if $lot["type_bargain"] == 2 {
+                    DBUpdate("keys", Int(buyer["buyer_id"]), "-deposit", buyer["amount"])
+                }*/
                 var buyers array i int
                 buyers = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=?", $lot_id)
                 while i < Len(buyers) {
@@ -47,8 +50,10 @@ contract lots_Sign {
         if $actions == "buyer_reject" {
             if $lot["buyer"] == $key_id {
                 var buyer map
-                buyer = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=? and buyer_id=?", $lot_id, $lot["buyer"]).Row()
+				buyer = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=? and buyer_id=? and status != -1", $lot_id, $lot["buyer"]).Order("amount DESC").Row()
                 DBUpdate("buyers", Int(buyer["id"]), "status", -1)
+                DBUpdate("keys", Int($lot["buyer"]), "deposit", 0)
+                //DBUpdate("keys", Int(buyer["buyer_id"]), "-deposit", buyer["amount"])
                 lots_Close("id", $lot_id)
             }
         }
@@ -63,6 +68,15 @@ contract lots_Sign {
         if $actions == "seller_reject" {
             if $lot["seller"] == $key_id {
                 DBUpdate("lots", $lot_id, "status", 5)
+            }
+            var buyers array i int
+            buyers = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=?", $lot_id)
+            while i < Len(buyers) {
+                var buyer map
+                buyer = buyers[i]
+                //DBUpdate("keys", Int(buyer["buyer_id"]), "-deposit", buyer["amount"])
+                DBUpdate("keys", Int($lot["buyer"]), "deposit", 0)
+                i = i + 1
             }
         }
         if $notific_id > 0{

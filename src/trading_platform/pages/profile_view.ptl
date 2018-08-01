@@ -5,11 +5,8 @@ Div(content-wrapper){
         }
     DBFind(Name: members, Source: src_member).Columns("id,image_id,member_name,name_first,name_middle,name_last,company_name,company_position,member_info->information").Where("id=#v_member_id#").Vars(prefix)
     DBFind(roles).Where("id=#role_id#").Columns("role_name").Vars(r)
-
+    DBFind(applications).Columns("id").Where("name='Trading Platform' AND deleted=0").Vars(application)
     If(Or(#prefix_id#>0,#prefix_id#<0)){
-        }.Else{
-            SetVar(Name: prefix_member_name, Value: "")
-        }
         Div(row){
             Div(Class: col-sm-3 mt-sm text-center){
                     If(#prefix_image_id#>0){
@@ -57,53 +54,53 @@ Div(content-wrapper){
                 }.Style(height: 310px;)
             }
             Div(Class: col-md-5 mt-sm){
-                Div(Class: panel panel-primary) {
+                Div(Class: panel panel-primary){
                         DBFind(Name: roles_participants, Source: src_check).Columns("id").Where("member->member_id='#v_member_id#' and deleted=0").Vars(check)
-                            If(#check_id#>0){
-                                Div(Class: list-group-item text-left) {
-                                    Span(Class: text-bold h4, Body: Текущая роль:)Span(Class: h4){
-                                        If(#r_role_name#=="Seller"){
-                                            LangRes(Продавец)
-                                        }
-                                        If(#r_role_name#=="Buyer"){
-                                            LangRes(Покупатель)
-                                        }
-                                        If(#r_role_name#=="Admin"){
-                                            LangRes(Администратор)
-                                        }
-                                    }.Style(margin-left: 5px;)
-                                }
-                                DBFind(Name: keys, Source: src_keys).Where("id=#v_member_id#").Vars(tokens)
-                                Div(Class: list-group-item text-left) {
-                                    Span(Class: text-bold, Body: Аккаунт:)Span(Class: h5, Body: Address(#tokens_id#)).Style(margin-left: 5px;)
-                                }
-                                Div(Class: list-group-item text-left) {
-                                    SetVar(dd, Money(#tokens_amount#))
-                                    Span(Class: text-bold, Body: Баланс:)Span(Class: h5, Body: Calculate(#dd#,money,0)).Style(margin-left: 5px;)
-                                }
-                                Div(Class: list-group-item text-left) {
-                                    Span(Class: text-bold, Body: Депозит:)Span(Class: h5, Body: Money(#tokens_deposit#)).Style(margin-left: 5px;)
-                                }
-                                DBFind(Name: roles_participants, Source: src_roles).Columns("role->id,role->name").Where("member->member_id='#v_member_id#' and deleted=0").Order("id")
-                                Div(Class: list-group-item) {
-                                    Div(Class: row df f-valign) {
-                                        Div(Class: text-center) {
-                                            Label(Body: Роли:)
-                                                ForList(src_roles){
-                                                    LinkPage(Page: roles_view, PageParams: "v_role_id=#role.id#"){
-                                                        Span(Class: h5, Body: LangRes(#role.name#)).Style(margin-left: 5px; margin-right: 5px;)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+						If(#check_id#>0){
+							Div(Class: list-group-item text-left) {
+								Span(Class: text-bold h4, Body: Текущая роль:)Span(Class: h4){
+									If(#r_role_name#=="Seller"){
+										LangRes(Продавец)
+									}
+									If(#r_role_name#=="Buyer"){
+										LangRes(Покупатель)
+									}
+									If(#r_role_name#=="Admin"){
+										LangRes(Администратор)
+									}
+								}.Style(margin-left: 5px;)
+							}
+							DBFind(Name: keys, Source: src_keys).Where("id=#v_member_id#").Vars(tokens)
+							Div(Class: list-group-item text-left) {
+								Span(Class: text-bold, Body: Аккаунт:)Span(Class: h5, Body: Address(#tokens_id#)).Style(margin-left: 5px;)
+							}
+							Div(Class: list-group-item text-left) {
+								SetVar(dd, Money(#tokens_amount#))
+								Span(Class: text-bold, Body: Баланс:)Span(Class: h5, Body: Calculate(#dd#,money,0)).Style(margin-left: 5px;)
+							}
+							Div(Class: list-group-item text-left) {
+								Span(Class: text-bold, Body: Депозит:)Span(Class: h5, Body: Money(#tokens_deposit#)).Style(margin-left: 5px;)
+							}
+							DBFind(Name: roles_participants, Source: src_roles).Columns("role->id,role->name").Where("member->member_id='#v_member_id#' and deleted=0").Order("id")
+							Div(Class: list-group-item) {
+								Div(Class: row df f-valign) {
+									Div(Class: text-center) {
+										Label(Body: Роли:)
+											ForList(src_roles){
+												LinkPage(Page: roles_view, PageParams: "v_role_id=#role.id#"){
+													Span(Class: h5, Body: LangRes(#role.name#)).Style(margin-left: 5px; margin-right: 5px;)
+												}
+											}
+										}
+									}
+								}
+						}
                     If(#prefix_id# == #key_id#){
                         Div(Class: panel-footer text-center) {
                         DBFind(Name: roles_participants, Source: src_roles).Columns("role->id,role->name").Where("member->member_id='#v_member_id#' and deleted=0").Vars(valid)
                             If(And(#valid_role_name#=="Seller",#valid_role_name#=="Buyer")){
                             }.Else{
-                                Button(Class: btn btn-link, Page: platform_role_selection, Body: Подать заявку на роль).Popup(50, Выбор роли)
+                                Button(Class: btn btn-link, Page: platform_role_selection, Body: Подать заявку на роль).Popup(35, Выбор роли)
                             }
                                 Button(Class: btn btn-link, Page: tokens_transfer, Body: Перевод средств).Popup(50, Укажите адресата)
                             }
@@ -112,132 +109,434 @@ Div(content-wrapper){
                 } 
             }
         If(#prefix_id# == #key_id#){
-            Div(Class: panel panel-default) {
-                If(#r_role_name#=="Seller") {
-                    Div(Class: panel-heading, Body: Активные лоты)
-                        DBFind(lots, src_lots).Count(tettttt).Where("seller=#key_id# and deleted=0 and status=2").Custom(_photo){
-                            Image(Src: Binary().ById(#photo#), Class:photo)
-                        }.Custom(_date_creation){
-                            DateTime(#date_creation#, DD.MM.YYYY)
-                        }.Custom(_date_start){
-                            DateTime(#date_start#, DD.MM.YY) \ DateTime(#date_end#, DD.MM.YY)
-                        }.Custom(_date_end){
-                            DateTime(#date_end#, DD.MM.YYYY)
-                        }.Custom(_amount_starting){
-                            Money(#amount_starting#)
-                        }.Custom(_stps){
+            Div(Class: panel panel-default){
+                If(#r_role_name#=="Seller"){
+				Div(Class: panel-heading, Body: Активные лоты)
+					DBFind(lots, src_lots).Count(tettttt).Where("seller=#key_id# and deleted=0 and status=2 ").Custom(_photo){
+						Image(Src: Binary().ById(#photo#), Class:photo)
+					}.Custom(_date_creation){
+						DateTime(#date_creation#, DD.MM.YYYY)
+					}.Custom(_date_start){
+						DateTime(#date_start#, DD.MM.YY) \ DateTime(#date_end#, DD.MM.YY)
+					}.Custom(_date_end){
+						DateTime(#date_end#, DD.MM.YYYY)
+					}.Custom(_amount_starting){
+						Money(#amount_starting#)
+					}.Custom(_stps){
+                        If(#type_bargain# == 1){
                             Div(Class:h6, Body:Money(#order_min#) \ Money(#order_max#))
-                        }.Custom(_amount_final){
-                            SetVar(status_index, Calculate(#status# + 1))
-                            SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+                        }
+                        If(#type_bargain# == 2){
+                            Div(Class:h6, Body:"-")
+                        }
+					}.Custom(_amount_final){
+                        SetVar(status_index, Calculate(#status# + 1))
+                        SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+                        If(#type_bargain# == 1){
                             Div(#status_class#){
                                 Money(#amount_max#)
-                            } 
-                        }.Custom(_seller){
-                            Div(text-nowrap){
-                                DBFind(members).Columns("id,member_name,image_id").Where("id=#seller#").Vars(seller)
-                                If(Or(#seller_id#>0,#seller_id#<0)){
-                                }.Else{
-                                    SetVar(seller_member_name,Address(#seller#))
-                                }
-                                LinkPage(Class: center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
-                                    If(#seller_image_id#>0){
-                                        Image(Src: Binary().ById(#seller_image_id#), Class: img-circle mr)
-                                    }.Else{
-                                        Div(Class: fa icon-user fa-2x mr)
-                                    }
-                                    Div(){#seller_member_name#}
-                                }
-                            }
-                        }.Custom(_name){
-                            Div(text-left){
-                                LinkPage(Class: text-primary h5 text-bold, Page: lots_view, PageParams: "Id=#id#", Body: #name#)
                             }
                         }
-                        Div(list-group-item text-center){
-                            Div(table-responsive){
-                                If(#tettttt#>0){
-                                    Table(src_lots,"ID=id,Название=_name,Продавец=_seller,Начало \ Окончание=_date_start,Стартовая цена=_amount_starting,Шаг (Min\Max)=_stps,Цена=_amount_final")
-                                }.Else{
-                                    Span(Лотов нет)
-                                }
-                            }.Style(
-                                th,td {text-align:center;}
-                                .img-circle {height: 30px;width: 30px; border: 1px solid #5A5D63;}
-                                .center {display:flex; align-items:center;}
-                                .photo {height: 30px; width: 30px;}
-                            )
-                        }
-                    }
+                        If(#type_bargain# == 2){
+                            Div(#status_class#){
+                                Money(#amount_starting#)
+                            }
+                        } 
+					}.Custom(_seller){
+						Div(text-nowrap){
+							DBFind(members).Columns("id,member_name,image_id").Where("id=#seller#").Vars(seller)
+							If(Or(#seller_id#>0,#seller_id#<0)){
+							}.Else{
+								SetVar(seller_member_name,Address(#seller#))
+							}
+							LinkPage(Class: center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
+								If(#seller_image_id#>0){
+									Image(Src: Binary().ById(#seller_image_id#), Class: img-circle mr)
+								}.Else{
+									Div(Class: fa icon-user fa-2x mr)
+								}
+								Div(){#seller_member_name#}
+							}
+						}
+					}.Custom(_name){
+						Div(text-left){
+							LinkPage(Class: text-primary h5 text-bold, Page: lots_view, PageParams: "Id=#id#", Body: #name#)
+						}
+					}
+					Div(list-group-item text-center){
+						Div(table-responsive){
+							If(#tettttt#>0){
+								Table(src_lots,"ID=id,Название=_name,Продавец=_seller,Начало \ Окончание=_date_start,Стартовая цена=_amount_starting,Шаг (Min\Max)=_stps,Цена=_amount_final")
+							}.Else{
+								Span(Лотов нет)
+							}
+						}.Style(
+							th,td {text-align:center;}
+							.img-circle {height: 30px;width: 30px; border: 1px solid #5A5D63;}
+							.center {display:flex; align-items:center;}
+							.photo {height: 30px; width: 30px;}
+						)
+					}
+				}
                 If(#r_role_name#=="Buyer") {
                     Div(Class: panel-heading, Body: Активные лоты)
-                        DBFind(lots, src_lots).Count(tettttt2).Where("deleted=0 and status=2").Custom(_bid){
-                            Form(pull-right){
-                                Div(input-group){
-                                    Input(Сlass: form-control, Name: StepRate,Type: number)
-                                    Div(input-group-btn){
-                                        DBFind("buyers").Where("lot_id = #id#").Order("amount DESC").Vars(rate_hight_)
-                                        If(#rate_hight__buyer_id# == #key_id#){
-                                            Button(Body: Сделать ставку, Class: btn btn-success disabled)
-                                        }.Else{
-                                            Button(Body: Сделать ставку, Class: btn btn-success, Contract: AuctionProcess,Page:profile_view, Params:"step_rate=Val(StepRate),lot_id=#id#",PageParams: "Id=#id#")
-                                        }
-                                    }
-                                }.Style(width:250px;)
-                            }
-                        }.Custom(_name){
-                            Div(text-left){
-                                LinkPage(Class: text-primary h5 text-bold, Page: lots_view, PageParams: "Id=#id#", Body: #name#)
-                            }
-                        }.Custom(_photo){
-                            Image(Src: Binary().ById(#photo#), Class:photo)
-                        }.Custom(_date_creation){
-                            DateTime(#date_creation#, DD.MM.YYYY)
-                        }.Custom(_date_start){
-                            DateTime(#date_start#, DD.MM.YY) \ DateTime(#date_end#, DD.MM.YY)
-                        }.Custom(_date_end){
-                            DateTime(#date_end#, DD.MM.YYYY)
-                        }.Custom(_stps){
+					DBFind(lots, src_lots).Count(tettttt2).Where("deleted=0 and status=2").Custom(_bid){
+						Form(pull-right){
+							If(#type_bargain#==1){
+								Div(input-group){
+									Input(Сlass: form-control, Name: StepRate,Type: number)
+									Div(input-group-btn){
+										DBFind("buyers").Where("lot_id = #id#").Order("amount DESC").Vars(rate_hight_)
+										If(#rate_hight__buyer_id# == #key_id#){
+											Button(Body: Сделать ставку, Class: btn btn-success disabled)
+										}.Else{
+											Button(Body: Сделать ставку, Class: btn btn-success, Contract: AuctionProcess,Page:profile_view, Params:"step_rate=Val(StepRate),lot_id=#id#",PageParams: "Id=#id#")
+										}
+									}
+								}.Style(width:250px;)
+							}
+							If(And(#type_bargain#==2,#status#==2)){
+								Button(Class: btn btn-success pull-right,Body: "Купить",Contract:AuctionProcess,Page:lots_view,Params:"step_rate=0,lot_id=#id#",PageParams: "Id=#id#")
+							}
+						}
+					}.Custom(_name){
+						Div(text-left){
+							LinkPage(Class: text-primary h5 text-bold, Page: lots_view, PageParams: "Id=#id#", Body: #name#)
+						}
+					}.Custom(_photo){
+						Image(Src: Binary().ById(#photo#), Class:photo)
+					}.Custom(_date_creation){
+						DateTime(#date_creation#, DD.MM.YYYY)
+					}.Custom(_date_start){
+						DateTime(#date_start#, DD.MM.YY) \ DateTime(#date_end#, DD.MM.YY)
+					}.Custom(_date_end){
+						DateTime(#date_end#, DD.MM.YYYY)
+					}.Custom(_stps){
+						If(#type_bargain# == 1){
                             Div(Class:h6, Body:Money(#order_min#) \ Money(#order_max#))
-                        }.Custom(_amount_starting){
-                            Money(#amount_starting#)
-                        }.Custom(_seller){
-                            Div(text-nowrap){
-                                DBFind(members).Columns("id,member_name,image_id").Where("id=#seller#").Vars(seller)
-                                If(Or(#seller_id#>0,#seller_id#<0)){
-                                }.Else{
-                                    SetVar(seller_member_name,Address(#seller#))
-                                }
-                                LinkPage(Class: center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
-                                    If(#seller_image_id#>0){
-                                        Image(Src: Binary().ById(#seller_image_id#), Class: img-circle mr)
-                                    }.Else{
-                                        Div(Class: fa icon-user fa-2x mr)
-                                    }
-                                    Div(){#seller_member_name#}
-                                }
-                            }
-                        }.Custom(_amount_final){
-                            SetVar(status_index, Calculate(#status# + 1))
-                            SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+                        }
+                        If(#type_bargain# == 2){
+                            Div(Class:h6, Body:"-")
+                        }
+					}.Custom(_amount_starting){
+						Money(#amount_starting#)
+					}.Custom(_seller){
+						Div(text-nowrap){
+							DBFind(members).Columns("id,member_name,image_id").Where("id=#seller#").Vars(seller)
+							If(Or(#seller_id#>0,#seller_id#<0)){
+							}.Else{
+								SetVar(seller_member_name,Address(#seller#))
+							}
+							LinkPage(Class: center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
+								If(#seller_image_id#>0){
+									Image(Src: Binary().ById(#seller_image_id#), Class: img-circle mr)
+								}.Else{
+									Div(Class: fa icon-user fa-2x mr)
+								}
+								Div(){#seller_member_name#}
+							}
+						}
+					}.Custom(_amount_final){
+						SetVar(status_index, Calculate(#status# + 1))
+						SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+                        If(#type_bargain# == 1){
                             Div(#status_class#){
                                 Money(#amount_max#)
-                            } 
+                            }
                         }
-                        Div(list-group-item text-center){
-                            Div(table-responsive){
-                                If(#tettttt2#>0){                        
-                                    Table(src_lots,"ID=id,Название=_name,Продавец=_seller,Начало \ Окончание=_date_start,Стартовая цена=_amount_starting,Шаг (Min\Max)=_stps,Цена=_amount_final,Ставка=_bid")
-                                }.Else{
-                                    Span(Лотов нет)
-                                }
-                            }.Style(
-                                th,td {text-align:center;}
-                                .img-circle {height: 30px;width: 30px; border: 1px solid #5A5D63;}
-                                .center {display:flex; align-items:center;}
-                                .photo {height: 30px; width: 30px;}
-                            )
-                        }
+                        If(#type_bargain# == 2){
+                            Div(#status_class#){
+                                Money(#amount_starting#)
+                            }
+                        } 
+					}
+					Div(list-group-item text-center){
+						Div(table-responsive){
+							If(#tettttt2#>0){                        
+								Table(src_lots,"ID=id,Название=_name,Продавец=_seller,Начало \ Окончание=_date_start,Стартовая цена=_amount_starting,Шаг (Min\Max)=_stps,Цена=_amount_final,Ставка=_bid")
+							}.Else{
+								Span(Лотов нет)
+							}
+						}.Style(
+							th,td {text-align:center;}
+							.img-circle {height: 30px;width: 30px; border: 1px solid #5A5D63;}
+							.center {display:flex; align-items:center;}
+							.photo {height: 30px; width: 30px;}
+						)
+					}
                 }
             }
+            Div(Class: panel panel-default) {
+                Div(Class: panel-heading, Body: Завершенные лоты)
+                If(#r_role_name#=="Seller") {
+                    DBFind(lots, src_lots).Count(tettttt).Where("seller=#key_id# and deleted=0 and status=4 and seller_sign=1").Custom(_photo){
+						Image(Src: Binary().ById(#photo#), Class:photo)
+					}.Custom(_date_creation){
+						DateTime(#date_creation#, DD.MM.YYYY)
+					}.Custom(_date_start){
+						DateTime(#date_start#, DD.MM.YY) \ DateTime(#date_end#, DD.MM.YY)
+					}.Custom(_date_end){
+						DateTime(#date_end#, DD.MM.YYYY)
+					}.Custom(_amount_starting){
+						Money(#amount_starting#)
+					}.Custom(_stps){
+						If(#type_bargain# == 1){
+                            Div(Class:h6, Body:Money(#order_min#) \ Money(#order_max#))
+                        }
+                        If(#type_bargain# == 2){
+                            Div(Class:h6, Body:"-")
+                        }
+					}.Custom(_amount_final){
+						SetVar(status_index, Calculate(#status# + 1))
+						SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+                        If(#type_bargain# == 1){
+                            Div(#status_class#){
+                                Money(#amount_max#)
+                            }
+                        }
+                        If(#type_bargain# == 2){
+                            Div(#status_class#){
+                                Money(#amount_starting#)
+                            }
+                        } 
+					}.Custom(_seller){
+						Div(text-nowrap){
+							DBFind(members).Columns("id,member_name,image_id").Where("id=#seller#").Vars(seller)
+							If(Or(#seller_id#>0,#seller_id#<0)){
+							}.Else{
+								SetVar(seller_member_name,Address(#seller#))
+							}
+							LinkPage(Class: center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
+								If(#seller_image_id#>0){
+									Image(Src: Binary().ById(#seller_image_id#), Class: img-circle mr)
+								}.Else{
+									Div(Class: fa icon-user fa-2x mr)
+								}
+								Div(){#seller_member_name#}
+							}
+						}
+					}.Custom(_name){
+						Div(text-left){
+							LinkPage(Class: text-primary h5 text-bold, Page: lots_view, PageParams: "Id=#id#", Body: #name#)
+						}
+					}.Custom(_status){
+						SetVar(status_index, Calculate(#status# + 1))
+						SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+						Div(#status_class#){
+							AppParam(App: #application_id#, Name: lots_status, Index: #status_index#)
+                            SetVar(status_index, Calculate(#status# + 1))
+						}
+					}.Custom(_actions){
+						If(#status#==4){
+							Div(){
+								LinkPage(Body: Договор, Page: lots_view_contract, PageParams: "Id=#id#")
+							}
+						}
+					}
+                }
+                If(#r_role_name#=="Buyer") {
+                    DBFind(lots, src_lots).Count(tettttt).Where("buyer=#key_id# and deleted=0 and status=4 and buyer_sign=1").Custom(_photo){
+						Image(Src: Binary().ById(#photo#), Class:photo)
+					}.Custom(_date_creation){
+						DateTime(#date_creation#, DD.MM.YYYY)
+					}.Custom(_date_start){
+						DateTime(#date_start#, DD.MM.YY) \ DateTime(#date_end#, DD.MM.YY)
+					}.Custom(_date_end){
+						DateTime(#date_end#, DD.MM.YYYY)
+					}.Custom(_amount_starting){
+						Money(#amount_starting#)
+					}.Custom(_stps){
+						If(#type_bargain# == 1){
+                            Div(Class:h6, Body:Money(#order_min#) \ Money(#order_max#))
+                        }
+                        If(#type_bargain# == 2){
+                            Div(Class:h6, Body:"-")
+                        }
+					}.Custom(_amount_final){
+						SetVar(status_index, Calculate(#status# + 1))
+						SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+                        If(#type_bargain# == 1){
+                            Div(#status_class#){
+                                Money(#amount_max#)
+                            }
+                        }
+                        If(#type_bargain# == 2){
+                            Div(#status_class#){
+                                Money(#amount_starting#)
+                            }
+                        }
+					}.Custom(_seller){
+						Div(text-nowrap){
+							DBFind(members).Columns("id,member_name,image_id").Where("id=#seller#").Vars(seller)
+							If(Or(#seller_id#>0,#seller_id#<0)){
+							}.Else{
+								SetVar(seller_member_name,Address(#seller#))
+							}
+							LinkPage(Class: center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
+								If(#seller_image_id#>0){
+									Image(Src: Binary().ById(#seller_image_id#), Class: img-circle mr)
+								}.Else{
+									Div(Class: fa icon-user fa-2x mr)
+								}
+								Div(){#seller_member_name#}
+							}
+						}
+					}.Custom(_name){
+						Div(text-left){
+							LinkPage(Class: text-primary h5 text-bold, Page: lots_view, PageParams: "Id=#id#", Body: #name#)
+						}
+					}.Custom(_status){
+						SetVar(status_index, Calculate(#status# + 1))
+						SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+						Div(#status_class#){
+							AppParam(App: #application_id#, Name: lots_status, Index: #status_index#)
+						}
+					}.Custom(_actions){
+						If(#status#==4){
+							Div(){
+								LinkPage(Body: Договор, Page: lots_view_contract, PageParams: "Id=#id#")
+							}
+						}
+					}
+                }
+                If(#r_role_name#=="Admin") {
+                    DBFind(lots, src_lots).Count(tettttt).Where("deleted=0 or deleted=1 and status=4").Custom(_photo){
+						Image(Src: Binary().ById(#photo#), Class:photo)
+					}.Custom(_date_creation){
+						DateTime(#date_creation#, DD.MM.YYYY)
+					}.Custom(_date_start){
+						DateTime(#date_start#, DD.MM.YY) \ DateTime(#date_end#, DD.MM.YY)
+					}.Custom(_date_end){
+						DateTime(#date_end#, DD.MM.YYYY)
+					}.Custom(_amount_starting){
+						Money(#amount_starting#)
+					}.Custom(_stps){
+						If(#type_bargain# == 1){
+                            Div(Class:h6, Body:Money(#order_min#) \ Money(#order_max#))
+                        }
+                        If(#type_bargain# == 2){
+                            Div(Class:h6, Body:"-")
+                        }
+					}.Custom(_amount_final){
+						SetVar(status_index, Calculate(#status# + 1))
+						SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+                        If(#type_bargain# == 1){
+                            Div(#status_class#){
+                                Money(#amount_max#)
+                            }
+                        }
+                        If(#type_bargain# == 2){
+                            Div(#status_class#){
+                                Money(#amount_starting#)
+                            }
+                        }
+					}.Custom(_seller){
+						Div(text-nowrap){
+							DBFind(members).Columns("id,member_name,image_id").Where("id=#seller#").Vars(seller)
+							If(Or(#seller_id#>0,#seller_id#<0)){
+							}.Else{
+								SetVar(seller_member_name,Address(#seller#))
+							}
+							LinkPage(Class: center text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
+								If(#seller_image_id#>0){
+									Image(Src: Binary().ById(#seller_image_id#), Class: img-circle mr)
+								}.Else{
+									Div(Class: fa icon-user fa-2x mr)
+								}
+								Div(){#seller_member_name#}
+							}
+						}
+					}.Custom(_name){
+						Div(text-left){
+							LinkPage(Class: text-primary h5 text-bold, Page: lots_view, PageParams: "Id=#id#", Body: #name#)
+						}
+					}.Custom(_status){
+						SetVar(status_index, Calculate(#status# + 1))
+						SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+						Div(#status_class#){
+							AppParam(App: #application_id#, Name: lots_status, Index: #status_index#)
+						}
+					}.Custom(_actions){
+						If(#status#==4){
+							Div(){
+								LinkPage(Body: Договор, Page: lots_view_contract, PageParams: "Id=#id#")
+							}
+						}
+					}
+                }
+				Div(list-group-item text-center){
+					Div(table-responsive){
+						If(#tettttt#>0){
+							Table(src_lots,"ID=id,Название=_name,Продавец=_seller,Начало \ Окончание=_date_start,Стартовая цена=_amount_starting,Шаг (Min\Max)=_stps,Цена=_amount_final,Статус=_status,=_actions")
+						}.Else{
+							Span(Лотов нет)
+						}
+					}.Style(
+						th,td {text-align:center;}
+						.img-circle {height: 30px;width: 30px; border: 1px solid #5A5D63;}
+						.center {display:flex; align-items:center;}
+						.photo {height: 30px; width: 30px;}
+					)
+				}
+			}
+		}
+    }.Else{
+        Div(row){
+            Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
+                Form(panel panel-primary){
+                    Div(list-group-item){
+                        P(Class: text-center text-bold h4 m0, Body: LangRes(user_info))
+                        Div(panel-body){
+                            Div(form-group){
+                                Div(row){
+                                    Div(col-md-12 mt-sm text-center){
+                                        If(Or(#prefix_id#>0,#prefix_id#<0)){
+                                            If(#prefix_id# == #key_id#){
+                                                Button(Class: btn btn-link, Page: profile_edit, PageParams: "v_member_id=#key_id#"){
+                                                    If(#prefix_image_id#>0){
+                                                        Image(Src: Binary().ById(#prefix_image_id#), Class: img-circle).Style(width: 80px; border: 1px solid #5A5D63;)
+                                                    }.Else{
+                                                        Span(Class: fa icon-user fa-5x text-primary)
+                                                    }
+                                                    Div(m0 h4 text-bold){#prefix_member_name#}
+                                                }
+                                            }.Else{
+                                                If(#prefix_image_id#>0){
+                                                    Image(Src: Binary().ById(#prefix_image_id#), Class: img-circle).Style(width: 80px; border: 1px solid #5A5D63;)
+                                                }.Else{
+                                                    Span(Class: fa icon-user fa-5x)
+                                                }
+                                                Div(m0 h4 text-bold){#prefix_member_name#}
+                                            }
+                                            Div(Class: h5 text-muted m0, Body: #prefix_member_info_information#)
+                                        }.Else{
+                                            Button(Class: btn btn-link, Page: profile_add){
+                                                Span(Class: h4 text-bold, Body: LangRes(editing_profile))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Div(list-group-item text-center){
+                                Div(text-muted m0 h5, Body: LangRes(roles))
+                                DBFind(Name: roles_participants, Source: src_check).Columns("id").Where("member->member_id='#v_member_id#' and deleted=0").Vars(check)
+                                If(#check_id#>0){
+                                    DBFind(Name: roles_participants, Source: src_roles).Columns("role->id,role->name").Where("member->member_id='#v_member_id#' and deleted=0").Order("id")
+                                    ForList(src_roles){
+                                        Span(){
+                                            LinkPage(Page: roles_view, PageParams: "v_role_id=#role.id#"){
+                                                Span(Class: h5, Body: "#role.name#")
+                                            }
+                                        }.Style(margin-right: 6px; margin-left: 6px;)
+                                    }
+                                }.Else{
+                                    Span(LangRes(no))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
+}
