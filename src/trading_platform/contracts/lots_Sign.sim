@@ -22,6 +22,7 @@ contract lots_Sign {
 
         if $actions == "buyer_accept" {
             if $lot["buyer"] == $key_id {
+                //info($lot["type_bargain"])
                 notifications_Send("member_id,sender,text_header,page_name,params_map", $lot["seller"], 1, "Покупатель подписал контракт", "lots_view_contract", JSONEncode(params))
                 var buyer map
                 buyer = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=? and buyer_id=? and status != -1", $lot_id, $lot["buyer"]).Order("amount DESC").Row()
@@ -29,16 +30,21 @@ contract lots_Sign {
                 
                 DBUpdate("keys", Int($lot["seller"]), "+amount", buyer["amount"])
                 DBUpdate("keys", Int($lot["buyer"]), "-amount", buyer["amount"])
-                //info($lot["type_bargain"])
-                /*if $lot["type_bargain"] == 2 {
+                
+                if $lot["type_bargain"] == 2 {
                     DBUpdate("keys", Int(buyer["buyer_id"]), "-deposit", buyer["amount"])
-                }*/
-                var buyers array i int
-                buyers = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=?", $lot_id)
-                while i < Len(buyers) {
-                    buyer = buyers[i]
-                    DBUpdate("keys", Int(buyer["buyer_id"]), "deposit", 0)
-                    i = i + 1
+                }
+                if $lot["type_bargain"] == 1 {
+                    var buyers array i int
+                    buyers = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=?", $lot_id)
+                    while i < Len(buyers) {
+                        var buyer map
+                        buyer = buyers[i]
+                        $dep_check = DBFind("dep_user_list").Where("lot_id=$ and member_id=$",$lot_id,buyer["buyer_id"]).Row()
+                        DBUpdate("keys",Int($dep_check["member_id"]),"-deposit",$dep_check["amount"])
+                        DBUpdate("dep_user_list",Int($dep_check["id"]),"amount",0)
+                        i = i + 1
+                    }
                 }
                 var contract_hash string
                 contract_hash = Sha256($lot["contract_text"])
@@ -49,12 +55,21 @@ contract lots_Sign {
         }
         if $actions == "buyer_reject" {
             if $lot["buyer"] == $key_id {
-                var buyer map
-				buyer = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=? and buyer_id=? and status != -1", $lot_id, $lot["buyer"]).Order("amount DESC").Row()
-                DBUpdate("buyers", Int(buyer["id"]), "status", -1)
-                DBUpdate("keys", Int($lot["buyer"]), "deposit", 0)
-                //DBUpdate("keys", Int(buyer["buyer_id"]), "-deposit", buyer["amount"])
-                lots_Close("id", $lot_id)
+                if $lot["type_bargain"] == 2 {
+                    var buyer map
+				    buyer = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=? and buyer_id=? and status != -1", $lot_id, $lot["buyer"]).Order("amount DESC").Row()
+                    DBUpdate("keys", Int(buyer["buyer_id"]), "-deposit", buyer["amount"])
+                }
+                if $lot["type_bargain"] == 1 {
+                    var buyer map
+                    buyer = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=? and buyer_id=? and status != -1", $lot_id, $lot["buyer"]).Order("amount DESC").Row()
+                    DBUpdate("buyers", Int(buyer["id"]), "status", -1)
+                    
+                    $dep_check = DBFind("dep_user_list").Where("lot_id=$ and member_id=$",$lot_id,buyer["buyer_id"]).Row()
+                    DBUpdate("keys",Int($dep_check["member_id"]),"-deposit",$dep_check["amount"])
+                    DBUpdate("dep_user_list",Int($dep_check["id"]),"amount",0)
+                    lots_Close("id", $lot_id)
+                }
             }
         }
         if $actions == "seller_accept" {
@@ -69,14 +84,22 @@ contract lots_Sign {
             if $lot["seller"] == $key_id {
                 DBUpdate("lots", $lot_id, "status", 5)
             }
-            var buyers array i int
-            buyers = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=?", $lot_id)
-            while i < Len(buyers) {
+            if $lot["type_bargain"] == 2 {
                 var buyer map
-                buyer = buyers[i]
-                //DBUpdate("keys", Int(buyer["buyer_id"]), "-deposit", buyer["amount"])
-                DBUpdate("keys", Int($lot["buyer"]), "deposit", 0)
-                i = i + 1
+                buyer = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=? and buyer_id=? and status != -1", $lot_id, $lot["buyer"]).Order("amount DESC").Row()
+                DBUpdate("keys", Int(buyer["buyer_id"]), "-deposit", buyer["amount"])
+            }
+            if $lot["type_bargain"] == 1 {
+                var buyers array i int
+                buyers = DBFind("buyers").Columns("id,amount,buyer_id").Where("lot_id=?", $lot_id)
+                while i < Len(buyers) {
+                    var buyer map
+                    buyer = buyers[i]
+                    $dep_check = DBFind("dep_user_list").Where("lot_id=$ and member_id=$",$lot_id,buyer["buyer_id"]).Row()
+                    DBUpdate("keys",Int($dep_check["member_id"]),"-deposit",$dep_check["amount"])
+                    DBUpdate("dep_user_list",Int($dep_check["id"]),"amount",0)
+                    i = i + 1
+                }
             }
         }
         if $notific_id > 0{
