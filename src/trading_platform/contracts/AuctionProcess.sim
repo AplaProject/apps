@@ -39,7 +39,8 @@ contract AuctionProcess {
         var checkamount money
         checkamount = Money(DBFind("keys").Where("id = ?",$key_id).One("amount"))
         
-        $checksumm = DBFind("buyers").Where("lot_id=$ and buyer_id=$",$lot_id,$key_id).Order("id DESC").One("amount")
+        //$checksumm = DBFind("buyers").Where("lot_id=$ and buyer_id=$",$lot_id,$key_id).Order("id DESC").One("amount")
+        $checksumm = DBFind("buyers").Where("lot_id=$ and buyer_id=$",$lot_id,$key_id).Order("amount DESC").One("amount")
         $checkdep = Money(DBFind("keys").Where("id = ?",$key_id).One("deposit"))
         
         if ($lot_map["type_bargain"] == 2){
@@ -77,6 +78,8 @@ contract AuctionProcess {
                 DBUpdate("keys",$key_id,"+deposit",$step_rate)
                 DBUpdate("lots",$lot_id,"amount_max",$step_rate)
                 DBInsert("buyers","amount,lot_id,buyer_id,percentrate,timestamp rate_date",$step_rate,$lot_id,$key_id,percentrate,$block_time)
+
+                DBInsert("dep_user_list","amount,lot_id,member_id",$step_rate,$lot_id,$key_id)
             }
             if (Money($lot_map["amount_max"]) > Money(0)){
 
@@ -96,16 +99,17 @@ contract AuctionProcess {
                 notific_params["rate_broken"] = 1
                 notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", Int($send_notif_rate_broken), 1, "icon icon-envelope", "Ваша ставка перебита", "Подробнее", "view_lots_start_auction", notific_params)
 
-                /*if($user_map["buyer_id"]){
-                    DBUpdate("keys",$key_id,"+deposit",secondrate)
-                    DBUpdate("lots",$lot_id,"amount_max",$step_rate)
-                    DBUpdate("buyers",Int($user_map["id"]),"amount",$step_rate)
-                }*/
-                //if(!$user_map["buyer_id"]){
-                    DBUpdate("keys",$key_id,"+deposit",secondrate)
-                    DBUpdate("lots",$lot_id,"amount_max",$step_rate)
-                    DBInsert("buyers","amount,lot_id,buyer_id,percentrate,timestamp rate_date",$step_rate,$lot_id,$key_id,percentrate,$block_time)
-                //}
+                DBUpdate("keys",$key_id,"+deposit",secondrate)
+                DBUpdate("lots",$lot_id,"amount_max",$step_rate)
+                DBInsert("buyers","amount,lot_id,buyer_id,percentrate,timestamp rate_date",$step_rate,$lot_id,$key_id,percentrate,$block_time)
+
+                $dep_check = DBFind("dep_user_list").Where("lot_id=$ and member_id=$",$lot_id,$key_id).Row()
+                if(!$dep_check["member_id"]){
+                    DBInsert("dep_user_list","amount,lot_id,member_id",$step_rate,$lot_id,$key_id)
+                }
+                if($dep_check["member_id"]){
+                    DBUpdate("dep_user_list",Int($dep_check["id"]),"amount",$step_rate)
+                } 
             }
             DBUpdate("keys",$key_id,"-amount", percentrate)
             DBUpdate("keys", Int(EcosysParam("founder_account")) ,"+amount", percentrate)
@@ -118,7 +122,7 @@ contract AuctionProcess {
             DBInsert("buyers","amount,lot_id,buyer_id,percentrate,timestamp rate_date",$step_rate,$lot_id,$key_id,percentrate,$block_time)
             //DBInsert("dep_user_list","lot_id,member_id,amount",$lot_id,$key_id,$step_rate)
 
-			DBUpdate("lots",$lot_id,"status",3)
+            DBUpdate("lots",$lot_id,"status",3)
 
             var notific_params map
             notific_params["lot_id"] = $lot_id
