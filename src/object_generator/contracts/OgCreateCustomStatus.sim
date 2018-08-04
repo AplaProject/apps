@@ -1,0 +1,60 @@
+contract OgCreateCustomStatus {
+    data {
+        Name string
+        Language string "optional"
+        Translation string "optional"
+    }
+    func appendByName(ar array, m map)array{
+        var lenar int
+        lenar = Len(ar)
+        if lenar == 0{
+            ar[0] = m
+        }else{
+            var i int item map
+            while i<lenar{
+                item = ar[i]
+                if item["name"] == m["name"]{
+                    ar[i] = m
+                }
+                i=i+1
+            }
+        }
+        return ar
+    }
+    conditions {
+        Println($Name, $Language, $Translation)
+        if Contains($Name, " "){
+            warning "Spaces in Name prohibited"
+        }
+        if $Language{
+            if Contains($Language, " "){
+                warning "Spaces in Lang prohibited"
+            }
+        }
+        $buf = DBFind("buffer_data").Where("member_id=? and key='custom_statuses'", $key_id).Row()
+        if $buf{
+            $custom_statuses = JSONDecode($buf["value"])
+        }else{
+            var ar array
+            $custom_statuses = ar
+        }
+
+    }
+    action {
+        var status map
+        if $Language{
+            var trans map
+            trans[$Language] = $Translation
+            status["trans"] = trans
+        }
+        status["name"] = $Name
+        $custom_statuses = JSONEncode(appendByName($custom_statuses, status))
+        Println($custom_statuses)
+        // @1buffer_Manager("Action,Key,Value","set", "custom_statuses", $custom_statuses)
+        if $buf{
+            DBUpdate("buffer_data", Int($buf["id"]), "value", $custom_statuses)
+        }else{
+            DBInsert("buffer_data", "member_id,key,value", $key_id, "custom_statuses", $custom_statuses)
+        }
+    }
+}
