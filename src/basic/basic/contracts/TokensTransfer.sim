@@ -6,7 +6,7 @@ contract TokensTransfer {
         Comment string "optional"
         //Signature string "optional hidden"
     }
-    
+
     conditions {
         //check amount
         if $Amount == 0 {
@@ -15,31 +15,34 @@ contract TokensTransfer {
         if $Amount < 0 {
             error "Amount is negative"
         }
-        
+
         //check the sender
-        var sender string
-        sender = DBFind("keys").Where("id=$", $Sender_AccountId).One("id")
-        if !sender {
+        if !DBFind("keys").WhereId($Sender_AccountId).One("id") {
             error Sprintf("Sender %v is invalid", $Sender_AccountId)
         }
-        
+
         //check balance
-        $sender_balance = Money(DBFind("keys").Where("id=$", $Sender_AccountId).One("amount"))
+        $sender_balance = Money(DBFind("keys").WhereId($Sender_AccountId).One("amount"))
         if $Amount > $sender_balance {
             error Sprintf("Money is not enough %v < %v", $sender_balance, $Amount)
         }
-        
+
         //check the recipient
-        var recipient string
-        recipient = DBFind("keys").Where("id=$", $Recipient_AccountId).One("id")
-        if !recipient {
+        if !DBFind("keys").WhereId($Recipient_AccountId).One("id") {
             error Sprintf("Recipient %v is invalid", $Recipient_AccountId)
         }
     }
-    
+
     action {
-        DBUpdate("keys", $Sender_AccountId, "-amount", $Amount)
-        DBUpdate("keys", $Recipient_AccountId, "+amount", $Amount)
-        DBInsert("history", "sender_id,recipient_id,amount,comment,block_id,txhash", $Sender_AccountId, $Recipient_AccountId, $Amount, $Comment, $block, $txhash)
+        DBUpdate("keys", $Sender_AccountId, {"-amount":$Amount})
+        DBUpdate("keys", $Recipient_AccountId, {"+amount":$Amount})
+        var m map
+        m["sender_id"] = $Sender_AccountId
+        m["recipient_id"] = $Recipient_AccountId
+        m["amount"] = $Amount
+        m["comment"] = $Comment
+        m["block_id"] = $block
+        m["txhash"] = $txhash
+        DBInsert("history", m)
     }
 }

@@ -4,7 +4,7 @@ contract NotificationsClose {
     }
 
     conditions {
-        $notify = DBFind("notifications").Columns("id,date_start_processing,processing_info->member_id,closed,sender->type").Where("id=$", $notific_id).Row()
+        $notify = DBFind("notifications").Columns("id,date_start_processing,processing_info->member_id,closed,sender->type").WhereId($notific_id).Row()
         if !$notify {
             warning "Notification not found"
         }
@@ -32,7 +32,9 @@ contract NotificationsClose {
         if $notify["sender.type"] == 1{
             NotificationsProcess("notific_id", $notific_id)
         }
-
-        DBUpdate("notifications", $notific_id, "timestamp date_closed,closed", $block_time, 1)
+        var model map
+        model["date_closed"] = BlockTime()
+        model["closed"] = 1
+        DBUpdate("notifications", $notific_id, model)
     }
 }

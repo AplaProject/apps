@@ -4,18 +4,15 @@ contract RolesRequest {
     }
 
     conditions {
-        $role = DBFind("roles").Where("id=?", $rid).One("id")
-        if !$role {
+        if !DBFind("roles").WhereId($rid).One("id") {
             warning "Role not found"
         }
 
-        $assigned = DBFind("roles_participants").Where("role->id=? and member->member_id=? and deleted=0", $rid, $key_id).One("id")
-        if $assigned {
+        if DBFind("roles_participants").Where({"role->id":$rid, "member->member_id":$key_id, deleted:0}).One("id") {
             warning "You have already been added to the role"
         }
 
-        $notifications = DBFind("notifications").Where("page_name=? and page_params->rid=? and sender->member_id=? and closed=0", "roles_request_view", $rid, $key_id).One("id")
-        if $notifications {
+        if DBFind("notifications").Where({page_name:"roles_request_view", "page_params->rid":$rid, "sender->member_id":$key_id, closed:0}).One("id") {
             warning "Request already sent"
         }
     }
@@ -28,6 +25,6 @@ contract RolesRequest {
         member_id = EcosysParam("founder_account") 
 
         NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", 
-            member_id, 1, "fa-bars", "Roles", "New request received", "roles_request_view", JSONEncode(params))
+            member_id, 1, "fa-bars", "Roles", "New request received", "roles_request_view", params)
     }
 }

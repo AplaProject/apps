@@ -5,20 +5,20 @@ contract RolesAccessManager {
         ManagerRid string "optional"
     }
     func updateAccess(ra string){
-        var roles_access map
-        roles_access["rids"] = ra
-        DBUpdate("roles", $Rid, "roles_access", roles_access)
+        var model map
+        model["roles_access"] = {rids:ra}
+        DBUpdate("roles", $Rid, model)
     }
     conditions {
         RolesAccessCheck("rid", $Rid)
 
         $ManagerRid = Int($ManagerRid)
-        $role = DBFind("roles").Columns("id,roles_access->rids").Where("id=?", $Rid).Row()
+        $role = DBFind("roles").Columns("id,roles_access->rids").WhereId($Rid).Row()
         if !$role {
             warning "Role not found"
         }
         if $ManagerRid > 0{
-            if !DBFind("roles").Where("id=?", $ManagerRid).One("id") {
+            if !DBFind("roles").WhereId($ManagerRid).One("id") {
                 warning "Role not found"
             }
         }

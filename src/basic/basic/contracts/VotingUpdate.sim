@@ -18,7 +18,7 @@ contract VotingUpdate {
     }
     
     conditions {
-        $voting = DBFind("votings").Columns("flags,voting,progress").Where("id=?", $votingID).Row()
+        $voting = DBFind("votings").Columns("flags,voting,progress").WhereId($votingID).Row()
         if !$voting {
             warning "Voting is not found"
         }
@@ -45,7 +45,7 @@ contract VotingUpdate {
         progress["percent_success"] = percent_success
         progress["number_voters"] = number_voters
         
-        DBUpdate("votings", $votingID, "progress,flags->success", progress, flag_success)
+        DBUpdate("votings", $votingID, {progress:progress, "flags->success":flag_success})
         
         if (percent_voters >= quorum && quorum > 50 && percent_voters >= volume) || percent_voters == 100 {
             // if a quorum is more than 50% we can immediately make the decision

@@ -57,7 +57,11 @@ contract VotingCreate {
     }
     conditions {
         if $voting_type == 2 {
-            if !($original_contract == "VotingTokensRefundCreate" || $original_contract == "VotingTemplateRun" || $original_contract == "VotingNodeAdd"){
+            var specRules map
+            specRules["VotingTokensRefundCreate"] = 1
+            specRules["VotingTemplateRun"] = 1
+            specRules["VotingNodeAdd"] = 1
+            if specRules[$original_contract] != 1 {
                 warning Sprintf("The voting type 'system' is not allowed to launch from %v", $original_contract)
             }
         }
@@ -69,7 +73,7 @@ contract VotingCreate {
             warning Sprintf("Quorum [%v] should be in the range from 5 to 100", $quorum)
         }
 
-        $key = DBFind("keys").Where("id=$", $key_id).Row()
+        $key = DBFind("keys").WhereId($key_id).Row()
         if !$key {
             warning "You are not a member of the ecosystem"
         }
@@ -101,11 +105,20 @@ contract VotingCreate {
 
         creator["member_id"] = $key["id"]
         creator["member_name"] = IdToAddress($key_id)
+        var m map
+        m["voting"] = voting
+        m["progress"] = progress
+        m["flags"] = flags
+        m["creator"] = creator
         if $timestamped {
-            votingId = DBInsert("votings", "voting,progress,flags,creator,timestamp date_started,timestamp date_ended", voting, progress, flags, creator, $date_started, $date_ended)
+            // for this need merged feature/1040-date-time
+            m["date_started"] = Datetime($date_started)
+            m["date_ended"] = Datetime($date_ended)
         }else{
-            votingId = DBInsert("votings", "voting,progress,flags,creator,date_started,date_ended", voting, progress, flags, creator, $date_started, $date_ended)
+            m["date_started"] = $date_started
+            m["date_ended"] = $date_ended
         }
+        votingId = DBInsert("votings", m)
 
         // if all members are voting participants
         if $type_participants == 1 {

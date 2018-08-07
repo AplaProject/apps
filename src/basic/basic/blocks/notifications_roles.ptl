@@ -2,12 +2,12 @@ SetTitle($role_notifics$)
 AddToolButton(Title: $send$, Page: notifications_roles_send, Icon: icon-plus)
 
 If(GetVar(Search)){
-    SetVar(Where,"notification->type='2' and recipient->role_name='#Search#' and recipient->role_id='#role_id#'")
+    SetVar(Where,{"notification->type":2, "recipient->role_name":{"$like": #Search#}, "recipient->role_id":#role_id#})
 }.Else{
-    SetVar(Where,"notification->type='2' and recipient->role_id='#role_id#'").(Search,)
+    SetVar(Where, {"notification->type":2, "recipient->role_id":#role_id#}).(Search,)
 }
 
-DBFind(Name: notifications, Source: src_notifications).Limit(20).Columns("id,recipient->role_id,recipient->role_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,date_start_processing,processing_info->member_name,closed").Custom(_id){
+DBFind(notifications,src_notifications).Limit(20).Columns("id,recipient->role_id,recipient->role_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,date_start_processing,processing_info->member_name,closed").Custom(_id){
     If(#closed# == 0){
         SetVar(style_text,"text-normal").(style_link,"text-primary")
     }.Else{
@@ -74,7 +74,7 @@ DBFind(Name: notifications, Source: src_notifications).Limit(20).Columns("id,rec
             }
         }
     }
-}.Where(#Where#).Order("closed ASC, id DESC")
+}.Where(#Where#).Order([{closed: -1},{id: 1}])
 
 Form(panel panel-primary){
     Div(panel-body){

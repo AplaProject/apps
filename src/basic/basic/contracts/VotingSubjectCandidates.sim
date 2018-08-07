@@ -5,13 +5,13 @@ contract VotingSubjectCandidates {
     }
     func getMemberInfo(kid int) map {
         var res member map
-        member = DBFind("members").Where("id=?", kid).Row()
+        member = DBFind("members").WhereId(kid).Row()
         if member {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         }else{
-            member = DBFind("keys").Where("id=?", kid).Row()
+            member = DBFind("keys").WhereId(kid).Row()
             if member {
                 res["member_id"] = member["id"]
                 res["member_name"] = IdToAddress(Int(member["id"]))
@@ -27,7 +27,9 @@ contract VotingSubjectCandidates {
     }
 
     conditions {
-        $voting = DBFind("votings").Columns("id,date_started,optional,voting->type,flags->full_data").Where("id=? and date_started > ?", $votingID, BlockTime()).Row()
+        var bt string
+        bt = BlockTime()
+        $voting = DBFind("votings").Where({id:$votingID, date_started:[{"$gt":bt}]}).Columns("id,date_started,optional,voting->type,flags->full_data").Row()
         if !$voting {
             warning "Voting already started. Can not edit document"
         }
@@ -40,7 +42,7 @@ contract VotingSubjectCandidates {
             $memberID = $key_id
         }
 
-        if DBFind("votings_subject").Where("voting_id=? and subject->member_id=?", $votingID, $memberID).One("id") {
+        if DBFind("votings_subject").Where({voting_id:$votingID, "subject->member_id":$memberID}).One("id") {
             warning "This candidature for this role has already been added before"
         }
 
@@ -51,19 +53,7 @@ contract VotingSubjectCandidates {
     }
 
     action {
-        DBInsert("votings_subject", "voting_id,subject", $votingID, $member)
-
-        var optional map
-        optional = safeJsonToMap($voting["optional"])
-
-        var number_candidates int
-        if optional["number_candidates"]{
-            number_candidates = Int(optional["number_candidates"])
-            number_candidates = number_candidates + 1
-        } else {
-            number_candidates = 1
-        }
-
-        DBUpdate("votings", $votingID, "optional->number_candidates", number_candidates)
+        DBInsert("votings_subject", {voting_id:$votingID, subject:$member})
+        DBUpdate("votings", $votingID, {"+optional->number_candidates":1})
     }
 }

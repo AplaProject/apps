@@ -5,13 +5,13 @@ contract RolesAssign {
     }
     func getMemberInfo(kid int) map {
         var res member map
-        member = DBFind("members").Where("id=?", kid).Row()
+        member = DBFind("members").WhereId(kid).Row()
         if member {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         }else{
-            member = DBFind("keys").Where("id=?", kid).Row()
+            member = DBFind("keys").WhereId(kid).Row()
             if member {
                 res["member_id"] = member["id"]
                 res["member_name"] = IdToAddress(Int(member["id"]))
@@ -21,12 +21,12 @@ contract RolesAssign {
         return res
     }
     conditions {
-        $role = DBFind("roles").Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Where("id=?", $rid).Row()
+        $role = DBFind("roles").Columns("id,deleted,role_type,role_name,image_id,creator->member_id").WhereId($rid).Row()
         if !$role {
             warning "Role not found"
         }
-        
-        if !DBFind("keys").Where("id=?", $member_id).Row() {
+
+        if !DBFind("keys").WhereId($member_id).Row() {
             warning "Key not found"
         }
 
@@ -49,7 +49,7 @@ contract RolesAssign {
             RolesAccessCheck("rid", $rid)
         }
 
-        $assigned = DBFind("roles_participants").Where("role->id=? and member->member_id=? and deleted=0", $rid, $member_id).One("id")
+        $assigned = DBFind("roles_participants").Where({"role->id":$rid, "member->member_id":$member_id, deleted:0}).One("id")
     }
 
     action {
@@ -65,7 +65,11 @@ contract RolesAssign {
 
         member = getMemberInfo($member_id)
         appointer = getMemberInfo($key_id)
-
-        DBInsert("roles_participants", "role,member,appointed,timestamp date_created", role, member, appointer, $block_time)
+        var m map
+        m["role"] = role
+        m["member"] = member
+        m["appointed"] = appointer
+        m["date_created"] = BlockTime()
+        DBInsert("roles_participants", m)
     }
 }

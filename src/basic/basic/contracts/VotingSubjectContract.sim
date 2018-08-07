@@ -15,7 +15,9 @@ contract VotingSubjectContract {
     }
     
     conditions {
-        $voting = DBFind("votings").Columns("id,date_started,voting->type,flags->full_data").Where("id=? and date_started > ?", $votingID, BlockTime()).Row()
+        var bt string
+        bt = BlockTime()
+        $voting = DBFind("votings").Where({id:$votingID, date_started:[{"$gt":bt}]}).Columns("id,date_started,voting->type,flags->full_data").Row()
         if !$voting {
             warning "Voting already started. Can not edit document"
         }
@@ -36,11 +38,11 @@ contract VotingSubjectContract {
         subject["contract_reject"] = $contract_reject
         subject["contract_reject_params"] = reject_params
         
-        $subject_id = DBFind("votings_subject").Where("voting_id = $", $votingID).One("id")
-        if !$subject_id {
-            DBInsert("votings_subject", "voting_id,subject", $votingID, subject)
+        $subject_id = DBFind("votings_subject").Where({voting_id:$votingID}).One("id")
+        if $subject_id {
+            DBUpdate("votings_subject", Int($subject_id), {subject:subject})
         } else {
-            DBUpdate("votings_subject", Int($subject_id), "subject", subject)
+            DBInsert("votings_subject", {voting_id:$votingID, subject:subject})
         }
         
         VotingSubjectCheck("votingID", $votingID)

@@ -9,7 +9,7 @@ contract RolesDelete {
 
     action {
         var participants array
-        participants = DBFind("roles_participants").Columns("id").Where("role->id=? and deleted=0", $rid)
+        participants = DBFind("roles_participants").Columns("id").Where({"role->id":$rid, deleted:0})
 
         // delete all participants
         var i int
@@ -19,7 +19,9 @@ contract RolesDelete {
             RolesUnassign("row_id", Int(p["id"]))
             i = i + 1
         }
-
-        DBUpdate("roles", $rid, "deleted,timestamp date_deleted", 1, $block_time)
+        var m map
+        m["deleted"] = 1
+        m["date_deleted"] = BlockTime()
+        DBUpdate("roles", $rid, m)
     }
 }

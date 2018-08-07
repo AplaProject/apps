@@ -4,7 +4,7 @@ contract VotingDecisionAccept {
     }
 
     conditions {
-        $voting = DBFind("votings").Columns("id,flags->decision,flags->notifics,voting->type_participants,voting->role_id").Where("id=?", $votingID).Row()
+        $voting = DBFind("votings").WhereId($votingID).Columns("id,flags->decision,flags->notifics,voting->type_participants,voting->role_id").Row()
         if !$voting {
             warning "Voting is not found"
         }
@@ -14,12 +14,12 @@ contract VotingDecisionAccept {
             }
         }
 
-        $subject = DBFind("votings_subject").Where("voting_id=$", $votingID).Row()
+        $subject = DBFind("votings_subject").Where({voting_id:$votingID}).Row()
         if !$subject {
             warning "Subject of voting is not found"
         }
 
-        $participant_id = DBFind("votings_participants").Where("voting_id=$ and member->member_id=$", $votingID, $key_id).One("id")
+        $participant_id = DBFind("votings_participants").Where({voting_id:$votingID, "member->member_id":$key_id}).One("id")
         if !$participant_id {
             warning "You are not a participant in this voting"
         }
@@ -29,7 +29,7 @@ contract VotingDecisionAccept {
         // if notifications have been sent, then close it
         if $voting["flags.notifics"] == 1 {
             var noteId string
-            noteId = DBFind("notifications").Where("recipient->member_id=$ and page_name=$ and page_params->voting_id=$ and closed=$", $key_id, "voting_view", $votingID, 0).One("id")
+            noteId = DBFind("notifications").Where({"recipient->member_id":$key_id, page_name:$voting_view, "page_params->voting_id":$votingID, closed:0}).One("id")
             if noteId {
                 NotificationsClose("notific_id", Int(noteId))
             }
@@ -41,9 +41,10 @@ contract VotingDecisionAccept {
         }
 
         // check start-end of voting time
-        var voting_start voting_end string
-        voting_start = DBFind("votings").Where("id=$ and date_started < $", $votingID, BlockTime()).One("id")
-        voting_end = DBFind("votings").Where("id=$ and date_ended > $", $votingID, BlockTime()).One("id")
+        var voting_start voting_end bt string
+        bt = BlockTime()
+        voting_start = DBFind("votings").Where({id:$votingID, date_started:[{"$lt":bt}]}).One("id")
+        voting_end = DBFind("votings").Where({id:$votingID, date_ended:[{"$gt":bt}]}).One("id")
         if !voting_start {
             warning "Voting has not yet begun. Try again later, please"
         }
@@ -51,10 +52,10 @@ contract VotingDecisionAccept {
             warning "Voting has expired. Voting is now not possible"
         }
 
-        DBUpdate("votings_participants", Int($participant_id), "timestamp decision_date,decision", $block_time, 1)
+        DBUpdate("votings_participants", Int($participant_id), {decision_date:bt, decision:1})
 
         // increment count of accept
-        DBUpdate("votings_subject", Int($subject["id"]), "+number_accept", 1)
+        DBUpdate("votings_subject", Int($subject["id"]), {"+number_accept":1})
 
         VotingUpdate("votingID", $votingID)
     }

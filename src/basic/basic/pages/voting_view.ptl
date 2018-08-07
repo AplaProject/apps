@@ -1,14 +1,18 @@
-DBFind(applications,src_app).Columns("name,id").Where("name='Basic application'").Vars(application)
+DBFind(applications,src_app).Columns("name,id").Where({name:"Basic application"}).Vars(application)
 If(#notific_id#>0){
-    DBFind(notifications,src_notifications).Where("id=#notific_id#").Columns("page_params->voting_id").Vars(notific)
+    DBFind(notifications,src_notifications).WhereId(#notific_id#).Columns("page_params->voting_id").Vars(notific)
     SetVar(vID,#notific_page_params_voting_id#)
 }
 
 Div(content-wrapper){
     If(#vID# > 0){
-        DBFind(votings).Columns("id,voting->name,voting->volume,voting->quorum,voting->type,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended").Where("id=#vID#").Vars(instance)
-        DBFind(votings).Columns("date_started").Where("id=#vID# and date_started < now()").Vars(started)
-        DBFind(votings).Columns("date_ended").Where("id=#vID# and date_ended < now()").Vars(ended)
+        DBFind(votings).WhereId(#vID#).Columns("id,voting->name,voting->volume,voting->quorum,voting->type,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended").Vars(instance)
+
+        If("comment"==""){
+            старый синтаксис пока нет замены now()
+        }
+        DBFind(votings).Where("id=#vID# and date_started < now()").Columns("date_started").Vars(started)
+        DBFind(votings).Where("id=#vID# and date_ended < now()").Columns("date_ended").Vars(ended)
 
         If(#started_id#>0){
             SetVar(isStarted,1)
@@ -22,7 +26,7 @@ Div(content-wrapper){
         }
         SetTitle(Viewing voting: #instance_voting_name#)
 
-        DBFind(votings_participants,src_check).Columns("id").Where("voting_id=#vID# and member->member_id='#key_id#' and decision=0").Vars(participant)
+        DBFind(votings_participants,src_check).Where({voting_id:#vID#, "member->member_id":#key_id#, decision:0}).Columns("id").Vars(participant)
         If(And(#isStarted#>0,#isEnded#<0,#instance_flags_full_data#==1,#instance_flags_decision#==0,#participant_id#>0)){
             SetVar(isVotingAllowed,1)
         }.Else{
@@ -30,7 +34,7 @@ Div(content-wrapper){
         }
         Div(breadcrumb){
             LinkPage(Body:Votings list, Page:voting_list)
-            Span(/).Style(margin-right: 10px; margin-left: 10px;)
+            Span(/,mh)
             Span(Class: text-muted, Body: ##instance_id#)
         }
         Div(row mt-sm){
@@ -110,7 +114,7 @@ Div(content-wrapper){
                                 }
                                 Div(col-md-6 text-left){
                                     If(#instance_optional_role_id# > 0){
-                                        DBFind(Name: roles, Source: src_roles).Columns("id,role_name").Where("id=#instance_optional_role_id#").Vars(prefix)
+                                        DBFind(roles, src_roles).WhereId(#instance_optional_role_id#).Columns("id,role_name").Vars(prefix)
                                         #prefix_role_name# (LangRes(id): #prefix_id#)
                                     }.Else{
                                         Span(Class:text-danger, Body: LangRes(empty))
@@ -145,7 +149,7 @@ Div(content-wrapper){
                             }
                             Div(row mt-sm t6){
                                 Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
-                                    DBFind(Name: votings_subject, Source: src_voting_subject).Columns("id,subject->member_id,subject->member_name").Where("voting_id=#vID#").Custom(custom_address){
+                                    DBFind(votings_subject, src_voting_subject).Where({voting_id:#vID#}).Order("id").Columns("id,subject->member_id,subject->member_name").Custom(custom_address){
                                         Address(#subject.member_id#)
                                     }.Custom(custom_member){
                                         LinkPage(Class: text-primary t5 text-bold, Page: profile_view, PageParams: "v_member_id=#subject.member_id#"){
@@ -155,7 +159,7 @@ Div(content-wrapper){
                                         If(#isVotingAllowed#==1){
                                             Button(Body: LangRes(vote), Class: btn btn-success, Page: voting_view, PageParams: "vID=#vID#", Contract: VotingCandidateAccept, Params: "candidateID=#subject.member_id#")
                                         }
-                                    }.Order("id")
+                                    }
                                     Table(src_voting_subject, "=custom_member,=custom_address,=custom_voting")
                                 }
                             }
@@ -177,7 +181,7 @@ Div(content-wrapper){
                             }
                         }
                         If(#instance_voting_type_decision#==3){
-                            DBFind(Name: votings_subject, Source: src_voting_subject).Columns("id,subject->text,subject->hash").Where("voting_id=#vID#").Vars(subject)
+                            DBFind(votings_subject, src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->text,subject->hash").Vars(subject)
                             Div(row t5 mt-lg){
                                 Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
                                     Div(list-group-item){
@@ -219,7 +223,7 @@ Div(content-wrapper){
                             }
                         }
                         If(#instance_voting_type_decision#==4){
-                            DBFind(Name: votings_subject, Source: src_voting_subject).Columns("id,subject->description,subject->table,subject->table_id,subject->column,subject->column_value").Where("voting_id=#vID#").Vars(subject)
+                            DBFind(votings_subject, src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->description,subject->table,subject->table_id,subject->column,subject->column_value").Vars(subject)
 
                             If(#instance_voting_type#==1){
                                 Div(row mt-sm t5){
@@ -318,7 +322,7 @@ Div(content-wrapper){
                             }
                         }
                         If(#instance_voting_type_decision#==5){
-                            DBFind(Name: votings_subject, Source: src_voting_subject).Columns("id,subject->contract_accept,subject->contract_reject").Where("voting_id=#vID#").Vars(subject)
+                            DBFind(votings_subject, src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->contract_accept,subject->contract_reject").Vars(subject)
                             Div(row mt-sm t5){
                                 Div(col-md-6 text-right){
                                     LangRes(contract_accept)
@@ -472,7 +476,7 @@ Div(content-wrapper){
                         }
                         Div(row mt-sm t6){
                             Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
-                                DBFind(Name: votings_participants, Source: src_voting_participants).Custom(custom_address){
+                                DBFind(votings_participants, src_voting_participants).Where({voting_id:#vID#}).Order("id").Columns("id,member->member_id,decision_date,decision").Custom(custom_address){
                                     Div(Class: t6 m0, Body: Address(#member.member_id#))
                                 }.Custom(custom_decision){
                                     If(Or(#instance_voting_type_decision#==1,#instance_voting_type_decision#==2)){
@@ -517,7 +521,7 @@ Div(content-wrapper){
                                             Span(Class: text-danger, Body: $contract_rejected$ $at$ DateTime(DateTime: #decision_date#, Format: "DD.MM.YYYY HH:MI"))
                                         }
                                     }
-                                }.Order("id").Columns("id,member->member_id,decision_date,decision").Where("voting_id=#vID#")
+                                }
                                 Table(src_voting_participants, "=custom_address,=custom_decision")
                             }
                         }

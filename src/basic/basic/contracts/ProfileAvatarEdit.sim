@@ -4,25 +4,19 @@ contract ProfileAvatarEdit {
     }
 
     conditions {
-        var app_name string
-        app_name = "Basic application"
+        $member = DBFind("members").WhereId($key_id).Row()
+        $app_id = DBFind("applications").Where({name:"Basic application", deleted:0}).One("id")
 
-        $member_map = DBFind("members").Where("id = $", $key_id).Row()
-        $app_id = DBFind("applications").Where("name = $ AND deleted = 0", app_name).One("id")
-
-        if !$member_map {
+        if !$member {
             warning "Member name is not specified"
         }
     }
 
     action {
-        var image_name string
-        image_name = "avatar"
-
-        var image_id int
-        if $member_map {
-            image_id = @1UploadBinary("Name,Data,ApplicationId", image_name, $member_image, Int($app_id))
-            DBUpdate("members", Int($member_map["id"]), "image_id", image_id)
+        if $member {
+            var model map
+            model["image_id"] = @1UploadBinary("Name,Data,ApplicationId", "avatar", $member_image, Int($app_id))
+            DBUpdate("members", Int($member["id"]), model)
         }
     }
 }

@@ -1,15 +1,15 @@
 Div(content-wrapper){
-    DBFind(Name:applications, Source:src_app).Columns("name,id").Where("name='Basic application'").Vars(app)
+    DBFind(applications,src_app).Columns("name,id").Where("name='Basic application'").Vars(application)
     SetTitle($roles$)
     AddToolButton(Title: $create$, Page: roles_create, Icon: icon-plus)
 
     If(GetVar(search)){
-        SetVar(where,"role_name='#search#'")
+        SetVar(where,{role_name:{"$like":#search#}})
     }.Else{
-        SetVar(where,"id>0").(search,)
+        SetVar(where,{id:{"$neq":0}}).(search,)
     }
 
-    DBFind(Name: roles, Source: src_roles).Custom(_id){
+    DBFind(roles,src_roles).Where(#where#).Order({deleted:-1, id:-1}).Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access->rids").Custom(_id){
         JsonToSource(rids,#roles_access#)
         If(#deleted# == 0){
             SetVar(style_text,).(style_link,"text-primary")
@@ -41,7 +41,7 @@ Div(content-wrapper){
             Div(text-nowrap){DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI")}
         }
     }.Custom(_type){
-        Span(Class: #style_text#, Body: AppParam(App:#app_id#, Name: roles_types, Index: #role_type#))
+        Span(Class: #style_text#, Body: AppParam(App:#application_id#, Name: roles_types, Index: #role_type#))
     }.Custom(_status){
         Span(Class:#style_text#){
             If(#deleted# == 0){
@@ -56,8 +56,9 @@ Div(content-wrapper){
         }.Else{
             SetVar(access,)
         }
-        If(#roles_access.rids#!=""){
-            DBFind(roles, src_roles_list).Where("id in (#roles_access.rids#)").Columns("id,role_name").Count(access_count).Order(role_name)
+        
+        If(And(#roles_access.rids#!="",#roles_access.rids#!="NULL")){
+            DBFind(roles,src_roles_list).Where({id:{"$in":[#roles_access.rids#]}}).Columns("id,role_name").Count(access_count).Order(role_name)
             Div(#style_text# breaker){
                 ForList(src_roles_list){
                     If(And(#role_id#==#id#)){
@@ -83,7 +84,7 @@ Div(content-wrapper){
                 }
             }
         }
-    }.Where(#where#).Order("deleted ASC, id ASC").Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access->rids")
+    }
     Form(panel panel-primary){
         Div(panel-body){
             Div(row){

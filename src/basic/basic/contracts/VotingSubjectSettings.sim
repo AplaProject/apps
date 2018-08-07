@@ -20,8 +20,9 @@ contract VotingSubjectSettings {
         if $vacancies < 1 {
             warning "Number of vacancies can not be less than 1"
         }
-        
-        $voting = DBFind("votings").Columns("optional,voting->type,flags->full_data").Where("id=? and date_started > ?", $votingID, BlockTime()).Row()
+        var bt string
+        bt = BlockTime()
+        $voting = DBFind("votings").Where({id:$votingID, date_started:[{"$gt":bt}]}).Columns("optional,voting->type,flags->full_data").Row()
         
         if !$voting {
             warning "Voting already started. Can not edit document"
@@ -31,7 +32,7 @@ contract VotingSubjectSettings {
             warning "This vote is a system. Change settings not allowed"
         }
         var role map
-        role = DBFind("roles").Where("id=? and deleted=0", $roleID).Row()
+        role = DBFind("roles").Where({id:$roleID, deleted:0}).Row()
         if !role {
             warning "Specified role not found"
         }
@@ -53,7 +54,7 @@ contract VotingSubjectSettings {
         optional["role_id"] = $roleID
         optional["role_vacancies"] = $vacancies
         
-        DBUpdate("votings", $votingID, "optional", optional)
+        DBUpdate("votings", $votingID, {optional:optional})
         
         VotingSubjectCheck("votingID", $votingID)
     }

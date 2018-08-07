@@ -16,7 +16,9 @@ contract VotingSubjectDocument {
     }
     
     conditions {
-        $voting = DBFind("votings").Columns("id,date_started,flags->full_data,voting->type,optional").Where("id=? and date_started > ?", $votingID, BlockTime()).Row()
+        var bt string
+        bt = BlockTime()
+        $voting = DBFind("votings").Where({id:$votingID, date_started:[{"$gt":bt}]}).Columns("id,date_started,flags->full_data,voting->type,optional").Row()
         if !$voting {
             warning "Voting already started. Can not edit document"
         }
@@ -31,11 +33,11 @@ contract VotingSubjectDocument {
         subject["text"] = $text_document
         subject["hash"] = Sha256($text_document)
         
-        $subject_id = DBFind("votings_subject").Where("voting_id = $", $votingID).One("id")
+        $subject_id = DBFind("votings_subject").Where({voting_id:$votingID}).One("id")
         if !$subject_id {
-            DBInsert("votings_subject", "voting_id,subject", $votingID, subject)
+            DBInsert("votings_subject", {voting_id:$votingID, subject:subject})
         } else {
-            DBUpdate("votings_subject", Int($subject_id), "subject", subject)
+            DBUpdate("votings_subject", Int($subject_id), {subject:subject})
         }
         var accept_params reject_params map
         accept_params = safeJsonToMap($contract_accept_params)
@@ -49,7 +51,7 @@ contract VotingSubjectDocument {
         optional["contract_reject"] = $contract_reject
         optional["contract_reject_params"] = reject_params
         
-        DBUpdate("votings", $votingID, "optional", optional)
+        DBUpdate("votings", $votingID, {optional:optional})
         
         VotingSubjectCheck("votingID", $votingID)
     }

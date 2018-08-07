@@ -6,17 +6,17 @@ contract BufferManager {
     }
     func decodeArray(s string) array{
         var ar array
-        if HasPrefix($buf["value"], "[") && Substr($buf["value"], Size($buf["value"])-1, 1) == "]"{
+        if HasPrefix($buf["value"], "[") {
             ar = JSONDecode($buf["value"])
         }
         return ar
     }
     conditions {
         $emptyVal = JSONEncode("")
-        $buf = DBFind("buffer_data").Where("key=? and member_id=?", $Key, $key_id).Row()
+        $buf = DBFind("buffer_data").Where({key:$Key, member_id:$key_id}).Row()
         if !$buf {
             var buf map, id int
-            id = DBInsert("buffer_data", "key,value,member_id", $Key, $emptyVal, $key_id)
+            id = DBInsert("buffer_data", {key:$Key, value:$emptyVal, member_id:$key_id})
             buf["id"] = Str(id)
             buf["value"] = ""
             buf["member_id"] = Str($key_id)
@@ -26,28 +26,32 @@ contract BufferManager {
     }
 
     action {
+        var id int
+        id = Int($buf["id"])
         if $Action == "clean" {
-            DBUpdate("buffer_data", Int($buf["id"]), "value", $emptyVal)
+            DBUpdate("buffer_data", id, {value:$emptyVal})
         }
         if $Action == "set" {
-            DBUpdate("buffer_data", Int($buf["id"]), "value", $Val)
+            DBUpdate("buffer_data", id, {value:$Val})
         }
         if $Action == "array_add_value" {
-            var ar array
+            var ar array enc string
             ar = decodeArray($buf["value"])
-            ar[Len(ar)] = $Val
-            DBUpdate("buffer_data", Int($buf["id"]), "value", JSONEncode(ar))
+            ar = Append(ar, $Val)
+            enc = JSONEncode(ar)
+            DBUpdate("buffer_data", id, {value:enc})
         }
         if $Action == "array_remove_value" {
-            var ar arNew array, i int
+            var ar arNew array i int enc string
             ar = decodeArray($buf["value"])
             while i<Len(ar){
                 if ar[i] != $Val{
-                    arNew[Len(arNew)] = ar[i]
+                    arNew = Append(arNew, ar[i])
                 }
                 i=i+1
             }
-            DBUpdate("buffer_data", Int($buf["id"]), "value", JSONEncode(arNew))
+            enc = JSONEncode(arNew)
+            DBUpdate("buffer_data", id, {value:enc})
         }
     }
 }
