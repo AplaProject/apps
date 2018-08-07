@@ -1,65 +1,94 @@
 contract Roles_AccessManager {
     data {
         Action string
-        Rid int
-        ManagerRid string "optional"
+        rid int
+        manager_rid string "optional"
     }
     func updateAccess(ra string){
         var roles_access map
         roles_access["rids"] = ra
-        DBUpdate("roles", $Rid, "roles_access", roles_access)
+        DBUpdate("roles", $rid, "roles_access", roles_access)
+    }
+    func updateBufferAccess(ra array){
+        if !$buffer_id {
+            DBInsert("buffer_data", "member_id,key,value", $key_id, "roles_access", JSONEncode(ra))
+        } else {
+            DBUpdate("buffer_data", Int($buffer_id), "value", JSONEncode(ra))
+        }
     }
     conditions {
-        Roles_CheckAccess("rid", $Rid)
+        $manager_rid = Int($manager_rid)
+        if $rid != 0 {
+            Roles_CheckAccess("rid", $rid)
 
-        $ManagerRid = Int($ManagerRid)
-        $role = DBFind("roles").Columns("id,roles_access->rids").Where("id=?", $Rid).Row()
-        if !$role {
-            warning "Role not found"
-        }
-        if $ManagerRid > 0{
-            if !DBFind("roles").Where("id=?", $ManagerRid).One("id") {
+            $role = DBFind("roles").Columns("id,roles_access->rids").Where("id=?", $rid).Row()
+            if !$role {
                 warning "Role not found"
             }
-        }
-        var ids array, i int
-        $ids = ids
-        ids = Split($role["roles_access.rids"],",")
-        while i < Len(ids){
-            if ids[i] > 0 {
-                $ids = Append($ids, ids[i])
+            if $manager_rid > 0{
+                if !DBFind("roles").Where("id=?", $manager_rid).One("id") {
+                    warning "Role not found"
+                }
             }
-            i=i+1
+            var ids array, i int
+            $ids = ids
+            ids = Split($role["roles_access.rids"],",")
+            while i < Len(ids){
+                if ids[i] > 0 {
+                    $ids = Append($ids, ids[i])
+                }
+                i=i+1
+            }
+        } else {
+            var buffer map
+            buffer = DBFind("buffer_data").Where("member_id=$ and key=$", $key_id, "roles_access").Row()
+            if buffer {
+                $buffer_managers = buffer["value"]
+                $buffer_id = buffer["id"]
+            }
         }
     }
 
     action {
+        if $rid == 0 {
+            if $buffer_managers {
+                $ids = JSONDecode($buffer_managers)
+            }
+        }
         if $Action == "clean"{
             updateAccess("")
         }
-        if $ManagerRid > 0{
+        if $manager_rid > 0{
             var i int, idsNew array
             if $Action == "remove"{
                 while i<Len($ids){
-                    if $ids[i] != $ManagerRid{
+                    if $ids[i] != $manager_rid{
                         idsNew = Append(idsNew, $ids[i])
                     }
                     i=i+1
                 }
-                updateAccess(Join(idsNew, ","))
+                if $rid > 0 {
+                    updateAccess(Join(idsNew, ","))
+                } else {
+                    updateBufferAccess(idsNew)
+                }
             }
             if $Action == "add"{
                 var double bool
                 while i<Len($ids){
-                    if $ids[i] == $ManagerRid{
+                    if $ids[i] == $manager_rid{
                         double = true
                     }
                     i=i+1
                 }
                 if !double {
-                    $ids = Append($ids, $ManagerRid)
+                    $ids = Append($ids, $manager_rid)
                 }
-                updateAccess(Join($ids, ","))
+                if $rid > 0 {
+                    updateAccess(Join($ids, ","))
+                } else {
+                    updateBufferAccess($ids)
+                }
             }
         }
     }

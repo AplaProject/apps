@@ -1,20 +1,23 @@
-Div(content-wrapper){
-    DBFind(Name:applications, Source:src_app).Columns("name,id").Where("name='Basic application'").Vars(app)
-    SetTitle($roles$)
-    AddToolButton(Title: $create$, Page: roles_create, Icon: icon-plus)
+DBFind(Name: applications).Columns("name,id").Where("name='Basic application'").Vars(application)
+SetTitle($roles$)
+AddToolButton(Title: $create$, Page: roles_create, Icon: icon-plus).Popup(50, $new_role$)
 
+Div(content-wrapper){
     If(GetVar(search)){
         SetVar(where,"role_name='#search#'")
     }.Else{
-        SetVar(where,"id>0").(search,)
+        SetVar(where,"id>0")
+        SetVar(search,)
     }
 
     DBFind(Name: roles, Source: src_roles).Custom(_id){
-        JsonToSource(rids,#roles_access#)
+        JsonToSource(rids, #roles_access#)
         If(#deleted# == 0){
-            SetVar(style_text,).(style_link,"text-primary")
+            SetVar(style_text,)
+            SetVar(style_link, "text-primary")
         }.Else{
-            SetVar(style_text,"text-muted").(style_link,"text-muted")
+            SetVar(style_text, "text-muted")
+            SetVar(style_link,"text-muted")
         }
         Span(Class: #style_text#, Body: #id#)
     }.Custom(_creator){
@@ -31,7 +34,8 @@ Div(content-wrapper){
                 #role_name#
             }.Else{
                 Div(){
-                    Span(Class: fa icon-settings fa-2x mr-sm).(#role_name#)
+                    Span(Class: fa icon-settings fa-2x mr-sm)
+                    Span(#role_name#)
                 }.Style(display:flex; align-items:center;)
             }
         }
@@ -41,7 +45,7 @@ Div(content-wrapper){
             Div(text-nowrap){DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI")}
         }
     }.Custom(_type){
-        Span(Class: #style_text#, Body: AppParam(App:#app_id#, Name: roles_types, Index: #role_type#))
+        Span(Class: #style_text#, Body: AppParam(App:#application_id#, Name: roles_types, Index: #role_type#))
     }.Custom(_status){
         Span(Class:#style_text#){
             If(#deleted# == 0){
@@ -52,7 +56,7 @@ Div(content-wrapper){
         }
     }.Custom(_access){
         If(#creator.member_id#==#key_id#){
-            SetVar(access,done)
+            SetVar(access, done)
         }.Else{
             SetVar(access,)
         }
@@ -61,7 +65,7 @@ Div(content-wrapper){
             Div(#style_text# breaker){
                 ForList(src_roles_list){
                     If(And(#role_id#==#id#)){
-                        SetVar(access,done)
+                        SetVar(access, done)
                     }
 
                     If(#access_count#!=#src_roles_list_index#){
@@ -75,8 +79,8 @@ Div(content-wrapper){
     }.Custom(_actions){
         Div(text-right button-group text-nowrap){
             If(#access#=="done"){
-                Button(Class: fa fa-edit btn btn-default, PageParams: "rid=#id#", Page: roles_create)
-                If(And(#deleted#==0,#role_type#!=3)){
+                Button(Class: fa fa-edit btn btn-default, PageParams: "rid=#id#", Page: roles_create).Popup(70, $edit_role$)
+                If(And(#deleted#==0, #role_type#!=3)){
                     Button(Class: fa fa-trash btn btn-danger, Contract: Roles_Del, Params: "rid=#id#", Page: roles_list).Alert(Text: $sure_want_delete$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
                 }.ElseIf(#deleted#==1){
                     Button(Class: fa fa-recycle btn btn-info, Contract: Roles_Restore, Params: "rid=#id#", Page: roles_list)
@@ -100,7 +104,7 @@ Div(content-wrapper){
                 }
             }
             Div(table-responsive){
-                Table(Source: src_roles, Columns: "$id$=_id,$name$=_name,$type$=_type,$creator$=_creator,$created$ / $deleted$=_date,$status$=_status,$roles_access$=_access,=_actions")
+                Table(Source: src_roles, Columns: "$id$=_id,$name$=_name,$type$=_type,$creator$=_creator,$created$ / $deleted$=_date,$status$=_status,$roles_managers$=_access,=_actions")
             }
             If(GetVar(search)){
                 Div(row){
