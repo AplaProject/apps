@@ -19,7 +19,7 @@ contract DelegateRefresh{
         ROLE_ID = 7
 
         // get role Id and Type
-        $role = DBFind("roles").Where("role_name=? and id=? and deleted=0", ROLE_NAME, ROLE_ID).Row()
+        $role = DBFind("roles").Where({role_name:ROLE_NAME, id:ROLE_ID, deleted:0}).Row()
         if !$role{
             warning Sprintf("Role %q not found", ROLE_NAME)
         }
@@ -27,16 +27,15 @@ contract DelegateRefresh{
 
     action{
         // get delegates ids
-        var delegateIds currentDelegates ecosystems array
+        var delegateIds currentDelegates ecosystems array i ecoId int rid string
         ecosystems = DBFind("ecosystems").Columns("id").Ecosystem(1)
-        var i ecoId int
         while i < Len(ecosystems) {
             var eco delegateParam map
             eco = ecosystems[i]
             ecoId = Int(eco["id"])
-            delegateParam = DBFind("parameters").Where("name='delegate_account'").Ecosystem(ecoId).Row()
+            delegateParam = DBFind("parameters").Where({name:"delegate_account"}).Ecosystem(ecoId).Row()
             if !delegateParam{
-                delegateParam = DBFind("parameters").Where("name='founder_account'").Ecosystem(ecoId).Row()
+                delegateParam = DBFind("parameters").Where({name:"founder_account"}).Ecosystem(ecoId).Row()
             }
 
             if NotInArray(delegateParam["value"], delegateIds){
@@ -46,13 +45,13 @@ contract DelegateRefresh{
         }
 
         // remove old role assigns
-        currentDelegates = DBFind("roles_participants").Columns("id,member->member_id").Where("role->id=? and deleted=0", $role["id"])
+        rid = Int($role["id"])
+        currentDelegates = DBFind("roles_participants").Where({"role->id":rid, deleted:0}).Columns("id,member->member_id")
+        var delegate map id int
         i = 0
         while i < Len(currentDelegates){
-            var delegate map
             delegate = currentDelegates[i]
             if NotInArray(delegate["member.member_id"], delegateIds){
-                var id int
                 id = Int(delegate["id"])
                 RolesUnassign("row_id", id)
             }
@@ -60,18 +59,15 @@ contract DelegateRefresh{
         }
 
         // assign new roles
+        var key map delegateId int
         i = 0
         while i < Len(delegateIds) {
-            var delegateId int
             delegateId = Int(delegateIds[i])
-            var key map
-            key = DBFind("keys").Where("id=?",delegateId).Row()
+            key = DBFind("keys").WhereId(delegateId).Row()
             if key {
                 // check role dup
-                var assigned map
-                assigned = DBFind("roles_participants").Where("member->member_id=? and role->id=? and deleted=0", delegateId, $role["id"]).Row()
-                if !assigned{
-                    RolesAssign("rid,member_id", Int($role["id"]), Int(key["id"]))
+                if !DBFind("roles_participants").Where({"member->member_id":delegateId, "role->id":rid, deleted:0}).Row(){
+                    RolesAssign("rid,member_id", rid, Int(key["id"]))
                 }
             }
             i=i+1

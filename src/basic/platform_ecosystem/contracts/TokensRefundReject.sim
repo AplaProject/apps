@@ -10,12 +10,13 @@ contract TokensRefundReject{
         if attackerId==0{
             error "unblockAccounts. invalid attacker key"
         }
-        DBUpdate("keys", Int(victimId), "blocked", 0)
-        DBUpdate("keys", Int(attackerId), "blocked", 0)
+        DBUpdate("keys", Int(victimId), {blocked:0})
+        DBUpdate("keys", Int(attackerId), {blocked:0})
     }
     
     conditions{
-        $tokenrefund = DBFind("tokenrefund").Where("id=?", $Id).Row()
+        $Id = Int($Id)
+        $tokenrefund = DBFind("tokenrefund").WhereId($Id).Row()
         if !$tokenrefund{
             error "tokenrefund not found"
         }
@@ -24,6 +25,6 @@ contract TokensRefundReject{
     action{
         unblockAccounts($tokenrefund["victim_key_id"],$tokenrefund["attacker_key_id"])
         // status 3: closed; 1: return cancelled
-        DBUpdate("tokenrefund", Int($tokenrefund["id"]), "status,result", 3,1)
+        DBUpdate("tokenrefund", $Id, {status:3, result:1})
     }
 }

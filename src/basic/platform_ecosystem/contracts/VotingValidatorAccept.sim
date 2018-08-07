@@ -16,9 +16,9 @@ contract VotingValidatorAccept{
         }
 
         var app_id templateId int params map
-        app_id = Int(DBFind("applications").Columns("name,id").Where("name='Basic application'").One("id"))
+        app_id = Int(DBFind("applications").Where({name:"Basic application"}).Columns("name,id").One("id"))
         templateId = Int(AppParam(app_id,"voting_validators_template_id"))
-        if !DBFind("voting_templates").Where("id=?", templateId).One("id"){
+        if !DBFind("voting_templates").WhereId(templateId).One("id"){
             warning "Voting template not found"
         }
         if $VotingTemplateId != templateId{
@@ -30,13 +30,13 @@ contract VotingValidatorAccept{
         roleId = 5 
         roleName = "Validator"
         
-        candidateId = DBFind("sysparams_candidate").Where("candidate_key_id=?", $KeyId).One("candidate_key_id")
+        candidateId = DBFind("sysparams_candidate").Where({candidate_key_id:$KeyId}).One("candidate_key_id")
         if !candidateId {
             warning "Candidate key id not found"
         }
-        $rowId = Int(DBFind("roles_participants").Where("deleted=0 and role->id=? and member->member_id=?", oldRoleId, candidateId).One("id"))
+        $rowId = Int(DBFind("roles_participants").Where({deleted:0, "role->id":oldRoleId, "member->member_id":candidateId}).One("id"))
         
-        $roleId = Int(DBFind("roles").Where("id=? and role_name=? and deleted=0", roleId, roleName).One("id"))
+        $roleId = Int(DBFind("roles").Where({id:roleId, role_name:roleName, deleted:0}).One("id"))
         if $roleId == 0 {
             warning "Validator role not found"
         }

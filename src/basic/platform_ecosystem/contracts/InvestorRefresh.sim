@@ -15,12 +15,12 @@ contract InvestorRefresh {
         }
 
         // roles:id == 4 Investor with voting rights
-        $roleId = Int(DBFind("roles").Where("id=4 and deleted=0").One("id"))
+        $roleId = Int(DBFind("roles").Where({id:4, deleted:0}).One("id"))
         if !$roleId{
             warning "Investor role not found or deleted"
         }
         var appId int
-        appId = Int(DBFind("applications").Columns("name,id").Where("name='Basic application'").One("id"))
+        appId = Int(DBFind("applications").Where({name:"Basic application"}).Columns("name,id").One("id"))
         $limitInvestors = Int(AppParam(appId,"investors_number"))
         if $limitInvestors == 0 {
             warning "Investors number not set in application params"
@@ -30,8 +30,8 @@ contract InvestorRefresh {
     action{
         // get investors ids
         var keysInvestors assignedInvestors investorsIds assignedIds array
-        keysInvestors = DBFind("keys").Columns("id").Order("amount desc, id").Limit($limitInvestors)
-        assignedInvestors = DBFind("roles_participants").Columns("member->member_id").Where("role->id=? and deleted=0", $roleId)
+        keysInvestors = DBFind("keys").Columns("id").Order([{amount:"1"},{id:"-1"}]).Limit($limitInvestors)
+        assignedInvestors = DBFind("roles_participants").Where({"role->id":$roleId, deleted:0}).Columns("member->member_id")
 
         // get ids
         var i int
@@ -50,11 +50,12 @@ contract InvestorRefresh {
         }
 
         // remove old investors
+        var assigned map mid string
         i=0
         while i < Len(assignedIds) {
             if NotInArray(assignedIds[i], investorsIds){
-                var assigned map
-                assigned = DBFind("roles_participants").Where("member->member_id=? and role->id=?", assignedIds[i], $roleId).Row()
+                mid = assignedIds[i]
+                assigned = DBFind("roles_participants").Where({"member->member_id":mid, "role->id":$roleId}).Row()
                 if assigned {
                     RolesUnassign("row_id", Int(assigned["id"]))
                 }
@@ -65,7 +66,7 @@ contract InvestorRefresh {
         i=0
         while i < Len(investorsIds) {
             if NotInArray(investorsIds[i], assignedIds){
-                if DBFind("keys").Where("id=?",investorsIds[i]).Row(){
+                if DBFind("keys").WhereId(investorsIds[i]).Row(){
                     RolesAssign("rid,member_id", $roleId, Int(investorsIds[i]))
                 }
             }

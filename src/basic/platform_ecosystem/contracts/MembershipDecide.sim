@@ -4,7 +4,7 @@ contract MembershipDecide {
         Accept int
     }
     conditions {
-        $request = DBFind("notifications").Columns("id,closed,sender->member_id,page_params->ecosystem_id").Where("id = ?", $notific_id).Row()
+        $request = DBFind("notifications").WhereId($notific_id).Columns("id,closed,sender->member_id,page_params->ecosystem_id").Row()
        
 
         if Int($request["closed"]) == 1 {
@@ -12,7 +12,7 @@ contract MembershipDecide {
         }
 
         var founder_id int
-        founder_id = DBFind("parameters").Where("name = 'founder_account'").Ecosystem(Int($request["page_params.ecosystem_id"])).One("value")
+        founder_id = DBFind("parameters").Where({name:"founder_account"}).Ecosystem(Int($request["page_params.ecosystem_id"])).One("value")
        
         if founder_id != $key_id {
             warning "You are not the founder of the ecosystem"
@@ -27,9 +27,10 @@ contract MembershipDecide {
             var table_name string
             table_name = Sprintf("@%v_keys", $request["page_params.ecosystem_id"]) 
 
-            var pub string
-            pub = DBFind("keys").Where("id = ?", $request["sender.member_id"]).One("pub")
-            DBInsert(table_name, "id,pub", $request["sender.member_id"], pub)
+            var pub string mid int
+            mid = Int($request["sender.member_id"])
+            pub = DBFind("keys").WhereId(mid).One("pub")
+            DBInsert(table_name, {id:mid, pub:pub})
         }
         else{   
             params["status"] = 0

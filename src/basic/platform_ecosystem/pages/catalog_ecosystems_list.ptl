@@ -1,17 +1,17 @@
 Div(content-wrapper){
-    DBFind(Name:applications, Source:src_app).Columns("name,id").Where("name='Basic application'").Vars(appication)
+    DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(appication)
     SetTitle($catalog_ecosystems$)
     AddToolButton(Title: $add$, Page: catalog_ecosystems_create, Icon: icon-plus)
 
+    SetVar(Where,{deleted:0})
     If(#param_flag_free#==0){
-        SetVar(Name: v_where, Value: "deleted=0")
+        SetVar(Where,{deleted:0})
     }.ElseIf(#param_flag_free#==1){
-        SetVar(Name: v_where, Value: "deleted=0 and flag_free=1")
+        SetVar(Where,{deleted:0, flag_free:1})
     }.ElseIf(#param_flag_free#==2){
-        SetVar(Name: v_where, Value: "deleted=0 and flag_free=2")
+        SetVar(Where,{deleted:0, flag_free:2})
     }.Else{
-        SetVar(Name: v_where, Value: "deleted=0")
-        SetVar(Name: param_flag_free, Value: 0)
+        SetVar(param_flag_free,0)
     }
 
     Div(row){
@@ -38,7 +38,7 @@ Div(content-wrapper){
 
     Form(panel panel-primary){
         Div(panel-body){
-            DBFind(Name: catalog_ecosystems, Source: src_catalog).Columns("id,ecosystem_number,ecosystem_name,ecosystem_type,image_id,flag_free").Custom(custom_name){
+            DBFind(catalog_ecosystems,src_catalog).Where(#Where#).Order("ecosystem_number").Columns("id,ecosystem_number,ecosystem_name,ecosystem_type,image_id,flag_free").Custom(custom_name){
                 LinkPage(Page: catalog_ecosystems_view, PageParams: "v_id=#id#"){
                     Span(Class: h5 text-bold, Body: #ecosystem_name#)
                 }
@@ -48,7 +48,7 @@ Div(content-wrapper){
                 Span(AppParam(App:#appication_id#, Name: catalog_ecosystems_freetype, Index: #flag_free#))
             }.Custom(custom_ecosystem){
                 Span(Class: h5, Body: #ecosystem_number#)
-            }.Where(#v_where#).Order("ecosystem_number")
+            }
 
             Div(row){
                 Div(col-md-12){

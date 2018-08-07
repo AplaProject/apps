@@ -24,12 +24,12 @@ contract VotingTemplateRun{
 
     conditions{
         var template map
-        template = DBFind("voting_templates").Where("id=?",$TemplateId).Row()
+        template = DBFind("voting_templates").WhereId($TemplateId).Row()
         if !template{
             warning "Voting template not found"
         }
         if $KeyId != 0{
-            $keyFind = DBFind("keys").Where("id=?", $KeyId).Row()
+            $keyFind = DBFind("keys").WhereId($KeyId).Row()
             if !$keyFind{
                 warning "Key id not found"
             }
@@ -75,7 +75,7 @@ contract VotingTemplateRun{
             // role-candidates
             checkInput($candidates, "Candidate role")
             var candidate map
-            candidate = DBFind("roles").Where("id=? and deleted=0", $candidates).Row()
+            candidate = DBFind("roles").Where({id:$candidates, deleted:0}).Row()
             if !candidate {
                 warning Sprintf("Candidates role (id: %v) not found", $candidates)
             }
@@ -107,7 +107,7 @@ contract VotingTemplateRun{
 
         }
         // check duplicated
-        if DBFind("votings").Where("voting->name=? and flags->decision not in ('1', '-1') and deleted=0", $votingName).Row(){
+        if DBFind("votings").Where({"voting->name":$votingName, "flags->decision":{"$nin":["1", "-1"]}, deleted:0}).Row(){
             error "Same voting already created"
         }
 
@@ -115,7 +115,7 @@ contract VotingTemplateRun{
         if $participants == 3 {
             // if the type of the participants "in role" - check the role
             var role map
-            role = DBFind("roles").Where("id=? and deleted=0", $voters).Row()
+            role = DBFind("roles").Where({id:$voters, deleted:0}).Row()
             if !role {
                 warning Sprintf("Voters role (id: %v) not found", $voters)
             }

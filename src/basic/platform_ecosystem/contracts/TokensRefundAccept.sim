@@ -4,7 +4,7 @@ contract TokensRefundAccept{
     }
     func closeNotes(){
         var notes array
-        notes = DBFind("notifications").Where("page_name='voting_view' and page_params->voting_id=?", $votingID)
+        notes = DBFind("notifications").Where({page_name:"voting_view", "page_params->voting_id":$votingID})
         var i int
         while i < Len(notes){
             var note map
@@ -25,12 +25,13 @@ contract TokensRefundAccept{
         if attackerId==0{
             error "unblockAccounts. invalid attacker key"
         }
-        DBUpdate("keys", Int(victimId), "blocked", 0)
-        DBUpdate("keys", Int(attackerId), "blocked", 0)
+        DBUpdate("keys", Int(victimId), {blocked:0})
+        DBUpdate("keys", Int(attackerId), {blocked:0})
     }
 
     conditions{
-        $tokenrefund = DBFind("tokenrefund").Where("id=?", $Id).Row()
+        $Id = Int($Id)
+        $tokenrefund = DBFind("tokenrefund").WhereId($Id).Row()
         if !$tokenrefund{
             error "tokenrefund not found"
         }
@@ -45,6 +46,6 @@ contract TokensRefundAccept{
         }
         refundAmount($tokenrefund["victim_key_id"],$tokenrefund["attacker_key_id"],$tokenrefund["amount"])
         // status 3: closed; result 2: the tokens returned
-        DBUpdate("tokenrefund", Int($tokenrefund["id"]), "status,result", 3,2)
+        DBUpdate("tokenrefund", $Id, {status:3, result:2})
     }
 }
