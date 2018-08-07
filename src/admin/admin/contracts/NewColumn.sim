@@ -3,13 +3,18 @@ contract NewColumn {
         TableName string
         Name string
         Type string
-        Permissions string
+        UpdatePerm string
+        ReadPerm string
     }
     conditions {
-        ColumnCondition($TableName, $Name, $Type, $Permissions)
+    var permissions map
+        permissions["update"] = $UpdatePerm
+        permissions["read"] = $ReadPerm
+        $Permissions = permissions
+        ColumnCondition($TableName, $Name, $Type, JSONEncode($Permissions))
     }
     action {
-        CreateColumn($TableName, $Name, $Type, $Permissions)
+        CreateColumn($TableName, $Name, $Type, JSONEncode($Permissions))
     }
     func rollback() {
         RollbackColumn($TableName, $Name)
