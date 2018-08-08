@@ -1,0 +1,24 @@
+contract SectionEdit {
+    data {
+		id int
+		title string
+		status int
+		urlname string
+		page string
+		roles_access string
+    }
+    conditions {
+		if $status < 0 || $status > 2 {
+			warning "Status must be in range 0..2"
+		}
+		if !DBFind("sections").Columns("id").WhereId($id) {
+			warning Sprintf("Section with id '%v' not exists", $id)
+		}
+	}
+    action {
+		if $status == 2 && DBFind("sections").Columns("id").Where("status = ?", 2) {
+			DBUpdateExt("sections", "status", "2", "status", "1")
+		}
+			DBUpdate("sections", $id, "title,status,urlname,page,roles_access", $title, $status, $urlname, $page, $roles_access)
+	}
+}
