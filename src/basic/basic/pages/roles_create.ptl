@@ -1,17 +1,17 @@
-DBFind(applications).Columns("name,id").Where("name='Basic application'").Vars(application)
-DBFind(roles, src_roles).Columns("role_name,id").Where("deleted=0").Order(id)
+DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(application)
+DBFind(roles, src_roles).Where({deleted:0}).Columns("role_name,id").Order(id)
 
 If(GetVar(role_name)){}.Else{SetVar(role_name,)}
 If(GetVar(role_type)){}.Else{SetVar(role_type,1)}
 
 If(GetVar(rid)){
-    DBFind(roles).Where("id=#rid#").Columns("roles_access->rids,id,role_type,role_name").Vars(rid)
+    DBFind(roles).WhereId(#rid#).Columns("roles_access->rids,id,role_type,role_name").Vars(rid)
     SetVar(title,$edit_role$).(role_type,"AppParam(App:#application_id#, Name: roles_types, Index: #rid_role_type#)")
 
-    If(#rid_roles_access_rids#!=""){
-        DBFind(roles,src_roles_access).Columns("id,role_name").Where("id in (#rid_roles_access_rids#)").Order(role_name)
+    If(And(#rid_roles_access_rids#!="NULL",#rid_roles_access_rids#!="")){
+        DBFind(roles,src_roles_access).Where({id:{"$in":[#rid_roles_access_rids#]}}).Columns("id,role_name").Order(role_name)
     }
-    DBFind(roles,src_roles).Columns("id,role_name").Where("deleted=0").Order(id)
+    DBFind(roles,src_roles).Where({deleted:0}).Columns("id,role_name").Order(id)
     Data(form, "Name,Res,Type,Src,Val"){
         role_name,name,text,,#role_name#
         roles_types,type,app_param,,#rid_role_type#
@@ -68,14 +68,14 @@ Div(content-wrapper){
                                         Div(input-group mb-sm){
                                             Select(Name:#Name#, Source:#Src#, NameColumn:role_name, ValueColumn: id)
                                             Div(input-group-btn){
-                                                Button(Class: btn btn-primary fa fa-plus, Page: roles_create, PageParams:"role_name=Val(role_name),role_type=Val(role_type),rid=#rid#", Contract:Roles_AccessManager, Params:"Rid=#rid#,ManagerRid=Val(#Name#),Action=add")
+                                                Button(Class: btn btn-primary fa fa-plus, Page: roles_create, PageParams:"role_name=Val(role_name),role_type=Val(role_type),rid=#rid#", Contract:RolesAccessManager, Params:"Rid=#rid#,ManagerRid=Val(#Name#),Action=add")
                                             }
                                         }
                                         ForList(src_roles_access){
                                             If(#id#==#role_id#){
-                                                Button(Class: btn btn-info mr-sm mb-sm, Page: roles_create, PageParams:"role_name=Val(role_name),role_type=Val(role_type),rid=#rid#", Contract:Roles_AccessManager, Params:"Rid=#rid#,ManagerRid=#id#,Action=remove", Body: Span(Class: fa fa-remove) #role_name#).Alert(Text: $want_delete_your_role_from_manager$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                                                Button(Class: btn btn-info mr-sm mb-sm, Page: roles_create, PageParams:"role_name=Val(role_name),role_type=Val(role_type),rid=#rid#", Contract:RolesAccessManager, Params:"Rid=#rid#,ManagerRid=#id#,Action=remove", Body: Span(Class: fa fa-remove) #role_name#).Alert(Text: $want_delete_your_role_from_manager$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
                                             }.Else{
-                                                Button(Class: btn btn-default mr-sm mb-sm, Page: roles_create, PageParams:"role_name=Val(role_name),role_type=Val(role_type),rid=#rid#", Contract:Roles_AccessManager, Params:"Rid=#rid#,ManagerRid=#id#,Action=remove"){
+                                                Button(Class: btn btn-default mr-sm mb-sm, Page: roles_create, PageParams:"role_name=Val(role_name),role_type=Val(role_type),rid=#rid#", Contract:RolesAccessManager, Params:"Rid=#rid#,ManagerRid=#id#,Action=remove"){
                                                     Span(Class: fa fa-remove)
                                                     #role_name#
                                                 }
@@ -91,7 +91,7 @@ Div(content-wrapper){
                             Button(Body: LangRes(back), Class: btn btn-default, Page: roles_list)
                         }
                         If(#rid_id#>0){}.Else{
-                            Button(Body: LangRes(create), Class: btn btn-primary, Page: roles_list, Contract: Roles_Create)
+                            Button(Body: LangRes(create), Class: btn btn-primary, Page: roles_list, Contract: RolesCreate)
                         }
                     }
                 }

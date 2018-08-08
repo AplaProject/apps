@@ -1,0 +1,75 @@
+contract VotingSubjectCheck {
+    data {
+        votingID int
+    }
+    func safeJsonToMap(m string) map {
+        var res map
+        if Size(m) > 0 { res = JSONToMap(m) }
+        return res
+    }
+
+    conditions {
+        $voting_map = DBFind("votings").WhereId($votingID).Columns("id,optional,voting->type,voting->type_decision,flags").Row()
+        if !$voting_map {
+            warning "Voting is not found"
+        }
+
+        $type_decision = $voting_map["voting.type_decision"]
+        if $type_decision < 1 || $type_decision > 5 {
+            warning "invalid type of decision"
+        }
+
+        $subject_map = DBFind("votings_subject").Where({voting_id:$votingID}).Row()
+        if !$subject_map {
+            warning "Subject of voting is not found"
+        }
+    }
+
+    action {
+        var flags, subject map
+        flags = safeJsonToMap($voting_map["flags"])
+        if $type_decision > 2 && $type_decision <= 5 {
+            subject = safeJsonToMap($subject_map["subject"])
+        }
+
+        var fullData string
+
+        if $type_decision == 1 || $type_decision == 2 {
+            var optional map
+            optional = safeJsonToMap($voting_map["optional"])
+
+            if optional["number_candidates"] > 0 && optional["role_vacancies"] > 0 && optional["role_id"] > 0 {
+                fullData = 1
+            }
+        }
+
+        if $type_decision == 3 {
+            if subject["text"] != "" && subject["hash"] != "" {
+                fullData = 1
+            }
+        }
+
+        if $type_decision == 4 {
+            if $voting_map["voting.type"] == 1{ // personal
+                if subject["table"] != "" && subject["table_id"] != "" && subject["column"] != "" && subject["column_value"] != "" {
+                    fullData = 1
+                }
+            }
+            if $voting_map["voting.type"] == 2 { // system
+                if subject["column"] != "" && subject["column_value"] != "" {
+                    fullData = 1
+                }
+            }
+        }
+
+        if $type_decision == 5 {
+            if subject["contract_accept"] != "" && subject["contract_reject"] != "" {
+                fullData = 1
+            }
+        }
+
+        if fullData == 1 {
+            DBUpdate("votings", $votingID, {"flags->full_data":fullData})
+        }
+    }
+}

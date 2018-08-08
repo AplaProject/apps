@@ -1,0 +1,59 @@
+contract VotingSubjectCandidates {
+    data {
+        votingID int
+        memberID int
+    }
+    func getMemberInfo(kid int) map {
+        var res member map
+        member = DBFind("members").WhereId(kid).Row()
+        if member {
+            res["member_id"] = member["id"]
+            res["member_name"] = member["member_name"]
+            res["image_id"] = member["image_id"]
+        }else{
+            member = DBFind("keys").WhereId(kid).Row()
+            if member {
+                res["member_id"] = member["id"]
+                res["member_name"] = IdToAddress(Int(member["id"]))
+                res["image_id"] = 0
+            }
+        }
+        return res
+    }
+    func safeJsonToMap(m string) map {
+        var res map
+        if Size(m) > 0 { res = JSONToMap(m) }
+        return res
+    }
+
+    conditions {
+        var bt string
+        bt = BlockTime()
+        $voting = DBFind("votings").Where({id:$votingID, date_started:[{"$gt":bt}]}).Columns("id,date_started,optional,voting->type,flags->full_data").Row()
+        if !$voting {
+            warning "Voting already started. Can not edit document"
+        }
+
+        if $voting["flags.full_data"] == 1 && $voting["voting.type"] == 2 {
+            warning "This vote is a system. Change settings not allowed"
+        }
+
+        if $memberID == 0 {
+            $memberID = $key_id
+        }
+
+        if DBFind("votings_subject").Where({voting_id:$votingID, "subject->member_id":$memberID}).One("id") {
+            warning "This candidature for this role has already been added before"
+        }
+
+        $member = getMemberInfo($memberID)
+        if !$member {
+            warning Sprintf("Key not found (%v)", $memberID)
+        }
+    }
+
+    action {
+        DBInsert("votings_subject", {voting_id:$votingID, subject:$member})
+        DBUpdate("votings", $votingID, {"+optional->number_candidates":1})
+    }
+}

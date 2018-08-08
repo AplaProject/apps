@@ -1,0 +1,40 @@
+contract NotificationsClose {
+    data {
+        notific_id int
+    }
+
+    conditions {
+        $notify = DBFind("notifications").WhereId($notific_id).Columns("id,date_start_processing,processing_info->member_id,closed,sender->type").Row()
+        if !$notify {
+            warning "Notification not found"
+        }
+        if $notify["sender.type"] == 2{
+            //role has processing check
+            if $notify["date_start_processing"] == "" {
+                warning "Sorry, processing of this notification has not yet begun"
+            }
+
+            if $notify["processing_info.member_id"] != $key_id {
+                warning "Sorry, processing of this notice began another member"
+            }
+
+            if $notify["closed"] > 0 {
+                warning "Sorry, this notification has already been closed before"
+            }
+        }else {
+            if $notify["sender.type"] != 1 { // not single
+                warning "Notification type not found"
+            }
+        }
+    }
+
+    action {
+        if $notify["sender.type"] == 1{
+            NotificationsProcess("notific_id", $notific_id)
+        }
+        var m map
+        m["date_closed"] = BlockTime()
+        m["closed"] = 1
+        DBUpdate("notifications", $notific_id, m)
+    }
+}

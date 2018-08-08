@@ -12,11 +12,11 @@ Div(content-wrapper){
         }
     }
 
-    If(GetVar(isSearch) == 1){
-        SetVar(Name: v_Where, Value: "name='#v_Search#' and id != 1")
+    If(GetVar(Search)){
+        SetVar(Where,{name:{"$like":#Search#}, id:{"$neq":1}})
     }.Else{
-        SetVar(Name: v_Where, Value: "id != 1")
-        SetVar(Name: v_Search, Value: "")
+        SetVar(Where,{id:{"$neq":1}})
+        SetVar(Search,)
     }
 
     Form(panel panel-primary){
@@ -27,40 +27,39 @@ Div(content-wrapper){
                         Div(input-group-addon){
                             LangRes(name)
                         }
-                        Input(Name: Search, Value: #v_Search#)
+                        Input(Name: Search, Value: #Search#)
                         Div(input-group-btn){
-                            Button(Class: btn btn-default fa fa-search, Page: membership_ecosystems_list, PageParams: "isSearch=1,v_Search=Val(Search)")
+                            Button(Class: btn btn-default fa fa-search, Page: membership_ecosystems_list, PageParams: "Search=Val(Search)")
                         }
                     }
                 }
             }
 
-            DBFind(ecosystems, src_ecosystems).Ecosystem(1).Where("#v_Where#").Custom(custom_id){
+            DBFind(ecosystems, src_ecosystems).Ecosystem(1).Where("#Where#").Custom(_id){
                 Span(#id#)
-            }.Custom(custom_name){
+            }.Custom(_name){
                 Span(#name#)
-            }.Custom(custom_actions){
-                SetVar(req_id, "")
-                SetVar(k_id, "")
-                DBFind(notifications, src_notifications).Where("sender->member_id = '#key_id#' and page_params->ecosystem_id = '#id#' and closed = 0").Count(notific_count)
-                DBFind(keys, src_keys).Where("id = #key_id#").Ecosystem(#id#).Limit(1).Vars("k")
+            }.Custom(_actions){
+                SetVar(k_id,)
+                DBFind(notifications).Where({"sender->member_id":#key_id#, "page_params->ecosystem_id":#id#, closed:0}).Count(notific_count)
+                DBFind(keys).WhereId(#key_id#).Ecosystem(#id#).Limit(1).Vars("k")
 
-                If(And(#notific_count# == 0, GetVar(k_id) == "")){
-                    Button(Class: btn btn-link pull-right, Body: Send Request, Contract: "membership_send_request", Page: membership_ecosystems_list, Params: "ecosystem_num=#id#")
+                If(And(#notific_count#==0,#k_id#=="")){
+                    Button(Class: btn btn-link pull-right, Body: Send Request, Contract: "MembershipRequest", Page: membership_ecosystems_list, Params: "ecosystem_num=#id#")
                 }
             }
 			
             Div(row){
                 Div(col-md-12){
-                    Table(Source: src_ecosystems, Columns: "ID=custom_id,$name$=custom_name,=custom_actions")
+                    Table(Source: src_ecosystems, Columns: "ID=_id,$name$=_name,=_actions")
                 }
             }
 			
-            If(GetVar(isSearch) == 1){
+            If(GetVar(Search)){
                 Div(row){
                     Div(col-md-12 mt-lg){
                         Div(text-center){
-                            Button(Body: $view_all$, Class: btn btn-primary, Page: membership_ecosystems_list, PageParams: "isSearch=0")
+                            Button(Body: $view_all$, Class: btn btn-primary, Page: membership_ecosystems_list)
                         }
                     }
                 }

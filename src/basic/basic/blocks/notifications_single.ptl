@@ -7,12 +7,12 @@ If(And(#role_id#==1,#ecosystem_id#==1)){
 }
 AddToolButton(Title: $send$, Page: notifications_single_send, Icon: icon-plus)
 If(GetVar(Search)){
-    SetVar(Where,"notification->type='1' and recipient->member_name='#Search#' and recipient->member_id='#key_id#'")
+    SetVar(Where,{"notification->type":1, "recipient->member_name":#Search#, "recipient->member_id":#key_id#})
 }.Else{
-    SetVar(Where,"notification->type='1' and recipient->member_id='#key_id#'").(Search,)
+    SetVar(Where,{"notification->type":1, "recipient->member_id":#key_id#}).(Search,)
 }
 
-DBFind(Name: notifications, Source: src_notifications).Limit(20).Columns("id,recipient->member_id,recipient->member_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,closed").Custom(custom_id){
+DBFind(notifications,src_notifications).Where(#Where#).Order([{closed:"1"}, {id:"-1"}]).Limit(20).Columns("id,recipient->member_id,recipient->member_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,closed").Custom(custom_id){
     If(#closed# == 0){
         SetVar(Name: style_text, Value: "text-normal")
         SetVar(Name: style_link, Value: "text-primary")
@@ -62,10 +62,10 @@ DBFind(Name: notifications, Source: src_notifications).Limit(20).Columns("id,rec
 }.Custom(actions){
     Div(pull-right){
         If(#closed# == 0){
-            Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, Contract: notifications_Close, Params: "notific_id=#id#", Page: notifications_list).Alert(Text: $want_close_notification$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+            Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, Contract: NotificationsClose, Params: "notific_id=#id#", Page: notifications_list).Alert(Text: $want_close_notification$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
         }
     }
-}.Where(#Where#).Order("closed ASC, id DESC")
+}
 
 Form(panel panel-primary){
     Div(panel-body){

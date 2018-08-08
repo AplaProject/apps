@@ -1,0 +1,105 @@
+contract VotingTokensRefundCreate{
+    data{
+        VictimAccount string
+        SuspectAccount string
+        Amount int
+        Note string
+    }
+    func blockAccounts(victimId, attackerId int){
+        if victimId==0 {
+            error "unblockAccounts. invalid victim key"
+        }
+        if attackerId==0{
+            error "unblockAccounts. invalid attacker key"
+        }
+        if !DBFind("keys").Where({blocked:1, id:victimId}).One("id"){
+            DBUpdate("keys", victimId, {blocked:1})
+        }
+        if !DBFind("keys").Where({blocked:1, id:attackerId}).One("id"){
+            DBUpdate("keys", attackerId, {blocked:1})
+        }
+    }
+    func getKeyId(test string) int{
+        if Len(Split(test, "-")) > 1 {
+            // probably it is address
+            return AddressToId(test)
+        }
+        if "invalid" != IdToAddress(Int(test)){
+            // probably it is key_id
+            return Int(test)
+        }
+        return 0
+    }
+
+    conditions{
+        if $Amount <= 0{
+            error "Amount not valid"
+        }
+        if Size($Note) == 0{
+            error "Please add description"
+        }
+        var victim attacker int
+        victim = getKeyId($VictimAccount)
+        attacker = getKeyId($SuspectAccount)
+        if victim == 0{
+            error "Victim address not valid"
+        }
+        if attacker == 0{
+            error "Suspect address not valid"
+        }
+        $victimId = victim
+        $attackerId = attacker
+
+        var app_id template_id int
+        app_id = Int(DBFind("applications").Where({name:"Basic application"}).Columns("name,id").One("id"))
+        template_id = Int(AppParam(app_id,"voting_tokenrefund_template_id"))
+        if template_id <= 0 {
+            warning "Template id not found"
+        }
+
+        $template = DBFind("voting_templates").WhereId(template_id).Row()
+        $votersRoleId = Int($template["voters"])
+        $votingName = $template["title"]
+        $typeParticipants = Int($template["type_participants"])
+        $typeDecision = Int($template["type_decision"])
+        $typeVoting = Int($template["type_voting"])
+        $volume = Int($template["volume"])
+        $quorum = Int($template["quorum"])
+        $contractAccept = $template["contract_accept"]
+        $contractReject = $template["contract_reject"]
+        var initContract string
+        initContract = $template["init_contract"]
+        if Size(initContract) > 4 { // greater then "NULL"
+            var m map
+            CallContract(initContract, m)
+        }
+        $desc = Sprintf("%v (victim: %v, attacker: %v, amount: %v)", $votingName, $victimId, $attackerId, $Amount)
+
+        if !DBFind("roles_participants").Where({"role->id":$votersRoleId, deleted:0}).One("id") {
+            warning Sprintf("Role (id: %v) does not contain members", $votersRoleId)
+        }
+    }
+
+    action{
+        blockAccounts($victimId,$attackerId)
+        var votingId int params m map paramsJSON interval_days string
+        interval_days = "3"
+        votingId = VotingCreate("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $volume, $quorum, interval_days)
+
+        m["victim_key_id"] = $victimId
+        m["attacker_key_id"] = $attackerId
+        m["amount"] = $Amount
+        m["note"] = $Note
+        m["validator_key_id"] = $key_id
+        m["blocked_at"] = BlockTime()
+        m["voting_id"] = votingId
+        m["status"] = 1 // 0.Accounts blocked 1.Discussion 2.Vote 3.Closed
+        m["result"] = 0 // 0. discussion and voting 1. cancelled 2. the tokens returned
+        params["Id"] = DBInsert("tokenrefund", m)
+
+        paramsJSON = JSONEncode(params)
+        VotingSubjectContract("votingID,contract_reject,contract_accept,contract_reject_params,contract_accept_params", votingId, $contractReject, $contractAccept, paramsJSON, paramsJSON)
+
+        VotingInvite("votingID,var_id", votingId, $votersRoleId)
+    }
+}
