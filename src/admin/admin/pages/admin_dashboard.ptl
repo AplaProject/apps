@@ -58,7 +58,7 @@ If(And(GetVar(Restore),GetVar(Table),GetVar(Id))){
     Div(content-wrapper){
         Div(panel panel-default){
             If(GetVar(Single)){
-                Div(pull-right){
+                Div(text-right){
                     Button(Page: #this_page#, PageParams: "appid=#appid#", Class: btn btn-default btn-close fa fa-close)
                 }
             }.Else{
@@ -86,144 +86,162 @@ If(And(GetVar(Restore),GetVar(Table),GetVar(Id))){
                 SetVar(limit,250)
                 ForList(tables){
                     If(#Table#==binaries){
-                        DBFind(#Table#, src_table).Limit(#limit#).Order({ id: -1 }).Where(#where#).Custom(_name){
+                        DBFind(#Table#, src_table).Limit(#limit#).Order({ id: -1 }).Where(#where#).Count(items_count).Custom(_name){
                             LinkPage(Page: #Page#, PageParams: "id=#id#,application_id=#appid#"){#name#}
                         }.Custom(_img){
                             Image(Src: Binary().ById(#id#), Class: preview)
                         }
                     }.Else{
-                        DBFind(#Table#, src_table).Limit(#limit#).Columns(#Cols#).Order("name").Where(#where#)
+                        DBFind(#Table#, src_table).Limit(#limit#).Columns(#Cols#).Order("name").Where(#where#).Count(items_count)
                     }
                     Div(list-group-item){
                         Div(h3){
-                            If(#Table#==contracts){
-                                LinkPage(Page: #Page#, Class: text-normal, PageParams: "create=contract,appId=#appid#"){
-                                    LangRes(#Table#)
+                            If(#appid#>0){
+                                If(#Table#==contracts){
+                                    LinkPage(Page: #Page#, Class: text-normal, PageParams: "create=contract,appId=#appid#"){
+                                        LangRes(#Table#)
+                                    }
+                                }.ElseIf(#Table#==pages){
+                                    LinkPage(Page: #Page#, Class: text-normal, PageParams: "create=page,appId=#appid#"){
+                                        LangRes(#Table#)
+                                    }
+                                }.ElseIf(#Table#==blocks){
+                                    LinkPage(Page: #Page#, Class: text-normal, PageParams: "create=block,appId=#appid#"){
+                                        LangRes(#Table#)
+                                    }
+                                }.ElseIf(#Table#==tables){
+                                    LinkPage(Page: #Page#, Class: text-normal, PageParams: "application_id=#appid#"){
+                                        LangRes(#Table#)
+                                    }
+                                }.ElseIf(#Table#==app_params){
+                                    LinkPage(Page: #Page#, Class: text-normal, PageParams: "application_id=#appid#,create=create"){
+                                        LangRes(#Table#)
+                                    }
+                                }.ElseIf(#Table#==binaries){
+                                    LinkPage(Page: #Page#, Class: text-normal, PageParams: "application_id=#appid#"){
+                                        LangRes(#Table#)
+                                    }
+                                }.ElseIf(#Table#==languages){
+                                    LinkPage(Page: #Page#, Class: text-normal, PageParams: "application_id=#appid#"){
+                                        LangRes(#Table#)
+                                    }
                                 }
-                            }.ElseIf(#Table#==pages){
-                                LinkPage(Page: #Page#, Class: text-normal, PageParams: "create=page,appId=#appid#"){
-                                    LangRes(#Table#)
-                                }
-                            }.ElseIf(#Table#==blocks){
-                                LinkPage(Page: #Page#, Class: text-normal, PageParams: "create=block,appId=#appid#"){
-                                    LangRes(#Table#)
-                                }
-                            }.ElseIf(#Table#==tables){
-                                LinkPage(Page: #Page#, Class: text-normal, PageParams: "application_id=#appid#"){
-                                    LangRes(#Table#)
-                                }
-                            }.ElseIf(#Table#==app_params){
-                                LinkPage(Page: #Page#, Class: text-normal, PageParams: "application_id=#appid#,create=create"){
-                                    LangRes(#Table#)
-                                }
-                            }.ElseIf(#Table#==binaries){
-                                LinkPage(Page: #Page#, Class: text-normal, PageParams: "application_id=#appid#"){
-                                    LangRes(#Table#)
-                                }
-                            }.ElseIf(#Table#==languages){
-                                LinkPage(Page: #Page#, Class: text-normal, PageParams: "application_id=#appid#"){
-                                    LangRes(#Table#)
-                                }
+                            }.Else{
+                                LangRes(#Table#)
                             }
                         }
                         Div(row pd){
                             Div(col-sm-12){
                                 If(#Table#==binaries){
-                                    Div(items){
-                                        Table(src_table,"=id,Edit link=_name,Download link=data,=_img")
+                                    If(#items_count#>0){
+                                        Div(items){
+                                            Table(src_table,"=id,Edit link=_name,Download link=data,=_img")
+                                        }
+                                    }.Else{
+                                        Div(text-muted h4 text-center){
+                                            #Table# not found
+                                        }
                                     }
                                 }.Else{
                                     Div(cols){
                                         SetVar(value,).(res,)
-                                        ForList(src_table){
-                                            Div(clearfix item){
-                                                Div(pull-right){
-                                                    If(#Table#==contracts){
-                                                        If(#active#==1){
-                                                            Span(actived,text-success mr-lg)
+                                        If(#items_count#>0){
+                                            ForList(src_table){
+                                                Div(clearfix item){
+                                                    Div(pull-right){
+                                                        If(#Table#==contracts){
+                                                            If(#active#==1){
+                                                                Span(actived,text-success mr-lg)
+                                                            }
+                                                            LinkPage(Class: text-muted fa fa-cogs, Page: properties_edit, PageParams: "edit_property_id=#id#,type=contract")
                                                         }
-                                                        LinkPage(Class: text-muted fa fa-cogs, Page: properties_edit, PageParams: "edit_property_id=#id#,type=contract")
-                                                    }
-                                                    If(#Table#==pages){
-                                                        LinkPage(Class: text-muted fa fa-eye, Page: #name#)
-                                                        LinkPage(Class: text-muted fa fa-cogs, Page: properties_edit, PageParams: "edit_property_id=#id#,type=page")
-                                                    }
-                                                    If(#Table#==blocks){
-                                                        LinkPage(Class: text-muted fa fa-eye, Page: #this_page#, PageParams:"block=#name#")
-                                                        LinkPage(Class: text-muted fa fa-cogs, Page: properties_edit, PageParams: "edit_property_id=#id#,type=block")
-                                                    }
-                                                    If(#Table#==tables){
-                                                        LinkPage(Class: text-muted fa fa-eye, Page: table_view, PageParams: "tabl_id=#id#,table_name=#name#")
-                                                    }
-                                                    If(#changer_count#==1){
-                                                        If(#appid#==0){
-                                                            Button(Class: btn-link text-muted fa fa-recycle, Page: #this_page#, PageParams: "Restore=1,Table=#Table#,Id=#id#").Popup(30, "Select restore target application")
-                                                        }.Else{
-                                                            If(#ecosystem_id#==1){
-                                                                Button(Class: btn-link text-muted fa fa-trash, Page: #this_page#, PageParams: "appid=#appid#", Contract: ItemChangeAppId, Params: "Table=#Table#,Id=#id#,AppId=0").Alert("Do you want to remove this item from the application?", "confirm", "cancel")
+                                                        If(#Table#==pages){
+                                                            LinkPage(Class: text-muted fa fa-eye, Page: #name#)
+                                                            LinkPage(Class: text-muted fa fa-cogs, Page: properties_edit, PageParams: "edit_property_id=#id#,type=page")
+                                                        }
+                                                        If(#Table#==blocks){
+                                                            LinkPage(Class: text-muted fa fa-eye, Page: #this_page#, PageParams:"block=#name#")
+                                                            LinkPage(Class: text-muted fa fa-cogs, Page: properties_edit, PageParams: "edit_property_id=#id#,type=block")
+                                                        }
+                                                        If(#Table#==tables){
+                                                            LinkPage(Class: text-muted fa fa-eye, Page: table_view, PageParams: "tabl_id=#id#,table_name=#name#")
+                                                        }
+                                                        If(#changer_count#==1){
+                                                            If(#appid#==0){
+                                                                Button(Class: btn-link text-muted fa fa-recycle, Page: #this_page#, PageParams: "Restore=1,Table=#Table#,Id=#id#").Popup(30, "Select restore target application")
                                                             }.Else{
-                                                                Button(Class: btn-link text-muted fa fa-trash, Page: #this_page#, PageParams: "appid=#appid#", Contract: @1ItemChangeAppId, Params: "Table=#Table#,Id=#id#,AppId=0").Alert("Do you want to remove this item from the application?", "confirm", "cancel")
+                                                                If(#ecosystem_id#==1){
+                                                                    Button(Class: btn-link text-muted fa fa-trash, Page: #this_page#, PageParams: "appid=#appid#", Contract: ItemChangeAppId, Params: "Table=#Table#,Id=#id#,AppId=0").Alert("Do you want to remove this item from the application?", "confirm", "cancel")
+                                                                }.Else{
+                                                                    Button(Class: btn-link text-muted fa fa-trash, Page: #this_page#, PageParams: "appid=#appid#", Contract: @1ItemChangeAppId, Params: "Table=#Table#,Id=#id#,AppId=0").Alert("Do you want to remove this item from the application?", "confirm", "cancel")
 
+                                                                }
                                                             }
                                                         }
                                                     }
+                                                    If(#Table#==contracts){
+                                                        LinkPage(Page: #Page#, PageParams: "open=contract,name=#name#"){#name#}
+                                                    }
+                                                    If(#Table#==pages){
+                                                        LinkPage(Page: #Page#, PageParams: "open=page,name=#name#"){#name#}
+                                                    }
+                                                    If(#Table#==blocks){
+                                                        LinkPage(Page: #Page#, PageParams: "open=block,name=#name#"){#name#}
+                                                    }
+                                                    If(#Table#==tables){
+                                                        LinkPage(Page: table_edit, PageParams: "tabl_id=#id#"){#name#}
+                                                    }
+                                                    If(#Table#==app_params){
+                                                        LinkPage(Page: #Page#, PageParams: "id=#id#"){#name#}
+                                                    }
+                                                    If(#Table#==languages){
+                                                        LinkPage(Page: langres_edit, PageParams: "lang_id=#id#"){#name#}
+                                                    }
+                                                    If(`#value#`!=""){
+                                                        :Div(text-muted){`#value#`}.Style(max-height:1.5em;overflow:hidden;)
+                                                    }.ElseIf(`#res#`!=""){
+                                                        :Div(text-muted){`#res#`}
+                                                    }
                                                 }
-                                                If(#Table#==contracts){
-                                                    LinkPage(Page: #Page#, PageParams: "open=contract,name=#name#"){#name#}
-                                                }
-                                                If(#Table#==pages){
-                                                    LinkPage(Page: #Page#, PageParams: "open=page,name=#name#"){#name#}
-                                                }
-                                                If(#Table#==blocks){
-                                                    LinkPage(Page: #Page#, PageParams: "open=block,name=#name#"){#name#}
-                                                }
-                                                If(#Table#==tables){
-                                                    LinkPage(Page: table_edit, PageParams: "tabl_id=#id#"){#name#}
-                                                }
-                                                If(#Table#==app_params){
-                                                    LinkPage(Page: #Page#, PageParams: "id=#id#"){#name#}
-                                                }
-                                                If(#Table#==languages){
-                                                    LinkPage(Page: langres_edit, PageParams: "lang_id=#id#"){#name#}
-                                                }
-                                                If(`#value#`!=""){
-                                                    :Div(text-muted){`#value#`}.Style(max-height:1.5em;overflow:hidden;)
-                                                }.ElseIf(`#res#`!=""){
-                                                    :Div(text-muted){`#res#`}
-                                                }
+                                            }
+                                        }.Else{
+                                            Div(text-muted h4 text-center){
+                                                #Table# not found
                                             }
                                         }
                                     }
                                 }
                             }
                             Div(col-sm-12 mt-lg text-right){
-                                If(#Table#==contracts){
-                                    LinkPage(Page: #Page#, PageParams: "create=contract,appId=#appid#"){
-                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
-                                    }
-                                }.ElseIf(#Table#==pages){
-                                    LinkPage(Page: #Page#, PageParams: "create=page,appId=#appid#"){
-                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
-                                    }
-                                }.ElseIf(#Table#==blocks){
-                                    LinkPage(Page: #Page#, PageParams: "create=block,appId=#appid#"){
-                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
-                                    }
-                                }.ElseIf(#Table#==tables){
-                                    LinkPage(Page: #Page#, PageParams: "application_id=#appid#"){
-                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
-                                    }
-                                }.ElseIf(#Table#==app_params){
-                                    LinkPage(Page: #Page#, PageParams: "application_id=#appid#,create=create"){
-                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
-                                    }
-                                }.ElseIf(#Table#==binaries){
-                                    LinkPage(Page: #Page#, PageParams: "application_id=#appid#"){
-                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
-                                    }
-                                }.ElseIf(#Table#==languages){
-                                    LinkPage(Page: #Page#, PageParams: "application_id=#appid#"){
-                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                If(#appid#>0){
+                                    If(#Table#==contracts){
+                                        LinkPage(Page: #Page#, PageParams: "create=contract,appId=#appid#"){
+                                            Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                        }
+                                    }.ElseIf(#Table#==pages){
+                                        LinkPage(Page: #Page#, PageParams: "create=page,appId=#appid#"){
+                                            Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                        }
+                                    }.ElseIf(#Table#==blocks){
+                                        LinkPage(Page: #Page#, PageParams: "create=block,appId=#appid#"){
+                                            Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                        }
+                                    }.ElseIf(#Table#==tables){
+                                        LinkPage(Page: #Page#, PageParams: "application_id=#appid#"){
+                                            Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                        }
+                                    }.ElseIf(#Table#==app_params){
+                                        LinkPage(Page: #Page#, PageParams: "application_id=#appid#,create=create"){
+                                            Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                        }
+                                    }.ElseIf(#Table#==binaries){
+                                        LinkPage(Page: #Page#, PageParams: "application_id=#appid#"){
+                                            Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                        }
+                                    }.ElseIf(#Table#==languages){
+                                        LinkPage(Page: #Page#, PageParams: "application_id=#appid#"){
+                                            Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                        }
                                     }
                                 }
                             }
