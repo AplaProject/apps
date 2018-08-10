@@ -41,6 +41,18 @@ If(#v_role_id#>0){
                     }
                 }
                 If(#manager_id#>0){
+                    SetVar(participants,0)
+                    DBFind(roles_participants).Where({"role->id":#v_role_id#, deleted:0}).Columns("id,member->member_id").Custom(_id){
+                        SetVar(participants,"#participants#,#member.member_id#")
+                    }
+                    DBFind(keys,src_keys).Where({id:{"$nin":[#participants#]}}).Columns("id").Custom(_name){
+                        SetVar(m_id, 0)
+                        DBFind(members).WhereId(#id#).Columns("id,member_name").Vars(m)
+                        Address(#id#)
+                        If(Or(#m_id#>0,#m_id#<0)){
+                            " (#m_member_name#)"
+                        }
+                    }
                     Div(row){
                         Div(col-md-3 mt-sm text-right){
                             Label(){
@@ -48,13 +60,6 @@ If(#v_role_id#>0){
                             }
                         }
                         Div(col-md-9 text-left){
-                            DBFind(keys, src_keys).Columns("id").Custom(_name){
-                                DBFind(members).Columns("id,member_name").WhereId(#id#).Vars(m)
-                                Address(#id#)
-                                If(Or(#m_id#>0,#m_id#<0)){
-                                    " (#m_member_name#)"
-                                }
-                            }
                             Select(Name: member_id, Source: src_keys, NameColumn: _name, ValueColumn: id)
                         }
                     }
