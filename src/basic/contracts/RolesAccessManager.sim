@@ -9,31 +9,54 @@ contract RolesAccessManager {
         model["roles_access"] = {rids:ra}
         DBUpdate("roles", $Rid, model)
     }
+	func updateBufferAccess(ra array){
+        var roles_access string
+        roles_access = JSONEncode(ra)
+        if !$buffer_id {
+            DBInsert("buffer_data", {"member_id": $key_id, "key": "roles_access", "value": roles_access})
+        } else {
+            DBUpdate("buffer_data", Int($buffer_id), {"value": roles_access})
+        }
+    }
     conditions {
-        RolesAccessCheck("rid", $Rid)
+		$ManagerRid = Int($ManagerRid)
+        if $Rid > 0 {
+			RolesAccessCheck("rid", $Rid)
 
-        $ManagerRid = Int($ManagerRid)
-        $role = DBFind("roles").WhereId($Rid).Columns("id,roles_access->rids").Row()
-        if !$role {
-            warning "Role not found"
-        }
-        if $ManagerRid > 0{
-            if !DBFind("roles").WhereId($ManagerRid).One("id") {
-                warning "Role not found"
+			$role = DBFind("roles").WhereId($Rid).Columns("id,roles_access->rids").Row()
+			if !$role {
+				warning "Role not found"
+			}
+			if $ManagerRid > 0{
+				if !DBFind("roles").WhereId($ManagerRid).One("id") {
+					warning "Role not found"
+				}
+			}
+			var ids array, i int
+			$ids = ids
+			ids = Split($role["roles_access.rids"],",")
+			while i < Len(ids){
+				if ids[i] > 0 {
+					$ids = Append($ids, ids[i])
+				}
+				i=i+1
+			}
+		} else {
+            var buffer map
+            buffer = DBFind("buffer_data").Where({"member_id": $key_id, "key": "roles_access"}).Row()
+            if buffer {
+                $buffer_managers = buffer["value"]
+                $buffer_id = buffer["id"]
             }
-        }
-        var ids array, i int
-        $ids = ids
-        ids = Split($role["roles_access.rids"],",")
-        while i < Len(ids){
-            if ids[i] > 0 {
-                $ids = Append($ids, ids[i])
-            }
-            i=i+1
         }
     }
 
     action {
+		if $Rid == 0 {
+            if $buffer_managers {
+                $ids = JSONDecode($buffer_managers)
+            }
+        }
         if $Action == "clean"{
             updateAccess("")
         }
@@ -46,7 +69,11 @@ contract RolesAccessManager {
                     }
                     i=i+1
                 }
-                updateAccess(Join(idsNew, ","))
+				if $Rid == 0 {
+					updateBufferAccess(idsNew)
+				}else{
+					updateAccess(Join(idsNew, ","))
+				}
             }
             if $Action == "add"{
                 var double bool
@@ -59,7 +86,11 @@ contract RolesAccessManager {
                 if !double {
                     $ids = Append($ids, $ManagerRid)
                 }
-                updateAccess(Join($ids, ","))
+                if $Rid == 0 {
+					updateBufferAccess(idsNew)
+				}else{
+					updateAccess(Join(idsNew, ","))
+				}
             }
         }
     }
