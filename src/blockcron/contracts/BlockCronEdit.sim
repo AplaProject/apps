@@ -1,0 +1,41 @@
+contract BlockCronEdit {
+    data {
+        id int
+        contract_name string "optional"
+        every_block int "optional"
+        limit int "optional"
+        start_block int "optional"
+        deleted int "optional"
+    }
+    conditions {
+        var original_cron map
+        original_cron = DBFind("delayed_contracts").Where({"id": $id, "key_id": $key_id}).Row()
+
+        if !original_cron {
+            warning Sprintf("Delayed contract #%v not found", $id)
+        }
+
+        if !$contract_name {
+            $contract_name = original_cron["contract"]
+        }
+        if !$every_block {
+            $every_block = Int(original_cron["every_block"])
+        }
+        if !$limit {
+            $limit = Int(original_cron["limit"])
+        }
+        if !$start_block {
+            $start_block = Int(original_cron["start_block"])
+        }
+        if !$deleted {
+            $deleted = 0
+        }
+        $conditions = Str(original_cron["conditions"])
+        if $start_block < $block {
+            $start_block = $block + 1
+        }
+    }
+    action {
+        EditDelayedContract("Id,Contract,EveryBlock,Conditions,BlockID,Limit,Deleted", $id, $contract_name, $every_block, $conditions, $start_block, $limit, $deleted)
+    }
+}

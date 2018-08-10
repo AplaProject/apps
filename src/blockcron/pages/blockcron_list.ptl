@@ -1,17 +1,44 @@
 SetTitle($blockcron_list$)
-AddToolButton(Title: $create$, Icon:"icon icon-clock", Page:blockcron)
+AddToolButton(Title: $create$, Icon:"icon icon-clock", Page: blockcron_create)
+
+If(GetVar(query)!=""){
+    SetVar(cron_where, {"key_id":"#key_id#", "contract":{"$like":"#query#"}, "deleted":"false"})
+}.Else{
+    SetVar(cron_where, {"key_id":"#key_id#", "deleted":"false"})
+    SetVar(query,)
+}
+
 Div(content-wrapper){
     Div(panel panel-primary){
         Div(panel panel-body){
-            DBFind(block_cron,src_cron).Where("deleted=0 and owner=#key_id#").Order(id desc).Custom(_actions){
-                Div(text-right){
-                    Div(input-group-btn){
-                        Button(Contract: blockcron_Manager, Class: btn btn-danger icon-trash, Params:"Id=#id#,Action=delete", Page:blockcron_list).Alert(Text: $want_delete_block_timer$,ConfirmButton:$yes$, CancelButton: $cancel$)
-                        Button(Class:btn btn-primary fa fa-edit, Page:blockcron, PageParams: "Id=#id#")
+            Div(row){
+                Div(col-md-12){
+                    Form(input-group){
+                        Div(Class: input-group-addon){
+                            $contract$
+                        }
+                        Input(Name: query_input, Value: #query#)
+                        Div(input-group-btn){
+                            Button(Class: btn btn-default fa fa-search, Page: blockcron_list, PageParams: "query=Val(query_input)")
+                        }
                     }
                 }
             }
-            Table(src_cron,"$contract$ id=contract_id,$start_block$=start_block,$interval$=interval,$next_block$=next_block,$limit$=limited,$count$=counter,=_actions")
+            DBFind(delayed_contracts,src_cron).Columns(["contract", "block_id", "every_block", "counter", "limit", "deleted::int", "id"]).Where(#cron_where#).Order({"id":-1}).Custom(_actions){
+                Div(text-right){
+                    Div(input-group-btn){
+                        Button(Contract: BlockCronEdit, Class: btn btn-danger icon-trash, Params:"id=#id#,deleted=1", Page:blockcron_list).Alert(Text: $want_delete_block_timer$,ConfirmButton:$yes$, CancelButton: $cancel$)
+                        Button(Class:btn btn-primary fa fa-edit, Page:blockcron_edit, PageParams: "id=#id#")
+                    }
+                }
+            }.Custom(_next_block){
+                If(Or(#counter# < #limit#, #limit# == 0)){
+                    Span(Class: text-warning, Body: #block_id#)
+                }.Else{
+                    Span(Class: text-success, Body: $done$)
+                }
+            }
+            Table(src_cron, "$contract$=contract,$interval$=every_block,$next_block$=_next_block,$count$=counter,$limit$=limit,=_actions")
         }
     }
 }
