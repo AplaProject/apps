@@ -22,39 +22,54 @@ contract VotingCreate {
         return s
     }
     func dateAddTime(d, t string) string {
-        return Sprintf("%v %v", trimZeroTime(d), t)
+        var dt string
+        if Size(t) == 5{
+            dt = Sprintf("%v %v:00", trimZeroTime(d), t)
+        }
+        return dt
     }
     func isCalledFromPage() bool{
         return $stack[0] == Sprintf("@%v%v", $ecosystem_id, $this_contract)
     }
-    func checkDatetimes(){
-        if Size($date_started) < 10 || Size($date_ended) < 10 { // invalid datetimes
+    func fixDatetimes(){
+        $date_started = dateAddTime($start_date, $start_time)
+        $date_ended = dateAddTime($end_date, $end_time)
+
+        if UnixDateTime($date_started) == 0 || UnixDateTime($date_ended) == 0 { // invalid datetimes
             if isCalledFromPage(){
                 var errs array
-                if Size($start_date) < 1 {
+                if Size($start_date) < 10 {
                     errs = Append(errs, "starting date")
                 }
-                if Size($start_time) < 1 {
+                if Size($start_time) < 5 {
                     errs = Append(errs, "starting time")
                 }
-                if Size($end_date) < 1 {
+                if Size($end_date) < 10 {
                     errs = Append(errs, "ending date")
                 }
-                if Size($end_time) < 1 {
+                if Size($end_time) < 5 {
                     errs = Append(errs, "ending time")
                 }
-                error Sprintf("Error create voting: %v not found", Join(errs, ", "))
+                error Sprintf("Error create voting: %v unspecified", Join(errs, ", "))
             }else{
-                $timestamped = true
                 $date_started = $time + 2 * 60
                 $interval = Int($interval)
                 if $interval == 0 {
                     $interval = 3
                 }
                 $date_ended = $date_started + 3600 * 24 * $interval
+                $date_started = DateTime($date_started)
+                $date_ended = DateTime($date_ended)
             }
         }
+        if UnixDateTime($date_started) <= $block_time{
+            error "Invalid date starting"
+        }
+        if UnixDateTime($date_started) >= UnixDateTime($date_ended){
+            error "Invalid date ending"
+        }
     }
+
     conditions {
         if $voting_type == 2 {
             var specRules map
@@ -77,10 +92,8 @@ contract VotingCreate {
         if !$key {
             warning "You are not a member of the ecosystem"
         }
-        $timestamped = false
-        $date_started = dateAddTime($start_date, $start_time)
-        $date_ended = dateAddTime($end_date, $end_time)
-        checkDatetimes()
+
+        fixDatetimes()
     }
 
     action {
@@ -110,14 +123,10 @@ contract VotingCreate {
         m["progress"] = progress
         m["flags"] = flags
         m["creator"] = creator
-        if $timestamped {
-            // for this need merged feature/1040-date-time
-            m["date_started"] = DateTime($date_started)
-            m["date_ended"] = DateTime($date_ended)
-        }else{
-            m["date_started"] = $date_started
-            m["date_ended"] = $date_ended
-        }
+        m["status"] = 1
+        m["date_started"] = $date_started
+        m["date_ended"] = $date_ended
+
         votingId = DBInsert("votings", m)
 
         // if all members are voting participants

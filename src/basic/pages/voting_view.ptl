@@ -4,30 +4,16 @@ If(#notific_id#>0){
     SetVar(vID,#notific_page_params_voting_id#)
 }
 
+SetVar(WAITING,1).(VALID,2).(STARTED,3).(FINISHED,4).(INVALID,5)
+SetVar(date_format,"DD.MM.YYYY HH:MI")
 Div(content-wrapper){
     If(#vID# > 0){
-        DBFind(votings).WhereId(#vID#).Columns("id,voting->name,voting->volume,voting->quorum,voting->type,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended").Vars(instance)
+        DBFind(votings).WhereId(#vID#).Columns("id,voting->name,voting->volume,voting->quorum,voting->type,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended,status").Vars(instance)
 
-        If("comment"=="TODO:"){
-            заменить проверку времени на проверку статуса
-        }
-        DBFind(votings).Where("id=#vID# and date_started < now()").Columns("date_started").Vars(started)
-        DBFind(votings).Where("id=#vID# and date_ended < now()").Columns("date_ended").Vars(ended)
-
-        If(#started_id#>0){
-            SetVar(isStarted,1)
-        }.Else{
-            SetVar(isStarted,-1)
-        }
-        If(#ended_id#>0){
-            SetVar(isEnded,1)
-        }.Else{
-            SetVar(isEnded,-1)
-        }
         SetTitle(Viewing voting: #instance_voting_name#)
 
-        DBFind(votings_participants,src_check).Where({voting_id:#vID#, "member->member_id":#key_id#, decision:0}).Columns("id").Vars(participant)
-        If(And(#isStarted#>0,#isEnded#<0,#instance_flags_full_data#==1,#instance_flags_decision#==0,#participant_id#>0)){
+        DBFind(votings_participants).Where({voting_id:#vID#, "member->member_id":#key_id#, decision:0}).Columns("id").Vars(participant)
+        If(And(#instance_status#==#STARTED#,#participant_id#>0)){
             SetVar(isVotingAllowed,1)
         }.Else{
             SetVar(isVotingAllowed,0)
@@ -49,12 +35,14 @@ Div(content-wrapper){
                                 Div(Class: t5 text-muted m0, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #instance_voting_type_decision#))
                             }
                         }
-                        Div(row mt-sm){
-                            Div(col-md-6 text-right){
-                                Div(Class: t5 text-muted m0, Body: LangRes(description))
-                            }
-                            Div(col-md-6 text-left break){
-                                Div(Class: t5 text-muted m0, Body: #instance_voting_description#)
+                        If(`#instance_voting_description#`!=""){
+                            Div(row mt-sm){
+                                Div(col-md-6 text-right){
+                                    Div(Class: t5 text-muted m0, Body: LangRes(description))
+                                }
+                                Div(col-md-6 text-left break){
+                                    Div(Class: t5 text-muted m0, Body: #instance_voting_description#)
+                                }
                             }
                         }
                     }
@@ -147,25 +135,25 @@ Div(content-wrapper){
                                     }
                                 }
                             }
+                            DBFind(votings_subject, src_voting_subject).Where({voting_id:#vID#}).Order("id").Columns("id,subject->member_id,subject->member_name").Custom(_address){
+                                Address(#subject.member_id#)
+                            }.Custom(_member){
+                                LinkPage(Class: text-primary t5 text-bold, Page: profile_view, PageParams: "v_member_id=#subject.member_id#"){
+                                    #subject.member_name#
+                                }
+                            }.Custom(_voting){
+                                If(#isVotingAllowed#==1){
+                                    Button(Body: LangRes(vote), Class: btn btn-success, Page: voting_view, PageParams: "vID=#vID#", Contract: VotingCandidateAccept, Params: "candidateID=#subject.member_id#")
+                                }
+                            }
                             Div(row mt-sm t6){
                                 Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
-                                    DBFind(votings_subject, src_voting_subject).Where({voting_id:#vID#}).Order("id").Columns("id,subject->member_id,subject->member_name").Custom(custom_address){
-                                        Address(#subject.member_id#)
-                                    }.Custom(custom_member){
-                                        LinkPage(Class: text-primary t5 text-bold, Page: profile_view, PageParams: "v_member_id=#subject.member_id#"){
-                                            #subject.member_name#
-                                        }
-                                    }.Custom(custom_voting){
-                                        If(#isVotingAllowed#==1){
-                                            Button(Body: LangRes(vote), Class: btn btn-success, Page: voting_view, PageParams: "vID=#vID#", Contract: VotingCandidateAccept, Params: "candidateID=#subject.member_id#")
-                                        }
-                                    }
-                                    Table(src_voting_subject, "=custom_member,=custom_address,=custom_voting")
+                                    Table(src_voting_subject, "=_member,=_address,=_voting")
                                 }
                             }
                             Div(row mt-sm t5){
                                 Div(col-md-12){
-                                    If(And(#isStarted#<0,#instance_voting_type#==1)){
+                                    If(And(#instance_status#==#INVALID#,#instance_voting_type#==1)){
                                         If(#instance_voting_type_decision#==1){
                                             Button(Class: btn btn-link, Page: voting_decision_candidates, PageParams: "vID=#vID#"){
                                                 Strong(LangRes(subject_voting_edit))
@@ -202,7 +190,7 @@ Div(content-wrapper){
                             }
                             Div(row mt-sm t5){
                                 Div(col-md-12){
-                                    If(And(#isStarted#<0,#instance_voting_type#==1)){
+                                    If(And(#instance_status#==#INVALID#,#instance_voting_type#==1)){
                                         Button(Class: btn btn-link, Page: voting_decision_document, PageParams: "vID=#vID#"){
                                             Strong(LangRes(subject_voting_edit))
                                         }
@@ -301,7 +289,7 @@ Div(content-wrapper){
                             }
                             Div(row mt-sm t5){
                                 Div(col-md-12){
-                                    If(And(#isStarted#<0,#instance_voting_type#==1)){
+                                    If(And(#instance_status#==#INVALID#,#instance_voting_type#==1)){
                                         Button(Class: btn btn-link, Page: voting_decision_formal, PageParams: "vID=#vID#"){
                                             Strong(LangRes(subject_voting_edit))
                                         }
@@ -351,7 +339,7 @@ Div(content-wrapper){
                             }
                             Div(row mt-sm t5){
                                 Div(col-md-12){
-                                    If(And(#isStarted#<0,#instance_voting_type#==1)){
+                                    If(And(#instance_status#==#INVALID#,#instance_voting_type#==1)){
                                         Button(Class: btn btn-link, Page: voting_decision_contract, PageParams: "vID=#vID#"){
                                             Strong(LangRes(subject_voting_edit))
                                         }
@@ -379,21 +367,11 @@ Div(content-wrapper){
                                 LangRes(status)
                             }
                             Div(col-md-6 text-left){
-                                If(#instance_flags_success#==1){
-                                    Span(Class:text-success, Body: LangRes(success))
-                                }.ElseIf(#isStarted#>0){
-                                    If(And(#instance_flags_full_data#==1,#instance_progress_number_participants#>0)){
-                                        If(#isEnded#>0){
-                                            Span(Class:text-muted, Body: LangRes(finished))
-                                        }.Else{
-                                            Span(Class:text-success, Body: LangRes(started))
-                                        }
-                                    }.Else{
-                                        Span(Class:text-danger, Body: LangRes(invalid))
-                                    }
-                                }.Else{
-                                    Span(Class:text-warning, Body: LangRes(waiting))
+                                SetVar(status_class, AppParam(App:#application_id#, Name:voting_statuses_classes, Index:#instance_status#))
+                                Div(#status_class#){
+                                    AppParam(App:#application_id#, Name:voting_statuses, Index:#instance_status#)
                                 }
+
                                 If(#instance_flags_full_data#==0){
                                     Div(text-muted){LangRes(not_filled)}
                                 }
@@ -425,24 +403,24 @@ Div(content-wrapper){
                             Div(col-md-6 text-right){
                                 LangRes(date_start)
                             }
-                            Div(col-md-6 text-left){
-                                If(#isStarted#>0){
-                                    Span(Class:text-muted, Body: DateTime(DateTime: #instance_date_started#, Format: "DD.MM.YYYY HH:MI"))
-                                }.Else{
-                                    DateTime(DateTime: #instance_date_started#, Format: "DD.MM.YYYY HH:MI")
-                                }
+                            SetVar(date_started_class,)
+                            If(#instance_status#==#STARTED#){
+                                SetVar(date_started_class,"text-muted")
+                            }
+                            Div(col-md-6 text-left #date_started_class#){
+                                DateTime(DateTime: #instance_date_started#, Format: #date_format#)
                             }
                         }
                         Div(row mt-sm){
                             Div(col-md-6 text-right){
                                 LangRes(date_end)
                             }
-                            Div(col-md-6 text-left){
-                                If(#isEnded#>0){
-                                    Span(Class:text-muted, Body: DateTime(DateTime: #instance_date_ended#, Format: "DD.MM.YYYY HH:MI"))
-                                }.Else{
-                                    DateTime(DateTime: #instance_date_ended#, Format: "DD.MM.YYYY HH:MI")
-                                }
+                            SetVar(date_started_class,)
+                            If(#instance_status#==#FINISHED#){
+                                SetVar(date_ended_class,"text-muted")
+                            }
+                            Div(col-md-6 text-left #date_ended_class#){
+                                DateTime(DateTime: #instance_date_ended#, Format: #date_format#)
                             }
                         }
                         Div(row mt-sm){
@@ -476,16 +454,16 @@ Div(content-wrapper){
                         }
                         Div(row mt-sm t6){
                             Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
-                                DBFind(votings_participants, src_voting_participants).Where({voting_id:#vID#}).Order("id").Columns("id,member->member_id,decision_date,decision").Custom(custom_address){
+                                DBFind(votings_participants, src_voting_participants).Where({voting_id:#vID#}).Order("id").Columns("id,member->member_id,decision_date,decision").Custom(_address){
                                     Div(Class: t6 m0, Body: Address(#member.member_id#))
-                                }.Custom(custom_decision){
+                                }.Custom(_decision){
                                     If(Or(#instance_voting_type_decision#==1,#instance_voting_type_decision#==2)){
                                         If(#decision#==0){
                                             LangRes(did_not_vote)
                                         }.Else{
                                             Div(Class: text-success text-center, Body: $vote_for_candidate$:)
                                             Div(Class: text-success text-center, Body: Address(#decision#) )
-                                            Div(Class: text-success text-center, Body: $at$ DateTime(DateTime: #decision_date#, Format: "DD.MM.YYYY HH:MI"))
+                                            Div(Class: text-success text-center, Body: $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
                                         }
                                     }
                                     If(#instance_voting_type_decision#==3){
@@ -493,10 +471,10 @@ Div(content-wrapper){
                                             LangRes(did_not_vote)
                                         }
                                         If(#decision#==1){
-                                            Span(Class: text-success, Body: $document_accept$ $at$ DateTime(DateTime: #decision_date#, Format: "DD.MM.YYYY HH:MI"))
+                                            Span(Class: text-success, Body: $document_accept$ $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
                                         }
                                         If(#decision#==-1){
-                                            Span(Class: text-danger, Body: $document_reject$ $at$ DateTime(DateTime: #decision_date#, Format: "DD.MM.YYYY HH:MI"))
+                                            Span(Class: text-danger, Body: $document_reject$ $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
                                         }
                                     }
                                     If(#instance_voting_type_decision#==4){
@@ -504,10 +482,10 @@ Div(content-wrapper){
                                             LangRes(did_not_vote)
                                         }
                                         If(#decision#==1){
-                                            Span(Class: text-success, Body: $decision_accept$ $at$ DateTime(DateTime: #decision_date#, Format: "DD.MM.YYYY HH:MI"))
+                                            Span(Class: text-success, Body: $decision_accept$ $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
                                         }
                                         If(#decision#==-1){
-                                            Span(Class: text-danger, Body: $decision_reject$ $at$ DateTime(DateTime: #decision_date#, Format: "DD.MM.YYYY HH:MI"))
+                                            Span(Class: text-danger, Body: $decision_reject$ $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
                                         }
                                     }
                                     If(#instance_voting_type_decision#==5){
@@ -515,21 +493,23 @@ Div(content-wrapper){
                                             LangRes(did_not_vote)
                                         }
                                         If(#decision#==1){
-                                            Span(Class: text-success, Body: $contract_accepted$ $at$ DateTime(DateTime: #decision_date#, Format: "DD.MM.YYYY HH:MI"))
+                                            Span(Class: text-success, Body: $contract_accepted$ $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
                                         }
                                         If(#decision#==-1){
-                                            Span(Class: text-danger, Body: $contract_rejected$ $at$ DateTime(DateTime: #decision_date#, Format: "DD.MM.YYYY HH:MI"))
+                                            Span(Class: text-danger, Body: $contract_rejected$ $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
                                         }
                                     }
                                 }
-                                Table(src_voting_participants, "=custom_address,=custom_decision")
+                                Table(src_voting_participants, "=_address,=_decision")
                             }
                         }
                         Div(row mt-sm t5){
                             Div(col-md-12){
-                                If(And(#isStarted#<0,#instance_voting_type#==1)){
-                                    Button(Class: btn btn-link, Page: voting_invite, PageParams: "vID=#vID#"){
-                                        Strong(LangRes(participants_add))
+                                If(#instance_voting_type#==1){
+                                    If(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#)){
+                                        Button(Class: btn btn-link text-bold, Page: voting_invite, PageParams: "vID=#vID#"){
+                                            LangRes(participants_add)
+                                        }.Popup(50, $participants_add$)
                                     }
                                 }
                             }

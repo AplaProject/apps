@@ -3,11 +3,7 @@ contract VotingInvite {
         votingID int
         var_id int //0, member_id, role_id
     }
-    func safeJsonToMap(m string) map {
-        var res map
-        if Size(m) > 0 { res = JSONToMap(m) }
-        return res
-    }
+
     func addVotingKey(key map, votingId int) {
         var m member map
         member["member_id"] = key["id"]
@@ -17,9 +13,11 @@ contract VotingInvite {
         DBInsert("votings_participants", m)
     }
     conditions {
+        $STARTED = 3
+        $FINISHED = 4
         var bt string
         bt = BlockTime()
-        $voting = DBFind("votings").Where({id:$votingID, date_ended:[{"$gt":bt}]}).Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Row()
+        $voting = DBFind("votings").Where({id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Row()
         if !$voting {
             warning "Voting has expired. Can not add new participants"
         }
@@ -91,6 +89,5 @@ contract VotingInvite {
         }else{
             DBUpdate("votings", $votingID, v)
         }
-        VotingNotificationSend("votingID", $votingID)
     }
 }

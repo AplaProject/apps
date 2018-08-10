@@ -20,18 +20,19 @@ contract VotingSubjectCandidates {
         }
         return res
     }
-    func safeJsonToMap(m string) map {
-        var res map
-        if Size(m) > 0 { res = JSONToMap(m) }
-        return res
-    }
 
     conditions {
+        $STARTED = 3
+        $FINISHED = 4
+        
         var bt string
         bt = BlockTime()
-        $voting = DBFind("votings").Where({id:$votingID, date_started:[{"$gt":bt}]}).Columns("id,date_started,optional,voting->type,flags->full_data").Row()
-        if !$voting {
-            warning "Voting already started. Can not edit document"
+        $voting = DBFind("votings").Where({id:$votingID}).Columns("id,optional->number_candidates,voting->type,flags->full_data,status").Row()
+        if $voting["status"] == $STARTED {
+            warning "Voting already started. Can not add candidates"
+        }
+        if $voting["status"] == $FINISHED {
+            warning "Voting already finished. Can not add candidates"
         }
 
         if $voting["flags.full_data"] == 1 && $voting["voting.type"] == 2 {
@@ -54,6 +55,8 @@ contract VotingSubjectCandidates {
 
     action {
         DBInsert("votings_subject", {voting_id:$votingID, subject:$member})
-        DBUpdate("votings", $votingID, {"+optional->number_candidates":1})
+        var m map
+        m["optional->number_candidates"] = Int($voting["optional.number_candidates"]) + 1
+        DBUpdate("votings", $votingID, m)
     }
 }

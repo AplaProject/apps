@@ -3,18 +3,33 @@ contract VotingCandidateAccept {
         votingID int
         candidateID int
     }
-
+    func closeNotification(){
+        var id int
+        id = Int(DBFind("notifications").Where({"recipient->member_id":$key_id, page_name:"voting_view", "page_params->voting_id":$votingID, closed:0}).One("id"))
+        if id > 0 {
+            NotificationsClose("notific_id", id)
+        }
+    }
     conditions {
-        $voting_map = DBFind("votings").Columns("id,flags").WhereId($votingID).Row()
-        if !$voting_map {
+        $WAITING = 1
+        $VALID = 2
+        $STARTED = 3
+        $FINISHED = 4
+        $INVALID = 5
+        $voting = DBFind("votings").Columns("id,flags->decision,flags->notifics,status").WhereId($votingID).Row()
+        if !$voting {
             warning "Voting is not found"
         }
-
+        if $voting["status"] == $FINISHED {
+            warning "Voting has expired. Voting is now not possible"
+        }
+        if $voting["status"] != $STARTED {
+            warning "Voting has not yet begun. Try again later, please"
+        }
         $subject_map = DBFind("votings_subject").Where({voting_id:$votingID, "subject->member_id":$candidateID}).Row()
         if !$subject_map {
             warning "Subject of voting is not found"
         }
-
         $participant_id = DBFind("votings_participants").Where({voting_id:$votingID, "member->member_id":$key_id}).One("id")
         if !$participant_id {
             warning "You are not a participant in this voting"
@@ -22,44 +37,24 @@ contract VotingCandidateAccept {
     }
 
     action {
-        var flags map
-        flags = JSONToMap($voting_map["flags"])
-        // if notifications have been sent, then close it
-        if flags["notifics"] == 1 {
-
-            $notific_id = DBFind("notifications").Where({"recipient->member_id":$key_id, page_name:"voting_view", "page_params->voting_id":$votingID, closed:0}).One("id")
-
-            if $notific_id {
-                NotificationsClose("notific_id", Int($notific_id))
-            }
+        if $voting["flags.notifics"] == 1 {
+            closeNotification()
         }
 
-        // check the decision
-        if flags["decision"] == 1 {
-            warning "Decision was taken. Voting is now not possible"
+        if $voting["flags.decision"] != 1 {
+            var bt string
+            bt = BlockTime()
+
+            // write the result of the voting
+            var m map
+            m["decision_date"] = bt
+            m["decision"] =  $candidateID
+            DBUpdate("votings_participants", Int($participant_id), m)
+
+            // increment count of accept
+            DBUpdate("votings_subject", Int($subject_map["id"]), {"+number_accept":1})
+
+            VotingUpdate("votingID", $votingID)
         }
-
-        // check start-end of voting time
-        var voting_start voting_end bt string
-        bt = BlockTime()
-        voting_start = DBFind("votings").Where({id:$votingID, date_started:[{"$lt":bt}]}).One("id")
-        voting_end = DBFind("votings").Where({id:$votingID, date_ended:[{"$gt":bt}]}).One("id")
-        if !voting_start {
-            warning "Voting has not yet begun. Try again later, please"
-        }
-        if !voting_end {
-            warning "Voting has expired. Voting is now not possible"
-        }
-
-        // write the result of the voting
-        var m map
-        m["decision_date"] = bt
-        m["decision"] =  $candidateID
-        DBUpdate("votings_participants", Int($participant_id), m)
-
-        // increment count of accept
-        DBUpdate("votings_subject", Int($subject_map["id"]), {"+number_accept":1})
-
-        VotingUpdate("votingID", $votingID)
     }
 }
