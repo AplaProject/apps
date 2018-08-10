@@ -2,16 +2,17 @@ contract NewSign {
     data {
         Name string
         Value string
-        Conditions string
     }
     conditions {
-        ValidateCondition($Conditions, $ecosystem_id)
+        //ValidateCondition($Conditions, $ecosystem_id)
 
-        if DBFind("signatures").Columns("id").Where({name: $Name}).One("id") {
+		$contract_map = DBFind("contracts").Columns("id,name,confirmation").Where({name: $Name}).Row()
+        /*if $contract_map["confirmation"] {
             warning Sprintf("The signature %s already exists", $Name)
-        }
+        }*/
+		
     }
     action {
-        DBInsert("signatures", {"name": $Name,"value": $Value,"conditions": $Conditions})  
+		DBUpdate("contracts",Int($contract_map["id"]),{"confirmation": $Value}) 
     }
 }
