@@ -11,6 +11,9 @@ contract SectionAdd {
 		if $status < 0 || $status > 2 {
 			warning "Status must be in range 0..2"
 		}
+		if DBFind("sections").Columns("id").Where({"urlname:$urlname}) {
+			warning Sprintf("Section with url name '%s' already exists", $urlname)
+		}
 		if Len($roles_access_ids) != Len($roles_access_vals) {
 			warning Sprintf("Given '%s' role IDs but checked '%v' role IDs", Len($roles_access_ids), Len($roles_access_vals))
 		}
@@ -22,9 +25,7 @@ contract SectionAdd {
 			roles_access[k] = $roles_access_vals[i]
 			i = i + 1
 		}
-		if $status == 2 && DBFind("sections").Columns("id").Where("status = ?", 2){
-			DBUpdateExt("sections", "status", "2", "status", "1")
+		//DBInsert("sections", "title,status,urlname,page,roles_access", $title, $status, $urlname, $page, JSONEncode(roles_access))
+		DBInsert("sections", {"title":$title, "status":$status, "urlname":$urlname, "page":$page, "roles_access":JSONEncode(roles_access)})
 		}
-			DBInsert("sections", "title,status,urlname,page,roles_access", $title, $status, $urlname, $page, JSONEncode(roles_access))
-		}
-}	
+}
