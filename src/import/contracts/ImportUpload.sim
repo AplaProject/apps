@@ -8,12 +8,12 @@ contract ImportUpload {
         globs = ["ecosystem_id", "key_id", "isMobile", "role_id", "ecosystem_name", "app_id", "info_value_pages_count", "info_value_pages", "info_value_blocks_count", "info_value_blocks","info_value_menu_count", "info_value_menu", "info_value_parameters_count", "info_value_parameters","info_value_languages_count", "info_value_languages", "info_value_contracts_count", "info_value_contracts", "info_value_tables_count", "info_value_tables", "DataName", "DataCount", "DataInfo"]
 
         lenGlobs = Len(globs)
-        while i<lenGlobs{
+        while i < lenGlobs{
             r = globs[i]
-            from = "#"+r+"#"
-            to = ToUpper("#"+prefix+r+"#")
+            from = "#" + r + "#"
+            to = ToUpper("#" + prefix + r + "#")
             s = Replace(s, from, to)
-            i=i+1
+            i = i + 1
         }
         return s
     }
@@ -23,7 +23,7 @@ contract ImportUpload {
         $input_file = encodeGlobals($input_file)
         $limit = 5 // data piece size of import
 
-        // init buffer_data, cleaning old buffer
+    // init buffer_data, cleaning old buffer
         var initJson map
         $import_id = DBFind("buffer_data").Where({member_id:$key_id, key: "import"}).One("id")
         if $import_id {
@@ -51,10 +51,10 @@ contract ImportUpload {
 
         var pages_arr blocks_arr menu_arr parameters_arr languages_arr contracts_arr tables_arr array
 
-        // import info
+    // import info
         var i lenArrData int item map
         lenArrData = Len(arrData)
-        while i<lenArrData{
+        while i < lenArrData{
             item = arrData[i]
 
             if item["Type"] == "pages" {
@@ -97,25 +97,25 @@ contract ImportUpload {
             warning "Invalid or empty import file"
         }
 
-        // import data
-        // the contracts is imported in one piece, the rest is cut under the $limit, a crutch to bypass the error when you import dependent contracts in different pieces
+    // import data
+    // the contracts is imported in one piece, the rest is cut under the $limit, a crutch to bypass the error when you import dependent contracts in different pieces
         var sliced contracts array
-        i=0
+        i = 0
         while i <lenArrData{
             var items array l int item map
-            while l < $limit && (i+l < lenArrData) {
-                item = arrData[i+l]
+            while l < $limit && (i + l < lenArrData) {
+                item = arrData[i + l]
                 if item["Type"] == "contracts" {
                     contracts = Append(contracts, item)
                 }else{
                     items = Append(items, item)
                 }
-                l=l+1
+                l = l + 1
             }
             var batch map
             batch["Data"] = JSONEncode(items)
             sliced = Append(sliced, batch)
-            i=i+$limit
+            i = i + $limit
         }
         if Len(contracts) > 0{
             var batch map
@@ -124,12 +124,12 @@ contract ImportUpload {
         }
         input["data"] = sliced
 
-        // storing
+    // storing
         DBUpdate("buffer_data", $import_id, {"value": input})
         DBUpdate("buffer_data", $info_id, {"value": inf})
 
         var name string
-        name =  Str(input["name"])
+        name = Str(input["name"])
         if !DBFind("applications").Columns("id").Where({name:name}).One("id") {
             DBInsert("applications", {"name": name, "conditions": "true"})
         }
