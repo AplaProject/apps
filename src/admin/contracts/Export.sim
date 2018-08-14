@@ -7,21 +7,25 @@ contract Export {
         s = Replace(s, "\n", `\n`)
         s = Replace(s, "\r", `\r`)
         s = Replace(s, `"`, `\"`)
-        if s == "0"{
-            s = ""
-        }
         return s
     }
 
-    func AssignAll(app_name string, resources string) string {
+    func AssignAll(items array) string {
         return Sprintf(`{
             "name": "%v",
+            "conditions": "%v",
             "data": [
                 %v
             ]
-        }`, app_name, resources)
+        }`, $AppName, $AppConditions, Join(items, ",\r\n"))
     }
-
+    func safeStr(s ...)string{
+        // because Str(nil) == "0"
+        if s[0] != nil{
+            return Str(s[0])
+        }
+        return ""
+    }
     func serializeItem(item map, type string) string {
         var s string
         s = Sprintf(
@@ -34,14 +38,15 @@ contract Export {
                 "Title": "%v",
                 "Trans": "%v",
                 "Columns": "%v",
-                "Permissions": "%v"
-            }`, type, escapeSpecials(Str(item["name"])), escapeSpecials(Str(item["value"])), escapeSpecials(Str(item["conditions"])), escapeSpecials(Str(item["menu"])), escapeSpecials(Str(item["title"])), escapeSpecials(Str(item["res"])), escapeSpecials(Str(item["columns"])), escapeSpecials(Str(item["permissions"]))
+                "Permissions": "%v",
+                "Confirmation": "%v"
+            }`, type, escapeSpecials(safeStr(item["name"])), escapeSpecials(safeStr(item["value"])), escapeSpecials(safeStr(item["conditions"])), escapeSpecials(safeStr(item["menu"])), escapeSpecials(safeStr(item["title"])), escapeSpecials(safeStr(item["res"])), escapeSpecials(safeStr(item["columns"])), escapeSpecials(safeStr(item["permissions"])), escapeSpecials(safeStr(item["confirmation"]))
         )
         return s
     }
 
     func getTypeForColumns(table_name string, columnsJSON string) string {
-        var colsMap map, result columns array
+        var colsMap map result columns array
         colsMap = JSONDecode(columnsJSON)
         columns = GetMapKeys(colsMap)
         var i int
@@ -59,7 +64,7 @@ contract Export {
     }
 
     func exportTable(type string, result array) array {
-        var items array, limit offset int
+        var items array limit offset int
         limit = 250
         while true{
             var rows array
@@ -69,32 +74,27 @@ contract Export {
                     where["name"] = {"$in": $menus_names}
                 }
             }else{
-                where["app_id"] = $ApplicationID
+                where["app_id"] = $AppID
             }
             if where {
                 rows = DBFind(type).Limit(limit).Offset(offset).Where(where)
             }
             if Len(rows) > 0{
                 var i int
-                while i<Len(rows){
+                while i < Len(rows){
                     items = Append(items, rows[i])
-                    i=i+1
+                    i = i + 1
                 }
             }else{
                 break
             }
-            offset = offset+limit
+            offset = offset + limit
         }
-        var i int, item map
+        var i int item map
         while i < Len(items) {
             item = items[i]
             if type == "tables" {
-                var table map
-                table["name"] = item["name"]
-                table["permissions"] = item["permissions"]
-                table["conditions"] = item["conditions"]
-                table["columns"] = getTypeForColumns(item["name"], item["columns"])
-                item = table
+                item["columns"] = getTypeForColumns(item["name"], item["columns"])
             }
             result = Append(result, serializeItem(item, type))
             if type == "pages" {
@@ -106,17 +106,21 @@ contract Export {
     }
 
     conditions {
-        var buffer_map map
-        buffer_map = DBFind("buffer_data").Columns("id,value->app_id,value->app_name").Where({member_id:$key_id, key: "export"}).Row()
+        var buf app map
+        buf = DBFind("buffer_data").Columns("id,value->app_id,value->app_name").Where({member_id:$key_id, key: "export"}).Row()
+        if !buf{
+            warning "Application not selected"
+        }
+        $AppID = Int(buf["value.app_id"])
+        $AppName = Str(buf["value.app_name"])
 
-        if !buffer_map{
+        app = DBFind("applications").Columns("id,conditions").Where({id:$AppID}).Row()
+        if !app{
             warning "Application not found"
         }
-        $ApplicationID = Int(buffer_map["value.app_id"])
-        $ApplicationName = Str(buffer_map["value.app_name"])
+        $AppConditions = app["conditions"]
 
-        var menus_names array
-        $menus_names = menus_names
+        $menus_names = []
     }
 
     action {
@@ -129,7 +133,7 @@ contract Export {
         items = exportTable("tables", items)
         items = exportTable("menu", items)
 
-        exportJSON = AssignAll($ApplicationName, Join(items, ",\r\n"))
+        exportJSON = AssignAll(items)
         UploadBinary("Name,Data,ApplicationId,DataMimeType", "export", exportJSON, 1, "application/json")
     }
 }
