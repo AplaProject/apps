@@ -1,64 +1,29 @@
-Div(content-wrapper){
-    DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(application)
-    SetTitle($voting_start$)
-    If(#TemplateId#>0){
-        DBFind(voting_templates).WhereId(#TemplateId#).Vars(template)
-        If(#template_voters#>0){
-            DBFind(roles).WhereId(#template_voters#).Columns("role_name").Vars(vid)
-            SetVar(v_role, "#vid_role_name#")
-        }.Else{
-            SetVar(v_role,)
-        }
+DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(application)
+SetTitle($voting_start$)
 
-        If(#template_candidates#>0){
-            DBFind(roles).WhereId(#template_candidates#).Columns("role_name").Vars(cid)
-            SetVar(c_role, "#cid_role_name#")
-        }.Else{
-            SetVar(c_role,)
-        }
-        Data(inputs, "res,value"){
-            name,"#template_title#"
-            participants,"AppParam(App:#application_id#, Name: type_voting_participants, Index: #template_type_participants#)"
-            voting_type,"AppParam(App:#application_id#, Name: type_voting, Index: #template_type_voting#)"
-            decision,"AppParam(App:#application_id#, Name: type_voting_decisions, Index: #template_type_decision#)"
-            voting_volume,"#template_volume#"
-            voting_quorum,"#template_quorum#"
-            voting_subject,"#template_subject#"
-            voters,"#v_role#"
-            candidates,"#c_role#"
-            vacancies,"#template_vacancies#"
-            init_contract,"#template_init_contract#"
-            voting_contract_accept,"#template_contract_accept#(#template_accept_params#)"
-            voting_contract_reject,"#template_contract_reject#(#template_reject_params#)"
-            duration,"Input(Name:Duration, Type:number, Value:3)"
-        }
+SetVar(col_left,"col-md-4 text-right")
+SetVar(col_right,"col-md-8 text-left")
 
-        If(#template_type_decision#==3){
-            Data(decision_inputs, "name,type,res,star,value,control"){
-                TextDocument,textarea,text_document,*,"",textarea
-            }
-        }.ElseIf(#template_type_decision#==4){
-            If(#template_type_voting#==2){
-                Data(decision_inputs,"name,type,res,star,value,control"){
-                    ColumnName,text,system_param,*,"",input
-                    NewValue,text,value,*,"",input
-                }
-            }.Else{
-                Data(decision_inputs,"name,type,res,star,value,control"){
-                    TableWritten,text,table_to_written,*,"",input
-                    RowId,number,row_id,*,"",input
-                    ColumnName,text,column_name,*,"",input
-                    NewValue,text,value,*,"",input
-                }
-            }
-        }.Else{
-            Data(decision_inputs, "name,type,res,star,value,control"){}
-        }
+If(#TemplateId#>0){
+    DBFind(voting_templates).WhereId(#TemplateId#).Vars(template)
+
+    SetVar(v_role,).(c_role,)
+    If(#template_voters#>0){
+        DBFind(roles).WhereId(#template_voters#).Columns("role_name").Vars(vid)
+        SetVar(v_role, "#vid_role_name#")
     }
+    If(#template_candidates#>0){
+        DBFind(roles).WhereId(#template_candidates#).Columns("role_name").Vars(cid)
+        SetVar(c_role, "#cid_role_name#")
+    }
+}
+Div(content-wrapper){
     Div(breadcrumb){
-        LinkPage($voting_templates$, voting_templates)
-        Span(/).Style(margin-right: 10px; margin-left: 10px;)
-        Span(Class: text-muted, Body: $voting_start$)
+        LinkPage(Body: $voting$, Page: voting_list)
+        Span(/, mh)
+        LinkPage(Body: $voting_templates$, Page: voting_templates_list)
+        Span(/,mh)
+        Span($voting_start$, text-muted)
     }
 
     If(#TemplateId#>0){
@@ -67,39 +32,202 @@ Div(content-wrapper){
                 Form(panel panel-primary){
                     Div(panel-heading){LangRes(voting_params)}
                     Div(panel-body){
-                        ForList(inputs){
-                            Div(row form-group){
-                                Div(col-md-4 text-right){
-                                    Strong(LangRes(#res#))
-                                }
-                                Div(col-md-8 text-left){
-                                    If("#value#"!="()"){
-                                        #value#
-                                    }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(name))
+                            }
+                            Div(#col_right#){
+                                #template_title#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(participants))
+                            }
+                            Div(#col_right#){
+                                AppParam(App:#application_id#, Name: type_voting_participants, Index: #template_type_participants#)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voting_type))
+                            }
+                            Div(#col_right#){
+                                AppParam(App:#application_id#, Name: type_voting, Index: #template_type_voting#)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(decision))
+                            }
+                            Div(#col_right#){
+                                AppParam(App:#application_id#, Name: type_voting_decisions, Index: #template_type_decision#)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voting_volume))
+                            }
+                            Div(#col_right#){
+                                #template_volume#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voting_quorum))
+                            }
+                            Div(#col_right#){
+                                #template_quorum#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voting_subject))
+                            }
+                            Div(#col_right#){
+                                #template_subject#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voters))
+                            }
+                            Div(#col_right#){
+                                #v_role#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(candidates))
+                            }
+                            Div(#col_right#){
+                                #c_role#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(vacancies))
+                            }
+                            Div(#col_right#){
+                                #template_vacancies#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(init_contract))
+                            }
+                            Div(#col_right#){
+                                #template_init_contract#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voting_contract_accept))
+                            }
+                            Div(#col_right#){
+                                #template_contract_accept#
+                                If(`#template_accept_params#`!=""){
+                                    (#template_accept_params#)
                                 }
                             }
                         }
-                        ForList(decision_inputs){
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voting_contract_reject))
+                            }
+                            Div(#col_right#){
+                                #template_contract_reject#
+                                If(`#template_reject_params#`!=""){
+                                    (#template_reject_params#)
+                                }
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: Duration){
+                                    LangRes(duration)
+                                }
+                            }
+                            Div(#col_right#){
+                                Input(Name: Duration, Type: number, Value: 3)
+                            }
+                        }
+                        If(#template_type_decision#==3){
                             Div(row form-group){
-                                If(#control#!="textarea"){
+                                Div(col-md-12){
+                                    Label(For: TextDocument){
+                                        LangRes(text_document)
+                                    }
+                                    Input(Name: TextDocument, Type: textarea)
+                                }
+                            }
+                        }.ElseIf(#template_type_decision#==4){
+                            If(#template_type_voting#==2){
+                                Div(row form-group){
                                     Div(col-md-4 mt-sm text-right){
-                                        Label(For: #name#){
-                                            LangRes(#res#)
-                                            If(#star#=="*"){
-                                                Span(Class: text-danger, Body:*)
-                                            }
+                                        Label(For: ColumnName){
+                                            LangRes(system_param)
+                                            Span(*,text-danger)
                                         }
                                     }
-                                    Div(col-md-8 text-left){
-                                        If(#control#=="input"){
-                                            Input(Name: #name#, Value: #value#, Type: #type#)
-                                        }
+                                    Div(#col_right#){
+                                        Input(Name: ColumnName)
                                     }
                                 }
-                                If(#control#=="textarea"){
-                                    Div(col-md-12){
-                                        Label(For: #name#){LangRes(#res#)}
-                                        Input(Name: #name#, Type: textarea, Value: #value#)
+                                Div(row form-group){
+                                    Div(col-md-4 mt-sm text-right){
+                                        Label(For: NewValue){
+                                            LangRes(value)
+                                            Span(*,text-danger)
+                                        }
+                                    }
+                                    Div(#col_right#){
+                                        Input(Name: NewValue)
+                                    }
+                                }
+                            }.Else{
+                                Div(row form-group){
+                                    Div(col-md-4 mt-sm text-right){
+                                        Label(For: TableWritten){
+                                            LangRes(table_to_written)
+                                            Span(*,text-danger)
+                                        }
+                                    }
+                                    Div(#col_right#){
+                                        Input(Name: TableWritten)
+                                    }
+                                }
+                                Div(row form-group){
+                                    Div(col-md-4 mt-sm text-right){
+                                        Label(For: RowId){
+                                            LangRes(row_id)
+                                            Span(*,text-danger)
+                                        }
+                                    }
+                                    Div(#col_right#){
+                                        Input(Name: RowId, Type: number)
+                                    }
+                                }
+                                Div(row form-group){
+                                    Div(col-md-4 mt-sm text-right){
+                                        Label(For: ColumnName){
+                                            LangRes(column_name)
+                                            Span(*,text-danger)
+                                        }
+                                    }
+                                    Div(#col_right#){
+                                        Input(Name: ColumnName)
+                                    }
+                                }
+                                Div(row form-group){
+                                    Div(col-md-4 mt-sm text-right){
+                                        Label(For: NewValue){
+                                            LangRes(value)
+                                            Span(*,text-danger)
+                                        }
+                                    }
+                                    Div(#col_right#){
+                                        Input(Name: NewValue)
                                     }
                                 }
                             }
