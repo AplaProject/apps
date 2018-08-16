@@ -1,5 +1,19 @@
 DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(application)
-DBFind(voting_templates, src_templates).Order(id).Count(template_count).Custom(_participants){
+SetTitle($voting_templates$)
+Div(breadcrumb){
+    LinkPage($voting$, voting_list)
+    Span(/, mh)
+    Span($voting_templates$, text-muted)
+}
+
+If(GetVar(Search)){
+    SetVar(Where,{"title":{"$like":#Search#}})
+}.Else{
+    SetVar(Where,{"id":{"$gt":0}}).(Search,)
+}
+SetVar(this_page,"voting_templates_list")
+
+DBFind(voting_templates, src_templates).Where(#Where#).Order(id).Count(template_count).Custom(_participants){
     AppParam(App:#application_id#, Name:type_voting_participants, #type_participants#)
 }.Custom(_decision){
     AppParam(App:#application_id#, Name:type_voting_decisions, #type_decision#)
@@ -27,22 +41,40 @@ DBFind(voting_templates, src_templates).Order(id).Count(template_count).Custom(_
     }
 }
 
-SetTitle($voting_templates$)
 If(#template_count#>0){
     AddToolButton(Title: $create$, Page: voting_template_create, Icon: icon-plus)
 }
 
 Div(content-wrapper){
-    Div(breadcrumb){
-        LinkPage($voting$, voting_list)
-        Span(/, mh)
-        Span($voting_templates$, text-muted)
-    }
     Form(panel panel-primary){
         If(#template_count#>0){
             Div(panel-body){
-                Div(table-responsive){
-                    Table(Source: src_templates, Columns:"$id$=id,$title$=title,$voting_subject$=subject,$volume$/$quorum$=_vq,$voting_type$=_type,$participants$=_participants,$decision$=_decision,$vacancies$=_vacancies,$contracts$=_contracts,=_actions")
+                Div(row){
+                    Div(col-md-12){
+                        Div(input-group){
+                            Div(input-group-addon){
+                                LangRes(name)
+                            }
+                            Input(Name: Search, Value: #Search#)
+                            Div(input-group-btn){
+                                Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: #this_page#, PageParams: "Search=Val(Search)")
+                            }
+                        }
+                    }
+                    Div(col-md-12){
+                        Div(table-responsive){
+                            Table(Source: src_templates, Columns:"$id$=id,$name$=title,$voting_subject$=subject,$volume$/$quorum$=_vq,$voting_type$=_type,$participants$=_participants,$decision$=_decision,$vacancies$=_vacancies,$contracts$=_contracts,=_actions")
+                        }
+                    }
+                }
+                If(GetVar(Search)){
+                    Div(row){
+                        Div(col-md-12 mt-lg){
+                            Div(text-center){
+                                Button(Body: $view_all$, Class: btn btn-default, Page: #this_page#)
+                            }
+                        }
+                    }
                 }
             }
         }.Else{
