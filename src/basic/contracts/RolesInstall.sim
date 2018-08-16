@@ -1,0 +1,48 @@
+contract RolesInstall{
+    data{}
+    func addRole(id int, name string, withParticipant bool){
+        var m map
+        m["role_name"] = name
+        m["role_type"] = 3
+        m["id"] = id
+        if !DBFind("roles").Where(m).One("id"){
+            m["default_page"] = ""
+            m["deleted"] = 0
+            m["creator"] = {}
+            m["date_created"] = BlockTime()
+            m["roles_access->rids"] = "1"
+            DBInsert("roles", m)
+        }
+
+        if withParticipant {
+            var participant map
+            participant["role->id"] = m["id"]
+            participant["role->type"] = m["role_type"]
+            participant["role->name"] = m["role_name"]
+            participant["role->image_id"] = 0
+            participant["member->member_id"] = Str($key_id)
+            participant["member->member_name"] = "founder"
+            participant["member->image_id"] = 0
+
+            if !DBFind("roles_participants").Where(participant).One("id"){
+                participant["date_created"] = BlockTime()
+                DBInsert("roles_participants", participant)
+            }
+        }
+    }
+    conditions{}
+
+    action{
+        Println($this_contract)
+        addRole(1, "Admin", true)
+        addRole(2, "Developer", true)
+
+        if $ecosystem_id == 1{
+            addRole(3, "Apla Consensus asbl", false)
+            addRole(4, "Candidate for validators", false)
+            addRole(5, "Validator", false)
+            addRole(6, "Investor with voting rights", false)
+            addRole(7, "Delegate", false)
+        }
+    }
+}
