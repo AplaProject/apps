@@ -1,5 +1,6 @@
 DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(application)
-SetVar(template_id, AppParam(App:#application_id#, Name: voting_sysparams_template_id))
+SetVar(tid, AppParam(App:#application_id#, Name: voting_sysparams_template_id))
+DBFind(voting_templates,temps).WhereId(#tid#).Vars(template)
 SetTitle($voting$)
 
 Div(content-wrapper){
@@ -11,7 +12,7 @@ Div(content-wrapper){
 
     If(And(#template_id#>0,#param_index#>0,#param_name#!="")){
         DBFind(system_parameters).Where({name:#param_name#}).Vars(param)
-        DBFind(voting_templates).WhereId(#template_id#).Columns("title").Vars(template)
+        DBFind(voting_templates).WhereId(#template_id#).Columns("title,id").Vars(template)
         SetTitle(#template_title#)
         If(#param_name#!="full_nodes"){
             Form(){
@@ -155,9 +156,18 @@ Div(content-wrapper){
             If(#param_index#>0){}.Else{
                 Div(){LangRes(attention)}
             }
-            If(#template_id#>0){}.Else{
+            If(#tid#>0){
+                If(#template_id#>0){}.Else{
+                    Div(mb-sm){
+                        LangRes(voting_template_not_found)
+                    }
+                    LinkPage(Page: voting_templates_list, Class: btn btn-info){
+                        Set the template
+                    }
+                }
+            }.Else{
                 Div(mb-sm){
-                    LangRes(voting_template_not_found)
+                    LangRes(voting_template_id_not_found)
                 }
                 DBFind(app_params).Where({name:voting_sysparams_template_id}).Vars(template_param)
                 LinkPage(Page: app_params_edit, Class: btn btn-info, PageParams: "back_page=sysparams_list,id=#template_param_id#"){
