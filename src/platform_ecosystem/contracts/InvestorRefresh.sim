@@ -1,30 +1,45 @@
 contract InvestorRefresh {
     func NotInArray(val string, arr array) bool{
-        var i int
-        while i< Len(arr){
+        var i lenArr int
+        lenArr = Len(arr)
+        while i < lenArr{
             if val == Str(arr[i]){
                 return false
             }
-            i=i+1
+            i = i + 1
         }
         return true
     }
+    func getParamInt(id int, name string) int{
+        var param int
+        param = Int(AppParam(id, name))
+        if param == 0{
+            warning Sprintf("Application parameter not setted in '%v'", name)
+        }
+        Println("return param")
+        return param
+    }
     conditions{
-        if $role_id != 3 {
-            // warning "You not Validator. You can not to run this"
+        var appId int
+        appId = Int(DBFind("applications").Where({name:"Basic application", deleted:0}).One("id"))
+        if appId == 0{
+            warning "Application not found"
         }
 
-        // roles:id == 4 Investor with voting rights
-        $roleId = Int(DBFind("roles").Where({id:4, deleted:0}).One("id"))
-        if !$roleId{
+        var roleValidatorId roleInvestorId string
+
+        roleValidatorId = getParamInt(appId, "role_validator")
+        if $role_id != roleValidatorId {
+            warning "You not Validator. You can not to run this"
+        }
+
+        roleInvestorId = getParamInt(appId, "role_investor_with_voting_rights")
+        $roleId = Int(DBFind("roles").Where({id:roleInvestorId, deleted:0}).One("id"))
+        if $roleId == 0{
             warning "Investor role not found or deleted"
         }
-        var appId int
-        appId = Int(DBFind("applications").Where({name:"Basic application"}).Columns("name,id").One("id"))
-        $limitInvestors = Int(AppParam(appId,"investors_number"))
-        if $limitInvestors == 0 {
-            warning "Investors number not set in application params"
-        }
+
+        $limitInvestors = getParamInt(appId, "investors_number")
     }
 
     action{
@@ -41,17 +56,17 @@ contract InvestorRefresh {
             investorsIds[i] = inv["id"]
             i = i + 1
         }
-        i=0
+        i = 0
         while i < Len(assignedInvestors) {
             var inv map
             inv = assignedInvestors[i]
             assignedIds[i] = inv["member.member_id"]
             i = i + 1
-        }
+        }   
 
         // remove old investors
         var assigned map mid string
-        i=0
+        i = 0
         while i < Len(assignedIds) {
             if NotInArray(assignedIds[i], investorsIds){
                 mid = assignedIds[i]
@@ -60,17 +75,17 @@ contract InvestorRefresh {
                     RolesUnassign("row_id", Int(assigned["id"]))
                 }
             }
-            i = i+1
+            i = i + 1
         }
         // add new investors
-        i=0
+        i = 0
         while i < Len(investorsIds) {
             if NotInArray(investorsIds[i], assignedIds){
-                if DBFind("keys").WhereId(investorsIds[i]).Row(){
+                if DBFind("keys").WhereId(Int(investorsIds[i])).Row(){
                     RolesAssign("rid,member_id", $roleId, Int(investorsIds[i]))
                 }
             }
-            i = i+1
+            i = i + 1
         }
     }
 }
