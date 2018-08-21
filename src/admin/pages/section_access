@@ -9,7 +9,7 @@ Div(content-wrapper){
 	Form(){
 		Div(form-group){
 			Label("Roles access")
-			      DBFind(roles,src_roles).Where({deleted:0}).Columns("id,role_name").Order(id)
+            DBFind(roles,src_roles).Where({deleted:0}).Columns("id,role_name").Order(id)
             Data(form, "Name,Res,Type,Src,Val"){
                 role_name,name,text,,#role_name#
                 roles_types,type,app_param,,#rid_role_type#
@@ -18,18 +18,25 @@ Div(content-wrapper){
             Div(input-group mb-sm){
                 Select(Name:#Name#, Source:src_roles, NameColumn:role_name, ValueColumn: id)
                 Div(input-group-btn){
-                    Button(Class: btn btn-primary fa fa-plus, Page: section_edit, PageParams:"id=#id#", Contract:SectionAccessRoles, Params:"rid=#rid#,id=#id#,operation=add")
+                    Button(Class: btn btn-primary fa fa-plus, Page: section_edit, PageParams:"id=#section_id#", Contract:SectionRoles, Params:"rid=#rid#,id=#section_id#,operation=add")
                 }
             }
-            DBFind("sections").Where({"id":#id#}).Columns("roles_access->rids").Vars(json)
-            DBFind(roles,src_roles_access).Where({id:{"$in":[#json_roles_access_rids#]}}).Columns("id,role_name").Order(role_name)
-            ForList(src_roles_access){
-                If(#id#==#role_id#){
-                    Button(Class: btn btn-info mr-sm mb-sm, Page: roles_create, PageParams:"rid=#rid#", Contract: SectionAccessRoles, Params:"rid=#rid#,id=#id#,operation=remove", Body: Span(Class: fa fa-remove) #role_name#)
+            DBFind("sections").Where({"id":#section_id#}).Columns("roles_access->rids").Vars(json)
+                If(#json_roles_access_rids#==""){
+                    Span(Body: "This section is avaliable for everyone", Class: m0 text-muted)
                 }.Else{
-                    Button(Class: btn btn-default mr-sm mb-sm, Page: roles_create, PageParams:"rid=#rid#", Contract: SectionAccessRoles, Params:"rid=#rid#,id=#id#,operation=emove", Body: Span(Class: fa fa-remove) #role_name#)
+                    DBFind(roles,src_roles_access).Where({id:{"$in":[#json_roles_access_rids#]}}).Columns("id,role_name")
+                    ForList(src_roles_access){
+                        If(#role_id#==1){
+                            Button(Class: btn btn-info mr-sm mb-sm, Page: section_access, PageParams:"id=#section_id#", Contract: @1SectionRoles, Params:"rid=#rid#,id=#section_id#,operation=remove", Body: Span(Class: fa fa-remove) #role_name#)
+                        }.Else{
+                            Button(Class: btn btn-default mr-sm mb-sm, Page: section_access, PageParams:"id=#section_id#", Contract: @1SectionRoles, Params:"rid=#rid#,id=#section_id#,operation=emove", Body: Span(Class: fa fa-remove) #role_name#)
+                        }
+                    }
                 }
-			}
+            Div(form-group){
+                Button(Class: btn btn-primary, Body: "View", Page: section_access, PageParams:"id=#section_id#", Contract: @1SectionRoles, Params:"id=#section_id#,rid=#role_id#")
+            }
 		}
 	}
 }
