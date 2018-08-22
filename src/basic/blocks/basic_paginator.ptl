@@ -1,0 +1,43 @@
+If(GetVar(per_page)){}.Else{
+    SetVar(per_page,25)
+}
+
+If(And(GetVar(this_page),GetVar(table))){
+    If(GetVar(Where)){
+        DBFind(#table#).Where(#Where#).Count(table_count)
+    }.Else{
+        DBFind(#table#).Count(table_count)
+    }
+    If(#table_count#>#per_page#){
+        If(#paginator_page#>0){
+            SetVar(prev_paginator_page,Calculate(#paginator_page#-1)
+        }.Else{
+            SetVar(paginator_page,0).(prev_paginator_page,0)
+        }
+        SetVar(paginator_offset,Calculate(#paginator_page#*#per_page#)).(last_paginator_page,Calculate(#table_count#/#per_page#)).(next_paginator_page,#last_paginator_page#)
+        If(#table_count#>Calculate(#paginator_offset#+#per_page#)){
+            SetVar(next_paginator_page,Calculate(#paginator_page#+1)
+        }
+        Div(button-group){
+            If(#paginator_page#>0){
+                Button(Body:"1", Class:btn btn-default, Page:#this_page#, PageParams: "paginator_page=0")
+            }.Else{
+                Button(Body:"1", Class:btn btn-default disabled)
+            }
+            If(#paginator_page#>1){
+                Button(Body:Calculate(#prev_paginator_page#+1), Class:btn btn-default, Page:#this_page#, PageParams: "paginator_page=#prev_paginator_page#")
+            }
+            If(And(#paginator_page#>0,#paginator_page#<#last_paginator_page#)){
+                Button(Body:Calculate(#paginator_page#+1), Class:btn btn-default disabled)
+            }
+            If(#next_paginator_page#<#last_paginator_page#){
+                Button(Body:Calculate(#next_paginator_page#+1), Class:btn btn-default, Page:#this_page#, PageParams: "paginator_page=#next_paginator_page#")
+            }
+            If(#paginator_page#<#last_paginator_page#){
+                Button(Body:Calculate(#last_paginator_page#+1), Class:btn btn-default, Page:#this_page#, PageParams: "paginator_page=#last_paginator_page#")
+            }.ElseIf(#last_paginator_page#>0){
+                Button(Body:Calculate(#last_paginator_page#+1), Class:btn btn-default disabled)
+            }
+        }
+    }
+}

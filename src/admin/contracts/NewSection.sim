@@ -1,0 +1,35 @@
+contract NewSection {
+	data {
+		title string
+		status int
+		urlname string
+		page string
+		roles_access_ids array
+		roles_access_vals array
+	}
+	
+	conditions {
+		if $status < 0 || $status > 2 {
+			warning "Status must be in range 0..2"
+		}
+		if DBFind("sections").Where({"urlname":$urlname}) {
+			warning Sprintf("Section with url name '%s' already exists", $urlname)
+		}
+		if Len($roles_access_ids) != Len($roles_access_vals) {
+			warning Sprintf("Given '%s' role IDs but checked '%v' role IDs", Len($roles_access_ids), Len($roles_access_vals))
+		}
+	}
+	
+	action {
+		var roles_access map i int k string
+		while i < Len($roles_access_ids) {
+			k = Str($roles_access_ids[i])
+            if $roles_access_vals[i] != "true" {
+                $roles_access_vals[i] = "false"
+            }
+			roles_access[k] = $roles_access_vals[i]
+			i = i + 1
+		}
+		DBInsert("sections", {"title":$title, "status":$status, "urlname":$urlname, "page":$page, "roles_access":roles_access})
+	}
+}

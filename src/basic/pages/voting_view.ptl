@@ -1,0 +1,561 @@
+DBFind(applications,src_app).Columns("name,id").Where({name:"Basic application"}).Vars(application)
+If(#notific_id#>0){
+    DBFind(notifications,src_notifications).WhereId(#notific_id#).Columns("page_params->voting_id").Vars(notific)
+    SetVar(vID,#notific_page_params_voting_id#)
+}
+
+SetVar(WAITING,1).(VALID,2).(STARTED,3).(FINISHED,4).(INVALID,5)
+SetVar(date_format,"DD.MM.YYYY HH:MI")
+Div(content-wrapper){
+    If(#vID# > 0){
+        DBFind(votings).WhereId(#vID#).Columns("id,voting->name,voting->volume,voting->quorum,voting->type,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended,status").Vars(instance)
+
+        SetTitle(Viewing voting: #instance_voting_name#)
+
+        DBFind(votings_participants).Where({voting_id:#vID#, "member->member_id":#key_id#, decision:0}).Columns("id").Vars(participant)
+        If(And(#instance_status#==#STARTED#,#participant_id#>0)){
+            SetVar(isVotingAllowed,1)
+        }.Else{
+            SetVar(isVotingAllowed,0)
+        }
+        Div(breadcrumb){
+            LinkPage(Body:Votings list, Page:voting_list)
+            Span(/,mh)
+            Span(Class: text-muted, Body: ##instance_id#)
+        }
+        Div(row mt-sm){
+            Div(col-lg-10 col-lg-offset-1){
+                Form(panel panel-default){
+                    Input(Type: hidden, Name: votingID, Value: #vID#)
+
+                    Div(list-group-item text-center){
+                        P(Class: h3 text-bold m0, Body: #instance_voting_name#)
+                        Div(row mt-sm){
+                            Div(col-md-12){
+                                Div(Class: t5 text-muted m0, Body: AppParam(App:#application_id#, Name: type_voting_decisions, Index: #instance_voting_type_decision#))
+                            }
+                        }
+                        If(`#instance_voting_description#`!=""){
+                            Div(row mt-sm){
+                                Div(col-md-6 text-right){
+                                    Div(Class: t5 text-muted m0, Body: LangRes(description))
+                                }
+                                Div(col-md-6 text-left break){
+                                    Div(Class: t5 text-muted m0, Body: #instance_voting_description#)
+                                }
+                            }
+                        }
+                    }
+
+                    Div(list-group-item text-center){
+                        Div(row mt-sm t4){
+                            Div(col-md-6 text-right){
+                                LangRes(type)
+                            }
+                            Div(col-md-6 text-left){
+                                AppParam(App:#application_id#, Name: type_voting, Index: #instance_voting_type#)
+                            }
+                        }
+                        If(Or(#instance_voting_type_decision#==1,#instance_voting_type_decision#==2,#instance_voting_type_decision#==3,#instance_voting_type_decision#==4)){
+                            Div(row mt-sm t5){
+                                Div(col-md-6 text-right){
+                                    LangRes(contract_accept)
+                                }
+                                Div(col-md-6 text-left){
+                                    If(#instance_optional_contract_accept# == ""){
+                                        Span(Class: text-muted, Body: LangRes(optional))
+                                    }.Else{
+                                        #instance_optional_contract_accept#
+                                    }
+                                }
+                            }
+                            Div(row t5 mt-sm){
+                                Div(col-md-6 text-right){
+                                    LangRes(contract_reject)
+                                }
+                                Div(col-md-6 text-left){
+                                    If(#instance_optional_contract_reject# == ""){
+                                        Span(Class: text-muted, Body: LangRes(optional))
+                                    }.Else{
+                                        #instance_optional_contract_reject#
+                                    }
+                                }
+                            }
+                        }
+                        Div(row mt-sm t5){
+                            Div(col-md-6 text-right){
+                                LangRes(filled)
+                            }
+                            Div(col-md-6 text-left){
+                                If(#instance_flags_full_data# == 1){
+                                    Span(Class: text-success, Body: LangRes(yes))
+                                }.Else{
+                                    Span(Class: text-danger, Body: LangRes(no))
+                                }
+                            }
+                        }
+                        If(Or(#instance_voting_type_decision#==1,#instance_voting_type_decision#==2)){
+                            Div(row mt-sm t5){
+                                Div(col-md-6 text-right){
+                                    LangRes(role)
+                                    Span(Class: text-danger, Body:*)
+                                }
+                                Div(col-md-6 text-left){
+                                    If(#instance_optional_role_id# > 0){
+                                        DBFind(roles, src_roles).WhereId(#instance_optional_role_id#).Columns("id,role_name").Vars(prefix)
+                                        #prefix_role_name# (LangRes(id): #prefix_id#)
+                                    }.Else{
+                                        Span(Class:text-danger, Body: LangRes(empty))
+                                    }
+                                }
+                            }
+                            Div(row mt-sm t5){
+                                Div(col-md-6 text-right){
+                                    LangRes(vacancies)
+                                    Span(Class: text-danger, Body:*)
+                                }
+                                Div(col-md-6 text-left){
+                                    If(#instance_optional_role_vacancies# > 0){
+                                        #instance_optional_role_vacancies#
+                                    }.Else{
+                                        Span(Class: text-danger, Body: #instance_optional_role_vacancies#)
+                                    }
+                                }
+                            }
+                            Div(row mt-sm t5){
+                                Div(col-md-6 text-right){
+                                    LangRes(candidates)
+                                    Span(Class: text-danger, Body:*)
+                                }
+                                Div(col-md-6 text-left){
+                                    If(#instance_optional_number_candidates# > 0){
+                                        #instance_optional_number_candidates#
+                                    }.Else{
+                                        Span(Class:text-danger, Body: #instance_optional_number_candidates#)
+                                    }
+                                }
+                            }
+                            DBFind(votings_subject, src_voting_subject).Where({voting_id:#vID#}).Order("id").Columns("id,subject->member_id,subject->member_name").Custom(_address){
+                                Address(#subject.member_id#)
+                            }.Custom(_member){
+                                LinkPage(Class: text-primary t5 text-bold, Page: profile_view, PageParams: "v_member_id=#subject.member_id#"){
+                                    #subject.member_name#
+                                }
+                            }.Custom(_voting){
+                                If(#isVotingAllowed#==1){
+                                    Button(Body: LangRes(vote), Class: btn btn-success, Page: voting_view, PageParams: "vID=#vID#", Contract: VotingCandidateAccept, Params: "candidateID=#subject.member_id#")
+                                }
+                            }
+                            Div(row mt-sm t6){
+                                Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
+                                    Table(src_voting_subject, "=_member,=_address,=_voting")
+                                }
+                            }
+                            Div(row mt-sm t5){
+                                Div(col-md-12){
+                                    If(And(#instance_status#==#INVALID#,#instance_voting_type#==1)){
+                                        If(#instance_voting_type_decision#==1){
+                                            Button(Class: btn btn-link, Page: voting_decision_candidates, PageParams: "vID=#vID#"){
+                                                Strong(LangRes(subject_voting_edit))
+                                            }
+                                        }
+                                        If(#instance_voting_type_decision#==2){
+                                            Button(Class: btn btn-link, Page: voting_decision_election, PageParams: "vID=#vID#"){
+                                                Strong(LangRes(subject_voting_edit))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        If(#instance_voting_type_decision#==3){
+                            DBFind(votings_subject, src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->text,subject->hash").Vars(subject)
+                            Div(row t5 mt-lg){
+                                Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
+                                    Div(list-group-item){
+                                        If(#subject_id# > 0){
+                                            #subject_subject_text#
+                                        }.Else{
+                                            Span(Class:text-danger, Body: LangRes(empty))
+                                        }
+                                    }
+                                    Div(list-group-item t6 text-muted){
+                                        If(#subject_id# > 0){
+                                            Hash: #subject_subject_hash#
+                                        }.Else{
+                                            Hash: LangRes(empty)
+                                        }
+                                    }
+                                }
+                            }
+                            Div(row mt-sm t5){
+                                Div(col-md-12){
+                                    If(And(#instance_status#==#INVALID#,#instance_voting_type#==1)){
+                                        Button(Class: btn btn-link, Page: voting_decision_document, PageParams: "vID=#vID#"){
+                                            Strong(LangRes(subject_voting_edit))
+                                        }
+                                    }
+                                }
+                            }
+                            Div(row mt-sm){
+                                Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
+                                    If(#isVotingAllowed#==1){
+                                        Div(pull-left){
+                                            Button(Body: LangRes(reject), Class: btn btn-danger, Contract: VotingDecisionReject, PageParams: "vID=#vID#", Page: voting_view)
+                                        }
+                                        Div(pull-right){
+                                            Button(Body: LangRes(accept), Class: btn btn-success, Contract: VotingDecisionAccept, PageParams: "vID=#vID#", Page: voting_view)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        If(#instance_voting_type_decision#==4){
+                            DBFind(votings_subject, src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->description,subject->table,subject->table_id,subject->column,subject->column_value").Vars(subject)
+
+                            If(#instance_voting_type#==1){
+                                Div(row mt-sm t5){
+                                    Div(col-md-6 text-right){
+                                        LangRes(table_to_written)
+                                        Span(Class: text-danger, Body:*)
+                                    }
+                                    Div(col-md-6 text-left){
+                                        If(#subject_id# > 0){
+                                            #subject_subject_table#
+                                        }.Else{
+                                            Span(Class:text-danger, Body: LangRes(empty))
+                                        }
+                                    }
+                                }
+                                Div(row mt-sm t5){
+                                    Div(col-md-6 text-right){
+                                        LangRes(row_id)
+                                        Span(Class: text-danger, Body:*)
+                                    }
+                                    Div(col-md-6 text-left){
+                                        If(#subject_id# > 0){
+                                            #subject_subject_table_id#
+                                        }.Else{
+                                            Span(Class:text-danger, Body: LangRes(empty))
+                                        }
+                                    }
+                                }
+                            }
+                            Div(row mt-sm t5){
+                                Div(col-md-6 text-right){
+                                    If(#instance_voting_type#==1){
+                                        LangRes(column_name)
+                                    }.Else{
+                                        LangRes(parameter_name)
+                                    }
+                                    Span(Class: text-danger, Body:*)
+                                }
+                                Div(col-md-6 text-left){
+                                    If(#subject_id# > 0){
+                                        #subject_subject_column#
+                                    }.Else{
+                                        Span(Class:text-danger, Body: LangRes(empty))
+                                    }
+                                }
+                            }
+                            Div(row mt-sm t5){
+                                Div(col-md-6 text-right){
+                                    Span(Body: LangRes(written_value))
+                                    Span(Class: text-danger, Body:*)
+                                }
+                                Div(col-md-6 text-left break){
+                                    If(#subject_id# > 0){
+                                        #subject_subject_column_value#
+                                    }.Else{
+                                        Span(Class:text-danger, Body: LangRes(empty))
+                                    }
+                                }
+                            }
+                            Div(row mt-sm t5){
+                                Div(col-md-6 text-right){
+                                    LangRes(description)
+                                }
+                                Div(col-md-6 text-left break){
+                                    If(#subject_id# > 0){
+                                        If(#subject_subject_description# == ""){
+                                            Span(Class:text-muted, Body: LangRes(optional))
+                                        }.Else{
+                                            #subject_subject_description#
+                                        }
+                                    }.Else{
+                                        Span(Class:text-danger, Body: LangRes(empty))
+                                    }
+                                }
+                            }
+                            Div(row mt-sm t5){
+                                Div(col-md-12){
+                                    If(And(#instance_status#==#INVALID#,#instance_voting_type#==1)){
+                                        Button(Class: btn btn-link, Page: voting_decision_formal, PageParams: "vID=#vID#"){
+                                            Strong(LangRes(subject_voting_edit))
+                                        }
+                                    }
+                                }
+                            }
+                            Div(row mt-sm){
+                                Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
+                                    If(#isVotingAllowed#==1){
+                                        Div(pull-left){
+                                            Button(Body: LangRes(reject), Class: btn btn-danger, Contract: VotingDecisionReject, PageParams: "vID=#vID#", Page: voting_view)
+                                        }
+                                        Div(pull-right){
+                                            Button(Body: LangRes(accept), Class: btn btn-success, Contract: VotingDecisionAccept, PageParams: "vID=#vID#", Page: voting_view)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        If(#instance_voting_type_decision#==5){
+                            DBFind(votings_subject, src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->contract_accept,subject->contract_reject").Vars(subject)
+                            Div(row mt-sm t5){
+                                Div(col-md-6 text-right){
+                                    LangRes(contract_accept)
+                                    Span(Class: text-danger, Body:*)
+                                }
+                                Div(col-md-6 text-left){
+                                    If(#subject_id# > 0){
+                                        #subject_subject_contract_accept#
+                                    }.Else{
+                                        Span(Class:text-danger, Body: LangRes(empty))
+                                    }
+                                }
+                            }
+                            Div(row mt-sm t5){
+                                Div(col-md-6 text-right){
+                                    LangRes(contract_reject)
+                                    Span(Class: text-danger, Body:*)
+                                }
+                                Div(col-md-6 text-left){
+                                    If(#subject_id# > 0){
+                                        #subject_subject_contract_reject#
+                                    }.Else{
+                                        Span(Class:text-danger, Body: LangRes(empty))
+                                    }
+                                }
+                            }
+                            Div(row mt-sm t5){
+                                Div(col-md-12){
+                                    If(And(#instance_status#==#INVALID#,#instance_voting_type#==1)){
+                                        Button(Class: btn btn-link, Page: voting_decision_contract, PageParams: "vID=#vID#"){
+                                            Strong(LangRes(subject_voting_edit))
+                                        }
+                                    }
+                                }
+                            }
+                            Div(row mt-sm){
+                                Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
+                                    If(#isVotingAllowed#==1){
+                                        Div(pull-left){
+                                            Button(Body: LangRes(reject), Class: btn btn-danger, Contract: VotingDecisionReject, PageParams: "vID=#vID#", Page: voting_view)
+                                        }
+                                        Div(pull-right){
+                                            Button(Body: LangRes(accept), Class: btn btn-success, Contract: VotingDecisionAccept, PageParams: "vID=#vID#", Page: voting_view)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Div(list-group-item text-center t5){
+                        Div(row mt-sm){
+                            Div(col-md-6 text-right){
+                                LangRes(status)
+                            }
+                            Div(col-md-6 text-left){
+                                SetVar(status_class, AppParam(App:#application_id#, Name:voting_statuses_classes, Index:#instance_status#))
+                                Div(#status_class#){
+                                    AppParam(App:#application_id#, Name:voting_statuses, Index:#instance_status#)
+                                }
+
+                                If(#instance_flags_full_data#==0){
+                                    Div(text-muted){LangRes(not_filled)}
+                                }
+                                If(#instance_progress_number_participants#==0){
+                                    Div(text-muted){LangRes(not_participants)}
+                                }
+                            }
+                        }
+                        Div(row mt-sm){
+                            Div(col-md-6 text-right){
+                                LangRes(decision)
+                            }
+                            Div(col-md-6 text-left){
+                                If(#instance_flags_decision#==-2){
+                                    LangRes(not_enough_votes)
+                                }
+                                If(#instance_flags_decision#==-1){
+                                    Span(Class:text-danger, Body: LangRes(rejected))
+                                }
+                                If(#instance_flags_decision#==0){
+                                    LangRes(no)
+                                }
+                                If(#instance_flags_decision#==1){
+                                    Span(Class:text-success, Body: LangRes(accepted))
+                                }
+                            }
+                        }
+                        Div(row mt-sm){
+                            Div(col-md-6 text-right){
+                                LangRes(date_start)
+                            }
+                            SetVar(date_started_class,)
+                            If(Or(#instance_status#==#STARTED#,#instance_status#==#FINISHED#)){
+                                SetVar(date_started_class,"text-muted")
+                            }
+                            Div(col-md-6 text-left #date_started_class#){
+                                DateTime(DateTime: #instance_date_started#, Format: #date_format#)
+                            }
+                        }
+                        Div(row mt-sm){
+                            Div(col-md-6 text-right){
+                                LangRes(date_end)
+                            }
+                            SetVar(date_started_class,)
+                            If(#instance_status#==#FINISHED#){
+                                SetVar(date_ended_class,"text-muted")
+                            }
+                            Div(col-md-6 text-left #date_ended_class#){
+                                DateTime(DateTime: #instance_date_ended#, Format: #date_format#)
+                            }
+                        }
+                        Div(row mt-sm){
+                            Div(col-md-6 text-right){
+                                LangRes(voting_volume)
+                            }
+                            Div(col-md-6 text-left){
+                                #instance_voting_volume#
+                            }
+                        }
+                        Div(row mt-sm){
+                            Div(col-md-6 text-right){
+                                LangRes(voting_quorum)
+                            }
+                            Div(col-md-6 text-left){
+                                #instance_voting_quorum#
+                            }
+                        }
+                        Div(row mt-sm){
+                            Div(col-md-6 text-right){
+                                LangRes(participants)
+                                Span(Class: text-danger, Body:*)
+                            }
+                            Div(col-md-6 text-left){
+                                If(#instance_progress_number_participants# > 0){
+                                    #instance_progress_number_participants#
+                                }.Else{
+                                    Span(Class:text-danger, Body: #instance_progress_number_participants#)
+                                }
+                            }
+                        }
+                        Div(row mt-sm t6){
+                            Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
+                                DBFind(votings_participants, src_voting_participants).Where({voting_id:#vID#}).Order("id").Columns("id,member->member_id,decision_date,decision").Custom(_address){
+                                    Div(Class: t6 m0, Body: Address(#member.member_id#))
+                                }.Custom(_decision){
+                                    If(Or(#instance_voting_type_decision#==1,#instance_voting_type_decision#==2)){
+                                        If(#decision#==0){
+                                            LangRes(did_not_vote)
+                                        }.Else{
+                                            Div(Class: text-success text-center, Body: $vote_for_candidate$:)
+                                            Div(Class: text-success text-center, Body: Address(#decision#) )
+                                            Div(Class: text-success text-center, Body: $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
+                                        }
+                                    }
+                                    If(#instance_voting_type_decision#==3){
+                                        If(#decision#==0){
+                                            LangRes(did_not_vote)
+                                        }
+                                        If(#decision#==1){
+                                            Span(Class: text-success, Body: $document_accept$ $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
+                                        }
+                                        If(#decision#==-1){
+                                            Span(Class: text-danger, Body: $document_reject$ $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
+                                        }
+                                    }
+                                    If(#instance_voting_type_decision#==4){
+                                        If(#decision#==0){
+                                            LangRes(did_not_vote)
+                                        }
+                                        If(#decision#==1){
+                                            Span(Class: text-success, Body: $decision_accept$ $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
+                                        }
+                                        If(#decision#==-1){
+                                            Span(Class: text-danger, Body: $decision_reject$ $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
+                                        }
+                                    }
+                                    If(#instance_voting_type_decision#==5){
+                                        If(#decision#==0){
+                                            LangRes(did_not_vote)
+                                        }
+                                        If(#decision#==1){
+                                            Span(Class: text-success, Body: $contract_accepted$ $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
+                                        }
+                                        If(#decision#==-1){
+                                            Span(Class: text-danger, Body: $contract_rejected$ $at$ DateTime(DateTime: #decision_date#, Format: #date_format#))
+                                        }
+                                    }
+                                }
+                                Table(src_voting_participants, "=_address,=_decision")
+                            }
+                        }
+                        Div(row mt-sm t5){
+                            Div(col-md-12){
+                                If(#instance_voting_type#==1){
+                                    If(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#)){
+                                        Button(Class: btn btn-link text-bold, Page: voting_invite, PageParams: "vID=#vID#"){
+                                            LangRes(participants_add)
+                                        }.Popup(50, $participants_add$)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Div(list-group-item text-center){
+                        Div(row mt-sm t4){
+                            Div(col-md-5 col-md-offset-1){
+                                LangRes(voted)
+                            }
+                            Div(col-md-5){
+                                LangRes(progress)
+                            }
+                        }
+                        If(graph_work=="good"){
+                            Div(row mt-sm text-muted t6 text-center){
+                                Div(col-md-5 col-md-offset-1){
+                                    LangRes(voting_graph_voted)
+                                }
+                                Div(col-md-5){
+                                    LangRes(voting_graph_progress)
+                                }
+                            }
+                        }
+                        Div(row mt-sm text-center t3){
+                            Div(col-md-5 col-md-offset-1){
+                                #instance_progress_number_voters# LangRes(voters) / #instance_progress_percent_voters#% LangRes(voters)
+                            }
+                            Div(col-md-5){
+                                #instance_progress_percent_success#% LangRes(success) / 100% LangRes(total)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }.Else{
+        Div(md-12 alert alert-danger text-center){
+            Span(Body: LangRes(attention))
+        }
+    }
+}.Style(
+    .t3 {font-size:24px;}
+    .t4 {font-size:18px;}
+    .t5 {font-size:14px;}
+    .t6 {font-size:12px;}
+    .break {word-break: break-all;}
+)

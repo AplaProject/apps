@@ -1,0 +1,60 @@
+Div(content-wrapper){
+    DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(appication)
+    SetTitle($catalog_ecosystems$)
+    AddToolButton(Title: $add$, Page: catalog_ecosystems_create, Icon: icon-plus)
+
+    SetVar(Where,{deleted:0})
+    If(#param_flag_free#==0){
+        SetVar(Where,{deleted:0})
+    }.ElseIf(#param_flag_free#==1){
+        SetVar(Where,{deleted:0, flag_free:1})
+    }.ElseIf(#param_flag_free#==2){
+        SetVar(Where,{deleted:0, flag_free:2})
+    }.Else{
+        SetVar(param_flag_free,0)
+    }
+
+    Div(row){
+        Div(col-md-12 text-left){
+            Div(btn-group){
+                If(#param_flag_free#==0){
+                    Span(Button(Body: Em(Class: fa fa-align-justify) $all$, Page: catalog_ecosystems_list, PageParams: "param_flag_free=0", Class: btn bg-gray-lighter)).Style(margin-left:5px;)
+                }.Else{
+                    Span(Button(Body: Em(Class: fa fa-align-justify) $all$, Page: catalog_ecosystems_list, PageParams: "param_flag_free=0", Class: btn bg-gray)).Style(margin-left:5px;)
+                }
+                If(#param_flag_free#==1){
+                    Span(Button(Body: Em(Class: fa fa-user-o) $not_need_fuel$, Page: catalog_ecosystems_list, PageParams: "param_flag_free=1", Class: btn bg-gray-lighter)).Style(margin-left:5px;)
+                }.Else{
+                    Span(Button(Body: Em(Class: fa fa-user-o) $not_need_fuel$, Page: catalog_ecosystems_list, PageParams: "param_flag_free=1", Class: btn bg-gray)).Style(margin-left:5px;)
+                }
+                If(#param_flag_free#==2){
+                    Span(Button(Body: Em(Class: fa fa-money) $need_fuel$, Page: catalog_ecosystems_list, PageParams: "param_flag_free=2", Class: btn bg-gray-lighter)).Style(margin-left:5px;)
+                }.Else{
+                    Span(Button(Body: Em(Class: fa fa-money) $need_fuel$, Page: catalog_ecosystems_list, PageParams: "param_flag_free=2", Class: btn bg-gray)).Style(margin-left:5px;)
+                }
+            }
+        }
+    }
+
+    Form(panel panel-primary){
+        Div(panel-body){
+            DBFind(catalog_ecosystems,src_catalog).Where(#Where#).Order("ecosystem_number").Columns("id,ecosystem_number,ecosystem_name,ecosystem_type,image_id,flag_free").Custom(custom_name){
+                LinkPage(Page: catalog_ecosystems_view, PageParams: "v_id=#id#"){
+                    Span(Class: h5 text-bold, Body: #ecosystem_name#)
+                }
+            }.Custom(custom_type){
+                Span(AppParam(App:#appication_id#, Name: catalog_ecosystems_type, Index: #ecosystem_type#))
+            }.Custom(custom_free){
+                Span(AppParam(App:#appication_id#, Name: catalog_ecosystems_freetype, Index: #flag_free#))
+            }.Custom(custom_ecosystem){
+                Span(Class: h5, Body: #ecosystem_number#)
+            }
+
+            Div(row){
+                Div(col-md-12){
+                    Table(Source: src_catalog, Columns:"$id$=custom_ecosystem,$logo$=custom_logo,$name$=custom_name,$type$=custom_type,$freetype$=custom_free")
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,48 @@
+contract SectionRoles {
+	data {
+		id int
+		rid int
+		operation string
+	}
+	conditions {
+		var roles_access map
+		roles_access = DBFind("sections").Where({"id":$id}).Columns("roles_access->rids").One("roles_access->rids")
+        if $operation == "add" {
+            if Contains(roles_access, Str($rid)) {
+                 warning "This role is already have permission"
+            }
+        }
+	}
+    action {
+        var roles_access map
+		roles_access = DBFind("sections").Where({"id":$id}).Columns("roles_access->rids").One("roles_access->rids")
+        if $operation == "add" {
+            if Size(roles_access) == 0 {
+                var roles_id map
+                roles_id["rids"] = $rid
+                roles_id = JSONEncode(roles_id)
+                DBUpdate("sections", $id, {"roles_access":roles_id})
+            } else {
+                var buffer string
+                var roles_id map
+                buffer = roles_access + "," + Str($rid)
+                roles_id["rids"] = buffer
+                roles_id = JSONEncode(roles_id)
+                DBUpdate("sections", $id, {"roles_access":roles_id})
+            }
+        }
+        if $operation == "remove" {
+            var buffer string
+                if Contains(roles_access, Str($rid)) {
+                    buffer = Replace(roles_access, `,` + Str($rid), ``)
+                    if Contains(buffer, Str($rid)) {
+                        buffer = Replace(buffer, Str($rid), ``)
+                    }
+            }
+            var roles_id map
+            roles_id["rids"] = buffer
+            roles_id = JSONEncode(roles_id)
+            DBUpdate("sections", $id, {"roles_access":roles_id})
+        }
+    }
+}

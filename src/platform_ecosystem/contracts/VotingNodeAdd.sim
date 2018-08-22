@@ -1,0 +1,122 @@
+contract VotingNodeAdd{
+    data{
+        TcpAddress string
+        ApiAddress string
+        KeyId int
+        PubKey string
+        Duration int
+    }
+    func warn(name, detail string){
+        warning Sprintf("%v invalid (%v)", name, detail)
+    }
+    func checkApiAddress(addr string){
+        var name string
+        name = "API Address"
+        if Size(addr) == 0 {
+            warn(name, "size")
+        }
+        if !(HasPrefix(addr, "http://") || HasPrefix(addr, "https://")) {
+            warn(name, "protocol")
+        }
+        if Contains(addr, " ") {
+            warn(name, "space")
+        }
+        addr = Replace(addr, "http://", "")
+        addr = Replace(addr, "https://", "")
+        var parts array
+        if Contains(addr, ":") {
+            parts = Split(addr, ":")
+            if Len(parts) > 2 {
+                warn(name, ":")
+            }
+            var port string
+            port = parts[1]
+            if port <= 0 {
+                warn(name, "port")
+            }
+            addr = parts[0]
+        }
+    }
+    func checkTcpAddress(addr string){
+        var name string
+        name = "TCP Address"
+        if Size(addr) == 0 {
+            warn(name, "size")
+        }
+        if Contains(addr, " ") {
+            warn(name, "space")
+        }
+        var parts array
+        if Contains(addr, ":") {
+            parts = Split(addr, ":")
+            if Len(parts) > 2 {
+                warn(name, ":")
+            }
+            var port string
+            port = parts[1]
+            if port <= 0 {
+                warn(name, "port")
+            }
+        }
+    }
+    func checkPub(pub string){
+        if PubToID(pub) == 0 {
+            warning "Public key invalid"
+        }
+    }
+    func checkKeyId(keyid int){
+        var existed map
+        existed = DBFind("keys").WhereId(keyid).Row()
+        if !existed {
+            warning "Key id not found"
+        }
+    }
+    func getNodesJSON() string{
+        var nodes string
+        nodes = SysParamString("full_nodes")
+        if Size(nodes) < 100 {
+            nodes = "[]"
+        }
+        return nodes
+    }
+    func appendFirstNode(nodes array) array{
+        var first string firstNode map
+        first = AppParam($appId,"first_node")
+        if !HasPrefix(first, "{") || Size(first) < 100 {
+            warning "Application parameter first_node not valid"
+        }
+        firstNode = JSONDecode(first)
+        checkTcpAddress(firstNode["tcp_address"])
+        checkApiAddress(firstNode["api_address"])
+        checkKeyId(Int(firstNode["key_id"]))
+        checkPub(firstNode["public_key"])
+
+        nodes = Append(nodes, firstNode)
+        return nodes
+    }
+    conditions{
+        $appId = Int(DBFind("applications").Where({name:"Basic application"}).Columns("name,id").One("id"))
+        $templateId = Int(AppParam($appId,"voting_sysparams_template_id"))
+        if $templateId == 0 {
+            warning "Template id not found"
+        }
+        checkKeyId($KeyId)
+        checkPub($PubKey)
+        checkApiAddress($ApiAddress)
+        checkTcpAddress($TcpAddress)
+    }
+
+    action{
+        var nodes array node map
+        node["tcp_address"] = $TcpAddress
+        node["api_address"] = $ApiAddress
+        node["key_id"] = Str($KeyId)
+        node["public_key"] = $PubKey
+        nodes = JSONDecode(getNodesJSON())
+        if Len(nodes) == 0 {
+            nodes = appendFirstNode(nodes)
+        }
+        nodes = Append(nodes, node)
+        VotingTemplateRun("TemplateId,Duration,KeyId,TableWritten,RowId,ColumnName,NewValue,TextDocument", $templateId, $Duration, 0, "", "", "full_nodes", JSONEncode(nodes), "")
+    }
+}

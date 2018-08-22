@@ -1,0 +1,86 @@
+DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(application)
+SetTitle($voting_templates$)
+Div(breadcrumb){
+    LinkPage($voting$, voting_list)
+    Span(/, mh)
+    Span($voting_templates$, text-muted)
+}
+
+If(GetVar(Search)){
+    SetVar(Where,{"title":{"$like":#Search#}})
+}.Else{
+    SetVar(Where,{"id":{"$gt":0}}).(Search,)
+}
+SetVar(this_page,"voting_templates_list")
+
+DBFind(voting_templates, src_templates).Where(#Where#).Order(id).Count(template_count).Custom(_participants){
+    AppParam(App:#application_id#, Name:type_voting_participants, #type_participants#)
+}.Custom(_decision){
+    AppParam(App:#application_id#, Name:type_voting_decisions, #type_decision#)
+}.Custom(_type){
+    AppParam(App:#application_id#, Name:type_voting, #type_voting#)
+}.Custom(_actions){
+    Div(pull-right){
+        Button(Class: btn btn-default fa fa-eye, Page: voting_template_start, PageParams: "TemplateId=#id#")
+    }
+}.Custom(_contracts){
+    If(And(#init_contract#!="",#init_contract#!="NULL")){
+        Div(){#init_contract#}
+    }
+    If(And(#contract_accept#!="",#contract_accept#!="NULL")){
+        Div(){#contract_accept#}
+    }
+    If(And(#contract_reject#!="",#contract_reject#!="NULL")){
+        Div(){#contract_reject#}
+    }
+}.Custom(_vq){
+    #volume#/#quorum#
+}.Custom(_vacancies){
+    If(#vacancies#>0){
+        #vacancies#
+    }
+}
+
+If(#template_count#>0){
+    AddToolButton(Title: $create$, Page: voting_template_create, Icon: icon-plus)
+}
+
+Div(content-wrapper){
+    Form(panel panel-primary){
+        If(#template_count#>0){
+            Div(panel-body){
+                Div(row){
+                    Div(col-md-12){
+                        Div(input-group){
+                            Div(input-group-addon){
+                                LangRes(name)
+                            }
+                            Input(Name: Search, Value: #Search#)
+                            Div(input-group-btn){
+                                Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: #this_page#, PageParams: "Search=Val(Search)")
+                            }
+                        }
+                    }
+                    Div(col-md-12){
+                        Div(table-responsive){
+                            Table(Source: src_templates, Columns:"$id$=id,$name$=title,$voting_subject$=subject,$volume$/$quorum$=_vq,$voting_type$=_type,$participants$=_participants,$decision$=_decision,$vacancies$=_vacancies,$contracts$=_contracts,=_actions")
+                        }
+                    }
+                }
+                If(GetVar(Search)){
+                    Div(row){
+                        Div(col-md-12 mt-lg){
+                            Div(text-center){
+                                Button(Body: $view_all$, Class: btn btn-default, Page: #this_page#)
+                            }
+                        }
+                    }
+                }
+            }
+        }.Else{
+            Div(panel-body text-center h3){
+                Button(Body: $install_default_templates$, Class: btn btn-primary, Page: voting_templates_list, Contract: VotingTemplatesInstall)
+            }
+        }
+    }
+}

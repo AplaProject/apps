@@ -1,0 +1,143 @@
+Div(content-wrapper){
+    If(#vID# > 0){
+        DBFind(votings, src_voting).WhereId(#vID#).Columns("id,voting->name,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params").Vars(instance)
+
+        SetTitle($subject_voting$)
+        Div(breadcrumb){
+            LinkPage($voting$, voting_list)
+            Span(/,mh)
+            LinkPage(#instance_voting_name#, voting_view,, "vID=#vID#")
+            Span(/,mh)
+            Span(Class: text-muted, Body: $subject_voting$)
+        }
+        SetVar(candidates,0)
+        DBFind(votings_subject, src_subject).Where({voting_id:#vID#}).Columns("id,subject->member_id,subject->member_name").Custom(_address){
+            SetVar(candidates,"#candidates#,#subject.member_id#")
+            Address(#subject.member_id#)
+        }.Custom(_member){
+            LinkPage(Class: text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#subject.member_id#"){
+                Span(Body: #subject.member_name#)
+            }
+        }
+        DBFind(keys,src_keys).Where({id:{"$nin":[#candidates#]}}).Columns("id").Custom(_name){
+            DBFind(members).WhereId(#id#).Columns("id,member_name").Vars(m)
+            Address(#id#)
+            If(Or(#m_id#>0,#m_id#<0)){
+                " (#m_member_name#)"
+            }
+        }
+        Div(row){
+            Div(col-sm-10 col-sm-offset-1 col-lg-8 col-lg-offset-2){
+                Form(panel panel-primary){
+                    Div(panel-body){
+                        Div(list-group-item){
+                            Div(row){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(){
+                                        Span(Body: LangRes(candidates)).(Class: text-danger, Body:*)
+                                    }
+                                }
+                                Div(col-md-9 mc-sm text-left){
+                                    Div(input-group){
+                                        Select(Name: memberID, Source: src_keys, NameColumn: _name, ValueColumn: id)
+                                        Div(input-group-btn){
+                                            Button(Body: LangRes(add), Class: btn btn-primary, Page: voting_decision_election, PageParams: "vID=#vID#", Contract: VotingSubjectCandidates)
+                                        }
+                                    }
+                                }
+                            }
+                            Div(row){
+                                Div(col-sm-9 col-sm-offset-3){
+                                    Table(src_subject, "$candidates$=_member,$address$=_address")
+                                }
+                            }
+                        }
+                        Div(list-group-item){
+                            Div(row){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(){
+                                        Span(Body: LangRes(role)).(Class: text-danger, Body:*)
+                                    }
+                                }
+                                Div(col-md-9 mb-sm text-left){
+                                    DBFind(roles,src_roles).Where({role_type:2, deleted:0}).Columns("id,role_name").Count(count_roles)
+                                    If(#count_roles#>0){
+                                        Select(Name: roleID, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #instance_optional_role_id#)
+                                    }.Else{
+                                        elected role is not found
+                                    }
+                                }
+                            }
+
+                            Div(row){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(){
+                                        Span(Body: LangRes(vacancies)).(Class: text-danger, Body:*)
+                                    }
+                                }
+                                Div(col-md-9 mc-sm text-left){
+                                    Input(Name: vacancies, Class: form-control, Type: Number, Value: #instance_optional_role_vacancies#)
+                                }
+                            }
+                        }
+                        Div(list-group-item){
+                            Div(row){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(){
+                                        Span(Body: LangRes(contract_accept))
+                                    }
+                                }
+                                Div(col-md-9 mb-sm text-left){
+                                    Input(Name: contract_accept, Value: #instance_optional_contract_accept#, Placeholder: "$contract_accept_des$").Validate(minLength:3, maxLength:255)
+                                    InputErr(Name: contract_accept, minLength: $validate_contract_name$, maxLength: $validate_contract_name$)
+                                }
+                            }
+                            Div(row){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(){
+                                        Span(Body: LangRes(params))
+                                    }
+                                }
+                                Div(col-md-9 mb-sm text-left){
+                                    Input(Name: contract_accept_params, Value: #instance_optional_contract_accept_params#, Placeholder: "$contract_params_des$")
+                                }
+                            }
+                            Div(row){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(){
+                                        Span(Body: LangRes(contract_reject))
+                                    }
+                                }
+                                Div(col-md-9 mb-sm text-left){
+                                    Input(Name: contract_reject, Value: #instance_optional_contract_reject#, Placeholder: "$contract_reject_des$").Validate(minLength:3, maxLength:255)
+                                    InputErr(Name: contract_reject, minLength: $validate_contract_name$, maxLength: $validate_contract_name$)
+                                }
+                            }
+                            Div(row){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(){
+                                        Span(Body: LangRes(params))
+                                    }
+                                }
+                                Div(col-md-9 mc-sm text-left){
+                                    Input(Name: contract_reject_params, Value: #instance_optional_contract_reject_params#, Placeholder: "$contract_params_des$")
+                                }
+                            }
+                        }
+                    }
+                    Div(panel-footer text-right){
+                        Div(pull-left){
+                            Button(Body: LangRes(back), Class: btn btn-default, Page: voting_view, PageParams: "vID=#vID#")
+                        }
+                        Input(Name: votingID, Type: hidden, Value: #vID#)
+                        Button(Body: LangRes(save), Class: btn btn-primary, Page: voting_view, PageParams: "vID=#vID#", Contract: VotingSubjectSettings)
+                    }
+                }
+            }
+        }
+    }.Else{
+        Div(md-12 alert alert-danger text-center){
+            Span(Body: LangRes(attention))
+        }
+    }
+}

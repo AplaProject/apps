@@ -1,0 +1,35 @@
+contract EditDelayedContract {
+	data {
+		Id int
+		Contract string
+		EveryBlock int
+		Conditions string
+		BlockID int "optional"
+		Limit int "optional"
+		Deleted int "optional"
+	}
+	conditions {
+		ConditionById("delayed_contracts", true)
+
+		if !HasPrefix($Contract, "@") {
+			$Contract = "@" + Str($ecosystem_id) + $Contract
+		}
+
+		if GetContractByName($Contract) == 0 {
+			error Sprintf("Unknown contract %s", $Contract)
+		}
+
+		if $BlockID == 0 {
+			$BlockID = $block + $EveryBlock
+		}
+
+		if $BlockID <= $block {
+			error "The blockID must be greater than the current blockID"
+		}
+	}
+	action {
+        DBUpdate("delayed_contracts", $Id, {"contract": $Contract,"key_id": $key_id,
+          "block_id": $BlockID,"every_block": $EveryBlock,
+          "counter": 0,"limit": $Limit, "deleted": $Deleted,"conditions": $Conditions})
+	}
+}

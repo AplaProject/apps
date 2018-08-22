@@ -1,0 +1,57 @@
+contract BufferManager {
+    data {
+        Action string
+        Key string
+        Val string "optional"
+    }
+    func decodeArray(s string) array{
+        var ar array
+        if HasPrefix($buf["value"], "[") {
+            ar = JSONDecode($buf["value"])
+        }
+        return ar
+    }
+    conditions {
+        $emptyVal = JSONEncode("")
+        $buf = DBFind("buffer_data").Where({key:$Key, member_id:$key_id}).Row()
+        if !$buf {
+            var buf map, id int
+            id = DBInsert("buffer_data", {key:$Key, value:$emptyVal, member_id:$key_id})
+            buf["id"] = Str(id)
+            buf["value"] = ""
+            buf["member_id"] = Str($key_id)
+            buf["key"] = Str($Key)
+            $buf = buf
+        }
+    }
+
+    action {
+        var id int
+        id = Int($buf["id"])
+        if $Action == "clean" {
+            DBUpdate("buffer_data", id, {value:$emptyVal})
+        }
+        if $Action == "set" {
+            DBUpdate("buffer_data", id, {value:$Val})
+        }
+        if $Action == "array_add_value" {
+            var ar array enc string
+            ar = decodeArray($buf["value"])
+            ar = Append(ar, $Val)
+            enc = JSONEncode(ar)
+            DBUpdate("buffer_data", id, {value:enc})
+        }
+        if $Action == "array_remove_value" {
+            var ar arNew array i int enc string
+            ar = decodeArray($buf["value"])
+            while i<Len(ar){
+                if ar[i] != $Val{
+                    arNew = Append(arNew, ar[i])
+                }
+                i=i+1
+            }
+            enc = JSONEncode(arNew)
+            DBUpdate("buffer_data", id, {value:enc})
+        }
+    }
+}

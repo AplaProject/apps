@@ -1,0 +1,61 @@
+contract TokensRefund {
+    data {
+        SenderId string "optional"
+        RecipientId string
+        Amount string
+    }
+
+    conditions {
+        if !($SenderId == $key_id || (Size($SenderId) > 0 && ($original_contract == "VotingDecisionAccept" || $original_contract == "TokensRefundAccept"))) {
+            error "sender id error"
+        }
+        var addressLen int
+        addressLen = 24
+
+        $amount = Money($Amount)
+        if $SenderId == ""{
+            $SenderId = Sprintf("%v", $key_id)
+        }
+        if $amount <= 0 {
+            error "TokensRefund. Amount less than or equal to zero"
+        }
+
+        if !HasPrefix($SenderId, "-") && Contains($SenderId, "-"){
+            // is address. convert to key id
+            $SenderId = Sprintf("%v", AddressToId($SenderId))
+        }
+        if !HasPrefix($RecipientId, "-") && Contains($RecipientId, "-"){
+            // is address. convert to key id
+            $RecipientId = Sprintf("%v", AddressToId($RecipientId))
+        }
+
+        if Size($SenderId) > addressLen{
+            $SenderId = Sprintf("%v", PubToID($SenderId))
+        }
+        if Size($RecipientId) > addressLen{
+            $RecipientId = Sprintf("%v", PubToID($RecipientId))
+        }
+
+        $RecipientId = Int($RecipientId)
+        $SenderId = Int($SenderId)
+        var sender recipient map
+        sender = DBFind("keys").WhereId($SenderId).Row()
+        if !sender{
+            error "TokensRefund. Sender is invalid"
+        }
+        if !DBFind("keys").WhereId($RecipientId).Row(){
+            error "TokensRefund. Recipient is invalid"
+        }
+        if sender["blocked"] == 1 {
+            error "Sender blocked"
+        }
+        if sender["amount"] < $amount{
+            error Sprintf("The number of tokens of the sender (%v) is not enough", sender["amount"])
+        }
+    }
+
+    action {
+        DBUpdate("keys", $SenderId, {"-amount":$amount})
+        DBUpdate("keys", $RecipientId, {"+amount":$amount})
+    }
+}

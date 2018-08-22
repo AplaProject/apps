@@ -1,0 +1,60 @@
+contract RolesInstall{
+    data{}
+    func addRole(name string, withParticipant bool){
+        var m param map paramName string id int
+        m["role_name"] = name
+        m["role_type"] = 3
+        id = Int(DBFind("roles").Where(m).One("id"))
+        if id == 0 {
+            m["default_page"] = ""
+            m["deleted"] = 0
+            m["creator->image_id"] = 0
+            m["creator->member_name"] = "founder"
+            m["creator->member_id"] = Str($key_id)
+            m["date_created"] = BlockTime()
+            m["roles_access->rids"] = "1"
+            id = DBInsert("roles", m)
+        }
+        paramName = "role_" + Replace(ToLower(name), " ", "_")
+        param = Int(AppParam($appId, paramName))
+        if param == 0{
+            NewAppParam("ApplicationId,Name,Value,Conditions", $appId, paramName, id, "ContractConditions(\"MainCondition\")")
+        }
+
+        if withParticipant {
+            var participant map
+            participant["role->id"] = id
+            participant["role->type"] = m["role_type"]
+            participant["role->name"] = m["role_name"]
+            participant["role->image_id"] = 0
+            participant["member->member_id"] = Str($key_id)
+            participant["member->member_name"] = "founder"
+            participant["member->image_id"] = 0
+
+            if !DBFind("roles_participants").Where(participant).One("id"){
+                participant["date_created"] = BlockTime()
+                DBInsert("roles_participants", participant)
+            }
+        }
+    }
+    conditions{
+        MainCondition()
+        $appId = Int(DBFind("applications").Where({name:"Basic application", deleted:0}).One("id"))
+        if $appId == 0{
+            warning "Application not found"
+        }
+    }
+
+    action{
+        addRole("Admin", true)
+        addRole("Developer", true)
+
+        if $ecosystem_id == 1{
+            addRole("Apla Consensus asbl", false)
+            addRole("Candidate for validators", false)
+            addRole("Validator", false)
+            addRole("Investor with voting rights", false)
+            addRole("Delegate", false)
+        }
+    }
+}

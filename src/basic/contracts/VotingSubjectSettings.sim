@@ -1,0 +1,62 @@
+contract VotingSubjectSettings {
+    data {
+        votingID int
+
+        roleID int
+        vacancies int
+
+        contract_accept string "optional"
+        contract_accept_params string "optional"
+        contract_reject string "optional"
+        contract_reject_params string "optional"
+    }
+    func safeJsonToMap(m string) map {
+        var res map
+        if Size(m) > 0 { res = JSONToMap(m) }
+        return res
+    }
+
+    conditions {
+        if $vacancies < 1 {
+            warning "Number of vacancies can not be less than 1"
+        }
+
+        $STARTED = 3
+        $FINISHED = 4
+        $voting = DBFind("votings").Where({id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("optional,voting->type,flags->full_data").Row()
+
+        if !$voting {
+            warning "Voting already started. Can not edit document"
+        }
+
+        if $voting["flags.full_data"] == 1 && $voting["voting.type"] == 2 {
+            warning "This vote is a system. Change settings not allowed"
+        }
+        var role map
+        role = DBFind("roles").Where({id:$roleID, deleted:0}).Row()
+        if !role {
+            warning "Specified role not found"
+        }
+
+        // roles_types: 1. assigned_role, 2. elective_role, 3. system_role, 4. company_role
+        if !(role["role_type"] == 2 || role["role_type"] == 3) {
+            warning "The chosen role is not elective or has been removed"
+        }
+    }
+
+    action {
+        var optional map
+        optional = safeJsonToMap($voting["optional"])
+
+        optional["contract_accept"] = $contract_accept
+        optional["contract_accept_params"] = safeJsonToMap($contract_accept_params)
+        optional["contract_reject"] = $contract_reject
+        optional["contract_reject_params"] = safeJsonToMap($contract_reject_params)
+        optional["role_id"] = $roleID
+        optional["role_vacancies"] = $vacancies
+
+        DBUpdate("votings", $votingID, {optional:optional})
+
+        VotingSubjectCheck("votingID", $votingID)
+    }
+}

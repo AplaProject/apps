@@ -1,0 +1,138 @@
+contract VotingCreate {
+    data {
+        voting_name string
+        voting_type int
+        type_participants int
+        type_decision int
+
+        volume int
+        quorum int
+
+        description string "optional"
+        interval string "optional"
+        start_date string "optional"
+        start_time string "optional"
+        end_date string "optional"
+        end_time string "optional"
+    }
+    func trimZeroTime(s string) string{
+        if Contains(s, "T00:00:00Z"){
+            s = s Replace(s, "T00:00:00Z", "")
+        }
+        return s
+    }
+    func dateAddTime(d, t string) string {
+        var dt string
+        if Size(t) == 5{
+            dt = Sprintf("%v %v:00", trimZeroTime(d), t)
+        }
+        return dt
+    }
+    func isCalledFromPage() bool{
+        return $stack[0] == Sprintf("@%v%v", $ecosystem_id, $this_contract)
+    }
+    func fixDatetimes(){
+        $date_started = dateAddTime($start_date, $start_time)
+        $date_ended = dateAddTime($end_date, $end_time)
+
+        if UnixDateTime($date_started) == 0 || UnixDateTime($date_ended) == 0 { // invalid datetimes
+            if isCalledFromPage(){
+                var errs array
+                if Size($start_date) < 10 {
+                    errs = Append(errs, "starting date")
+                }
+                if Size($start_time) < 5 {
+                    errs = Append(errs, "starting time")
+                }
+                if Size($end_date) < 10 {
+                    errs = Append(errs, "ending date")
+                }
+                if Size($end_time) < 5 {
+                    errs = Append(errs, "ending time")
+                }
+                error Sprintf("Error create voting: %v unspecified", Join(errs, ", "))
+            }else{
+                $date_started = $time
+                $interval = Int($interval)
+                if $interval == 0 {
+                    $interval = 3
+                }
+                $date_ended = $date_started + 3600 * 24 * $interval
+                $date_started = DateTime($date_started)
+                $date_ended = DateTime($date_ended)
+            }
+        }
+        if UnixDateTime($date_started) <= $block_time{
+            error "Invalid date starting"
+        }
+        if UnixDateTime($date_started) >= UnixDateTime($date_ended){
+            error "Invalid date ending"
+        }
+    }
+
+    conditions {
+        if $voting_type == 2 {
+            var specRules map
+            specRules["VotingTokensRefundCreate"] = 1
+            specRules["VotingTemplateRun"] = 1
+            specRules["VotingNodeAdd"] = 1
+            if specRules[$original_contract] != 1 {
+                warning Sprintf("The voting type 'system' is not allowed to launch from %v", $original_contract)
+            }
+        }
+        if ($volume < 50) || ($volume > 100) {
+            warning Sprintf("Volume [%v] should be in the range from 50 to 100", $volume)
+        }
+
+        if ($quorum < 5) || ($quorum > 100) {
+            warning Sprintf("Quorum [%v] should be in the range from 5 to 100", $quorum)
+        }
+
+        $key = DBFind("keys").WhereId($key_id).Row()
+        if !$key {
+            warning "You are not a member of the ecosystem"
+        }
+
+        fixDatetimes()
+    }
+
+    action {
+        var voting progress flags creator map votingId int
+        voting["name"] = $voting_name
+        voting["type"] = $voting_type
+        voting["description"] = $description
+        voting["type_participants"] = $type_participants
+        voting["type_decision"] = $type_decision
+        voting["volume"] = $volume
+        voting["quorum"] = $quorum
+
+        progress["number_participants"] = "0"
+        progress["number_voters"] = "0"
+        progress["percent_success"] = "0"
+        progress["percent_voters"] = "0"
+
+        flags["success"] = "0"
+        flags["decision"] = "0"
+        flags["full_data"] = "0"
+        flags["notifics"] = "0"
+
+        creator["member_id"] = $key["id"]
+        creator["member_name"] = IdToAddress($key_id)
+        var m map
+        m["voting"] = voting
+        m["progress"] = progress
+        m["flags"] = flags
+        m["creator"] = creator
+        m["status"] = 1
+        m["date_started"] = $date_started
+        m["date_ended"] = $date_ended
+
+        votingId = DBInsert("votings", m)
+
+        // if all members are voting participants
+        if $type_participants == 1 {
+            VotingInvite("votingID,var_id", votingId, 0)
+        }
+        $result = votingId
+    }
+}

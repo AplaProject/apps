@@ -1,0 +1,50 @@
+contract NotificationsProcess {
+    data {
+        notific_id int
+    }
+    func getMemberInfo(kid int) map {
+        var res member map
+        member = DBFind("members").WhereId(kid).Row()
+        if member {
+            res["member_id"] = member["id"]
+            res["member_name"] = member["member_name"]
+            res["image_id"] = member["image_id"]
+        }else{
+            member = DBFind("keys").WhereId(kid).Row()
+            if member {
+                res["member_id"] = member["id"]
+                res["member_name"] = IdToAddress(Int(member["id"]))
+                res["image_id"] = 0
+            }
+        }
+        return res
+    }
+    conditions {
+        $notify = DBFind("notifications").WhereId($notific_id).Columns("recipient->role_id,sender->type,date_start_processing").Row()
+        if !$notify {
+            warning "Notification not found"
+        }
+
+        if $notify["sender.type"] == 2{
+            if $notify["date_start_processing"] != "" {
+                warning "Sorry, processing of this notification has already begun"
+            }
+            var rid string
+            rid = $notify["recipient.role_id"]
+            if !DBFind("roles_participants").Where({"role->id":rid, "member->member_id":$key_id, deleted:0}).One("id") {
+                warning "Sorry, you are not part of the role for which this notification is intended"
+            }
+        }else{
+            if $notify["sender.type"] != 1 {
+                warning "Notification type not found"
+            }
+        }
+    }
+
+    action {
+        var model map
+        model["processing_info"] = getMemberInfo($key_id)
+        model["date_start_processing"] = BlockTime()
+        DBUpdate("notifications", $notific_id, model)
+    }
+}

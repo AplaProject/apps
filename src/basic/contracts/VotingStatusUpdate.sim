@@ -1,0 +1,56 @@
+contract VotingStatusUpdate {
+    data {}
+
+    func notificationSend(voting map){
+        var title string id i lenVoters int voters array
+        title = voting["voting.name"]
+        id = Int(voting["id"])
+        voters = DBFind("votings_participants").Columns("member->member_id").Where({voting_id:id, decision:0})
+        lenVoters = Len(voters)
+        while i < lenVoters {
+            var voter memberId params map
+            voter = voters[i]
+            memberId = Int(voter["member.member_id"])
+            params["voting_id"] = id
+            NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", memberId, 1, "fa-check", "Voting", title, "voting_view", params)
+            i = i + 1
+        }
+    }
+    func changeVotings(from, to map){
+        var votings array i lenVotings int v map
+        from["deleted"] = 0
+        votings = DBFind("votings").Columns("id,date_started,date_ended,voting->name").Where(from)
+
+        lenVotings = Len(votings)
+        while i<lenVotings{
+            v = votings[i]
+            if to["status"] == $STARTED{
+                notificationSend(v)
+                to["flags->notifics"] = 1
+            }
+            DBUpdate("votings", Int(v["id"]), to)
+            i=i+1
+        }
+    }
+
+    conditions {
+        MainCondition()
+        $WAITING = 1
+        $VALID = 2
+        $STARTED = 3
+        $FINISHED = 4
+        $INVALID = 5
+    }
+    action {
+        var bt string
+        bt = BlockTime()
+        changeVotings({status:$WAITING, "flags->full_data":0}, {status:$INVALID})
+        changeVotings({status:$INVALID, "flags->full_data":1, "progress->number_participants":{"$gt":0}}, {status:$VALID})
+        changeVotings({status:$WAITING, "flags->full_data":1, "progress->number_participants":{"$gt":0}}, {status:$VALID})
+        changeVotings({status:$VALID, date_started:{"$lte":bt}}, {status:$STARTED})
+
+        changeVotings({status:$STARTED, date_ended:{"$lte":bt}}, {status:$FINISHED})
+        
+        // changeVotings({status:$STARTED, date_ended:{"$lte":bt}, "flags->decision":1}, {status:$FINISHED})
+    }
+}

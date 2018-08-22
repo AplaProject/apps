@@ -1,0 +1,39 @@
+If(#notific_id#>0){
+    DBFind(notifications).WhereId(#notific_id#).Columns("id,page_params->tokenrefund_id,closed").Vars(note)
+    DBFind(tokenrefund).WhereId(#note_page_params_tokenrefund_id#).Vars(tr)
+
+    Data(inputs,"Name,Type,Res,Value"){
+        Amount,number,amount,#tr_amount#
+        VictimAccount,text,tokenrefund_victim,#tr_victim_key_id#
+        SuspectAccount,text,tokenrefund_attacker,#tr_attacker_key_id#
+        Note,textarea,description,#tr_note#
+    }
+    Div(content-wrapper){
+        Div(row){
+            Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
+                Div(panel panel-primary){
+                    Div(panel-heading, Body: $tokenrefund_start$)
+                    Div(panel-body){
+                        ForList(inputs){
+                            Div(row form-group){
+                                Div(col-sm-4){LangRes(#Res#)}
+                                Div(col-sm-8){
+                                    If(#Type#==textarea){
+                                        #Value#
+                                    }.Else{
+                                        Input(Name: #Name#, Type: #Type#, Value: #Value#, Class: disabled, Disabled: true)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Div(panel-footer text-right){
+                        If(#note_closed# == 0){
+                            Button(Body: $approve$, Contract: TokensRefundAccept, Params: "Id=#tr_id#", Page: tokenrefund_list, Class: btn btn-primary)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

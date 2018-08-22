@@ -1,0 +1,44 @@
+Div(content-wrapper){
+	DBFind(notifications,src_notific).WhereId(#notific_id#).Columns("page_params->rid,sender->image_id,sender->member_id,sender->member_name,closed").Vars(notific)
+   
+    Div(row){
+        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
+            Form(panel panel-default){
+                Div(panel-heading text-center){
+                    Span(Class: h3, Body: Request to role)
+                }
+                Div(panel-body){
+                    Div(form-group){
+                        Div(row){
+                            Div(col-md-12 mt-sm text-center){
+                                If(#notific_sender_image_id#>0){
+                                    Image(Src: Binary().ById(#notific_sender_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                }.Else{
+                                    Span(Class: fa icon-user fa-5x text-primary)
+                                }
+                                Div(m0 h4 text-bold){#notific_sender_member_name#}
+                            }
+                        }
+                    }
+                    Div(list-group-item text-center){
+                        Div(text-muted m0 h5, Body: LangRes(address))
+                        Span(Class: h5 text-bold, Body: Address(#notific_sender_member_id#))
+                    }
+                    Div(list-group-item text-center){
+                        DBFind(roles).WhereId(#notific_page_params_rid#).Columns("role_name").Vars(r)
+                        Div(text-muted m0 h5, Body: LangRes(role))
+                        Span(Class: h5 text-bold, Body: #notific_page_params_rid# - #r_role_name#)
+                    }
+					Div(list-group-item text-center){
+                        Input(Name: member_id, Class: hidden, Value: #notific_sender_member_id#)
+                        Input(Name: rid, Class: hidden, Value: #notific_page_params_rid#)
+                        If(#notific_closed# == 0){
+                            Button(Class: btn btn-danger, Body: Reject, Contract: RolesRequestDecision, Page: roles_list, Params: "notific_id=#notific_id#,decision=0")
+                            Button(Class: btn btn-success, Body: Accept, Contract: RolesRequestDecision, Page: roles_list, Params: "notific_id=#notific_id#,decision=1")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

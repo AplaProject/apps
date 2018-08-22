@@ -1,0 +1,47 @@
+DBFind(buffer_data, src_buffer).Columns("value->app_id").Where({key:export,member_id:#key_id#}).Vars(buffer)
+If(#buffer_value_app_id# > 0){
+	DBFind(applications, src_app).Where({id:#buffer_value_app_id#}).Vars("application")
+
+	Div(content-wrapper){
+		SetTitle("Application parameters": #application_name#)
+		AddToolButton(Title: "Create", Page: app_params_edit, Icon: icon-plus, PageParams: "application_id=#application_id#,create=create")
+
+		SetVar(pager_table, app_params).(pager_where, "{app_id:#buffer_value_app_id#}").(pager_page, app_params).(pager_limit, 50)
+		Include(pager_header)
+
+		SetVar(admin_page, app_params)
+		Include(admin_link)
+
+		DBFind(app_params, src_appparameters).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#})
+
+		Form(panel panel-primary){
+			Div(panel-body){
+				Div(row){
+					ForList(src_appparameters){
+						Div(col-md-#width# col-sm-12){
+							Div(list-group-item){
+								Div(row){
+									Div(col-md-4){
+										Span(Class: h5 text-bold, Body: "#id#").Style(margin-right: 10px;)
+										Span(Class: h5, Body: "#name#")
+									}
+									Div(col-md-8 text-right){
+										Span(LinkPage(Body: Em(Class: fa fa-edit), Class: text-primary h4, Page: app_params_edit, PageParams: "id=#id#"))
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			Div(panel-footer clearfix){
+				Include(pager)
+			}
+		}
+	}
+}.Else{
+	SetTitle("Application parameters")
+	Div(breadcrumb){
+		Span(Class: text-muted, Body: "You did not select the application. Viewing resources is not available")
+	}
+}

@@ -1,0 +1,81 @@
+contract VotingTemplateCreate{
+    data{
+        Title string
+        TypeParticipants int
+        TypeVoting int
+        TypeDecision int
+        Volume int
+        Quorum int
+        Subject string
+        Voters string "optional" // role of participant
+        Candidates string "optional" // role of candidate
+        InitContract string "optional" // Execute before the vote
+        Vacancies int "optional"
+        ContractAccept string "optional"
+        ParamsAccept string "optional"
+        ContractReject string "optional"
+        ParamsReject string "optional"
+    }
+
+    conditions{
+        if $TypeParticipants == 3 {
+            if Size($Voters) == 0 || $Voters == "NULL" || $Voters == 0 {
+                warning "Voters role not found"
+            }
+        }
+        if Size($Title) <3 {
+            warning "Please enter title"
+        }
+        if $Volume <0 || $Volume > 100 {
+            warning "Wrong volume range"
+        }
+        if $Quorum <0 || $Quorum > 100 {
+            warning "Wrong quorum range"
+        }
+
+        if $TypeDecision == 1 || $TypeDecision == 2 {
+            if $Vacancies < 1 {
+                warning "Wrong number vacancies"
+            }
+            if $Candidates == "NULL" || $Candidates == 0 || Size($Candidates) == 0 {
+                warning "Wrong candidate role"
+            }
+        }
+
+        if Size($InitContract) > 0{
+            if GetContractByName($InitContract) == 0 {
+                warning "Init Contract not found"
+            }
+        }
+        if Size($ContractAccept) > 0{
+            if GetContractByName($ContractAccept) == 0 {
+                warning "Contract for accepted decision not found"
+            }
+        }
+        if Size($ContractReject) > 0{
+            if GetContractByName($ContractReject) == 0{
+                warning "Contract for rejected decision not found"
+            }
+        }
+    }
+
+    action{
+        var m map
+        m["title"] = $Title
+        m["subject"] = $Subject
+        m["voters"] = $Voters
+        m["candidates"] = $Candidates
+        m["init_contract"] = $InitContract
+        m["volume"] = $Volume
+        m["quorum"] = $Quorum
+        m["type_voting"] = $TypeVoting
+        m["type_participants"] = $TypeParticipants
+        m["type_decision"] = $TypeDecision
+        m["vacancies"] = $Vacancies
+        m["contract_accept"] = $ContractAccept
+        m["accept_params"] = $ParamsAccept
+        m["contract_reject"] = $ContractReject
+        m["reject_params"] = $ParamsReject
+        $result = DBInsert("voting_templates", m)
+    }
+}

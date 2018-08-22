@@ -1,0 +1,69 @@
+Div(content-wrapper){
+	SetTitle(Ecosystems)
+    Div(breadcrumb){
+        Div(row){
+            Div(col-md-10){
+                Div(Class: text-muted, Body: "Ecosystems are relatively closed programming environments, which include applications and members.")
+                Div(Class: text-muted, Body: "Create your own ecosystem for your blockchain apps.")
+            }
+            Div(col-md-2){
+                Button(Body: $create$, Class: pull-right, Page: ecosystem_new).Popup(Header: $create$, Width: "30")
+            }
+        }
+    }
+
+    If(GetVar(Search)){
+        SetVar(Where,{name:{"$like":#Search#}, id:{"$neq":1}})
+    }.Else{
+        SetVar(Where,{id:{"$neq":1}})
+        SetVar(Search,)
+    }
+
+    Form(panel panel-primary){
+        Div(panel-body){
+            Div(row){
+                Div(col-md-12){
+                    Div(input-group){
+                        Div(input-group-addon){
+                            LangRes(name)
+                        }
+                        Input(Name: Search, Value: #Search#)
+                        Div(input-group-btn){
+                            Button(Class: btn btn-default fa fa-search, Page: membership_ecosystems_list, PageParams: "Search=Val(Search)")
+                        }
+                    }
+                }
+            }
+
+            DBFind(ecosystems, src_ecosystems).Ecosystem(1).Where("#Where#").Custom(_id){
+                Span(#id#)
+            }.Custom(_name){
+                Span(#name#)
+            }.Custom(_actions){
+                SetVar(k_id,)
+                DBFind(notifications).Where({"sender->member_id":#key_id#, "page_params->ecosystem_id":#id#, closed:0}).Count(notific_count)
+                DBFind(keys).WhereId(#key_id#).Ecosystem(#id#).Limit(1).Vars("k")
+
+                If(And(#notific_count#==0,#k_id#=="")){
+                    Button(Class: btn btn-link pull-right, Body: Send Request, Contract: "MembershipRequest", Page: membership_ecosystems_list, Params: "ecosystem_num=#id#")
+                }
+            }
+			
+            Div(row){
+                Div(col-md-12){
+                    Table(Source: src_ecosystems, Columns: "ID=_id,$name$=_name,=_actions")
+                }
+            }
+			
+            If(GetVar(Search)){
+                Div(row){
+                    Div(col-md-12 mt-lg){
+                        Div(text-center){
+                            Button(Body: $view_all$, Class: btn btn-primary, Page: membership_ecosystems_list)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
