@@ -1,0 +1,109 @@
+DBFind(applications).Columns(["name", "id"]).Where({"name": "Basic application"}).Vars(application)
+
+DBFind(roles).Columns(["role_name", "id"]).Where({deleted:0}).Order(id).Vars(admin_role)
+SetVar(admin_role_name, #admin_role_role_name#)
+
+If(GetVar(rid)){
+    DBFind(roles).WhereId(#rid#).Columns("roles_access->rids,id,role_type,role_name").Vars(role)
+    SetVar(title, $edit_role$)
+    SetVar(role_type, AppParam(App:#application_id#, Name: roles_types, Index: #role_role_type#))
+
+    If(GetVar(role_roles_access_rids)!=""){
+        DBFind(roles,src_roles_access).Where({id:{"$in":[#role_roles_access_rids#]}}).Columns("id,role_name").Order(role_name)
+        SetVar(rids_access, "[#role_roles_access_rids#, #role_id#]")
+    }.Else{
+        SetVar(rids_access, [#role_id#])
+    }
+}.Else{
+    DBFind(buffer_data).Columns(value).Where({"key": "roles_access", "member_id": #key_id#}).Vars(buffer)
+    If(And(GetVar(buffer_value)!="",#buffer_value#!="[]")){
+        DBFind(roles, src_roles_access).Columns("id,role_name").Where({"id": {"$in": #buffer_value#}}).Order(role_name)
+        SetVar(rids_access, "#buffer_value#")
+    }.Else{
+        SetVar(rids_access, [#admin_role_id#])
+    }
+    AppParam(App: #application_id#, Name: roles_types, Source: app_roles_types)
+    SetVar(rid, 0)
+    SetVar(title, $new_role$)
+}
+DBFind(roles, src_roles).Columns(["id", "role_name"]).Where({"deleted":0, "id": {"$nin": #rids_access#}}).Order(id)
+If(GetVar(back_page)){}.Else{
+    SetVar(back_page,"roles_list")
+}
+If(GetVar(vID)){}.Else{
+    SetVar(vID,)
+}
+
+Form(){
+    Div(row form-group){
+        Div(col-md-3 mt-sm text-right){
+            Label(For: name){
+                LangRes(name)
+                If(#rid# < 1){
+                    Span(*,text-danger)
+                }
+            }
+        }
+        Div(col-md-9 text-left){
+            If(#rid# > 0){
+                Div(text-muted mt-sm){
+                    #role_role_name#
+                }
+            }.Else{
+                Input(Name: role_name).Validate(minLength:3, maxLength:30)
+                InputErr(Name: role_name, minLength: $validate_role_name$, maxLength: $validate_role_name$)
+            }
+        }
+    }
+    Div(row form-group){
+        Div(col-md-3 mt-sm text-right){
+            Label(For: role_type){
+                LangRes(type)
+                If(#rid# < 1){
+                    Span(*,text-danger)
+                }
+            }
+        }
+        Div(col-md-9 text-left){
+            If(#rid# > 0){
+                Div(text-muted mt-sm){
+                    AppParam(App: #application_id#, Name: roles_types, Index: #role_role_type#)
+                }
+            }.Else{
+                AppParam(App: #application_id#, Name: roles_types, Source: app_roles_types)
+                Select(Name: role_type, Source: app_roles_types, NameColumn: name, ValueColumn: id)
+            }
+        }
+    }
+    Div(row form-group){
+        Div(col-md-3 mt-sm text-right){
+            Label(For: role_managers){
+                LangRes(roles_access)
+                If(#rid# < 1){
+                    Span(*,text-danger)
+                }
+            }
+        }
+        Div(col-md-9 text-left){
+            Div(input-group mb-sm){
+                Select(Name: roles_managers, Source: src_roles, NameColumn: role_name, ValueColumn: id)
+                Div(input-group-btn){
+                    Button(Class: btn btn-primary fa fa-plus, Page: roles_create, PageParams:"rid=#rid#", Contract: RolesAccessManager, Params:"Rid=#rid#,ManagerRid=Val(roles_managers),Action=add").Popup(50, #title#)
+                }
+            }
+            ForList(src_roles_access){
+                SetVar(btn_class,"btn-default")
+                If(#id#==#role_id#){
+                    SetVar(btn_class,"btn-info")
+                }
+                Button(Class: btn #btn_class# mr-sm mb-sm, Page: roles_create, PageParams:"rid=#rid#", Contract: RolesAccessManager, Params:"Rid=#rid#,ManagerRid=#id#,Action=remove", Body: Span(Class: fa fa-remove) #role_name#).Popup(50, #title#)
+            }
+        }
+    }
+    Div(pull-right){
+        Button(Body: LangRes(back), Class: btn btn-default, Page: #back_page#, PageParams: "vID=#vID#")
+        If(#rid#>0){}.Else{
+            Button(Body: LangRes(create), Class: btn btn-primary, Page: #back_page#, PageParams: "vID=#vID#", Contract: RolesCreate)
+        }
+    }
+}

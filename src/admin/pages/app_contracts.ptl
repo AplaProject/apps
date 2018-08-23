@@ -1,0 +1,58 @@
+DBFind(buffer_data, src_buffer).Columns("value->app_id").Where({key:export, member_id:#key_id#}).Vars(buffer)
+If(#buffer_value_app_id# > 0){
+	DBFind(applications, src_app).Where({id:#buffer_value_app_id#}).Vars("application")
+
+	Div(content-wrapper){
+		SetTitle("Contracts": #application_name#)
+		AddToolButton(Title: "Create", Page: editor, Icon: icon-plus, PageParams: "create=contract,appId=#buffer_value_app_id#")
+
+		SetVar(pager_table, contracts).(pager_where, "{app_id:#buffer_value_app_id#}").(pager_page, app_contracts).(pager_limit, 50)
+		Include(pager_header)
+
+		SetVar(admin_page, app_contracts)
+		Include(admin_link)
+
+		DBFind(contracts, src_contracts).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#})
+
+		Form(panel panel-primary){
+			Div(panel-body){
+				Div(row){
+					ForList(src_contracts){
+						Div(col-md-#width# col-sm-12){
+							Div(list-group-item){
+								Div(row){
+									Div(col-md-4){
+										Span(Class: h5 text-bold, Body: "#id#").Style(margin-right: 10px;)
+										Span(Class: h5, Body: "#name#")
+									}
+									Div(col-md-8){
+										Div(pull-right){
+                                            Span(LinkPage(Body: Em(Class: fa fa-history), Class: text-primary h4, Page: history, PageParams: "id=#id#,type=contract")).Style(margin-right: 15px;)
+											Span(LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: properties_edit, PageParams: "edit_property_id=#id#,type=contract")).Style(margin-right: 15px;)
+											Span(LinkPage(Body: Em(Class: fa fa-edit), Class: text-primary h4, Page: editor, PageParams: "open=contract,name=#name#"))
+										}
+										Div(pull-right){
+											If(#active#==1){
+												Span(Class: h5, Body: Em(Class: fa fa-check)).Style(margin-right: 50px;)
+											}.Else{
+												Span(Class: h5 text-muted, Body: Em(Class: fa fa-minus)).Style(margin-right: 50px;)
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			Div(panel-footer clearfix){
+				Include(pager)
+			}
+		}
+	}
+}.Else{
+	SetTitle("Contracts")
+	Div(breadcrumb){
+		Span(Class: text-muted, Body: "You did not select the application. Viewing resources is not available")
+	}
+}

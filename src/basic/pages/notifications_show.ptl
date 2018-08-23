@@ -1,0 +1,46 @@
+DBFind(applications).Columns("name,id").Where({name:"Basic application"}).Vars(application)
+SetTitle($notifications_view$)
+
+SetVar(type,0).(header,).(body,)
+Div(content-wrapper){
+
+    If(#notific_id#>0){
+        DBFind(notifications).WhereId(#notific_id#).Columns("id,sender->type,notification->header,notification->body,date_start_processing,closed").Vars(note)
+        SetVar(type,#note_sender_type#)
+        SetVar(header,#note_notification_header#)
+        SetVar(body,#note_notification_body#)
+
+
+        Div(row){
+            Div(col-md-6 col-md-offset-3){
+                Form(panel panel-primary){
+                    Div(panel-heading text-center){
+                        #header#
+                    }
+                    Div(panel-body){
+                        #body#
+                    }
+                    Div(panel-footer text-right){
+                        If(#type# == 1){
+                            If(#note_closed# == 0){
+                                Button(Body: LangRes(understand), Class: btn btn-primary, Contract: NotificationsClose, Params: "notific_id=#notific_id#", Page: default_page)
+                            }
+                        }.ElseIf(#type# == 2){
+                            If(#note_closed#==0){
+                                If(#note_date_start_processing#==""){
+                                    Button(Body: LangRes(understand), Class: btn btn-primary, Contract: NotificationsProcess, Params: "notific_id=#notific_id#", Page: notifications_show)
+                                }.Else{
+                                    Button(Body: LangRes(close), Class: btn btn-primary, Contract: NotificationsClose, Params: "notific_id=#notific_id#", Page: default_page)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }.Else{
+        Div(md-12 alert alert-danger text-center){
+            LangRes(attention)
+        }
+    }
+}

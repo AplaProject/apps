@@ -1,0 +1,78 @@
+contract RolesAssign {
+    data {
+        rid int
+        member_id int
+    }
+    func getMemberInfo(kid int) map {
+        var res member map
+        member = DBFind("members").WhereId(kid).Row()
+        if member {
+            res["member_id"] = member["id"]
+            res["member_name"] = member["member_name"]
+            res["image_id"] = member["image_id"]
+        }else{
+            member = DBFind("keys").WhereId(kid).Row()
+            if member {
+                res["member_id"] = member["id"]
+                res["member_name"] = IdToAddress(Int(member["id"]))
+                res["image_id"] = 0
+            }
+        }
+        return res
+    }
+    conditions {
+        $role = DBFind("roles").WhereId($rid).Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Row()
+        if (Int($role["role_type"]) == 2){
+            warning "Elective role can be assigned only during voting"
+        }
+        if !$role {
+            warning "Role not found"
+        }
+
+        if !DBFind("keys").WhereId($member_id).Row() {
+            warning "Key not found"
+        }
+
+        if $role["deleted"] == 1 {
+            warning "This role has been deleted. The appointment of members is impossible"
+        }
+
+        var specialRules map prev_contract string stack array
+        stack = JSONDecode(JSONEncode($stack))
+        prev_contract = stack[0]
+        if Len(stack)>2{
+            prev_contract = stack[Len(stack)-2]
+        }
+        specialRules["@1VotingValidatorAccept"] = "Validator"
+        specialRules["@1DelegateRefresh"] = "Delegate"
+        specialRules["@1CandidateValidatorRequest"] = "Candidate for validators"
+        specialRules["@1VotingTemplateRun"] = "Investor with voting rights"
+        specialRules["@1VotingTokensRefundCreate"] = "Investor with voting rights"
+        if specialRules[prev_contract] != $role["role_name"] {
+            RolesAccessCheck("rid", $rid)
+        }
+
+        $assigned = DBFind("roles_participants").Where({"role->id":$rid, "member->member_id":$member_id, deleted:0}).One("id")
+    }
+
+    action {
+        if $assigned {
+            // do not re-assign and do not warning because this contract may be called for other
+            return
+        }
+        var role member appointer map
+        role["id"] = $role["id"]
+        role["type"] = $role["role_type"]
+        role["name"] = $role["role_name"]
+        role["image_id"] = $role["image_id"]
+
+        member = getMemberInfo($member_id)
+        appointer = getMemberInfo($key_id)
+        var m map
+        m["role"] = role
+        m["member"] = member
+        m["appointed"] = appointer
+        m["date_created"] = BlockTime()
+        DBInsert("roles_participants", m)
+    }
+}

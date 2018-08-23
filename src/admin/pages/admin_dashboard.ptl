@@ -1,0 +1,254 @@
+SetVar(this_page,admin_dashboard).(deleters_count,0)
+DBFind(contracts).Where({name:ItemChangeAppId}).Count(changer_count).Ecosystem(1)
+DBFind(applications,src_apps).Where({deleted:0}).Order(id).Count(apps_count)
+If(And(GetVar(Restore),GetVar(Table),GetVar(Id))){
+    Form(){
+        Select(Name:AppId, NameColumn: name, ValueColumn: id, Source: src_apps, Class:mb)
+        Div(){
+            Button(Class: btn btn-default, Page: #this_page#, PageParams: "appid=0", Body: "Cancel")
+            If(#ecosystem_id#==1){
+                Button(Class: btn btn-primary pull-right, Page: #this_page#, PageParams: "appid=Val(AppId)", Contract: ItemChangeAppId, Params: "Table=#Table#,Id=#Id#,AppId=Val(AppId)", Body: "Confirm")
+            }.Else{
+                Button(Class: btn btn-primary pull-right, Page: #this_page#, PageParams: "appid=Val(AppId)", Contract: @1ItemChangeAppId, Params: "Table=#Table#,Id=#Id#,AppId=Val(AppId)", Body: "Confirm")
+            }
+        }
+    }
+}.ElseIf(GetVar(block)){
+    Div(breadcrumb){
+        LinkPage(Body:Dashboard,Page:#this_page#)
+        Span(/,mh)
+        Span(Class: text-muted, Body: Block: #block#)
+    }
+    Include(Name:#block#)
+}.Else{
+    DBFind(buffer_data).Columns("value->app_id").Where({key:export,member_id:#key_id#}).Vars(buffer)
+    If(#Single#==binaries){
+        Data(tables, "Table,Page,Name"){
+            binaries,app_upload_binary,"Binaries data"
+        }
+    }.ElseIf(#Single#==languages){
+        Data(tables, "Table,Cols,Page,Name"){
+            languages,"id,app_id,name,res",langres_add,"Languages resources"
+        }
+    }.Else{
+        Data(tables, "Table,Cols,Page,Name"){
+            contracts,"id,app_id,name,active",editor,"Contracts"
+            pages,"id,app_id,name",editor,"Pages"
+            blocks,"id,app_id,name",editor,"Blocks"
+            tables,"id,app_id,name",table_create,"Tables"
+            app_params,"id,app_id,name,value",app_params_edit,"Application parameters"
+        }
+    }
+    SetVar(active_btn,"btn btn-info").(create_icon,fa fa-plus-square).(cols,3)
+    If(GetVar(appid)!=""){
+        SetVar(where,"{app_id:#appid#}")
+    }.Else{
+        If(#buffer_value_app_id#>0){
+            SetVar(appid,#buffer_value_app_id#).(where,"{app_id:#appid#}")
+        }.Else{
+            SetVar(where,"{id:{ $gt:0}}").(appid,1)
+        }
+    }
+    If(#appid#==0){
+        SetVar(application_name,trash)
+    }.ElseIf(#appid#>0){
+        DBFind(applications).WhereId(#appid#).Vars(application)
+    }
+    SetTitle(Dashboard: #application_name#)
+    Div(content-wrapper){
+        Div(panel panel-default){
+            If(GetVar(Single)){
+                Div(text-right){
+                    Button(Page: #this_page#, PageParams: "appid=#appid#", Class: btn btn-default btn-close fa fa-close)
+                }
+            }.Else{
+                Div(row){
+                    Div(col-sm-12 btn-group){
+                        ForList(src_apps){
+                            If(#id#==1){
+                                If(#appid#==0){
+                                    LinkPage(Class: #active_btn# disabled, Body: Span(Class:fa fa-trash))
+                                }.Else{
+                                    LinkPage(Page: #this_page#, Class: btn btn-default, PageParams: "appid=0", Body: Span(Class:fa fa-trash))
+                                }
+                            }
+                            If(#appid#==#id#){
+                                LinkPage(Class: #active_btn# disabled, Body:"#id#:#name#")
+                            }.Else{
+                                LinkPage(Page: #this_page#, Class: btn btn-default, PageParams: "appid=#id#", Body:"#id#:#name#")
+                            }
+                        }
+                    }
+                }
+            }
+
+            Div(panel-body){
+                SetVar(limit,250)
+                ForList(tables){
+                    If(#Table#==binaries){
+                        DBFind(#Table#, src_table).Limit(#limit#).Order({ id: -1 }).Where(#where#).Count(items_count).Custom(_name){
+                            LinkPage(Page: #Page#, PageParams: "id=#id#,application_id=#appid#"){#name#}
+                        }.Custom(_img){
+                            Image(Src: Binary().ById(#id#), Class: preview)
+                        }
+                    }.Else{
+                        DBFind(#Table#, src_table).Limit(#limit#).Columns(#Cols#).Order("name").Where(#where#).Count(items_count)
+                    }
+                    Div(list-group-item clearfix){
+                        Div(h3 pull-left mt-lg){
+                            #Name#
+                        }
+                        If(#appid#>0){
+                            Div(pull-right mt-lg){
+                                If(#Table#==contracts){
+                                    LinkPage(Page: #Page#, PageParams: "create=contract,appId=#appid#"){
+                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                    }
+                                }.ElseIf(#Table#==pages){
+                                    LinkPage(Page: #Page#, PageParams: "create=page,appId=#appid#"){
+                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                    }
+                                }.ElseIf(#Table#==blocks){
+                                    LinkPage(Page: #Page#, PageParams: "create=block,appId=#appid#"){
+                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                    }
+                                }.ElseIf(#Table#==tables){
+                                    LinkPage(Page: #Page#, PageParams: "application_id=#appid#"){
+                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                    }
+                                }.ElseIf(#Table#==app_params){
+                                    LinkPage(Page: #Page#, PageParams: "application_id=#appid#,create=create"){
+                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                    }
+                                }.ElseIf(#Table#==binaries){
+                                    LinkPage(Page: #Page#, PageParams: "application_id=#appid#"){
+                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                    }
+                                }.ElseIf(#Table#==languages){
+                                    LinkPage(Page: #Page#, PageParams: "application_id=#appid#"){
+                                        Em(Class: #create_icon#) CREATE Em(Class: #create_icon#)
+                                    }
+                                }
+                            }
+                        }
+                        Div(row pd){
+                            Div(col-sm-12){
+                                If(#Table#==binaries){
+                                    If(#items_count#>0){
+                                        Div(items){
+                                            Table(src_table,"=id,Edit link=_name,Download link=data,=_img")
+                                        }
+                                    }.Else{
+                                        Div(text-muted h4 text-center){
+                                            #Name# not found
+                                        }
+                                    }
+                                }.Else{
+                                    SetVar(value,).(res,)
+                                    If(#items_count#>0){
+                                        Div(cols){
+                                            ForList(src_table){
+                                                Div(clearfix item){
+                                                    Div(pull-right){
+                                                        If(#Table#==contracts){
+                                                            If(#active#==1){
+                                                                Span(actived,text-success mr-lg)
+                                                            }
+                                                            LinkPage(Class: text-muted fa fa-cogs, Page: properties_edit, PageParams: "edit_property_id=#id#,type=contract")
+                                                        }
+                                                        If(#Table#==pages){
+                                                            LinkPage(Class: text-muted fa fa-eye, Page: #name#)
+                                                            LinkPage(Class: text-muted fa fa-cogs, Page: properties_edit, PageParams: "edit_property_id=#id#,type=page")
+                                                        }
+                                                        If(#Table#==blocks){
+                                                            LinkPage(Class: text-muted fa fa-eye, Page: #this_page#, PageParams:"block=#name#")
+                                                            LinkPage(Class: text-muted fa fa-cogs, Page: properties_edit, PageParams: "edit_property_id=#id#,type=block")
+                                                        }
+                                                        If(#Table#==tables){
+                                                            LinkPage(Class: text-muted fa fa-eye, Page: table_view, PageParams: "tabl_id=#id#,table_name=#name#")
+                                                        }
+                                                        If(#changer_count#==1){
+                                                            If(#appid#==0){
+                                                                Button(Class: btn-link text-muted fa fa-recycle, Page: #this_page#, PageParams: "Restore=1,Table=#Table#,Id=#id#").Popup(30, "Select restore target application")
+                                                            }.Else{
+                                                                If(#ecosystem_id#==1){
+                                                                    Button(Class: btn-link text-muted fa fa-trash, Page: #this_page#, PageParams: "appid=#appid#", Contract: ItemChangeAppId, Params: "Table=#Table#,Id=#id#,AppId=0").Alert("Do you want to remove this item from the application?", "Confirm", "Cancel")
+                                                                }.Else{
+                                                                    Button(Class: btn-link text-muted fa fa-trash, Page: #this_page#, PageParams: "appid=#appid#", Contract: @1ItemChangeAppId, Params: "Table=#Table#,Id=#id#,AppId=0").Alert("Do you want to remove this item from the application?", "Confirm", "Cancel")
+
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    If(#Table#==contracts){
+                                                        LinkPage(Page: #Page#, PageParams: "open=contract,name=#name#"){#name#}
+                                                    }
+                                                    If(#Table#==pages){
+                                                        LinkPage(Page: #Page#, PageParams: "open=page,name=#name#"){#name#}
+                                                    }
+                                                    If(#Table#==blocks){
+                                                        LinkPage(Page: #Page#, PageParams: "open=block,name=#name#"){#name#}
+                                                    }
+                                                    If(#Table#==tables){
+                                                        LinkPage(Page: table_edit, PageParams: "tabl_id=#id#"){#name#}
+                                                    }
+                                                    If(#Table#==app_params){
+                                                        LinkPage(Page: #Page#, PageParams: "id=#id#"){#name#}
+                                                    }
+                                                    If(#Table#==languages){
+                                                        LinkPage(Page: langres_edit, PageParams: "lang_id=#id#"){#name#}
+                                                    }
+                                                    If(`#value#`!=""){
+                                                        :Div(text-muted){`#value#`}.Style(max-height:1.5em;overflow:hidden;)
+                                                    }.ElseIf(`#res#`!=""){
+                                                        :Div(text-muted){`#res#`}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }.Else{
+                                        Div(text-muted h4 text-center){
+                                            #Name# not found
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Div(panel-footer){
+                If(GetVar(Single)){
+                    Button(Page: #this_page#, PageParams: "appid=#appid#", Class: btn btn-default mr, Body: Back)
+                }.Else{
+                    Button(Page: #this_page#, PageParams: "Single=binaries,appid=#appid#", Class: btn btn-default mr, Body: Binaries)
+                    Button(Page: #this_page#, PageParams: "Single=languages,appid=#appid#", Class: btn btn-default, Body: Languages)
+                }
+            }
+        }
+    }.Style(
+        .pull-right a {
+            margin-right:10px;
+        }
+        .text-muted {
+            color: #909fa7!important;
+        }
+        .cols {
+            -moz-column-count: #cols#;
+            -webkit-column-count: #cols#;
+            column-count: #cols#;
+        }
+        .item:hover {
+            background-color: #fafafa;
+        }
+        .items tr:hover {
+            background-color: #fafafa;
+        }
+        .preview {
+            height:30px;
+        }
+        .btn-close {
+            background-color: #00000000;
+        }
+    )
+}

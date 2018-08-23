@@ -1,0 +1,50 @@
+contract RolesCreate {
+    data {
+        role_name string
+        role_type int
+    }
+    func getMemberInfo(kid int) map {
+        var res member map
+        member = DBFind("members").WhereId(kid).Row()
+        if member {
+            res["member_id"] = member["id"]
+            res["member_name"] = member["member_name"]
+            res["image_id"] = member["image_id"]
+        }else{
+            member = DBFind("keys").WhereId(kid).Row()
+            if member {
+                res["member_id"] = member["id"]
+                res["member_name"] = IdToAddress(Int(member["id"]))
+                res["image_id"] = 0
+            }
+        }
+        return res
+    }
+
+    conditions {
+        // system role
+        if $role_type == 3 {
+            warning "System role can not be created"
+        }
+    }
+
+    action {
+		var roles_access_arr array, buffer map, roles_access string
+		buffer = DBFind("buffer_data").Where({"member_id": $key_id, "key": "roles_access"}).Row()
+        if buffer {
+            roles_access_arr = JSONDecode(buffer["value"])
+            DBUpdate("buffer_data", Int(buffer["id"]), {"value": "[]"})
+        }
+        roles_access_arr = Append(roles_access_arr, 1)
+		roles_access = Join(roles_access_arr, ",")
+		
+        var m map
+        m["creator"] = getMemberInfo($key_id)
+        m["role_name"] =  $role_name
+        m["role_type"] =  $role_type
+        m["date_created"]  =  BlockTime()
+        m["company_id"] =  0
+		m["roles_access"] = {"rids": roles_access}
+        $result = DBInsert("roles", m)
+    }
+}

@@ -1,0 +1,278 @@
+DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(application)
+AppParam(App:#application_id#, Name: type_voting_participants, Source: src_typepart)
+AppParam(App:#application_id#, Name: type_voting, Source: src_typevoting)
+AppParam(App:#application_id#, Name: type_voting_decisions, Source: src_typedec)
+DBFind(roles,src_roles).Where({deleted:0}).Order(id).Custom(name){
+    #role_name#
+}
+
+SetTitle($template_create$)
+
+SetVar(template_id, 0)
+SetVar(title,"New voting").(typevoting,0).(volume,50).(quorum,51).(subj,).(voters,).(candidates,).(vacancies,1).(contract_init,).(contract_accept,).(accept_params,).(contract_reject,).(reject_params,)
+If(#TemplateId#>0){
+    DBFind(voting_templates).WhereId(#TemplateId#).Vars(template)
+    SetVar(title, #template_title#)
+    SetVar(typevoting, #template_type_voting#)
+    SetVar(volume, #template_volume#)
+    SetVar(subj, #template_subject#)
+    SetVar(quorum, #template_quorum#)
+    SetVar(voters, #template_voters#)
+    SetVar(candidates, #template_candidates#)
+    SetVar(vacancies, #template_vacancies#)
+    SetVar(contract_init, #template_init_contract#)
+    SetVar(contract_accept, #template_contract_accept#)
+    SetVar(accept_params, #template_accept_params#)
+    SetVar(contract_reject, #template_contract_reject#)
+    SetVar(reject_params, #template_reject_params#)
+}
+
+If(#TypeDecision#>0){
+    SetVar(typedec,#TypeDecision#)
+}.Else{
+    SetVar(typedec,0)
+}
+If(#TypeParticipants#>0){
+    SetVar(typepart,#TypeParticipants#)
+}.Else{
+    SetVar(typepart,0)
+}
+SetVar(col_right,"col-md-8 text-left")
+SetVar(col_left,"col-md-4 mt-sm text-right")
+
+Div(content-wrapper){
+    Div(breadcrumb){
+        LinkPage(Body: $voting$, Page: voting_list)
+        Span(/, mh)
+        LinkPage(Body: $voting_templates$, Page: voting_templates_list)
+        Span(/, mh)
+        Span($template_create$, text-muted)
+    }
+    Div(row){
+        Div(col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3){
+            If(#typedec#>0){
+                Form(panel panel-primary){
+                    Div(panel-heading){
+                        LangRes(voting_params)
+                    }
+                    Div(panel-body){
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: Title){
+                                    LangRes(name)
+                                    Span(*,text-danger)
+                                }
+                            }
+                            Div(#col_right#){
+                                Input(Name: Title, Value: #title#)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: TypeParticipants){
+                                    LangRes(participants)
+                                    Span(*,text-danger)
+                                }
+                            }
+                            Div(#col_right#){
+                                Div(mt-sm){
+                                    AppParam(App:#application_id#, Name: type_voting_participants, Index: #typepart#)
+                                }
+                                Input(Name: TypeParticipants, Type: hidden, Value: #typepart#)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: TypeDecision){
+                                    LangRes(decision)
+                                    Span(*,text-danger)
+                                }
+                            }
+                            Div(#col_right#){
+                                Div(mt-sm){
+                                    AppParam(App:#application_id#, Name: type_voting_decisions, Index: #typedec#)
+                                }
+                                Input(Name: TypeDecision, Type: hidden, Value: #typedec#)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: TypeVoting){
+                                    LangRes(voting_type)
+                                    Span(*,text-danger)
+                                }
+                            }
+                            Div(#col_right#){
+                                Select(Name: TypeVoting, Source: src_typevoting, NameColumn: name, ValueColumn: id, Value: #typevoting#)
+
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: Volume){
+                                    LangRes(voting_volume)
+                                    Span(*,text-danger)
+                                }
+                            }
+                            Div(#col_right#){
+                                Input(Name: Volume, Type: number, Value: #volume#).Validate(minLength: 1)
+                                InputErr(Name: Volume, minLength: Please enter Volume)
+                                P(Class: m0 text-muted, Body: $voting_volume_desc$)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: Quorum){
+                                    LangRes(voting_quorum)
+                                    Span(*,text-danger)
+                                }
+                            }
+                            Div(#col_right#){
+                                Input(Name: Quorum, Type: number, Value: #quorum#).Validate(minLength: 1)
+                                InputErr(Name: Quorum, minLength: Please enter Quorum)
+                                P(Class: m0 text-muted, Body: $voting_quorum_desc$)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: Subject){
+                                    LangRes(voting_subject)
+                                    Span(*,text-danger)
+                                }
+                            }
+                            Div(#col_right#){
+                                Input(Name: Subject, Value: #subj#)
+                            }
+                        }
+                        If(Or(#typedec#==1,#typedec#==2)){
+                            Div(row form-group){
+                                Div(#col_left#){
+                                    Label(For: Vacancies){
+                                        LangRes(vacancies)
+                                        Span(*,text-danger)
+                                    }
+                                }
+                                Div(#col_right#){
+                                    Input(Name: Vacancies, Value: #vacancies#, Type: number)
+                                }
+                            }
+                            Div(row form-group){
+                                Div(#col_left#){
+                                    Label(For: Candidates){
+                                        LangRes(candidates_role)
+                                        Span(*,text-danger)
+                                    }
+                                }
+                                Div(#col_right#){
+                                    Select(Name: Candidates, Source: src_roles, NameColumn: name, ValueColumn: id, Value: #candidates#)
+                                }
+                            }
+                        }
+                        If(#typepart#==3){
+                            Div(row form-group){
+                                Div(#col_left#){
+                                    Label(For: Voters){
+                                        LangRes(voters_role)
+                                        Span(*,text-danger)
+                                    }
+                                }
+                                Div(#col_right#){
+                                    Select(Name: Voters, Source: src_roles, NameColumn: name, ValueColumn: id, Value: #voters#)
+                                }
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: InitContract){
+                                    LangRes(voting_init_contract)
+                                }
+                            }
+                            Div(#col_right#){
+                                Input(Name: InitContract, Value: #contract_init#)
+                                P(Class: m0 text-muted, Body: $voting_init_contract_desc$)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: ContractAccept){
+                                    LangRes(voting_contract_accept)
+                                }
+                            }
+                            Div(#col_right#){
+                                Div(row){
+                                    Div(col-md-6){
+                                        Input(Name: ContractAccept, Placeholder: $contract$, Value: #contract_accept#)
+                                    }
+                                    Div(col-md-6){
+                                        Input(Name: ParamsAccept, Placeholder: $arguments$, Value: #accept_params#)
+                                    }
+                                }
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: ContractReject){
+                                    LangRes(voting_contract_reject)
+                                }
+                            }
+                            Div(#col_right#){
+                                Div(row){
+                                    Div(col-md-6){
+                                        Input(Name: ContractReject, Placeholder: $contract$, Value: #contract_reject#)
+                                    }
+                                    Div(col-md-6){
+                                        Input(Name: ParamsReject, Placeholder: $arguments$, Value: #reject_params#)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Div(panel-footer text-left){
+                        Button(Body: LangRes(back), Class: btn btn-default, Page: voting_template_create, PageParams: "TemplateId=#TemplateId#")
+                        Button(Body: LangRes(create), Class: btn btn-primary pull-right, Page: voting_templates_list, Contract: VotingTemplateCreate)
+
+                    }
+                }
+            }.Else{
+                Form(panel panel-primary){
+                    Div(panel-heading){
+                        LangRes(voting_params)
+                    }
+                    Div(panel-body){
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: #name#){
+                                    LangRes(decision)
+                                    Span(*,text-danger)
+                                }
+                            }
+                            Div(#col_right#){
+                                RadioGroup(Name: TypeDecision, Value: #template_type_decision#, Source: src_typedec, ValueColumn: id, NameColumn: name)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Label(For: #name#){
+                                    LangRes(participants)
+                                    Span(*,text-danger)
+                                }
+                            }
+                            Div(#col_right#){
+                                Select(Name: TypeParticipants, Source: src_typepart, NameColumn: name, ValueColumn: id, Value: #template_type_participants#)
+                            }
+                        }
+                    }
+
+                    Div(panel-footer text-left){
+                        If(#TemplateId#>0){
+                            Button(Body: LangRes(back), Class: btn btn-default, Page: voting_template_start, PageParams: "TemplateId=#TemplateId#")
+                        }.Else{
+                            Button(Body: LangRes(back), Class: btn btn-default, Page: voting_templates_list)
+                        }
+                        Button(Body: LangRes(next), Class: btn btn-primary pull-right, Page: voting_template_create, PageParams: "TemplateId=#TemplateId#,TypeDecision=Val(TypeDecision),TypeParticipants=Val(TypeParticipants)")
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,179 @@
+DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(application)
+SetVar(tid, AppParam(App:#application_id#, Name: voting_sysparams_template_id))
+DBFind(voting_templates,temps).WhereId(#tid#).Vars(template)
+SetTitle($voting$)
+
+Div(content-wrapper){
+    Div(breadcrumb){
+        LinkPage($system_params$, sysparams_list)
+        Span(/).Style(margin-right: 10px; margin-left: 10px;)
+        Span(Class: text-muted, Body: $voting$)
+    }
+
+    If(And(#template_id#>0,#param_index#>0,#param_name#!="")){
+        DBFind(system_parameters).Where({name:#param_name#}).Vars(param)
+        DBFind(voting_templates).WhereId(#template_id#).Columns("title,id").Vars(template)
+        SetTitle(#template_title#)
+        If(#param_name#!="full_nodes"){
+            Form(){
+                Div(form-group){
+                    Label(For: ColumnName){
+                        LangRes(name)
+                    }
+                    Input(Name: ColumnName, Value: #param_name#, Disabled: true)
+                }
+                Div(form-group){
+                    Label(For: Duration){
+                        LangRes(duration)
+                    }
+                    Input(Name:Duration, Value:21, Disabled: true)
+                }
+                Div(form-group){
+                    Label(For: TemplateId){
+                        LangRes(template_id)
+                    }
+                    Input(Name: TemplateId, Value:#template_id#, Disabled: true)
+                }
+                Div(form-group){
+                    Label(For: Value){
+                        LangRes(value)
+                    }
+                    Input(Name: Value, Value: #param_value#, Disabled: true)
+                }
+                Div(form-group){
+                    Label(){
+                        LangRes(new_value)
+                    }
+                    Input(Name: NewValue, Type: textarea)
+                }
+                Div(text-left){
+                    Button(Body: LangRes(back), Class: btn btn-default, Page: sysparams_list)
+                    Button(Body: LangRes(voting), Class: btn btn-primary pull-right, Contract: VotingTemplateRun, Page: voting_list)
+                }
+            }
+        }.Else{
+            SetVar(full_nodes,SysParam(full_nodes)).(first_node,AppParam(App:#application_id#, Name: first_node)).(first_node_set,)
+            SetTitle("#param_name#: $add$ $new_value$")
+            Form(){
+                If(`#full_nodes#`==""){
+                    JsonToSource(src_first_node,#first_node#)
+                    ForList(src_first_node){
+                        If(#value#==""){
+                            SetVar(first_node_set,error)
+                        }
+                    }
+                    If(#first_node_set#==error){
+                        Div(text-center){
+                            ForList(src_first_node){
+                                If(#value#==""){
+                                    Div(){first node: '#key#' empty}
+                                }
+                            }
+                        }
+                        Div(text-center){
+                            DBFind(app_params).Where({name:first_node}).Vars(first_node_param)
+                            Button(Page: app_params_edit, Class: btn btn-info, PageParams: "id=#first_node_param_id#,back_page=sysparams_list"){
+                                Install the first node before adding the new
+                            }
+                        }
+                    }
+                }
+                If(#first_node_set#!=error){
+                    Div(form-group){
+                        Label(For: Duration){
+                            LangRes(duration)
+                        }
+                        Input(Name:Duration, Value:21, Disabled: true)
+                    }
+                    Div(form-group){
+                        Label(For: TcpAddress){
+                            LangRes(tcp_address)
+                        }
+                        Input(Name: TcpAddress, Placeholder: "#.#.#.#:#")
+                    }
+                    Div(form-group){
+                        Label(For: ApiAddress){
+                            LangRes(api_address)
+                        }
+                        Input(Name: ApiAddress, Placeholder: "#://#.#.#.#:#")
+                    }
+                    Div(form-group){
+                        Label(For: KeyId){
+                            LangRes(node_founder_key_id)
+                        }
+                        Input(Name: KeyId,Type: number, Value: #key_id#)
+                    }
+                    Div(form-group){
+                        Label(For: PubKey){
+                            LangRes(node_pub_key)
+                        }
+                        Input(Name: PubKey, Type: textarea)
+                    }
+
+                    Div(text-left mb-lg){
+                        Button(Body: LangRes(back), Class: btn btn-default, Page: sysparams_list)
+                        Button(Body: LangRes(voting), Class: btn btn-primary pull-right, Contract: VotingNodeAdd, Page: voting_list)
+                    }
+                }
+            }
+            AppParam(App:#application_id#, Name:full_nodes_keys, Source:nodes_keys)
+            SetVar(node_owner,)
+            ForList(nodes_keys){
+                If(#name#=="key_id"){
+                    SetVar(node_owner, 1)
+                }
+            }
+
+            If(#node_owner#==1){
+                Form(text-center){
+                    Div(h3){$delete_node$}
+                    Div(){$delete_node_desc$}
+                    Div(text-right){
+                        Button(Body: LangRes(delete), Class: btn btn-danger, Page: sysparams_list, Contract: NodeRemoveByKey)
+                    }
+                }
+            }
+            If(`#full_nodes#`!=""){
+                ArrayToSource(src_full_nodes,`#full_nodes#`)
+                Div(mt-lg form-group text-left text-muted){
+                    Label(){Nodes list}
+                    ForList(src_full_nodes){
+                        JsonToSource(src_node,`#value#`)
+                        Div(list-group-item){
+                            Label(){node #key#}
+                            ForList(src_node){
+                                Div(){
+                                    Strong(#key#:) #value#
+                                }
+                            }
+                        }
+                    }
+                }.Style(word-break: break-all;)
+            }
+        }
+    }.Else{
+        Div(text-danger text-center text-bold){
+            If(#param_index#>0){}.Else{
+                Div(){LangRes(attention)}
+            }
+            If(#tid#>0){
+                If(#template_id#>0){}.Else{
+                    Div(mb-sm){
+                        LangRes(voting_template_not_found)
+                    }
+                    LinkPage(Page: voting_templates_list, Class: btn btn-info){
+                        Set the template
+                    }
+                }
+            }.Else{
+                Div(mb-sm){
+                    LangRes(voting_template_id_not_found)
+                }
+                DBFind(app_params).Where({name:voting_sysparams_template_id}).Vars(template_param)
+                LinkPage(Page: app_params_edit, Class: btn btn-info, PageParams: "back_page=sysparams_list,id=#template_param_id#"){
+                    Set the template ID
+                }
+            }
+        }
+    }
+}

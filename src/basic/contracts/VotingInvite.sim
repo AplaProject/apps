@@ -1,0 +1,91 @@
+contract VotingInvite {
+    data {
+        votingID int
+        var_id int //0, member_id, role_id
+    }
+
+    func addVotingKey(key map, votingId int) {
+        var m member map
+        member["member_id"] = key["id"]
+        member["member_name"] = IdToAddress(Int(key["id"]))
+        m["voting_id"] = votingId
+        m["member"] = member
+        DBInsert("votings_participants", m)
+    }
+    conditions {
+        $STARTED = 3
+        $FINISHED = 4
+        $voting = DBFind("votings").Where({id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Row()
+        if !$voting {
+            warning "Voting has expired. Can not add new participants"
+        }
+
+        $type_participants = $voting["voting.type_participants"]
+        $type_voting = $voting["voting.type"]
+        $number_participants = Int($voting["progress.number_participants"])
+
+        if $number_participants > 1 && $type_voting == 2 {
+            warning "This vote is a system. Add new participants are not possible"
+        }
+        var isAdded string
+        if $type_participants == 2 {
+            if !DBFind("keys").WhereId($var_id).Row(){
+                warning "Key not found"
+            }
+            isAdded = DBFind("votings_participants").Where({voting_id:$votingID,"member->member_id":$var_id}).One("id")
+            if isAdded {
+                warning "Member has already been added before"
+            }
+        }
+
+        if $type_participants == 3 {
+            isAdded = DBFind("votings_participants").Where({voting_id:$votingID}).One("id")
+            if isAdded {
+                warning "Voting participants have already been added before"
+            }
+            if Len(DBFind("roles_participants").Where({"role->id":$var_id, deleted:0})) == 0 {
+                warning "Roles participants not found"
+            }
+        }
+    }
+
+    action {
+        var i int
+        if $type_participants == 1 { // everybody
+            var keys array
+            keys = DBFind("keys")
+            while i < Len(keys) {
+                addVotingKey(keys[i], $votingID)
+                $number_participants = $number_participants + 1
+                i = i + 1
+            }
+        }
+        if $type_participants == 2 { // manual
+            var key map
+            key = DBFind("keys").WhereId($var_id).Row()
+            addVotingKey(key, $votingID)
+            $number_participants = $number_participants + 1
+        }
+        if $type_participants == 3 { // role
+            var roles array
+            roles = DBFind("roles_participants").Where({"role->id":$var_id, deleted:0}).Order("id")
+            while i < Len(roles) {
+                var role m map
+                role = roles[i]
+                m["voting_id"] = $votingID
+                m["member"] = role["member"]
+                DBInsert("votings_participants", m)
+                $number_participants = $number_participants + 1
+                i = i + 1
+            }
+        }
+        var v map
+        v["progress->number_participants"] =  $number_participants
+        if $type_participants == 3 {
+            v["voting->role_id"] =  $var_id
+            DBUpdate("votings", $votingID, v)
+        }else{
+            DBUpdate("votings", $votingID, v)
+        }
+    }
+}

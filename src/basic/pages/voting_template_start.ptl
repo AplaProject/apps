@@ -1,0 +1,253 @@
+DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(application)
+SetTitle($voting_start$)
+
+SetVar(col_left,"col-md-4 text-right")
+SetVar(col_left_for_input,"col-md-4 mt-sm text-right")
+SetVar(col_right,"col-md-8 text-left")
+
+If(#TemplateId#>0){
+    DBFind(voting_templates).WhereId(#TemplateId#).Vars(template)
+
+    SetVar(v_role,).(c_role,)
+    If(#template_voters#>0){
+        DBFind(roles).WhereId(#template_voters#).Columns("role_name").Vars(vid)
+        SetVar(v_role, "#vid_role_name#")
+    }
+    If(#template_candidates#>0){
+        DBFind(roles).WhereId(#template_candidates#).Columns("role_name").Vars(cid)
+        SetVar(c_role, "#cid_role_name#")
+    }
+}
+Div(content-wrapper){
+    Div(breadcrumb){
+        LinkPage(Body: $voting$, Page: voting_list)
+        Span(/, mh)
+        LinkPage(Body: $voting_templates$, Page: voting_templates_list)
+        Span(/,mh)
+        Span($voting_start$, text-muted)
+    }
+
+    If(#TemplateId#>0){
+        Div(row){
+            Div(col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3){
+                Form(panel panel-primary){
+                    Div(panel-heading){LangRes(voting_params)}
+                    Div(panel-body){
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(name))
+                            }
+                            Div(#col_right#){
+                                #template_title#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(participants))
+                            }
+                            Div(#col_right#){
+                                AppParam(App:#application_id#, Name: type_voting_participants, Index: #template_type_participants#)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voting_type))
+                            }
+                            Div(#col_right#){
+                                AppParam(App:#application_id#, Name: type_voting, Index: #template_type_voting#)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(decision))
+                            }
+                            Div(#col_right#){
+                                AppParam(App:#application_id#, Name: type_voting_decisions, Index: #template_type_decision#)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voting_volume))
+                            }
+                            Div(#col_right#){
+                                #template_volume#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voting_quorum))
+                            }
+                            Div(#col_right#){
+                                #template_quorum#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voting_subject))
+                            }
+                            Div(#col_right#){
+                                #template_subject#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voters))
+                            }
+                            Div(#col_right#){
+                                #v_role#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(candidates))
+                            }
+                            Div(#col_right#){
+                                #c_role#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(vacancies))
+                            }
+                            Div(#col_right#){
+                                #template_vacancies#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(init_contract))
+                            }
+                            Div(#col_right#){
+                                #template_init_contract#
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voting_contract_accept))
+                            }
+                            Div(#col_right#){
+                                #template_contract_accept#
+                                If(`#template_accept_params#`!=""){
+                                    (#template_accept_params#)
+                                }
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left#){
+                                Strong(LangRes(voting_contract_reject))
+                            }
+                            Div(#col_right#){
+                                #template_contract_reject#
+                                If(`#template_reject_params#`!=""){
+                                    (#template_reject_params#)
+                                }
+                            }
+                        }
+                        Div(row form-group){
+                            Div(#col_left_for_input#){
+                                Label(For: Duration){
+                                    LangRes(duration)
+                                }
+                            }
+                            Div(#col_right#){
+                                Input(Name: Duration, Type: number, Value: 3)
+                            }
+                        }
+                        If(#template_type_decision#==3){
+                            Div(row form-group){
+                                Div(col-md-12){
+                                    Label(For: TextDocument){
+                                        LangRes(text_document)
+                                    }
+                                    Input(Name: TextDocument, Type: textarea)
+                                }
+                            }
+                        }.ElseIf(#template_type_decision#==4){
+                            If(#template_type_voting#==2){
+                                Div(row form-group){
+                                    Div(#col_left_for_input#){
+                                        Label(For: ColumnName){
+                                            LangRes(system_param)
+                                            Span(*,text-danger)
+                                        }
+                                    }
+                                    Div(#col_right#){
+                                        Input(Name: ColumnName)
+                                    }
+                                }
+                                Div(row form-group){
+                                    Div(#col_left_for_input#){
+                                        Label(For: NewValue){
+                                            LangRes(value)
+                                            Span(*,text-danger)
+                                        }
+                                    }
+                                    Div(#col_right#){
+                                        Input(Name: NewValue)
+                                    }
+                                }
+                            }.Else{
+                                Div(row form-group){
+                                    Div(#col_left_for_input#){
+                                        Label(For: TableWritten){
+                                            LangRes(table_to_written)
+                                            Span(*,text-danger)
+                                        }
+                                    }
+                                    Div(#col_right#){
+                                        Input(Name: TableWritten)
+                                    }
+                                }
+                                Div(row form-group){
+                                    Div(#col_left_for_input#){
+                                        Label(For: RowId){
+                                            LangRes(row_id)
+                                            Span(*,text-danger)
+                                        }
+                                    }
+                                    Div(#col_right#){
+                                        Input(Name: RowId, Type: number)
+                                    }
+                                }
+                                Div(row form-group){
+                                    Div(#col_left_for_input#){
+                                        Label(For: ColumnName){
+                                            LangRes(column_name)
+                                            Span(*,text-danger)
+                                        }
+                                    }
+                                    Div(#col_right#){
+                                        Input(Name: ColumnName)
+                                    }
+                                }
+                                Div(row form-group){
+                                    Div(#col_left_for_input#){
+                                        Label(For: NewValue){
+                                            LangRes(value)
+                                            Span(*,text-danger)
+                                        }
+                                    }
+                                    Div(#col_right#){
+                                        Input(Name: NewValue)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Div(panel-footer text-left){
+                        Button(Body: LangRes(back), Class: btn btn-default, Page: voting_templates_list)
+
+                        Div(pull-right){
+                            Button(Class: fa fa-copy btn btn-default, Page: voting_template_create, PageParams: "TemplateId=#TemplateId#")
+                            Button(Body: LangRes(voting_start), Class: btn btn-primary, Page: voting_list, Contract: VotingTemplateRun, Params: "TemplateId=#TemplateId#")
+                        }
+                    }
+                }
+            }
+        }
+    }.Else{
+        Div(col-md-12 alert alert-danger text-center){
+            LangRes(attention)
+        }
+    }
+}

@@ -1,0 +1,80 @@
+If(#notific_id#>0){
+    DBFind(Name: notifications, Source: src_notifications).Columns("id,page_params->id").WhereId(#notific_id#).Vars(notific)
+    SetVar(attorney_id, #notific_page_params_id#)
+}
+
+SetTitle($attorney_view$)
+
+DBFind(Name:power_of_attorney).WhereId(#attorney_id#).Vars(power_of_attorney)
+JsonToSource(Source: src_params, Data: #power_of_attorney_params#)
+
+Div(content-wrapper){
+    Div(breadcrumb){
+        LinkPage($attorney$, attorney_list)
+        Span(/).Style(margin-right: 10px; margin-left: 10px;)
+        Span(Class: text-muted, Body: $attorney_view$)
+    }
+    Div(panel panel-primary col-md-6 col-md-offset-3){
+        Div(panel-body){
+            Div(h4){
+                $attorney_info$
+            }
+            Div(list-group-item){
+                Div(row){
+                    Div(col-md-3 text-right){
+                        Label(LangRes(attorney))
+                    }
+                    Div(col-md-9 text-left){
+                        Address(#power_of_attorney_key_id_attorney#)
+                    }
+                }
+            }
+            Div(list-group-item){
+                Div(row){
+                    Div(col-md-3 text-right){
+                        Label(LangRes(contract))
+                    }
+                    Div(col-md-9 text-left){
+                        #power_of_attorney_contract#
+                    }
+                }
+            }
+            Div(list-group-item){
+                Div(row){
+                    Div(col-md-3 text-right){
+                        Label(LangRes(expiration_date))
+                    }
+                    Div(col-md-9 text-left){
+                        DateTime(#power_of_attorney_date_expiration#, "YYYY-MM-DD")
+                    }
+                }
+            }
+            Div(h4){
+                $power_of_attorney_params$
+            }
+            Div(row text-muted){
+                Div(col-md-3 mt-lg){
+                    Label(LangRes(name))
+                }
+                Div(col-md-8 mt-lg){
+                    Label(LangRes(value))
+                }
+            }
+            ForList(Source: src_params){
+                Div(col-md-3 mt-lg){
+                    #key#
+                }
+                Div(col-md-8 mt-lg){
+                    #value#
+                }
+            }
+            Div(panel-footer text-right){
+                If(#notific_id#>0){
+                    Button(Body: LangRes(informed), Class: btn btn-success, Contract: NotificationsClose, Params: "notific_id=#notific_id#")
+                }
+                Button(Body: LangRes(edit), Class: btn btn-primary, Page: attorney_edit, PageParams: "attorney_id=#attorney_id#")
+                Button(Body: LangRes(delete), Class: btn btn-danger, Contract: AttorneyDelete, Params: "Id=#attorney_id#", Page: attorney_list)
+            }
+        }
+    }
+}

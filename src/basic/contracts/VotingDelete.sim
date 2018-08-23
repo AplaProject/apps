@@ -1,0 +1,29 @@
+contract VotingDelete {
+    data {
+        votingID int
+    }
+
+    conditions {
+        $INVALID = 5
+        var voting map bt string
+        bt = BlockTime()
+        voting = DBFind("votings").Where({id:$votingID, "creator->member_id":$key_id, "status":$INVALID}).Columns("id").Row()
+        if !voting {
+            warning "Delete voting impossible"
+        }
+    }
+
+    action {
+        DBUpdate("votings", $votingID, {deleted:1})
+        var notes array
+        notes = DBFind("notifications").Where({page_name:"voting_view", "page_params->voting_id":$votingID})
+        var i int
+        while i < Len(notes){
+            var note map noteId int
+            note = notes[i]
+            noteId = Int(note["id"])
+            NotificationsClose("notific_id", noteId)
+            i=i+1
+        }
+    }
+}

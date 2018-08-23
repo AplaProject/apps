@@ -1,0 +1,57 @@
+contract VotingValidatorAccept{
+    data{
+        VotingTemplateId string
+        KeyId string
+        VotingId string
+    }
+    func getAppRoleId(id int, name string, warn bool) int{
+        var rid int
+        rid = Int(AppParam(id, name))
+        if rid == 0 && warn{
+            warning Sprintf("Role not setted in application parameter '%v'", name)
+        }
+        return rid
+    }
+    func conditions{
+        var prev string
+        prev = $stack[0]
+        if Len($stack) > 2{
+            prev = $stack[Len($stack) - 2]
+        }
+        if prev != "@1VotingDecisionCheck"{
+            warning "This contract allow starts only from @1VotingDecisionCheck"
+        }
+
+        var appId templateId int params map
+        appId = Int(DBFind("applications").Where({name:"Basic application"}).Columns("name,id").One("id"))
+        templateId = Int(AppParam(appId,"voting_validators_template_id"))
+        if !DBFind("voting_templates").WhereId(templateId).One("id"){
+            warning "Voting template not found"
+        }
+        if $VotingTemplateId != templateId{
+            warning "Incorrect template"
+        }
+
+        var candidateId oldRoleId roleId int roleName string
+        oldRoleId = getAppRoleId(appId, "role_candidate_for_validators", false)
+        roleId = getAppRoleId(appId, "role_validator", true)
+
+        candidateId = DBFind("sysparams_candidate").Where({candidate_key_id:$KeyId}).One("candidate_key_id")
+        if !candidateId {
+            warning "Candidate key id not found"
+        }
+        $oldRoleRowId = Int(DBFind("roles_participants").Where({deleted:0, "role->id":oldRoleId, "member->member_id":candidateId}).One("id"))
+
+        $roleId = Int(DBFind("roles").Where({id:roleId, deleted:0}).One("id"))
+        if $roleId == 0 {
+            warning "Validator role not found"
+        }
+    }
+
+    func action{
+        if $oldRoleRowId > 0 {
+            RolesUnassign("row_id", $oldRoleRowId)
+        }
+        RolesAssign("rid,member_id", $roleId, Int($KeyId))
+    }
+}

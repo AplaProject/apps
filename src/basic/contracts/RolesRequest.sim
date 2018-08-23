@@ -1,0 +1,30 @@
+contract RolesRequest {
+    data {
+        rid int
+    }
+
+    conditions {
+        if !DBFind("roles").WhereId($rid).One("id") {
+            warning "Role not found"
+        }
+
+        if DBFind("roles_participants").Where({"role->id":$rid, "member->member_id":$key_id, deleted:0}).One("id") {
+            warning "You have already been added to the role"
+        }
+
+        if DBFind("notifications").Where({page_name:"roles_request_view", "page_params->rid":$rid, "sender->member_id":$key_id, closed:0}).One("id") {
+            warning "Request already sent"
+        }
+    }
+    
+    action {
+        var params map
+        params["rid"] = $rid
+        
+        var member_id int
+        member_id = EcosysParam("founder_account") 
+
+        NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", 
+            member_id, 1, "fa-bars", "Roles", "New request received", "roles_request_view", params)
+    }
+}

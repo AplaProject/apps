@@ -1,0 +1,84 @@
+contract VotingTemplatesInstall{
+    data{}
+    func applyTemplate(m map){
+        DBInsert("voting_templates", m)
+    }
+    func getAppRoleId(id int, name string) int{
+        var rid int
+        rid = Int(AppParam(id, name))
+        if rid == 0{
+            warning Sprintf("Role not setted in application parameter '%v'", name)
+        }
+        return rid
+    }
+    conditions{
+        var appId int
+        appId = Int(DBFind("applications").Where({name:"Basic application", deleted:0}).One("id"))
+        if appId == 0{
+            warning "Application not found"
+        }
+        $consensusRoleId = getAppRoleId(appId, "role_apla_consensus_asbl")
+        $validatorRoleId = getAppRoleId(appId, "role_validator")
+
+    }
+
+    action{
+        var template map
+        // common
+        template["quorum"] = 51
+        template["volume"] = 70
+        template["accept_params"] = ""
+        template["reject_params"] = ""
+        template["type"] = "law"
+        template["voters"] = $consensusRoleId
+        template["type_participants"] = 3 // by Role
+
+        // validator
+        template["title"] = "Voting for Validator"
+        template["init_contract"] = "VotingValidatorInit"
+        template["contract_accept"] = "VotingValidatorAccept"
+        template["contract_reject"] = ""
+        template["vacancies"] = 1
+        template["candidates"] = $validatorRoleId
+        template["type_decision"] = 2
+        template["type_voting"] = 2
+        template["subject"] = "Validator"
+        applyTemplate(template)
+
+        // sysparam
+        template["title"] = "Voting for System param value"
+        template["init_contract"] = ""
+        template["contract_accept"] = ""
+        template["contract_reject"] = ""
+        template["vacancies"] = 0
+        template["candidates"] = 0
+        template["type_decision"] = 4
+        template["type_voting"] = 2
+        template["subject"] = "System param"
+        applyTemplate(template)
+
+        // valued ecosystem
+        template["title"] = "Voting for Valued Ecosystem"
+        template["init_contract"] = ""
+        template["contract_accept"] = ""
+        template["contract_reject"] = ""
+        template["vacancies"] = 0
+        template["candidates"] = 0
+        template["type_decision"] = 4
+        template["type_voting"] = 1
+        template["subject"] = "Valued ecosystem"
+        applyTemplate(template)
+
+        // tokenrefund
+        template["title"] = "Token Refund"
+        template["init_contract"] = ""
+        template["contract_accept"] = "TokensRefundAccept"
+        template["contract_reject"] = "TokensRefundReject"
+        template["vacancies"] = 0
+        template["candidates"] = 0
+        template["type_decision"] = 5
+        template["type_voting"] = 2
+        template["subject"] = "Token refund"
+        applyTemplate(template)
+    }
+}

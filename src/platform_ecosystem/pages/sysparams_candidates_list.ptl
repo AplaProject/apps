@@ -1,0 +1,42 @@
+Div(content-wrapper){
+    DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(application)
+    SetVar(template_id, AppParam(App:#application_id#, Name: voting_validators_template_id))
+    SetTitle($sysparams_candidates$)
+
+    DBFind(sysparams_candidate,src_candidates).Where({deleted:0}).Custom(_actions){
+        If(#template_id#>0){
+            Div(btn-group){
+                Input(Name:KeyId, Type: hidden, Value: #candidate_key_id#)
+                Input(Name:TemplateId, Type: hidden, Value: #template_id#)
+                Button(Contract: VotingTemplateRun, Page: voting_list, Class: btn btn-default fa fa-play)
+            }
+        }.Else{
+            Span($voting_template_not_found$,text-muted)
+        }
+
+    }.Custom(_date){
+        DateTime(DateTime: #date_created#, Format: YYYY-MM-DD HH:MI)
+    }.Count(count)
+
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $sysparams_candidates$)
+    }
+    AddToolButton(Title: $add$, Icon: icon-plus, Page: sysparams_candidate_validators_create)
+
+    Div(row){
+        Div(col-md-12){
+            Div(panel panel-primary){
+                If(#count#>0){
+                    Form(table-responsive){
+                        Input(Name: Duration, Type: hidden, Value: 14)
+                        Table(Source: src_candidates, Columns: "$id$=id,$host_ip$=host_ip,$commission_address$=commission_address,$description_equipment$=description,$comment$=comment,$date_created$=_date,$voting$=_actions")
+                    }
+                }.Else{
+                    Div(h3 text-muted text-center){
+                        Candidates not found
+                    }
+                }
+            }
+        }
+    }
+}

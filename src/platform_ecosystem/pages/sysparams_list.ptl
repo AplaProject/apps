@@ -1,0 +1,65 @@
+DBFind(applications).Where({name:"Basic application"}).Columns("id").Vars(application)
+SetVar(role_validator, AppParam(App:#application_id#, Name: role_validator))
+SetTitle(Platform parameters)
+JsonToSource(nodes){
+    SysParam(full_nodes)
+}
+ForList(nodes){
+    Div(#key_id#)
+}
+DBFind(system_parameters, src_sysparams).Order(id).Limit(250).Custom(_actions){
+    DBFind(contracts).Where({name:#name#}).Columns(id).Vars(sp)
+    If(#sp_id#>0){
+        If(#name#=="full_nodes"){
+            LinkPage(Class: fa fa-edit, Page: sysparams_voting, PageParams: "param_index=#id#,param_name=#name#")
+        }.Else{
+            LinkPage(Class: fa fa-edit, Page: sysparams_voting, PageParams: "param_index=#id#,param_name=#name#")
+        }
+    }.Else{
+        condition contract not found
+    }
+}.Custom(_val){
+    Div(){
+        #value#
+    }.Style(max-width: 500px;overflow: hidden;)
+}
+Div(){
+    Div(breadcrumb){
+        Div(Class:text-muted, Body: "Parameters for configuring nodes, transactions, blocks, and payment for network resources.")
+        Div(Class:text-muted, Body: "Parameters change only by voting of different roles.")
+    }
+    DBFind(roles_participants).Where({"member->member_id":#key_id#, "role->id":#role_validator#, deleted:0}).Columns("id").Vars(validator)
+    If(#validator_id#>0){
+        AddToolButton(Title: $sysparams_validator_resign$, Icon: icon-pin, Page: sysparams_validator_resign)
+    }
+    Div(table-responsive){
+        Table(src_sysparams,"ID=id,$name$=name,$value$=_val,=_actions")
+    }
+}.Style(
+    tbody > tr:nth-of-type(odd) {
+        background-color: #fafbfc;
+    }
+    tbody > tr > td {
+        word-break: break-all;
+        font-weight: 400;
+        font-size: 13px;
+        color: #666;
+        border-top: 1px solid #eee;
+        vertical-align: middle;
+    }
+    tr > *:first-child {
+        padding-left:20px;
+        width: 80px;
+    }
+    tr > *:last-child {
+        padding-right:30px;
+        text-align:right;
+        width: 100px;
+    }
+    thead {
+        background-color: #eee;
+    }
+    table a {
+        font-size: 18px;
+    }
+)

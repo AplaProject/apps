@@ -1,0 +1,111 @@
+Div(content-wrapper){
+    SetVar(pager_limit, 25).(pager_page, export_resources)
+    If(GetVar(res_type)){
+		SetVar(page_params,`{"res_type":"#res_type#"}`)
+	}.Else{
+		SetVar(res_type,)
+        JsonToSource(src_params, #page_params#)
+        ForList(src_params){
+			If(#key#==res_type){
+				SetVar(res_type,#value#)
+			}
+		}
+    }
+    SetTitle("Application Export")
+    Div(breadcrumb text-muted){
+        Select the application which do you want to export and proceed to the payload generation process
+    }
+    DBFind(buffer_data).Columns("value->app_id,value->app_name,value->menu_name,value->menu_id,value->count_menu").Where({key: export, member_id:#key_id#}).Vars(buffer)
+
+    Include(export_link)
+
+    If(#buffer_value_app_id# > 0){
+        If(#res_type#=="pages"){
+            SetVar(pager_table, pages).(pager_where, "{app_id:#buffer_value_app_id#}")
+            Include(pager_header)
+            DBFind(pages, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#}).Custom(_cbox){
+                Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
+            }.Order("id")
+        }
+        If(#res_type#=="blocks"){
+            SetVar(pager_table, blocks).(pager_where, "{app_id:#buffer_value_app_id#}")
+            Include(pager_header)
+            DBFind(blocks, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#}).Custom(_cbox){
+                Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
+            }.Order("id")
+        }
+        If(#res_type#=="menu"){
+            SetVar(pager_table, menu).(pager_where, "{id: {$in: [#buffer_value_menu_id#]}}")
+            Include(pager_header)
+            DBFind(menu, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({id: {$in: [#buffer_value_menu_id#]}}).Custom(_cbox){
+                Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
+            }.Order("id")
+        }
+        If(#res_type#=="parameters"){
+            SetVar(pager_table, app_params).(pager_where, "{app_id:#buffer_value_app_id#}")
+            Include(pager_header)
+            DBFind(app_params, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#}).Custom(_cbox){
+                Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
+            }.Order("id")
+        }
+        If(#res_type#=="languages"){
+            SetVar(pager_table, languages).(pager_where, "{app_id:#buffer_value_app_id#}")
+            Include(pager_header)
+            DBFind(languages, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#}).Custom(_cbox){
+                Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
+            }.Order("id")
+        }
+        If(#res_type#=="contracts"){
+            SetVar(pager_table, contracts).(pager_where, "{app_id:#buffer_value_app_id#}")
+            Include(pager_header)
+            DBFind(contracts, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#}).Custom(_cbox){
+                Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
+            }.Order("id")
+        }
+        If(#res_type#=="tables"){
+            SetVar(pager_table, tables).(pager_where, "{app_id:#buffer_value_app_id#}")
+            Include(pager_header)
+            DBFind(tables, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#}).Custom(_cbox){
+                Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
+            }.Order("id")
+        }
+    }
+
+    Div(row){
+        Div(col-md-9){
+            Table(src_pages, "ID=id,Name=name,=_cbox")
+            If(#pages_count#>#pager_limit#){
+                Include(pager)
+            }
+        }
+        Div(col-md-3){
+            Include(export_info)
+        }
+    }
+
+}.Style(
+    tbody > tr:nth-of-type(odd) {
+        background-color: #fafbfc;
+    }
+    tbody > tr > td {
+        word-break: break-all;
+        font-weight: 400;
+        font-size: 13px;
+        color: #666;
+        border-top: 1px solid #eee;
+        vertical-align: middle;
+        padding: 8px 20px !important;
+    }
+    tr > *:first-child {
+        padding-left:20px;
+        width: 80px;
+    }
+    tr > *:last-child {
+        padding-right:15px;
+        width: 50px;
+        text-align:right;
+    }
+    thead {
+        background-color: #eee;
+    }
+)

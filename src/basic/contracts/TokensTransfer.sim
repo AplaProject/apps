@@ -1,0 +1,48 @@
+contract TokensTransfer {
+    data {
+        Amount money
+        Sender_AccountId int
+        Recipient_AccountId int
+        Comment string "optional"
+        //Signature string "optional hidden"
+    }
+
+    conditions {
+        //check amount
+        if $Amount == 0 {
+            error "Amount is zero"
+        }
+        if $Amount < 0 {
+            error "Amount is negative"
+        }
+
+        //check the sender
+        if !DBFind("keys").WhereId($Sender_AccountId).One("id") {
+            error Sprintf("Sender %v is invalid", $Sender_AccountId)
+        }
+
+        //check balance
+        $sender_balance = Money(DBFind("keys").WhereId($Sender_AccountId).One("amount"))
+        if $Amount > $sender_balance {
+            error Sprintf("Money is not enough %v < %v", $sender_balance, $Amount)
+        }
+
+        //check the recipient
+        if !DBFind("keys").WhereId($Recipient_AccountId).One("id") {
+            error Sprintf("Recipient %v is invalid", $Recipient_AccountId)
+        }
+    }
+
+    action {
+        DBUpdate("keys", $Sender_AccountId, {"-amount":$Amount})
+        DBUpdate("keys", $Recipient_AccountId, {"+amount":$Amount})
+        var m map
+        m["sender_id"] = $Sender_AccountId
+        m["recipient_id"] = $Recipient_AccountId
+        m["amount"] = $Amount
+        m["comment"] = $Comment
+        m["block_id"] = $block
+        m["txhash"] = $txhash
+        DBInsert("history", m)
+    }
+}

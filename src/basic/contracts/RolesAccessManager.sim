@@ -1,0 +1,100 @@
+contract RolesAccessManager {
+    data {
+        Action string
+        Rid int
+        ManagerRid string "optional"
+    }
+    func updateAccess(ra string){
+        var model map
+        model["roles_access"] = {rids:ra}
+        DBUpdate("roles", $Rid, model)
+    }
+	func updateBufferAccess(ra array){
+        var roles_access string
+        roles_access = JSONEncode(ra)
+        if !$buffer_id {
+            DBInsert("buffer_data", {"member_id": $key_id, "key": "roles_access", "value": roles_access})
+        } else {
+            DBUpdate("buffer_data", Int($buffer_id), {"value": roles_access})
+        }
+    }
+    conditions {
+		$ManagerRid = Int($ManagerRid)
+        if $Rid > 0 {
+			RolesAccessCheck("rid", $Rid)
+
+			$role = DBFind("roles").WhereId($Rid).Columns("id,roles_access->rids").Row()
+			if !$role {
+				warning "Role not found"
+			}
+			if $ManagerRid > 0{
+				if !DBFind("roles").WhereId($ManagerRid).One("id") {
+					warning "Role not found"
+				}
+			}
+			var ids array, i int
+			$ids = ids
+			ids = Split($role["roles_access.rids"],",")
+			while i < Len(ids){
+				if ids[i] > 0 {
+					$ids = Append($ids, ids[i])
+				}
+				i=i+1
+			}
+		} else {
+            $buffer_managers = 0
+            $buffer_id = 0
+            $ids = []
+            var buffer map
+            buffer = DBFind("buffer_data").Where({"member_id": $key_id, "key": "roles_access"}).Row()
+            if buffer {
+                $buffer_managers = buffer["value"]
+                $buffer_id = buffer["id"]
+            }
+        }
+    }
+
+    action {
+		if $Rid == 0 {
+            if $buffer_managers {
+                $ids = JSONDecode($buffer_managers)
+            }
+        }
+        if $Action == "clean"{
+            updateAccess("")
+        }
+        if $ManagerRid > 0{
+            var i int, idsNew array
+            if $Action == "remove"{
+                while i<Len($ids){
+                    if $ids[i] != $ManagerRid{
+                        idsNew = Append(idsNew, $ids[i])
+                    }
+                    i=i+1
+                }
+				if $Rid == 0 {
+					updateBufferAccess(idsNew)
+				}else{
+					updateAccess(Join(idsNew, ","))
+				}
+            }
+            if $Action == "add"{
+                var double bool
+                while i<Len($ids){
+                    if $ids[i] == $ManagerRid{
+                        double = true
+                    }
+                    i=i+1
+                }
+                if !double {
+                    $ids = Append($ids, $ManagerRid)
+                }
+                if $Rid == 0 {
+					updateBufferAccess($ids)
+				}else{
+					updateAccess(Join($ids, ","))
+				}
+            }
+        }
+    }
+}

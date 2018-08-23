@@ -1,0 +1,22 @@
+contract ProfileAvatarEdit {
+    data {
+        member_image bytes "file"
+    }
+
+    conditions {
+        $member = DBFind("members").WhereId($key_id).Row()
+        $app_id = DBFind("applications").Where({name:"Basic application", deleted:0}).One("id")
+
+        if !$member {
+            warning "Member name is not specified"
+        }
+    }
+
+    action {
+        if $member {
+            var m map
+            m["image_id"] = @1UploadBinary("Name,Data,ApplicationId", "avatar", $member_image, Int($app_id))
+            DBUpdate("members", Int($member["id"]), m)
+        }
+    }
+}

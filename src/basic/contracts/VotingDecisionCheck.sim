@@ -1,0 +1,222 @@
+contract VotingDecisionCheck {
+    data {
+        votingID int
+    }
+    func runContract(cont, p string){
+        if Size(cont) > 0 {
+            var params map
+            if Size(p) > 0 {
+                params = JSONToMap(p)
+            }
+            CallContract(cont, params)
+        }
+    }
+    func percentPartOfTotal(part, total int) int {
+        if total == 0{ total = 1 }
+        var percent int
+        percent = Int((part * 100)/total)
+        if percent > 100 {
+            percent = 100
+        }
+        return percent
+    }
+    func closeNotes(){
+        var notes array i int
+        notes = DBFind("notifications").Where({page_name:"voting_view", "page_params->voting_id":$votingID})
+        while i < Len(notes){
+            var note map
+            note = notes[i]
+            NotificationsClose("notific_id", Int(note["id"]))
+            i=i+1
+        }
+    }
+    conditions {
+        $WAITING = 1
+        $VALID = 2
+        $STARTED = 3
+        $FINISHED = 4
+        $INVALID = 5
+
+        $voting = DBFind("votings").WhereId($votingID).Columns("voting->name,voting->type,voting->quorum,voting->type_decision,flags->success,progress->number_voters,progress->percent_voters,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params,status").Row()
+        $voting_name = $voting["voting.name"]
+        $voting_type = Int($voting["voting.type"]) //system or custom
+        $type_decision = Int($voting["voting.type_decision"])
+        $optional_role_id = Int($voting["optional.role_id"])
+        $number_role_vacancies = Int($voting["optional.role_vacancies"])
+        $number_voters = Int($voting["progress.number_voters"]) // already voted
+        $contract_accept = $voting["optional.contract_accept"]
+        $contract_reject = $voting["optional.contract_reject"]
+        $param_accept = $voting["optional.contract_accept_params"]
+        $param_reject = $voting["optional.contract_reject_params"]
+        $flag_success = $voting["flags.success"]
+        $quorum = Int($voting["voting.quorum"])
+        $percent_voters = Int($voting["progress.percent_voters"])
+        $status =  Int($voting["status"])
+
+        var prevContract string
+        prevContract = $stack[0]
+        if Len($stack)>2{
+            prevContract = $stack[Len($stack)-2]
+        }
+        if prevContract != "@1VotingUpdate"{
+            // if $percent_voters < $quorum && $quorum > 50 || $status != $FINISHED {
+            if $status != $FINISHED {
+                warning "Voting has not expired. Try again later, please"
+            }
+        }
+
+        $subject_id = DBFind("votings_subject").Where({voting_id:$votingID}).One("id")
+        if !$subject_id {
+            warning "Subject of voting is not found"
+        }
+
+        $ACCEPT = 1
+        $REJECT = -1
+    }
+
+    action {
+        var percent_voters flag_decision i int
+        flag_decision = -2 // decision can not be made (not enough participants to make a decision)
+        if $flag_success == $ACCEPT { //now enough participants to make a decision
+            if $type_decision == 1 || $type_decision == 2 {
+                var candidates_added_count int
+                candidates_added_count = 0 // candidates who have already been added
+                flag_decision = $REJECT // none of the candidates has been added yet
+
+                var subjects array
+                subjects = DBFind("votings_subject").Where({voting_id:$votingID}).Order({number_accept:"-1"}).Columns("voting_id,number_accept,subject->member_id,subject->member_name,subject->image_id")
+                i = 0
+                while i < Len(subjects) {
+                    var subject map
+                    subject = subjects[i]
+
+                    // if there are still vacancies
+                    if candidates_added_count < $number_role_vacancies {
+                        percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
+
+                        if percent_voters >= $quorum {
+                            // added candidate to the role
+                            var role map
+                            role = DBFind("roles").Columns("id,role_type,role_name,image_id").WhereId(Int($optional_role_id)).Row()
+                            if role {
+                                var member assignedMember map mid rid string
+                                member["member_id"] = subject["subject.member_id"]
+                                mid = member["member_id"]
+                                rid = role["id"]
+                                assignedMember = DBFind("roles_participants").Where({"member->member_id":mid, "role->id":rid, deleted:0}).Row()
+
+                                if !assignedMember {
+                                    member["member_name"] = subject["subject.member_name"]
+                                    member["image_id"] = subject["subject.image_id"]
+
+                                    var rolePart appointed m map
+                                    rolePart["id"] = role["id"]
+                                    rolePart["type"] = role["role_type"]
+                                    rolePart["name"] = role["role_name"]
+                                    rolePart["image_id"] = role["image_id"]
+
+                                    appointed["voting_id"] = $votingID
+                                    appointed["voting_name"] = $voting_name
+
+                                    // add a candidate to the role
+                                    m["role"] = rolePart
+                                    m["member"] = member
+                                    m["appointed"] = appointed
+                                    m["date_created"] = BlockTime()
+                                    DBInsert("roles_participants", m)
+
+                                    candidates_added_count = candidates_added_count + 1
+                                    // if at least one of the candidates was added to the role, then the voting decision is considered successful
+                                    flag_decision = $ACCEPT
+                                }
+                            }
+                        }
+                    }
+                    i = i + 1
+                }
+            }
+
+            if $type_decision == 3 {
+                var subject map
+                subject = DBFind("votings_subject").Where({voting_id:$votingID}).Columns("id,number_accept").Row()
+                if subject {
+                    percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
+                    if percent_voters >= $quorum {
+                        flag_decision = $ACCEPT
+                    } else {
+                        flag_decision = $REJECT
+                    }
+                }
+            }
+
+            if $type_decision == 4 {
+                var subject map
+                subject = DBFind("votings_subject").Where({voting_id:$votingID}).Columns("id,number_accept,subject->table,subject->table_id,subject->column,subject->column_value").Row()
+                if subject {
+                    percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
+                    if percent_voters >= $quorum {
+                        flag_decision = $ACCEPT
+
+                        var column string
+                        column = Str(subject["subject.column"])
+                        $colValue = Str(subject["subject.column_value"])
+                        // type of voting - custom
+                        if $voting_type == 1 {
+                            // ALWAYS CHECK THE PERMISSION
+                            var colType string
+                            colType = GetColumnType(subject["subject.table"], column)
+                            if colType == "number"{
+                                $colValue = Int($colValue)
+                            }
+                            if colType == "money"{
+                                $colValue = Money($colValue)
+                            }
+                            if colType == "double" {
+                                $colValue = Float($colValue)
+                            }
+                            var m map
+                            m[column] = $colValue
+                            DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
+                        }
+
+                        // type of voting - system
+                        if $voting_type == 2 {
+                            @1UpdateSysParam("Name,Value,Conditions", column, $colValue, "")
+                        }
+                    } else {
+                        flag_decision = $REJECT
+                    }
+                }
+            }
+
+            if $type_decision == 5 {
+                var subject map
+                subject = DBFind("votings_subject").Where({voting_id:$votingID}).Columns("id,number_accept,subject->contract_accept,subject->contract_reject,subject->contract_accept_params,subject->contract_reject_params").Row()
+                if subject {
+                    $contract_accept = subject["subject.contract_accept"]
+                    $contract_reject = subject["subject.contract_reject"]
+                    $param_accept = subject["subject.contract_accept_params"]
+                    $param_reject = subject["subject.contract_reject_params"]
+
+                    percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
+                    if percent_voters >= $quorum {
+                        flag_decision = $ACCEPT
+                    } else {
+                        flag_decision = $REJECT
+                    }
+                }
+            }
+
+            if flag_decision == 1 {
+                runContract($contract_accept, $param_accept)
+                closeNotes()
+            }
+            if flag_decision == -1 {
+                runContract($contract_reject, $param_reject)
+                closeNotes()
+            }
+        }
+
+        DBUpdate("votings", $votingID, {"flags->decision":flag_decision})
+    }
+}

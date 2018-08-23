@@ -1,0 +1,72 @@
+contract NotificationsBroadcast {
+    data {
+        Header string
+        Body string
+        RoleId int
+    }
+    func getMemberInfo(kid int) map {
+        var res member map
+        member = DBFind("members").WhereId(kid).Row()
+        if member {
+            res["member_id"] = member["id"]
+            res["member_name"] = member["member_name"]
+            res["image_id"] = member["image_id"]
+        }else{
+            if DBFind("keys").Columns("id").WhereId(kid).Row() {
+                res["member_id"] = Str(kid)
+                res["member_name"] = IdToAddress(kid)
+                res["image_id"] = "0"
+            }
+        }
+        return res
+    }
+    conditions {
+        if $role_id !=1 {
+            error "The action allowed only for admin"
+        }
+        if $ecosystem_id!=1 {
+            error "The action allowed only for admin from first ecosystem"
+        }
+        $ecos = DBFind("ecosystems").Ecosystem(1).Columns("id")
+        $lenEcos = Len($ecos)
+        if $lenEcos == 1{
+            error "Not found other ecosystems"
+        }
+    }
+    action {
+        var i lenIds int eco map ids array table roleName bt string sender recipient params note map
+        bt = BlockTime()
+        roleName = DBFind("roles").WhereId($role_id).One("role_name")
+        sender = getMemberInfo($key_id)
+        sender["type"] = "1"
+
+        note["header"] = $Header
+        note["type"] = "1"
+        note["icon"] = "icon-envelope"
+        note["body"] = $Body
+
+        while i<$lenEcos{
+            eco = $ecos[i]
+            if eco["id"] != 1{
+                ids = DBFind("roles_participants").Where({"role->id":$RoleId, "role->type":3}).Columns("member->member_id")
+                lenIds = Len(ids)
+                table = Sprintf("@%v_notifications", eco["id"])
+                var i_ids int
+                while i_ids<lenIds{
+                    recipient = ids[i_ids]
+                    recipient = getMemberInfo(Int(recipient["member.member_id"]))
+                    var m map
+                    m["recipient"] = recipient
+                    m["sender"] = sender
+                    m["notification"] = note
+                    m["page_name"] = "notifications_show"
+                    m["page_params"] = params
+                    m["date_created"] = bt
+                    DBInsert(table, m)
+                    i_ids=i_ids+1
+                }
+            }
+            i=i+1
+        }
+    }
+}

@@ -1,0 +1,72 @@
+If(#vID# > 0){
+    Form(){
+        If(GetVar(back_page)){}.Else{
+            SetVar(back_page,voting_view)
+        }
+        DBFind(votings).WhereId(#vID#).Columns("id,voting->name,voting->type_participants").Vars(instance)
+        SetVar(participants,0)
+        DBFind(votings_participants, src_participants).Where({voting_id:#vID#}).Columns("id,member->member_id,member->member_name").Count(participants_count).Custom(_id){
+            SetVar(participants,"#participants#,#member.member_id#")
+            #member.member_id#
+        }.Custom(_name){
+            LinkPage(Class: text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#member.member_id#", Body: #member.member_name#)
+        }
+        Div(form-group){
+            If(#instance_voting_type_participants# == 1){
+                Input(Name: voting_all_members, Disabled: 1, Value: "$voting_all_members$")
+            }
+            If(#instance_voting_type_participants# == 2){
+                Label(){
+                    LangRes(select_member)
+                    Span(*, text-danger)
+                }
+                DBFind(keys,src_keys).Where({id:{"$nin":[#participants#]}}).Columns("id").Count(keys_count).Custom(_name){
+                    DBFind(members).WhereId(#id#).Columns("id,member_name").Vars(m)
+                    Address(#id#)
+                    If(Or(#m_id#>0,#m_id#<0)){
+                        " (#m_member_name#)"
+                    }
+                }
+                If(#keys_count#>0){
+                    Select(Name: var_id, Source: src_keys, NameColumn: _name, ValueColumn: id)
+                }.Else{
+                    Input(Name: voting_all_members, Disabled: 1, Value: "$voting_all_keys_added$")
+                }
+            }
+            If(#instance_voting_type_participants# == 3){
+                Label(){
+                    LangRes(select_role)
+                    Span(*, text-danger)
+                }
+                DBFind(roles, src_roles).Where({deleted:0}).Columns("id,role_name")
+                Select(Name: var_id, Source: src_roles, NameColumn: role_name, ValueColumn: id)
+            }
+        }
+
+        Div(form-group text-left){
+            Button(Body: LangRes(back), Class: btn btn-default, Page: #back_page#, PageParams: "vID=#vID#")
+            Input(Name: votingID, Type: hidden, Value: #vID#)
+            If(#instance_voting_type_participants# == 2){
+                If(#keys_count#>0){
+                    Button(Body: LangRes(add_member), Class: btn btn-primary pull-right, Page: #back_page#, PageParams: "vID=#vID#", Contract: VotingInvite)
+                }
+            }.ElseIf(#instance_voting_type_participants# == 3){
+                Button(Body: LangRes(add_role), Class: btn btn-primary pull-right, Page: #back_page#, PageParams: "vID=#vID#", Contract: VotingInvite)
+            }
+        }
+        Div(list-group-item){
+            If(#participants_count#>0){
+                Div(form-group){
+                    Table(src_participants, "$id$=_id,$member_name$=_name")
+                }
+            }
+        }
+    }
+}.Else{
+    Div(alert alert-danger text-center){
+        Span(Body: LangRes(attention))
+    }
+    Div(form-group text-left){
+        Button(Body: LangRes(back), Class: btn btn-default, Page: voting_list)
+    }
+}

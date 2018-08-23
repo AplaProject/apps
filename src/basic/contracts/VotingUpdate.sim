@@ -1,0 +1,67 @@
+contract VotingUpdate {
+    data {
+        votingID int
+    }
+
+    func safeJsonToMap(m string) map {
+        var res map
+        if Size(m) > 0 { res = JSONToMap(m) }
+        return res
+    }
+
+    func percentPartOfTotal(part, total int) int {
+        if total == 0{ total = 1 }
+        var percent int
+        percent = Int((part * 100)/total)
+        if percent > 100 { percent = 100 }
+        return percent
+    }
+
+    conditions {
+        $WAITING = 1
+        $VALID = 2
+        $STARTED = 3
+        $FINISHED = 4
+        $INVALID = 5
+        $voting = DBFind("votings").Where({id:$votingID, status:$STARTED}).Columns("flags,voting,progress").Row()
+        if !$voting {
+            warning "Started voting is not found"
+        }
+    }
+
+    action {
+        var progress voting map
+        progress = safeJsonToMap($voting["progress"])
+        voting = safeJsonToMap($voting["voting"])
+
+        var flag_success percent_success percent_voters number_voters quorum  volume int
+        // increment count of voters
+        quorum = Int(voting["quorum"])
+        volume = Int(voting["volume"])
+        number_voters = Int(progress["number_voters"]) + 1
+        percent_voters = percentPartOfTotal(number_voters, Int(progress["number_participants"]))
+        percent_success = percentPartOfTotal(percent_voters, volume)
+
+        // update the flag of success
+        if percent_success == 100 {
+            flag_success = 1
+        }
+        progress["percent_voters"] = percent_voters
+        progress["percent_success"] = percent_success
+        progress["number_voters"] = number_voters
+
+        var m map
+        m["progress"] = progress
+        m["flags->success"] = flag_success
+        if (percent_voters >= quorum && quorum > 50 && percent_voters >= volume) || percent_voters == 100 {
+            // if a quorum is more than 50% we can immediately make the decision
+            // OR
+            // if all participants have voted we can not wait until the end of the voting period
+            m["status"] = $FINISHED
+            DBUpdate("votings", $votingID, m)
+            VotingDecisionCheck("votingID", $votingID)
+        }else{
+            DBUpdate("votings", $votingID, m)
+        }
+    }
+}

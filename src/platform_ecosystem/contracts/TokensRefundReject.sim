@@ -1,0 +1,30 @@
+contract TokensRefundReject{
+    data{
+        Id string
+    }
+    
+    func unblockAccounts(victimId, attackerId string){
+        if victimId==0 {
+            error "unblockAccounts. invalid victim key"
+        }
+        if attackerId==0{
+            error "unblockAccounts. invalid attacker key"
+        }
+        DBUpdate("keys", Int(victimId), {blocked:0})
+        DBUpdate("keys", Int(attackerId), {blocked:0})
+    }
+    
+    conditions{
+        $Id = Int($Id)
+        $tokenrefund = DBFind("tokenrefund").WhereId($Id).Row()
+        if !$tokenrefund{
+            error "tokenrefund not found"
+        }
+    }
+    
+    action{
+        unblockAccounts($tokenrefund["victim_key_id"],$tokenrefund["attacker_key_id"])
+        // status 3: closed; 1: return cancelled
+        DBUpdate("tokenrefund", $Id, {status:3, result:1})
+    }
+}
