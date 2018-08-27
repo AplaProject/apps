@@ -5,11 +5,23 @@ If(#vID# > 0){
         }
         DBFind(votings).WhereId(#vID#).Columns("id,voting->name,voting->type_participants").Vars(instance)
         SetVar(participants,0)
-        DBFind(votings_participants, src_participants).Where({voting_id:#vID#}).Columns("id,member->member_id,member->member_name").Count(participants_count).Custom(_id){
+        DBFind(votings_participants, src_participants).Where({voting_id:#vID#}).Columns("id,member->member_id,member->member_name,member->role_id,member->member->member_id,member->member->member_name").Count(participants_count).Custom(_id){
             SetVar(participants,"#participants#,#member.member_id#")
             #member.member_id#
         }.Custom(_name){
             LinkPage(Class: text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#member.member_id#", Body: #member.member_name#)
+        }.Custom(custom_member_role){
+            If(#instance_voting_type_participants# == 4){
+                DBFind("roles").Columns("id,role_name").WhereId(#member.role_id#).Vars(rl)
+                Span(#rl_role_name#)
+            }
+        }.Custom(custom_sent){
+            Span(Body: Role added to vote)
+        }.Custom(custom_member_roles){
+            DBFind("roles").Columns("id,role_name").WhereId(#member.role_id#).Vars(rl)
+            LinkPage(Class: text-primary h5 text-bold, Page: roles_view, PageParams: "v_role_id=#rl_id#"){
+                Span(Class: fa icon-settings fa-2x mr-sm).(#rl_role_name#)
+            }.Style(display:flex; align-items:center;)
         }
         Div(form-group){
             If(#instance_voting_type_participants# == 1){
@@ -41,6 +53,18 @@ If(#vID# > 0){
                 DBFind(roles, src_roles).Where({deleted:0}).Columns("id,role_name")
                 Select(Name: var_id, Source: src_roles, NameColumn: role_name, ValueColumn: id)
             }
+            If(Or(#instance_voting_type_participants# == 4,#instance_voting_type_participants# == 5)){
+                Div(row){
+                    Div(col-md-12){
+                        Label(){
+                            Span(Body: LangRes(select_role))
+                            Span(Class: text-danger, Body:*)
+                        }
+                        DBFind(roles, src_roles).Where({deleted:0}).Columns("id,role_name")
+                        Select(Name: var_id, Source: src_roles, NameColumn: role_name, ValueColumn: id)
+                    }
+                }
+            }
         }
 
         Div(form-group text-left){
@@ -52,12 +76,20 @@ If(#vID# > 0){
                 }
             }.ElseIf(#instance_voting_type_participants# == 3){
                 Button(Body: LangRes(add_role), Class: btn btn-primary pull-right, Page: #back_page#, PageParams: "vID=#vID#", Contract: VotingInvite)
+            }.ElseIf(Or(#instance_voting_type_participants# == 4,#instance_voting_type_participants# == 5)){
+                Button(Body: LangRes(add_role), Class: btn btn-primary pull-right, Page:#back_page#, PageParams: "vID=#vID#", Contract: VotingInvite)
             }
         }
         Div(list-group-item){
             If(#participants_count#>0){
                 Div(form-group){
-                    Table(src_participants, "$id$=_id,$member_name$=_name")
+                    If(#instance_voting_type_participants# == 5){
+                        Table(src_participants, "Role name=custom_member_roles,=custom_sent")
+                    }.ElseIf(#instance_voting_type_participants# == 4){
+                        Table(src_participants, "$id$=_id,$member_name$=_name,Role name=custom_member_roles,=custom_sent")
+                    }.Else{
+                        Table(src_participants, "$id$=_id,$member_name$=_name")
+                    }
                 }
             }
         }

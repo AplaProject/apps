@@ -8,15 +8,24 @@ SetVar(WAITING,1).(VALID,2).(STARTED,3).(FINISHED,4).(INVALID,5)
 SetVar(date_format,"DD.MM.YYYY HH:MI")
 Div(content-wrapper){
     If(#vID# > 0){
-        DBFind(votings).WhereId(#vID#).Columns("id,voting->name,voting->volume,voting->quorum,voting->type,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended,status").Vars(instance)
+        DBFind(votings).WhereId(#vID#).Columns("id,voting->name,voting->volume,voting->quorum,voting->type_participants,voting->type,voting->count_type_voters,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended,status").Vars(instance)
 
         SetTitle(Viewing voting: #instance_voting_name#)
 
-        DBFind(votings_participants).Where({voting_id:#vID#, "member->member_id":#key_id#, decision:0}).Columns("id").Vars(participant)
-        If(And(#instance_status#==#STARTED#,#participant_id#>0)){
-            SetVar(isVotingAllowed,1)
+        DBFind(votings_participants).Where({voting_id:#vID#,"member->member_id":#key_id#, decision:0}).Columns("id").Vars(participant)
+        If(And(#instance_voting_type_participants# !=4,#instance_voting_type_participants# !=5)){
+            If(And(#instance_status#==#STARTED#,#participant_id#>0)){
+                SetVar(isVotingAllowed,1)
+            }.Else{
+                SetVar(isVotingAllowed,0)
+            }
         }.Else{
-            SetVar(isVotingAllowed,0)
+            DBFind(votings_participants,Source: src_mem).Where({voting_id:#vID#,"member->role_id":#role_id#, decision:0}).Columns("id").Vars(participant_role)
+            If(And(#instance_status#==#STARTED#,#participant_role_id#>0)){
+                SetVar(isVotingAllowed,1)
+            }.Else{
+                SetVar(isVotingAllowed,0)
+            }
         }
         Div(breadcrumb){
             LinkPage(Body:Votings list, Page:voting_list)
@@ -205,7 +214,7 @@ Div(content-wrapper){
                                         }
                                         Div(pull-right){
                                             Button(Body: LangRes(accept), Class: btn btn-success, Contract: VotingDecisionAccept, PageParams: "vID=#vID#", Page: voting_view)
-                                        }
+                                        } 
                                     }
                                 }
                             }
@@ -432,11 +441,13 @@ Div(content-wrapper){
                             }
                         }
                         Div(row mt-sm){
-                            Div(col-md-6 text-right){
-                                LangRes(voting_quorum)
-                            }
-                            Div(col-md-6 text-left){
-                                #instance_voting_quorum#
+                            If(#instance_voting_count_type_voters# == 0){
+                                Div(col-md-6 text-right){
+                                    LangRes(voting_quorum)
+                                }
+                                Div(col-md-6 text-left){
+                                    #instance_voting_quorum#
+                                }
                             }
                         }
                         Div(row mt-sm){
@@ -454,8 +465,26 @@ Div(content-wrapper){
                         }
                         Div(row mt-sm t6){
                             Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
-                                DBFind(votings_participants, src_voting_participants).Where({voting_id:#vID#}).Order("id").Columns("id,member->member_id,decision_date,decision").Custom(_address){
-                                    Div(Class: t6 m0, Body: Address(#member.member_id#))
+                                DBFind(votings_participants, src_voting_participants).Where({voting_id:#vID#}).Order("id").Columns("id,member->member_id,member->role_id,decision_date,decision,voting_id").Custom(_address){
+                                    DBFind("votings",Source: src_mem).Columns("id,voting,voting->type_participants").WhereId(#voting_id#).Vars(type)
+                                    If(Or(#type_voting_type_participants# == 4,#type_voting_type_participants# == 5)){
+                                        DBFind("roles").Columns("id,role_name").WhereId(#member.role_id#).Vars(rl)
+                                        LinkPage(Class: text-primary h5 text-bold, Page: roles_view, PageParams: "v_role_id=#rl_id#"){
+                                            Span(Class: fa icon-eye  mr-sm).(#rl_role_name#)
+                                        }.Style(display:flex; align-items:center;)
+                                    }.Else{
+                                        Div(Class: t6 m0, Body: Address(#member.member_id#))
+                                    } 
+                                }.Custom(_voter){
+                                    DBFind("votings",Source: src_mem).Columns("id,voting,voting->type_participants").WhereId(#voting_id#).Vars(type)
+                                    If(#type_voting_type_participants# == 4){
+                                         Div(Class: t6 m0, Body: Address(#member.member_id#))
+                                    }
+                                    If(#type_voting_type_participants# == 5){
+                                        If(#decision#!=0){
+                                            Div(Class: t6 m0, Body: Address(#member.member_id#))
+                                        }
+                                    }
                                 }.Custom(_decision){
                                     If(Or(#instance_voting_type_decision#==1,#instance_voting_type_decision#==2)){
                                         If(#decision#==0){
@@ -500,7 +529,7 @@ Div(content-wrapper){
                                         }
                                     }
                                 }
-                                Table(src_voting_participants, "=_address,=_decision")
+                                Table(src_voting_participants, "=_address,=_voter,=_decision")
                             }
                         }
                         Div(row mt-sm t5){
@@ -536,11 +565,20 @@ Div(content-wrapper){
                             }
                         }
                         Div(row mt-sm text-center t3){
-                            Div(col-md-5 col-md-offset-1){
-                                #instance_progress_number_voters# LangRes(voters) / #instance_progress_percent_voters#% LangRes(voters)
-                            }
-                            Div(col-md-5){
-                                #instance_progress_percent_success#% LangRes(success) / 100% LangRes(total)
+                            If(#instance_voting_count_type_voters# == 0){
+                                Div(col-md-5 col-md-offset-1){
+                                    #instance_progress_number_voters# LangRes(voters) / #instance_progress_percent_voters#% LangRes(voters)
+                                }
+                                Div(col-md-5){
+                                    #instance_progress_percent_success#% LangRes(success) / 100% LangRes(total)
+                                }
+                            }.Else{
+                                Div(col-md-5 col-md-offset-1){
+                                    #instance_progress_number_voters# LangRes(voters) / #instance_voting_volume# LangRes(voters)
+                                }
+                                Div(col-md-5){
+                                    #instance_progress_percent_success#% LangRes(success) / 100% LangRes(total)
+                                }
                             }
                         }
                     }

@@ -3,24 +3,41 @@ contract VotingStatusUpdate {
 
     func notificationSend(voting map){
         var title string id i lenVoters int voters array
-        title = voting["voting.name"]
-        id = Int(voting["id"])
-        voters = DBFind("votings_participants").Columns("member->member_id").Where({voting_id:id, decision:0})
-        lenVoters = Len(voters)
-        while i < lenVoters {
-            var voter memberId params map
-            voter = voters[i]
-            memberId = Int(voter["member.member_id"])
-            params["voting_id"] = id
-            NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", memberId, 1, "fa-check", "Voting", title, "voting_view", params)
-            i = i + 1
+        $type_p = DBFind("votings").Columns("id,voting->type_participants").WhereId(Int(voting["id"])).Row()
+        if($type_p["voting.type_participants"] == 5){
+            title = voting["voting.name"]
+            id = Int(voting["id"])
+            voters = DBFind("votings_participants").Columns("member->role_id").Where({voting_id:id, decision:0})
+            lenVoters = Len(voters)
+            while i < lenVoters {
+                var voter roleId params map
+                voter = voters[i]
+                roleId = Int(voter["member.role_id"])
+                params["voting_id"] = id
+                NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type", roleId, 1, "fa-check", "Voting", title, "voting_view", params,1)
+                i = i + 1
+            }
+            //notifications_Send("icon_name,rid,closure_type,sender,text_header,text_body,page_name,params_map","fa-check",$role_id_send, 1, 1,"Voting",$voting_name,"voting_view",JSONEncode(params))
+        } else{
+            title = voting["voting.name"]
+            id = Int(voting["id"])
+            voters = DBFind("votings_participants").Columns("member->member_id").Where({voting_id:id, decision:0})
+            lenVoters = Len(voters)
+            while i < lenVoters {
+                var voter memberId params map
+                voter = voters[i]
+                memberId = Int(voter["member.member_id"])
+                params["voting_id"] = id
+                NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", memberId, 1, "fa-check", "Voting", title, "voting_view", params)
+                i = i + 1
+            }
         }
     }
     func changeVotings(from, to map){
         var votings array i lenVotings int v map
         from["deleted"] = 0
         votings = DBFind("votings").Columns("id,date_started,date_ended,voting->name").Where(from)
-
+  
         lenVotings = Len(votings)
         while i<lenVotings{
             v = votings[i]
@@ -50,7 +67,7 @@ contract VotingStatusUpdate {
         changeVotings({status:$VALID, date_started:{"$lte":bt}}, {status:$STARTED})
 
         changeVotings({status:$STARTED, date_ended:{"$lte":bt}}, {status:$FINISHED})
-        
+     
         // changeVotings({status:$STARTED, date_ended:{"$lte":bt}, "flags->decision":1}, {status:$FINISHED})
     }
 }

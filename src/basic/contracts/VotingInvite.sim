@@ -47,6 +47,20 @@ contract VotingInvite {
                 warning "Roles participants not found"
             }
         }
+        if ($type_participants == 4 || $type_participants == 5) {
+            isAdded = DBFind("votings_participants").Where({voting_id:$votingID,"member->role_id":$var_id}).One("id")
+            if isAdded {
+                if ($type_participants == 4){
+                    warning "Members of this role have already been added to the vote"
+                }
+                if ($type_participants == 5){
+                    warning "This role have already been added to the vote"
+                }
+            }
+            if Len(DBFind("roles_participants").Where({"role->id":$var_id, deleted:0})) == 0 {
+                    warning "Roles participants not found"
+            }
+        }
     }
 
     action {
@@ -78,6 +92,30 @@ contract VotingInvite {
                 $number_participants = $number_participants + 1
                 i = i + 1
             }
+        }
+        if $type_participants == 4 { // all participants in the selected roles vote
+            var roles array
+            roles = DBFind("roles_participants").Where({"role->id":$var_id, deleted:0}).Order("id")
+            while i < Len(roles) {
+                var role map
+                role = roles[i]
+                var cust map
+                cust= JSONToMap(role["member"])
+                cust["role_id"] = $var_id
+                DBInsert("votings_participants", {voting_id: $votingID, member: cust})
+                $number_participants = $number_participants + 1
+                i = i + 1
+            }
+        }
+        if $type_participants == 5 { // one participant of the selected roles votes
+            var role map
+            role["role_id"] = $var_id
+            role["member_id"] = "0"
+            var json string
+            json = JSONEncode(role)
+            $role_id_send = $var_id
+            DBInsert("votings_participants", {voting_id: $votingID, member: json}) 
+            $number_participants = $number_participants + 1 
         }
         var v map
         v["progress->number_participants"] =  $number_participants

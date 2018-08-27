@@ -3,10 +3,16 @@ contract VotingDecisionReject {
         votingID int
     }
     func closeNotification(){
-        var id int
-        id = Int(DBFind("notifications").Where({"recipient->member_id":$key_id, page_name:"voting_view", "page_params->voting_id":$votingID, closed:0}).One("id"))
-        if id > 0 {
-            NotificationsClose("notific_id", id)
+        var role_id_search int
+        role_id_search = Int(DBFind("notifications").Where({"recipient->role_id":$role_id, page_name:"voting_view", "page_params->voting_id":$votingID, closed:0}).One("id"))
+        if role_id_search > 0 {
+            NotificationsClose("notific_id", role_id_search)
+        } else {
+            var id int
+            id = Int(DBFind("notifications").Where({"recipient->member_id":$key_id, page_name:"voting_view", "page_params->voting_id":$votingID, closed:0}).One("id"))
+            if id > 0 {
+                NotificationsClose("notific_id", id)
+            }
         }
     }
     conditions {
@@ -30,9 +36,39 @@ contract VotingDecisionReject {
         if $voting["status"] != $STARTED {
             warning "Voting has not yet begun. Try again later, please"
         }
-        $participant_id = DBFind("votings_participants").Where({voting_id:$votingID, "member->member_id":$key_id}).One("id")
-        if !$participant_id {
-            warning "You are not a participant in this voting"
+        $participant_role_id = DBFind("votings_participants").Where({voting_id:$votingID, "member->role_id":$role_id,"member->member_id":0}).One("id")
+      
+        $check_type = DBFind("votings").Columns("id,voting,voting->type_participants").WhereId($votingID).Row()
+        if (Int($check_type["voting.type_participants"]) < 5){
+            $participant_id = DBFind("votings_participants").Where({voting_id:$votingID, "member->member_id":$key_id,decision:0}).One("id")
+            if !$participant_id {
+                warning "You are not a participant in this voting"
+            }
+        }
+        
+        if $participant_role_id {
+            $rid = DBFind("votings_participants").Columns("id,voting_id,member->role_id").Where({voting_id:$votingID, "member->role_id":$role_id}).Row()
+            if $rid {
+                var mem_role int
+                mem_role = Int($rid["member.role_id"])
+                $participant_id = DBFind("roles_participants").Columns("id,role,role->id,member,member->member_id").Where({"member->member_id":$key_id,"role->id":mem_role,"deleted":0}).One("member.member_id")
+                if !$participant_id{
+                    warning "You are not a participant in this voting"
+                } else {
+                    var solo_role_vot map
+                    $membership_role_name = DBFind("members").WhereId($key_id).Row()
+                    solo_role_vot["role_id"] = Int($rid["member.role_id"])
+                    solo_role_vot["member_id"] = $key_id
+                    solo_role_vot["member_name"] = $membership_role_name["member_name"]
+                    solo_role_vot["image_id"] = $membership_role_name["image_id"]
+                    var json string
+                    json = JSONEncode(solo_role_vot)
+                    DBUpdate("votings_participants",Int($rid["id"]),{"member":json})
+                    $participant_id = Int($rid["id"])
+                }
+            } else {
+                warning "You are not a participant in this voting"
+            }
         }
     }
 
