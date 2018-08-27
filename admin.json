@@ -644,9 +644,399 @@
             "Type": "contracts"
         },
         {
+            "Name": "UpdateSysParam",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract UpdateSysParam {\n    data {\n        Name string\n        Value string\n        Conditions string \"optional\"\n    }\n\n    conditions {\n        if GetContractByName($Name){\n            var params map\n            params[\"Value\"] = $Value\n            CallContract($Name, params)\n        } else {\n            warning \"System parameter not found\"\n        }\n    }\n\n    action {\n        DBUpdateSysParam($Name, $Value, $Conditions)\n    }\n}",
+            "Type": "contracts"
+        },
+        {
             "Name": "Export",
             "Conditions": "ContractConditions(\"MainCondition\")",
             "Value": "contract Export {\n    data {}\n\n    func createExport(items array) string {\n        var res map\n        res[\"name\"] = $AppName\n        res[\"conditions\"] = $AppConditions\n        res[\"data\"] = items\n        return JSONEncodeIndent(res, \"    \")\n    }\n    func mapping(res map, resKey string, item map itemKey string){\n        if item[itemKey] {\n            res[resKey] = Str(item[itemKey])\n        }\n    }\n    func prepareItem(item map, type string) string {\n        var res map\n        res[\"Type\"] = type\n        mapping(res, \"Name\", item, \"name\")\n        mapping(res, \"Value\", item, \"value\")\n        mapping(res, \"Conditions\", item, \"conditions\")\n        mapping(res, \"Menu\", item, \"menu\")\n        mapping(res, \"Title\", item, \"title\")\n        mapping(res, \"Trans\", item, \"res\")\n        mapping(res, \"Columns\", item, \"columns\")\n        mapping(res, \"Permissions\", item, \"permissions\")\n        mapping(res, \"Confirmation\", item, \"confirmation\")\n        return res\n    }\n\n    func getColumnsWithType(table_name string, columnsJSON string) string {\n        var colsMap map result columns array\n        colsMap = JSONDecode(columnsJSON)\n        columns = GetMapKeys(colsMap)\n        var i int\n        while i < Len(columns){\n            if Size(columns[i]) > 0 {\n                var col map\n                col[\"name\"] = columns[i]\n                col[\"conditions\"] = colsMap[col[\"name\"]]\n                col[\"type\"] = GetColumnType(table_name, col[\"name\"])\n                result = Append(result, col)\n            }\n            i = i + 1\n        }\n        return JSONEncode(result)\n    }\n\n    func exportTable(type string, result array) array {\n        var items array limit offset i lenItems int item map\n        limit = 250\n        while true{\n            var rows array where map\n            if type == \"menu\" {\n                if Len($menus_names) > 0 {\n                    where[\"name\"] = {\"$in\": $menus_names}\n                }\n            }else{\n                where[\"app_id\"] = $AppID\n            }\n            if where {\n                rows = DBFind(type).Limit(limit).Offset(offset).Where(where)\n            }\n            if Len(rows) > 0{\n                i = 0\n                while i < Len(rows){\n                    items = Append(items, rows[i])\n                    i = i + 1\n                }\n            }else{\n                break\n            }\n            offset = offset + limit\n        }\n        i = 0\n        lenItems = Len(items)\n        while i < lenItems {\n            item = items[i]\n            if type == \"tables\" {\n                item[\"columns\"] = getColumnsWithType(item[\"name\"], item[\"columns\"])\n            }\n            result = Append(result, prepareItem(item, type))\n            if type == \"pages\" {\n                $menus_names = Append($menus_names, Sprintf(\"'%v'\", item[\"menu\"]))\n            }\n            i = i + 1\n        }\n        return result\n    }\n\n    conditions {\n        var buf app map\n        buf = DBFind(\"buffer_data\").Columns(\"id,value->app_id,value->app_name\").Where({member_id:$key_id, key: \"export\"}).Row()\n        if !buf{\n            warning \"Application not selected\"\n        }\n        $AppID = Int(buf[\"value.app_id\"])\n        $AppName = Str(buf[\"value.app_name\"])\n\n        app = DBFind(\"applications\").Columns(\"id,conditions\").Where({id:$AppID}).Row()\n        if !app{\n            warning \"Application not found\"\n        }\n        $AppConditions = app[\"conditions\"]\n\n        $menus_names = []\n    }\n\n    action {\n        var exportJSON string items array\n        items = exportTable(\"pages\", items)\n        items = exportTable(\"contracts\", items)\n        items = exportTable(\"blocks\", items)\n        items = exportTable(\"languages\", items)\n        items = exportTable(\"app_params\", items)\n        items = exportTable(\"tables\", items)\n        items = exportTable(\"menu\", items)\n\n        exportJSON = createExport(items)\n        UploadBinary(\"Name,Data,ApplicationId,DataMimeType\", \"export\", exportJSON, 1, \"application/json\")\n    }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "block_reward",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract block_reward {\n    data {\n        Value string\n    }\n\n    conditions {\n        if Size($Value) == 0 {\n            warning \"Value was not received\"\n        }\n        if Int($Value) < 3 || Int($Value) > 9999 {\n            warning \"Value must be between 3 and 9999\"\n        }\n    }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "blockchain_url",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract blockchain_url {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if !(HasPrefix($Value, \"http://\") || HasPrefix($Value, \"https://\")) {\n      warning \"URL ivalid (not found protocol)\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "column_price",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract column_price {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "commission_size",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract commission_size {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "commission_wallet",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract commission_wallet {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "contract_price",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract contract_price {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "default_ecosystem_contract",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract default_ecosystem_contract {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "default_ecosystem_menu",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract default_ecosystem_menu {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "default_ecosystem_page",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract default_ecosystem_page {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "ecosystem_price",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract ecosystem_price {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_activate",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_activate {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_address_to_id",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_address_to_id {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_column_condition",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_column_condition {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_compile_contract",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_compile_contract {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_contains",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_contains {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_contracts_list",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_contracts_list {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_create_column",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_create_column {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_create_ecosystem",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_create_ecosystem {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_create_table",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_create_table {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_deactivate",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_deactivate {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_ecosys_param",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_ecosys_param {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_eval",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_eval {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_eval_condition",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_eval_condition {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_flush_contract",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_flush_contract {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_has_prefix",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_has_prefix {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_id_to_address",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_id_to_address {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_is_object",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_is_object {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_join",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_join {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_json_to_map",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_json_to_map {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_len",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_len {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_new_state",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_new_state {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_perm_column",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_perm_column {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_perm_table",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_perm_table {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_pub_to_id",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_pub_to_id {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_replace",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_replace {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_sha256",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_sha256 {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_size",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_size {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_substr",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_substr {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_sys_fuel",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_sys_fuel {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_sys_param_int",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_sys_param_int {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_sys_param_string",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_sys_param_string {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_table_conditions",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_table_conditions {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_update_lang",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_update_lang {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "extend_cost_validate_condition",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract extend_cost_validate_condition {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "fuel_rate",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract fuel_rate {\n  data {\n    Value string\n  }\n\n  conditions {\n    $Value = TrimSpace($Value)\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    // [[\"x1\",\"number\"]]\n    if !(HasPrefix($Value, \"[\") && \"]\" == Substr($Value, Size($Value)-1, 1)){\n      warning \"Invalid value\"\n    }\n    var rates newRate array\n    rates = JSONDecode($Value)\n    if Len(rates) > 1{\n      warning \"Invalid size array\"\n    }\n    newRate = rates[0]\n    if Len(newRate) != 2{\n      warning \"Invalid size new rate array\"\n    }\n    if newRate[0] != 1 {\n      warning \"Invalid ecosystem number\"\n    }\n    if Int(newRate[1]) <= 0 {\n      warning \"Invalid fuel value\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "full_nodes",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract full_nodes {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n\n    var full_nodes_arr array\n    full_nodes_arr = JSONDecode($Value)\n\n    var len_arr int\n    len_arr = Len(full_nodes_arr)\n\n    if len_arr == 0 {\n        warning \"Wrong array structure\"\n    }\n\n    var i int\n    while(i < len_arr){\n        var node_map map \n        node_map = full_nodes_arr[i]\n\n        var public_key string\n        var tcp_address string\n        var api_address string\n        var key_id string\n\n        public_key = node_map[\"public_key\"]\n        tcp_address = node_map[\"tcp_address\"]\n        api_address = node_map[\"api_address\"]\n        key_id = node_map[\"key_id\"]\n\n        if Size(public_key) == 0 {\n            warning \"Public key was not received\"\n        }\n        if Size(tcp_address) == 0 {\n            warning \"TCP address was not received\"\n        }\n        if Size(api_address) == 0 {\n            warning \"API address was not received\"\n        }\n        if Size(key_id) == 0 {\n            warning \"Key ID was not received\"\n        }\n\n        i = i + 1\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "gap_between_blocks",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract gap_between_blocks {\n    data {\n        Value string\n    }\n\n    conditions {\n        if Size($Value) == 0 {\n            warning \"Value was not received\"\n        }\n        if Int($Value) <= 0 || Int($Value) >= 86400 {\n            warning \"Value must be between 1 and 86399\"\n        }\n    }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "max_block_generation_time",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract max_block_generation_time {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "max_block_size",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract max_block_size {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "max_block_user_tx",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract max_block_user_tx {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "max_columns",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract max_columns {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "max_forsign_size",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract max_forsign_size {\n    data {\n      Value string\n    }\n  \n    conditions {\n      if Size($Value) == 0 {\n        warning \"Value was not received\"\n      }\n      if Int($Value) <= 0 {\n        warning \"Value must be greater than zero\"\n      }\n    }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "max_fuel_block",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract max_fuel_block {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "max_fuel_tx",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract max_fuel_tx {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "max_indexes",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract max_indexes {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "max_tx_count",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract max_tx_count {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "max_tx_size",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract max_tx_size {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "menu_price",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract menu_price {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "new_version_url",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract new_version_url {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "number_of_nodes",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract number_of_nodes {\n    data {\n        Value string\n    }\n\n    conditions {\n        if Size($Value) == 0 {\n            warning \"Value was not received\"\n        }\n        if Int($Value) < 1 || Int($Value) > 999 {\n            warning \"Value must be between 1 and 999\"\n        }\n    }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "page_price",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract page_price {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "private_blockchain",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract private_blockchain {\n    data {\n        Value string\n    }\n\n    conditions {\n        if Int($Value) != 0 && Int($Value) != 1 {\n            warning \"Value must be 0 or 1\"\n        }\n    }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "rb_blocks_1",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract rb_blocks_1 {\n    data {\n        Value string\n    }\n\n    conditions {\n        if Size($Value) == 0 {\n            warning \"Value was not received\"\n        }\n        if Int($Value) < 1 || Int($Value) > 999 {\n            warning \"Value must be between 1 and 999\"\n        }\n    }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "table_price",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract table_price {\n  data {\n    Value string\n  }\n\n  conditions {\n    if Size($Value) == 0 {\n      warning \"Value was not received\"\n    }\n    if Int($Value) <= 0 {\n      warning \"Value must be greater than zero\"\n    }\n  }\n}",
             "Type": "contracts"
         }
     ]
