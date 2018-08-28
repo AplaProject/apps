@@ -17,7 +17,7 @@ contract MoneyTransfer {
 
         var row map
         var req money
-		row = DBFind("keys").Columns("amount").WhereId($key_id).Row()
+		row = DBFind("@1_keys").Columns("amount").Where({id: $key_id, ecosystem: $ecosystem_id}).Row()
         total = Money(row["amount"])
         req = $amount + Money(100000000000000000) 
         if req > total {
@@ -25,13 +25,13 @@ contract MoneyTransfer {
 		}
 	}
 	action {
-		DBUpdate("keys", $key_id, {"-amount": $amount})
-		if DBFind("keys").Columns("id").WhereId($recipient).One("id") == nil {
-			DBInsert("keys", {"id": $recipient,"amount": $amount})
+		DBUpdate("@1_keys", $key_id, {"-amount": $amount})
+		if DBFind("@1_keys").Columns("id").Where({id: $recipient, ecosystem: $ecosystem_id}).One("id") == nil {
+			DBInsert("@1_keys", {"id": $recipient,"amount": $amount})
 		} else {
-			DBUpdate("keys", $recipient, {"+amount": $amount})
+			DBUpdate("@1_keys", $recipient, {"+amount": $amount})
 		}
-        DBInsert("history", {"sender_id": $key_id,"recipient_id": $recipient,
-             "amount":$amount,"comment": $Comment,"block_id": $block,"txhash": $txhash})
+        DBInsert("@1_history", {"sender_id": $key_id,"recipient_id": $recipient,
+            "amount":$amount,"comment": $Comment,"block_id": $block,"txhash": $txhash})
 	}
 }

@@ -54,12 +54,16 @@ contract Export {
             if type == "menu" {
                 if Len($menus_names) > 0 {
                     where["name"] = {"$in": $menus_names}
+					where["ecosystem"] = $ecosystem_id
                 }
             }else{
                 where["app_id"] = $AppID
+				where["ecosystem"] = $ecosystem_id
             }
             if where {
-                rows = DBFind(type).Limit(limit).Offset(offset).Where(where)
+				var tbl string
+				tbl = "@1_" + Str(type)
+                rows = DBFind(tbl).Limit(limit).Offset(offset).Where(where)
             }
             if Len(rows) > 0{
                 i = 0
@@ -90,14 +94,14 @@ contract Export {
 
     conditions {
         var buf app map
-        buf = DBFind("buffer_data").Columns("id,value->app_id,value->app_name").Where({member_id:$key_id, key: "export"}).Row()
+        buf = DBFind("@1_buffer_data").Columns("id,value->app_id,value->app_name").Where({member_id:$key_id, key: "export", ecosystem: $ecosystem_id}).Row()
         if !buf{
             warning "Application not selected"
         }
         $AppID = Int(buf["value.app_id"])
         $AppName = Str(buf["value.app_name"])
 
-        app = DBFind("applications").Columns("id,conditions").Where({id:$AppID}).Row()
+        app = DBFind("@1_applications").Columns("id,conditions").Where({id:$AppID, ecosystem: $ecosystem_id}).Row()
         if !app{
             warning "Application not found"
         }

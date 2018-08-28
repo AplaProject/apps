@@ -12,13 +12,27 @@ contract VotingDecisionCheck {
         }
     }
     func percentPartOfTotal(part, total int) int {
-        if total == 0{ total = 1 }
-        var percent int
-        percent = Int((part * 100)/total)
-        if percent > 100 {
-            percent = 100
+            if total == 0{ total = 1 }
+            var percent int
+            percent = Int((part * 100)/total)
+            if percent > 100 {
+                percent = 100
+            }
+            return percent   
+    }
+    func totalSummForTypeVotingVoters(votingId int) int {
+        var type_number_voters array
+        type_number_voters = DBFind("votings_participants").Where({voting_id:$votingID})
+        var i int
+        i = 0
+        var summ int
+        while i < Len(type_number_voters) {
+            var type_number_voter map
+            type_number_voter = type_number_voters[i]
+            summ = summ + Int(type_number_voter["decision"])
+            i = i + 1
         }
-        return percent
+        return summ
     }
     func closeNotes(){
         var notes array i int
@@ -37,7 +51,7 @@ contract VotingDecisionCheck {
         $FINISHED = 4
         $INVALID = 5
 
-        $voting = DBFind("votings").WhereId($votingID).Columns("voting->name,voting->type,voting->quorum,voting->type_decision,flags->success,progress->number_voters,progress->percent_voters,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params,status").Row()
+        $voting = DBFind("votings").WhereId($votingID).Columns("voting->name,voting->count_type_voters,voting->type,voting->quorum,voting->type_decision,flags->success,progress->number_voters,progress->percent_voters,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params,status").Row()
         $voting_name = $voting["voting.name"]
         $voting_type = Int($voting["voting.type"]) //system or custom
         $type_decision = Int($voting["voting.type_decision"])
@@ -93,41 +107,42 @@ contract VotingDecisionCheck {
                     // if there are still vacancies
                     if candidates_added_count < $number_role_vacancies {
                         percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
+                        if (Int($voting["voting.count_type_voters"]) == 0){
+                            if percent_voters >= $quorum {
+                                // added candidate to the role
+                                var role map
+                                role = DBFind("roles").Columns("id,role_type,role_name,image_id").WhereId(Int($optional_role_id)).Row()
+                                if role {
+                                    var member assignedMember map mid rid string
+                                    member["member_id"] = subject["subject.member_id"]
+                                    mid = member["member_id"]
+                                    rid = role["id"]
+                                    assignedMember = DBFind("roles_participants").Where({"member->member_id":mid, "role->id":rid, deleted:0}).Row()
 
-                        if percent_voters >= $quorum {
-                            // added candidate to the role
-                            var role map
-                            role = DBFind("roles").Columns("id,role_type,role_name,image_id").WhereId(Int($optional_role_id)).Row()
-                            if role {
-                                var member assignedMember map mid rid string
-                                member["member_id"] = subject["subject.member_id"]
-                                mid = member["member_id"]
-                                rid = role["id"]
-                                assignedMember = DBFind("roles_participants").Where({"member->member_id":mid, "role->id":rid, deleted:0}).Row()
+                                    if !assignedMember {
+                                        member["member_name"] = subject["subject.member_name"]
+                                        member["image_id"] = subject["subject.image_id"]
 
-                                if !assignedMember {
-                                    member["member_name"] = subject["subject.member_name"]
-                                    member["image_id"] = subject["subject.image_id"]
+                                        var rolePart appointed m map
+                                        rolePart["id"] = role["id"]
+                                        rolePart["type"] = role["role_type"]
+                                        rolePart["name"] = role["role_name"]
+                                        rolePart["image_id"] = role["image_id"]
 
-                                    var rolePart appointed m map
-                                    rolePart["id"] = role["id"]
-                                    rolePart["type"] = role["role_type"]
-                                    rolePart["name"] = role["role_name"]
-                                    rolePart["image_id"] = role["image_id"]
+                                        appointed["voting_id"] = $votingID
+                                        appointed["voting_name"] = $voting_name
 
-                                    appointed["voting_id"] = $votingID
-                                    appointed["voting_name"] = $voting_name
+                                        // add a candidate to the role
+                                        m["role"] = rolePart
+                                        m["member"] = member
+                                        m["appointed"] = appointed
+                                        m["date_created"] = BlockTime()
+                                        DBInsert("roles_participants", m)
 
-                                    // add a candidate to the role
-                                    m["role"] = rolePart
-                                    m["member"] = member
-                                    m["appointed"] = appointed
-                                    m["date_created"] = BlockTime()
-                                    DBInsert("roles_participants", m)
-
-                                    candidates_added_count = candidates_added_count + 1
-                                    // if at least one of the candidates was added to the role, then the voting decision is considered successful
-                                    flag_decision = $ACCEPT
+                                        candidates_added_count = candidates_added_count + 1
+                                        // if at least one of the candidates was added to the role, then the voting decision is considered successful
+                                        flag_decision = $ACCEPT
+                                    }
                                 }
                             }
                         }
@@ -140,11 +155,21 @@ contract VotingDecisionCheck {
                 var subject map
                 subject = DBFind("votings_subject").Where({voting_id:$votingID}).Columns("id,number_accept").Row()
                 if subject {
-                    percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
-                    if percent_voters >= $quorum {
-                        flag_decision = $ACCEPT
+                    if (Int($voting["voting.count_type_voters"]) == 0){
+                        percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
+                        if percent_voters >= $quorum {
+                            flag_decision = $ACCEPT
+                        } else {
+                            flag_decision = $REJECT
+                        }
                     } else {
-                        flag_decision = $REJECT
+                        var total_summ_type_voter int
+                        total_summ_type_voter = totalSummForTypeVotingVoters($votingID)
+                        if total_summ_type_voter >= 1 {
+                            flag_decision = $ACCEPT
+                        } else {
+                            flag_decision = $REJECT
+                        }
                     }
                 }
             }
@@ -153,38 +178,75 @@ contract VotingDecisionCheck {
                 var subject map
                 subject = DBFind("votings_subject").Where({voting_id:$votingID}).Columns("id,number_accept,subject->table,subject->table_id,subject->column,subject->column_value").Row()
                 if subject {
-                    percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
-                    if percent_voters >= $quorum {
-                        flag_decision = $ACCEPT
+                    if (Int($voting["voting.count_type_voters"]) == 0){
+                        percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
+                        if percent_voters >= $quorum {
+                            flag_decision = $ACCEPT
 
-                        var column string
-                        column = Str(subject["subject.column"])
-                        $colValue = Str(subject["subject.column_value"])
-                        // type of voting - custom
-                        if $voting_type == 1 {
-                            // ALWAYS CHECK THE PERMISSION
-                            var colType string
-                            colType = GetColumnType(subject["subject.table"], column)
-                            if colType == "number"{
-                                $colValue = Int($colValue)
+                            var column string
+                            column = Str(subject["subject.column"])
+                            $colValue = Str(subject["subject.column_value"])
+                            // type of voting - custom
+                            if $voting_type == 1 {
+                                // ALWAYS CHECK THE PERMISSION
+                                var colType string
+                                colType = GetColumnType(subject["subject.table"], column)
+                                if colType == "number"{
+                                    $colValue = Int($colValue)
+                                }
+                                if colType == "money"{
+                                    $colValue = Money($colValue)
+                                }
+                                if colType == "double" {
+                                    $colValue = Float($colValue)
+                                }
+                                var m map
+                                m[column] = $colValue
+                                DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
                             }
-                            if colType == "money"{
-                                $colValue = Money($colValue)
-                            }
-                            if colType == "double" {
-                                $colValue = Float($colValue)
-                            }
-                            var m map
-                            m[column] = $colValue
-                            DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
-                        }
 
-                        // type of voting - system
-                        if $voting_type == 2 {
-                            @1UpdateSysParam("Name,Value,Conditions", column, $colValue, "")
+                            // type of voting - system
+                            if $voting_type == 2 {
+                                @1UpdateSysParam("Name,Value,Conditions", column, $colValue, "")
+                            }
+                        } else {
+                            flag_decision = $REJECT
                         }
                     } else {
-                        flag_decision = $REJECT
+                        var total_summ_type_voter int
+                        total_summ_type_voter = totalSummForTypeVotingVoters($votingID)
+                        if total_summ_type_voter >= 1 {
+                            flag_decision = $ACCEPT
+
+                            var column string
+                            column = Str(subject["subject.column"])
+                            $colValue = Str(subject["subject.column_value"])
+                            // type of voting - custom
+                            if $voting_type == 1 {
+                                // ALWAYS CHECK THE PERMISSION
+                                var colType string
+                                colType = GetColumnType(subject["subject.table"], column)
+                                if colType == "number"{
+                                    $colValue = Int($colValue)
+                                }
+                                if colType == "money"{
+                                    $colValue = Money($colValue)
+                                }
+                                if colType == "double" {
+                                    $colValue = Float($colValue)
+                                }
+                                var m map
+                                m[column] = $colValue
+                                DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
+                            }
+
+                            // type of voting - system
+                            if $voting_type == 2 {
+                                @1UpdateSysParam("Name,Value,Conditions", column, $colValue, "")
+                            }
+                        } else {
+                            flag_decision = $REJECT
+                        }
                     }
                 }
             }
@@ -198,11 +260,21 @@ contract VotingDecisionCheck {
                     $param_accept = subject["subject.contract_accept_params"]
                     $param_reject = subject["subject.contract_reject_params"]
 
-                    percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
-                    if percent_voters >= $quorum {
-                        flag_decision = $ACCEPT
+                    if (Int($voting["voting.count_type_voters"]) == 0){
+                        percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
+                        if percent_voters >= $quorum {
+                            flag_decision = $ACCEPT
+                        } else {
+                            flag_decision = $REJECT
+                        }
                     } else {
-                        flag_decision = $REJECT
+                        var total_summ_type_voter int
+                        total_summ_type_voter = totalSummForTypeVotingVoters($votingID)
+                        if total_summ_type_voter >= 1 {
+                            flag_decision = $ACCEPT
+                        } else {
+                            flag_decision = $REJECT
+                        }
                     }
                 }
             }
