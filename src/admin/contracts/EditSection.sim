@@ -1,24 +1,35 @@
 contract EditSection {
-    data {
+	data {
 		id int
 		title string
 		status int
 		urlname string
 		page string
-    }
-	
-    conditions {
+	}
+
+	conditions {
 		if $status < 0 || $status > 2 {
 			warning "Status must be in range 0..2"
 		}
-		if !DBFind("@1_sections").Columns("id").Where({id: $id, ecosystem: $ecosystem_id}) {
+		if $status == 0 || $status == 1 {
+			var status_check map
+			status_check = DBFind("@1_sections").Where({"id":$id}).Columns("id,status").Row()
+			if (Int(JSONDecode(status_check["status"]))==2) {
+				warning "Section with ""Main section"" status must be only one and can be only reassigned"
+			}
+		}
+		if !DBFind("@1_sections").Columns("id").WhereId($id) {
 			warning Sprintf("Section with id '%v' not exists", $id)
 		}
 	}
-	
-    action {
-		if $status == 2 && DBFind("@1_sections").Columns("id").Where({"status":{"$eq": 2}, ecosystem: $ecosystem_id}).Order("id"){
-			DBUpdate("@1_sections",$id, {"value": "1"})
+
+	action {
+		if $status == 2 {
+			var status_check map
+			var curr_id int
+			status_check = DBFind("@1_sections").Where({"status":$status}).Columns("id,status").Row()
+			curr_id = Int(JSONDecode(status_check["id"]))
+			DBUpdate("@1_sections", curr_id, {"status":1})
 		}
 		DBUpdate("@1_sections", $id, {"title":$title,"status":$status,"urlname":$urlname,"page":$page}) 
 	}
