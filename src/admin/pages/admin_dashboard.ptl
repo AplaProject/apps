@@ -1,6 +1,6 @@
 SetVar(this_page, @1admin_dashboard).(deleters_count,0)
-DBFind(contracts).Where({name:ItemChangeAppId,ecosystem:#ecosystem_id#}).Count(changer_count).Ecosystem(1)
-DBFind(applications,src_apps).Where({deleted:0,ecosystem:#ecosystem_id#}).Order(id).Count(apps_count).Ecosystem(1)
+DBFind(@1_contracts).Where({name:ItemChangeAppId,ecosystem:#ecosystem_id#}).Count(changer_count)
+DBFind(@1_applications,src_apps).Where({deleted:0,ecosystem:#ecosystem_id#}).Order(id).Count(apps_count)
 If(And(GetVar(Restore),GetVar(Table),GetVar(Id))){
     Form(){
         Select(Name:AppId, NameColumn: name, ValueColumn: id, Source: src_apps, Class:mb)
@@ -21,27 +21,27 @@ If(And(GetVar(Restore),GetVar(Table),GetVar(Id))){
     }
     Include(Name:#block#)
 }.Else{
-    DBFind(buffer_data).Columns("value->app_id").Where({key:export,member_id:#key_id#,ecosystem:#ecosystem_id#}).Ecosystem(1).Vars(buffer)
+    DBFind(@1_buffer_data).Columns("value->app_id").Where({key:export,member_id:#key_id#,ecosystem:#ecosystem_id#}).Vars(buffer)
     If(#Single#==binaries){
         Data(tables, "Table,Page,Name"){
-            binaries,@1app_upload_binary,"Binaries data"
+            @1_binaries,@1app_upload_binary,"Binaries data"
         }
     }.ElseIf(#Single#==languages){
         Data(tables, "Table,Cols,Page,Name"){
-            languages,"id,app_id,name,res",@1langres_add,"Languages resources"
+            @1_languages,"id,app_id,name,res",@1langres_add,"Languages resources"
         }
     }.Else{
         Data(tables, "Table,Cols,Page,Name"){
-            contracts,"id,app_id,name,active",editor,"Contracts"
-            pages,"id,app_id,name",editor,"Pages"
-            blocks,"id,app_id,name",editor,"Blocks"
-            tables,"id,app_id,name",@1table_create,"Tables"
-            app_params,"id,app_id,name,value",@1app_params_edit,"Application parameters"
+            @1_contracts,"id,app_id,name,active",editor,"Contracts"
+            @1_pages,"id,app_id,name",editor,"Pages"
+            @1_blocks,"id,app_id,name",editor,"Blocks"
+            @1_tables,"id,app_id,name",@1table_create,"Tables"
+            @1_app_params,"id,app_id,name,value",@1app_params_edit,"Application parameters"
         }
     }
     SetVar(active_btn,"btn btn-info").(create_icon,fa fa-plus-square).(cols,3)
     If(GetVar(appid)!=""){
-        SetVar(where,"{app_id:#appid#}")
+        SetVar(where,"{app_id:#appid#,ecosystem:#ecosystem_id#}")
     }.Else{
         If(#buffer_value_app_id#>0){
             SetVar(appid,#buffer_value_app_id#).(where,"{app_id:#appid#,ecosystem:#ecosystem_id#}")
@@ -52,7 +52,7 @@ If(And(GetVar(Restore),GetVar(Table),GetVar(Id))){
     If(#appid#==0){
         SetVar(application_name,trash)
     }.ElseIf(#appid#>0){
-        DBFind(applications).WhereId(#appid#).Vars(application)
+        DBFind(@1_applications).Where({id:#appid#,ecosystem:#ecosystem_id#}).Vars(application)
     }
     SetTitle(Dashboard: #application_name#)
     Div(content-wrapper){
