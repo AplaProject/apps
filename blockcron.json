@@ -1,0 +1,38 @@
+{
+    "name": "System",
+    "conditions": "ContractConditions(\"MainCondition\")",
+    "data": [
+        {
+            "Name": "admin_menu",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "MenuItem(Title:\"Blockcron\", Page:@1blockcron_list, Icon:\"icon-clock\")",
+            "Type": "menu"
+        },
+        {
+            "Name": "blockcron_edit",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Value": "Div(content-wrapper){\r\n    SetTitle(Delayed contract)\r\n    Div(breadcrumb){\r\n\t\tLinkPage(\"Delayed contract\", @1blockcron_list)\r\n\t\tSpan(/).Style(margin-right: 10px; margin-left: 10px;)\r\n\t\tIf(#id# > 0){\r\n\t\t\tSpan(Class: text-muted, Body: \"Edit\")\r\n\t\t}.Else{\r\n\t\t\tSpan(Class: text-muted, Body: \"New\")\r\n\t\t}\r\n    }\r\n\t\r\n\tForm(){\r\n\t\tIf(#id# > 0){\r\n\t\t\tDBFind(Name: @1delayed_contracts).Where({id:#id#}).Vars(delayed_contract)\r\n\t\t\tDiv(form-group){\r\n\t\t\t\tLabel(\"Contract\")\r\n\t\t\t\tInput(Name: ContName, Disabled: \"true\", Value: #delayed_contract_contract#)\r\n\t\t\t}\r\n\t\t\tDiv(form-group){\r\n\t\t\t\tLabel(\"Start block\")\r\n\t\t\t\tInput(Name: StartBlock, Type: number, Value: #delayed_contract_block_id#)\r\n\t\t\t}\r\n\t\t\tDiv(form-group){\r\n\t\t\t\tLabel(\"Interval\")\r\n\t\t\t\tInput(Name: EveryBlock, Type: number, Value: #delayed_contract_every_block#)\r\n\t\t\t}\r\n\t\t\tDiv(form-group){\r\n\t\t\t\tLabel(\"Limit\")\r\n\t\t\t\tInput(Name: Limit, Type: number, Value: #delayed_contract_limit#)\r\n\t\t\t}\r\n\t\t\tDiv(form-group){\r\n\t\t\t\tLabel(\"Conditions\")\r\n\t\t\t\tInput(Name: Conditions, Value: #delayed_contract_conditions#)\r\n\t\t\t}\r\n\t\t\tDiv(form-group){\r\n\t\t\t\tDiv(row){\r\n\t\t\t\t\tDiv(text-left col-md-6){\r\n\t\t\t\t\t\tButton(Body: \"Delete\", Class: btn btn-danger, Page: @1blockcron_list, Contract: @1EditBlockCron, Params: \"Id=#id#,Deleted=1\").Alert(Text: \"Delete delayed contract?\",ConfirmButton: \"Yes\", CancelButton: \"No\")\r\n\t\t\t\t\t}\r\n\t\t\t\t\tDiv(text-right col-md-6){\r\n\t\t\t\t\t\tButton(Body: \"Save\", Class: btn btn-primary, Page: @1blockcron_list, Contract: @1EditBlockCron, Params: \"Id=#id#\")\r\n\t\t\t\t\t}\r\n\t\t\t\t}\r\n\t\t\t}\r\n\t\t}.Else{\r\n\t\t\tDiv(form-group){\r\n\t\t\t\tLabel(\"Contract\")\r\n\t\t\t\tInput(Name: ContName)\r\n\t\t\t}\r\n\t\t\tDiv(form-group){\r\n\t\t\t\tLabel(\"Start block\")\r\n\t\t\t\tInput(Name: StartBlock, Type: number)\r\n\t\t\t}\r\n\t\t\tDiv(form-group){\r\n\t\t\t\tLabel(\"Interval\")\r\n\t\t\t\tInput(Name: EveryBlock, Type: number)\r\n\t\t\t}\r\n\t\t\tDiv(form-group){\r\n\t\t\t\tLabel(\"Limit\")\r\n\t\t\t\tInput(Name: Limit, Type: number)\r\n\t\t\t}\r\n\t\t\tDiv(form-group){\r\n\t\t\t\tLabel(\"Conditions\")\r\n\t\t\t\tInput(Name: Conditions)\r\n\t\t\t}\r\n\t\t\tDiv(form-group){\r\n\t\t\t\tDiv(text-right){\r\n\t\t\t\t\tButton(Body: \"Save\", Class: btn btn-primary, Page: @1blockcron_list, Contract: @1NewBlockCron)\r\n\t\t\t\t}\r\n\t\t\t}\r\n\t\t}\r\n    }\r\n}",
+            "Menu": "admin_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "blockcron_list",
+            "Conditions": "ContractAccess(\"@1EditPage\")",
+            "Value": "Div(fullscreen){\r\n    SetTitle(Blockcron)\r\n    AddToolButton(Title: Create, Icon: icon-plus, Page: @1blockcron_edit)\r\n\tDiv(breadcrumb){\r\n\t\tSpan(Class: text-muted, Body: \"This section is used to manage the delayed contracts\")\r\n\t}\r\n\r\n    DBFind(@1delayed_contracts,src_cron).Where({\"deleted\":\"false\"}).Order({\"id\":1}).Custom(_actions){\r\n        LinkPage(Body: Em(Class: fa fa-edit), Class: text-primary h4, Page: @1blockcron_edit, PageParams: \"id=#id#\")\r\n    }.Custom(_next_block){\r\n        If(Or(#counter# < #limit#, #limit# == 0)){\r\n            Span(Class: text-warning, Body: #block_id#)\r\n        }.Else{\r\n            Span(Class: text-success, Body: \"Done\")\r\n        }\r\n    }\r\n\r\n    Table(src_cron, \"ID=id,Contract=contract,Interval=every_block,Limit=limit,Conditions=conditions,Next block to start=_next_block,Count of starts=counter,=_actions\").Style(\r\n    tbody > tr:nth-of-type(odd) {\r\n        background-color: #fafbfc; \r\n    }\r\n    tbody > tr > td {\r\n        word-break: break-all;\r\n        font-weight: 400;\r\n        font-size: 13px;\r\n        color: #666;\r\n        border-top: 1px solid #eee;\r\n        vertical-align: middle;\r\n    }\r\n    tr  > *:first-child {\r\n        padding-left:20px;\r\n        width: 80px;\r\n    }\r\n    tr  > *:last-child {\r\n        padding-right:30px;\r\n        text-align:right; \r\n        width: 100px;\r\n    }\r\n    thead {\r\n        background-color: #eee;\r\n    })\r\n}",
+            "Menu": "admin_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "EditBlockCron",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract EditBlockCron {\r\n    data {\r\n        Id int\r\n        ContName string\r\n        EveryBlock int\r\n        Conditions string\r\n        StartBlock int\r\n        Limit int\r\n        Deleted int \"optional\"\r\n    }\r\n    \r\n    conditions {\r\n        if Size($ContName) == 0 {\r\n            error \"Contract not found\"\r\n        }\r\n\r\n        if $EveryBlock < 1 {\r\n            error \"Interval can not be less 1\"\r\n        }\r\n\r\n        ValidateCondition($Conditions,$ecosystem_id)\r\n        \r\n        if $StartBlock < $block {\r\n            error Sprintf(\"Start block can not be less than the current block number. Current block number %d\", $block)\r\n        }\r\n\r\n        if $Limit < 0 {\r\n            error \"Limit can not be less 0\"\r\n        }\r\n        \r\n        if !$Deleted {\r\n            $Deleted = 0\r\n        }\r\n    }\r\n\r\n    action {\r\n        EditDelayedContract(\"Id,Contract,EveryBlock,Conditions,BlockID,Limit,Deleted\", $Id, $ContName, $EveryBlock, $Conditions, $StartBlock, $Limit, $Deleted)\r\n    }\r\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "NewBlockCron",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract NewBlockCron {\r\n    data {\r\n        ContName string\r\n        EveryBlock int\r\n        Conditions string\r\n        StartBlock int\r\n        Limit int \r\n    }\r\n\r\n    conditions {\r\n        if Size($ContName) == 0 {\r\n            error \"Contract not found\"\r\n        }\r\n\r\n        if $EveryBlock < 1 {\r\n            error \"Interval can not be less 1\"\r\n        }\r\n\r\n        ValidateCondition($Conditions,$ecosystem_id)\r\n        \r\n        if $StartBlock < $block {\r\n            error Sprintf(\"Start block can not be less than the current block number. Current block number %d\", $block)\r\n        }\r\n\r\n        if $Limit < 0 {\r\n            error \"Limit can not be less 0\"\r\n        }\r\n    }\r\n\r\n    action {\r\n        NewDelayedContract(\"Contract,EveryBlock,Conditions,BlockID,Limit\", $ContName, $EveryBlock, $Conditions, $StartBlock, $Limit)\r\n    }\r\n}",
+            "Type": "contracts"
+        }
+    ]
+}
