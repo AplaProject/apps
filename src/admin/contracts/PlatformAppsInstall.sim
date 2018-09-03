@@ -1,0 +1,53 @@
+contract PlatformAppsInstall {
+    data {
+        Name string
+    }
+    func getAdminMenu() string {
+        var menu array
+        if $Name == "System" {
+            menu = Append(menu, `MenuItem(Title:"Applications", Page:@1apps_list, Icon:"icon-folder")`)
+            menu = Append(menu, `MenuItem(Title:"Ecosystem parameters", Page:@1params_list, Icon:"icon-settings")`)
+            menu = Append(menu, `MenuItem(Title:"Menus", Page:@1menus_list, Icon:"icon-list")`)
+            menu = Append(menu, `MenuItem(Title:"Sections", Page:@1section_list, Icon:"icon-frame")`)
+            menu = Append(menu, `MenuItem(Title:"Blockcron", Page:@1blockcron_list, Icon:"icon-clock")`)
+            menu = Append(menu, `MenuItem(Title:"Dashboard", Page:@1admin_dashboard, Icon:"icon-wrench")`)
+        }
+        if $Name == "Basic application" {
+            // nothing
+        }
+        return Join(menu array, "\n")
+    }
+    func getDefaultMenu() string {
+        var menu array
+        if $Name == "System" {
+            // nothing
+        }
+        if $Name == "Basic application" {
+            // add the necessary menu items, please
+        }
+        return Join(menu array, "\n")
+    }
+
+
+    conditions {
+        $admin_menu_map = DBFind("@1menu").Columns("id,value").Where({name: "admin_menu", ecosystem: $ecosystem_id}).Row()
+        $default_menu_map = DBFind("@1menu").Columns("id,value").Where({name: "default_menu", ecosystem: $ecosystem_id}).Row()
+
+        if !$admin_menu_map {
+            warning "Admin menu not found"
+        }
+        if !$default_menu_map {
+            warning "Default menu not found"
+        }
+    }
+
+    action {
+        var val_admin_menu string
+        val_admin_menu = Str($admin_menu_map["value"]) + "\n" + getAdminMenu() 
+        EditMenu("Id,Value",Int($admin_menu_map["id"]), val_admin_menu)
+
+        var val_default_menu string
+        val_default_menu = Str($default_menu_map["value"]) + "\n" + getDefaultMenu() 
+        EditMenu("Id,Value", Int($default_menu_map["id"]), val_default_menu)       
+    }
+}
