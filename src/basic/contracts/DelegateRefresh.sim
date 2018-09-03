@@ -12,7 +12,7 @@ contract DelegateRefresh{
     }
     func getAppRoleId(id int, name string) int{
         var rid int
-        rid = Int(AppParam(id, name))
+        rid = Int(AppParam(id, name, $ecosystem_id))
         if rid == 0{
             warning Sprintf("Role not setted in application parameter '%v'", name)
         }
@@ -36,14 +36,14 @@ contract DelegateRefresh{
     action{
         // get delegates ids
         var delegateIds currentDelegates ecosystems array i ecoId int rid string
-        ecosystems = DBFind("ecosystems").Columns("id").Ecosystem(1)
+        ecosystems = DBFind("ecosystems").Columns("id").Where({ecosystem:1})
         while i < Len(ecosystems) {
             var eco delegateParam map
             eco = ecosystems[i]
             ecoId = Int(eco["id"])
-            delegateParam = DBFind("parameters").Where({name:"delegate_account"}).Ecosystem(ecoId).Row()
+            delegateParam = DBFind("parameters").Where({name:"delegate_account", ecosystem:ecoId}).Row()
             if !delegateParam{
-                delegateParam = DBFind("parameters").Where({name:"founder_account"}).Ecosystem(ecoId).Row()
+                delegateParam = DBFind("parameters").Where({name:"founder_account", ecosystem:ecoId}).Row()
             }
 
             if NotInArray(delegateParam["value"], delegateIds){
