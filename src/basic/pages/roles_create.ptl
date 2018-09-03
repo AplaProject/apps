@@ -1,23 +1,23 @@
-DBFind(applications).Columns(["name", "id"]).Where({"name": "Basic application"}).Vars(application)
+DBFind(@1applications).Columns(["name", "id"]).Where({ecosystem:#ecosystem_id#, "name": "Basic application"}).Vars(application)
 
-DBFind(roles).Columns(["role_name", "id"]).Where({deleted:0}).Order(id).Vars(admin_role)
+DBFind(@1roles).Columns(["role_name", "id"]).Where({ecosystem:#ecosystem_id#, deleted:0}).Order(id).Vars(admin_role)
 SetVar(admin_role_name, #admin_role_role_name#)
 
 If(GetVar(rid)){
-    DBFind(roles).WhereId(#rid#).Columns("roles_access->rids,id,role_type,role_name").Vars(role)
+    DBFind(@1roles).Where({ecosystem:#ecosystem_id#, id:#rid#}).Columns("roles_access->rids,id,role_type,role_name").Vars(role)
     SetVar(title, $edit_role$)
     SetVar(role_type, AppParam(Ecosystem:#ecosystem_id#, App:#application_id#, Name: roles_types, Index: #role_role_type#))
 
     If(GetVar(role_roles_access_rids)!=""){
-        DBFind(roles,src_roles_access).Where({id:{"$in":[#role_roles_access_rids#]}}).Columns("id,role_name").Order(role_name)
+        DBFind(@1roles,src_roles_access).Where({ecosystem:#ecosystem_id#, id:{"$in":[#role_roles_access_rids#]}}).Columns("id,role_name").Order(role_name)
         SetVar(rids_access, "[#role_roles_access_rids#, #role_id#]")
     }.Else{
         SetVar(rids_access, [#role_id#])
     }
 }.Else{
-    DBFind(buffer_data).Columns(value).Where({"key": "roles_access", "member_id": #key_id#}).Vars(buffer)
+    DBFind(@1buffer_data).Columns(value).Where({ecosystem:#ecosystem_id#, "key": "roles_access", "member_id": #key_id#}).Vars(buffer)
     If(And(GetVar(buffer_value)!="",#buffer_value#!="[]")){
-        DBFind(roles, src_roles_access).Columns("id,role_name").Where({"id": {"$in": #buffer_value#}}).Order(role_name)
+        DBFind(@1roles, src_roles_access).Columns("id,role_name").Where({ecosystem:#ecosystem_id#, "id": {"$in": #buffer_value#}}).Order(role_name)
         SetVar(rids_access, "#buffer_value#")
     }.Else{
         SetVar(rids_access, [#admin_role_id#])
@@ -26,7 +26,7 @@ If(GetVar(rid)){
     SetVar(rid, 0)
     SetVar(title, $new_role$)
 }
-DBFind(roles, src_roles).Columns(["id", "role_name"]).Where({"deleted":0, "id": {"$nin": #rids_access#}}).Order(id)
+DBFind(@1roles, src_roles).Columns(["id", "role_name"]).Where({ecosystem:#ecosystem_id#, "deleted":0, "id": {"$nin": #rids_access#}}).Order(id)
 If(GetVar(back_page)){}.Else{
     SetVar(back_page,"@1roles_list")
 }

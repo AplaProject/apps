@@ -1,11 +1,11 @@
-DBFind(applications,src_app).Columns("name,id").Where({name:"Basic application"}).Vars(application)
+DBFind(@1applications).Columns("name,id").Where({name:"Basic application", ecosystem:#ecosystem_id#}).Vars(application)
 If(#v_role_id#>0){
-    DBFind(roles,src_roles).WhereId(#v_role_id#).Columns("id,role_name,role_type,roles_access->rids,creator->member_id").Vars(prefix)
+    DBFind(@1roles,src_roles).Where({ecosystem:#ecosystem_id#, id:#v_role_id#}).Columns("id,role_name,role_type,roles_access->rids,creator->member_id").Vars(prefix)
 
     If(#prefix_creator_member_id#==#key_id#){
         SetVar(manager_id,1)
     }.ElseIf(And(#prefix_roles_access_rids#!="",#prefix_roles_access_rids#!="NULL")){
-        DBFind(roles).Where({id:[{"$in": [#prefix_roles_access_rids#]}, {"$eq":#role_id#}]}).Columns("id").Vars(manager)
+        DBFind(@1roles).Where({ecosystem:#ecosystem_id#, id:[{"$in": [#prefix_roles_access_rids#]}, {"$eq":#role_id#}]}).Columns("id").Vars(manager)
     }.Else{
         SetVar(manager_id,0)
     }
@@ -40,12 +40,12 @@ If(#v_role_id#>0){
         }
         If(#manager_id#>0){
             SetVar(participants,0)
-            DBFind(roles_participants).Where({"role->id":#v_role_id#, deleted:0}).Columns("id,member->member_id").Custom(_id){
+            DBFind(@1roles_participants).Where({"role->id":#v_role_id#, deleted:0, ecosystem:#ecosystem_id#}).Columns("id,member->member_id").Custom(_id){
                 SetVar(participants,"#participants#,#member.member_id#")
             }
-            DBFind(keys,src_keys).Where({id:{"$nin":[#participants#]}}).Columns("id").Custom(_name){
+            DBFind(@1keys,src_keys).Where({ecosystem:#ecosystem_id#, id:{"$nin":[#participants#]}}).Columns("id").Custom(_name){
                 SetVar(m_id, 0)
-                DBFind(members).WhereId(#id#).Columns("id,member_name").Vars(m)
+                DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#id#}).Columns("id,member_name").Vars(m)
                 Address(#id#)
                 If(Or(#m_id#>0,#m_id#<0)){
                     " (#m_member_name#)"

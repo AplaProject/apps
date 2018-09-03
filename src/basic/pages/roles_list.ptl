@@ -19,15 +19,15 @@ Div(){
     border: 0;
 )
 Div(content-wrapper){
-    DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(application)
+    DBFind(@1applications).Where({name:"Basic application", ecosystem:#ecosystem_id#}).Columns("name,id").Vars(application)
 
     If(GetVar(search)){
-        SetVar(where,{role_name:{"$like":#search#}})
+        SetVar(where,{role_name:{"$like":#search#}, ecosystem:#ecosystem_id#})
     }.Else{
-        SetVar(where,{id:{"$neq":0}}).(search,)
+        SetVar(where,{id:{"$neq":0}, ecosystem:#ecosystem_id#}).(search,)
     }
 
-    DBFind(roles,src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Count(roles_count).Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access->rids").Custom(_id){
+    DBFind(@1roles,src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Count(roles_count).Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access->rids").Custom(_id){
         JsonToSource(rids,#roles_access#)
         If(#deleted# == 0){
             SetVar(style_text,).(style_link,"text-primary")
@@ -75,7 +75,7 @@ Div(content-wrapper){
         }
 
         If(And(#roles_access.rids#!="",#roles_access.rids#!="NULL")){
-            DBFind(roles,src_roles_list).Where({id:{"$in":[#roles_access.rids#]}}).Columns("id,role_name").Count(access_count).Order(role_name)
+            DBFind(@1roles,src_roles_list).Where({id:{"$in":[#roles_access.rids#]}}).Columns("id,role_name").Count(access_count).Order(role_name)
             Div(#style_text# breaker){
                 ForList(src_roles_list){
                     If(And(#role_id#==#id#)){
