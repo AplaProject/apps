@@ -21,6 +21,15 @@ contract lots_Close {
         params["lot_id"] = $id
         if !buyer {
             DBUpdate("lots", $id, "status", 5)
+            var reject_lot_notif array
+            reject_lot_notif = DBFind("notifications").Where("page_params->lot_id=? and closed=0", $id)
+            var i int
+            while i < Len(reject_lot_notif) {
+                var p map
+                p = reject_lot_notif[i]
+                notifications_Close("notific_id",Int(p["id"]))
+                i=i+1
+            }
             notifications_Send("member_id,sender,text_header,page_name,params_map", $lot["seller"], 1, "Лот не продан: нет покупателей", "lots_view", JSONEncode(params))
         }else{
             var contract_text string buyer_member, seller_member map

@@ -1,15 +1,26 @@
 DBFind(applications).Columns("id").Where("name='Trading Platform' AND deleted=0").Vars(application)
 DBFind(roles).Where("id=#role_id#").Columns("role_name").Vars(r)
 SetTitle(Торги)
+If(#isMobile# == 1){
+    Div(Class: list-group-item){
+        Button(Body: Dev Button, Class: btn btn-primary, Page: testtest)
+    }
+    Div(Class: list-group-item){
+        Button(Body: Dev Button 2, Class: btn btn-primary, Page: lots_mobile)
+    }
+    Div(Class: list-group-item){
+        Button(Body: Обновить список лотов, Class: btn btn-primary, Page: lots_list)
+    }
+}
+
 Div(content-wrapper){
-    Div(breadcrumb){
-        Span(Class: text-muted, Body: $lots_list$)
-        If(#r_role_name#=="Seller"){
-            Button(Body: Span(Class:icon-plus) $lots_create$, Page: lots_edit, Class: btn btn-link pull-right hidden-sm hidden-md hidden-xs).Popup(Width: 40, Header: "Выбор категории")
-            Button(Body: Span(Class:icon-plus) $lots_create$, Page: lots_edit, Class: btn btn-link pull-right hidden-lg).Popup(Width: 50, Header: "Выбор категории")
+    Span(){
+        If(#isMobile# == 0){
+            If(#r_role_name#=="Seller"){
+                Button(Body: Em(Class:icon-plus) $lots_create$, Page: lots_edit, Class: btn btn-link pull-right).Popup(Width: 50, Header: "Выбор категории")  
+            }
         }
     }
-
     SetVar(Where,"deleted=0").(rejected_status,5)
     If(GetVar(Search)){
         If(GetVar(Status)){
@@ -23,7 +34,7 @@ Div(content-wrapper){
         }
         SetVar(Search,)
     }
-
+    
     Div(text-right){
         Data(status_icons, "Icon"){
             fa fa-hourglass-start
@@ -33,30 +44,63 @@ Div(content-wrapper){
             fa fa-times
         }
 
-        If(GetVar(Status)!=""){
-            Button(Class: fa fa-times mr-sm btn bg-danger, Page: lots_list)
-        }
-        ForList(status_icons){
-            SetVar(status,Calculate(#status_icons_index#))
-            If(#Status#==#status#){
-                Button(Class: #Icon# mr-sm btn bg-gray-lighter, Page: lots_list, PageParams: "Status=#status#,Search=#Search#")
-            }.Else{
-                Button(Class: #Icon# mr-sm btn bg-gray, Page: lots_list, PageParams: "Status=#status#,Search=#Search#")
+        If(#isMobile# == 0){
+            If(GetVar(Status)!=""){
+                Button(Class: fa fa-times mr-sm btn bg-danger, Page: lots_list)
+            }
+            ForList(status_icons){
+                SetVar(status,Calculate(#status_icons_index#))
+                If(#Status#==#status#){
+                    Button(Class: #Icon# mr-sm btn bg-gray-lighter, Page: lots_list, PageParams: "Status=#status#,Search=#Search#")
+                }.Else{
+                    Button(Class: #Icon# mr-sm btn bg-gray, Page: lots_list, PageParams: "Status=#status#,Search=#Search#")
+                }
+            }
+        }.Else{
+            Div(Class: form-group){ 
+                Div(Class: row){
+                    Div(Class: list-group-item){
+                        Div(Class: text-center){ 
+                            Div(Class: row mt-sm t4){ 
+                                Div(Class: col-xs-12){
+                                    Button(Class:btn btn-default, Page: lots_list, PageParams: "Status=1,Search=#Search#"){Em(Class:fa fa-hourglass-start)}
+                                    Button(Class:btn btn-default, Page: lots_list, PageParams: "Status=2,Search=#Search#"){Em(Class:fa fa-hourglass-half)}
+                                    Button(Class:btn btn-default, Page: lots_list, PageParams: "Status=3,Search=#Search#"){Em(Class:fa fa-hourglass-end)}
+                                    Button(Class:btn btn-default, Page: lots_list, PageParams: "Status=4,Search=#Search#"){Em(Class:fa fa-check)}
+                                }
+                            }
+                        }
+                    }
+                    Div(Class: list-group-item text-center){ 
+                        Div(Class: row mt-sm t4 text-center){ 
+                            Div(Class: col-xs-12 text-center){
+                                Div(Class: text-center){
+                                    Button(Class:btn btn-default, Page: lots_list, PageParams: "Status=5,Search=#Search#"){Em(Class:fa fa-times)}
+                                    If(GetVar(Status)!=""){
+                                        Button(Class:btn btn-danger, Page: lots_list){Em(Class:fa fa-times)}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-    }.Style(div {display:inline-block;})
 
+    }.Style(div {display:inline-block;})
     Form(panel panel-primary){
         Div(panel-body){
             Div(row){
-                Div(col-md-12){
+                Div(col-md-12 col-xs-12){
                     Div(input-group){
                         Div(input-group-addon){
                             "Название"
                         }
                         Input(Name: Search, Value: #Search#)
                         Div(input-group-btn){
-                            Button(Class: fa fa-search btn btn-default, Page: lots_list, PageParams: "Search=Val(Search)")
+                            Button(Class:  btn btn-default, Page: lots_list, PageParams: "Search=Val(Search)"){
+                                Em(Class: fa fa-search)
+                            }
                         }
                     }
                 }
@@ -87,13 +131,13 @@ Div(content-wrapper){
             }.Custom(_date_creation){
                 DateTime(#date_creation#, DD.MM.YYYY)
             }.Custom(_date_start){
-                DateTime(#date_start#, DD.MM.YY) \ DateTime(#date_end#, DD.MM.YY)
+                DateTime(#date_start#, DD.MM.YY) / DateTime(#date_end#, DD.MM.YY)
             }.Custom(_date_end){
             }.Custom(_amount_starting){
                 Div(Body:Money(#amount_starting#))
             }.Custom(_stps){
                 If(#type_bargain# == 1){
-                    Div(Class:h6, Body:Money(#order_min#) \ Money(#order_max#))
+                    Div(Class:h6, Body:Money(#order_min#) / Money(#order_max#))
                 }
                 If(#type_bargain# == 2){
                     Div(Class:h6, Body:"-")
@@ -132,9 +176,11 @@ Div(content-wrapper){
                             }
                         }
                     }.ElseIf(And(#seller#==#key_id#,#r_role_name#=="Seller")){
-                        If(#status#<1){
-                            Button(Class: btn btn-default fa fa-edit mr-sm, Page: lots_edit, PageParams: "Id=#id#")
-                            Button(Class: btn btn-danger fa fa-trash, Page: lots_list, Contract: lots_Delete, Params: "Id=#id#").Alert($lots_delete_auction$, $lots_yes$, $lots_no$)
+                        If(#isMobile# == 0){
+                            If(#status#<1){
+                                Button(Class: btn btn-default fa fa-edit mr-sm, Page: lots_edit, PageParams: "Id=#id#")
+                                Button(Class: btn btn-danger fa fa-trash, Page: lots_list, Contract: lots_Delete, Params: "Id=#id#").Alert($lots_delete_auction$, $lots_yes$, $lots_no$)
+                            }
                         }
                     }
                 }
@@ -153,7 +199,7 @@ Div(content-wrapper){
                 Div(col-md-12){
                     If(#lots_count#>0){
                         Div(table-responsive){
-                            Table(src_lots,"ID=id,$lots_name$=_name,$photo$=_photo,$seller$=_seller,Начало \ Окончание=_date_start,$amount_starting$=_amount_starting,Шаг (Min\Max)=_stps,$amount_final$=_amount_final,$lots_status$=_status,=_actions")
+                            Table(src_lots,"ID=id,$lots_name$=_name,$photo$=_photo,$seller$=_seller,Начало / Окончание=_date_start,$amount_starting$=_amount_starting,Шаг (Min/Max)=_stps,$amount_final$=_amount_final,$lots_status$=_status,=_actions")
                         }
                     }.Else{
                         Div(text-center h3){

@@ -1,5 +1,5 @@
-If(GetVar(left_col)){}.Else{SetVar(left_col,"col-md-3")}
-If(GetVar(right_col)){}.Else{SetVar(right_col,"col-md-9")}
+If(GetVar(left_col)){}.Else{SetVar(left_col,"col-md-3 col-xs-3")}
+If(GetVar(right_col)){}.Else{SetVar(right_col,"col-md-9 col-xs-9")}
 Data(weight_types, "id,name"){
     1,$lots_kg$
     2,$lots_ton$
@@ -8,29 +8,49 @@ Data(weight_types, "id,name"){
 If(#lot_weight_decimal#>#lot_weight#){
     SetVar(lot_weight,#lot_weight_decimal#)
 }
-
-Div(#left_col# mt-sm text-right){
-    Label(For:Weight){LangRes(lots_weight)}
+If(#isMobile# == 0){
+    Div(#left_col# mt-sm text-right){
+        Label(For:Weight){LangRes(lots_weight)}
+    }
+    Div(#right_col# text-left){
+        Div(row){
+            If(And(GetVar(TypeId),GetVar(lot_weight))){
+                Div(col-sm-4){
+                    Input(Name:Weight, Type:number, Value:#lot_weight#)
+                }
+                Div(col-sm-8){
+                    Select(Name:WeightType, Source:weight_types, NameColumn:name, ValueColumn:id, Value:#lot_weight_type#)
+                }
+            }.ElseIf(GetVar(lot_weight)){
+                Div(col-md-4 col-xs-4 mt-sm){
+                    Span(#lot_weight#, mr-sm)
+                    AppParam(App:#application_id#,Name:lots_weight_types, Index: #lot_weight_type#)
+                }
+            }.Else{
+                Div(col-sm-4){
+                    Input(Name:Weight, Type:number)
+                }
+                Div(col-sm-8){
+                    Select(Name:WeightType, Source:weight_types, NameColumn:name, ValueColumn:id)
+                }
+            }
+        }
+    }
 }
-Div(#right_col# text-left){
-    Div(row){
-        If(And(GetVar(TypeId),GetVar(lot_weight))){
-            Div(col-sm-8){
+If(#isMobile# == 1){
+    Div(Class: form-group){
+        Div(text-bold text-center){
+            Label(For:Weight){LangRes(lots_weight)}
+        }
+        Div(text-center){
+            If(And(GetVar(TypeId),GetVar(lot_weight))){
                 Input(Name:Weight, Type:number, Value:#lot_weight#)
-            }
-            Div(col-sm-4){
                 Select(Name:WeightType, Source:weight_types, NameColumn:name, ValueColumn:id, Value:#lot_weight_type#)
-            }
-        }.ElseIf(GetVar(lot_weight)){
-            Div(col-sm-12 mt-sm){
-                Span(#lot_weight#,mr-sm)
+            }.ElseIf(GetVar(lot_weight)){
+                Span(#lot_weight#)
                 AppParam(App:#application_id#,Name:lots_weight_types, Index: #lot_weight_type#)
-            }
-        }.Else{
-            Div(col-sm-8){
+            }.Else{
                 Input(Name:Weight, Type:number)
-            }
-            Div(col-sm-4){
                 Select(Name:WeightType, Source:weight_types, NameColumn:name, ValueColumn:id)
             }
         }
