@@ -78,7 +78,7 @@ contract VotingCreate {
         if $count_type_voters == 0 {
             if ($quorum < 5) || ($quorum > 100) {
                 warning Sprintf("Quorum [%v] should be in the range from 5 to 100", $quorum)
-            }   
+            }
             if ($volume < 50) || ($volume > 100) {
                 warning Sprintf("Volume [%v] should be in the range from 50 to 100", $volume)
             }
@@ -98,9 +98,9 @@ contract VotingCreate {
                 warning Sprintf("The voting type 'system' is not allowed to launch from %v", $original_contract)
             }
         }
-        
 
-        $key = DBFind("keys").WhereId($key_id).Row()
+
+        $key = DBFind("@1keys").Where({ecosystem: $ecosystem_id, id:$key_id}).Row()
         if !$key {
             warning "You are not a member of the ecosystem"
         }
@@ -139,12 +139,13 @@ contract VotingCreate {
         m["status"] = 1
         m["date_started"] = $date_started
         m["date_ended"] = $date_ended
+        m["ecosystem"] = $ecosystem_id,
 
-        votingId = DBInsert("votings", m)
+        votingId = DBInsert("@1votings", m)
 
         // if all members are voting participants
         if $type_participants == 1 {
-            VotingInvite("votingID,var_id", votingId, 0)
+            @1VotingInvite("votingID,var_id", votingId, 0)
         }
         $result = votingId
     }

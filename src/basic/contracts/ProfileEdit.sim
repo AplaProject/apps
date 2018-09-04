@@ -5,12 +5,12 @@ contract ProfileEdit {
     }
 
     conditions {
-        $member = DBFind("members").WhereId($key_id).Row()
-        $app_id = DBFind("applications").Where({name:"Basic application", deleted:0, ecosystem:$ecosystem_id}).One("id")
+        $member = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:$key_id}).Row()
+        $app_id = DBFind("@1applications").Where({ecosystem:$ecosystem_id, name:"Basic application", deleted:0}).One("id")
 
         if !$member {
             // check member_name
-            if DBFind("members").Where({member_name:$member_name}).One("id") {
+            if DBFind("@1members").Where({ecosystem:$ecosystem_id, member_name:$member_name}).One("id") {
                 warning "This member name is busy. Enter another member name, please"
             }
         }
@@ -20,11 +20,12 @@ contract ProfileEdit {
         var m map
         m["member_info"] = {information:$information}
         if $member{
-            DBUpdate("members", $key_id, m)
+            DBUpdate("@1members", $key_id, m)
         } else {
             m["id"] = $key_id
             m["member_name"] = $member_name
-            DBInsert("members", m)
+            m["ecosystem"] = $ecosystem_id
+            DBInsert("@1members", m)
         }
     }
 }

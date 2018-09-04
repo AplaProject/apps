@@ -4,11 +4,11 @@ contract RolesAccessCheck {
     }
     conditions {
         var role map
-        role = DBFind("roles").WhereId($rid).Columns("id,role_name,deleted,roles_access->rids,role_type,creator->member_id,company_id").Row()
+        role = DBFind("@1roles").Where({id:$rid}).Columns("id,role_name,deleted,roles_access->rids,role_type,creator->member_id,company_id").Row()
         if !role {
             warning Sprintf("%v: Role not found", $this_contract)
         }
-        
+
         if role["creator.member_id"] == $key_id {
             return
         }
@@ -19,14 +19,14 @@ contract RolesAccessCheck {
             if rawRids[i] > 0 {
                 rids = Append(rids, rawRids[i])
             }
-            i=i+1
+            i = i + 1
         }
-        i=0
-        while i<Len(rids){
+        i = 0
+        while i < Len(rids){
             if rids[i] == $role_id {
                 return
             }
-            i=i+1
+            i = i + 1
         }
 
         if role["role_type"] == 4 {

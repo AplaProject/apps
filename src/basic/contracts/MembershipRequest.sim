@@ -4,7 +4,7 @@ contract MembershipRequest {
     }
 
     conditions {
-        if DBFind("notifications").Where({"page_params->ecosystem_id":$ecosystem_num, "sender->member_id":$key_id, closed:0, page_name:"membership_admin_view"}).Row(){
+        if DBFind("@1notifications").Where({ecosystem:$ecosystem_id, "page_params->ecosystem_id":$ecosystem_num, "sender->member_id":$key_id, closed:0, page_name:"membership_admin_view"}).Row(){
             warning "Request already sent"
         }
     }
@@ -12,8 +12,8 @@ contract MembershipRequest {
     action {
         var notific_params map founder_id int
         notific_params["ecosystem_id"] = $ecosystem_num
-        founder_id = DBFind("parameters").Where({name:"founder_account", ecosystem:$ecosystem_num}).One("value")
+        founder_id = DBFind("@1parameters").Where({name:"founder_account", ecosystem:$ecosystem_num}).One("value")
 
-        NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", founder_id, 1, "icon icon-user-follow", "New request for membership", "View details", "membership_admin_view", notific_params)
+        @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", founder_id, 1, "icon icon-user-follow", "New request for membership", "View details", "membership_admin_view", notific_params)
     }
 }

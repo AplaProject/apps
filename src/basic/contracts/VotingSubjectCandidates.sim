@@ -5,13 +5,13 @@ contract VotingSubjectCandidates {
     }
     func getMemberInfo(kid int) map {
         var res member map
-        member = DBFind("members").WhereId(kid).Row()
+        member = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:kid}).Row()
         if member {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         }else{
-            member = DBFind("keys").WhereId(kid).Row()
+            member = DBFind("@1keys").WhereId(kid).Row()
             if member {
                 res["member_id"] = member["id"]
                 res["member_name"] = IdToAddress(Int(member["id"]))
@@ -23,8 +23,8 @@ contract VotingSubjectCandidates {
 
     conditions {
         $STARTED = 3
-        $FINISHED = 4        
-        $voting = DBFind("votings").Where({id:$votingID}).Columns("id,optional->number_candidates,voting->type,flags->full_data,status").Row()
+        $FINISHED = 4
+        $voting = DBFind("@1votings").Where({id:$votingID}).Columns("id,optional->number_candidates,voting->type,flags->full_data,status").Row()
         if $voting["status"] == $STARTED {
             warning "Voting already started. Can not add candidates"
         }
@@ -40,7 +40,7 @@ contract VotingSubjectCandidates {
             $memberID = $key_id
         }
 
-        if DBFind("votings_subject").Where({voting_id:$votingID, "subject->member_id":$memberID}).One("id") {
+        if DBFind("@1votings_subject").Where({voting_id:$votingID, "subject->member_id":$memberID}).One("id") {
             warning "This candidature for this role has already been added before"
         }
 
@@ -51,9 +51,9 @@ contract VotingSubjectCandidates {
     }
 
     action {
-        DBInsert("votings_subject", {voting_id:$votingID, subject:$member})
+        DBInsert("@1votings_subject", {ecosystem: $ecosystem_id, voting_id:$votingID, subject:$member})
         var m map
         m["optional->number_candidates"] = Int($voting["optional.number_candidates"]) + 1
-        DBUpdate("votings", $votingID, m)
+        DBUpdate("@1votings", $votingID, m)
     }
 }

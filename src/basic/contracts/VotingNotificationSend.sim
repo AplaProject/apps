@@ -12,12 +12,12 @@ contract VotingNotificationSend {
     conditions {
         var bt string
         bt = BlockTime()
-        $voting = DBFind("votings").Columns("id,date_ended").Where({id:$votingID, date_ended:[{"$gt":bt}]}).One("id")
+        $voting = DBFind("@1votings").Columns("id,date_ended").Where({id:$votingID, date_ended:[{"$gt":bt}]}).One("id")
         if !$voting {
             warning "Voting has expired. Notifications can not be sent"
         }
 
-        $voting = DBFind("votings").Columns("voting->name,creator->member_id,flags->notifics,flags,date_started").Where({id:$votingID, date_started:[{"$gt":bt}]}).Row()
+        $voting = DBFind("@1votings").Columns("voting->name,creator->member_id,flags->notifics,flags,date_started").Where({id:$votingID, date_started:[{"$gt":bt}]}).Row()
         if !$voting {
             warning "Voting has not yet begun. Try again later, please"
         }
@@ -33,18 +33,18 @@ contract VotingNotificationSend {
 
     action {
         var participants array
-        participants = DBFind("votings_participants").Where({voting_id:$votingID, decision:0})
+        participants = DBFind("@1votings_participants").Where({voting_id:$votingID, decision:0})
         var i int
         while i < Len(participants) {
             var participant member params map
             participant = participants[i]
             member = safeJsonToMap(participant["member"])
             params["voting_id"] = $votingID
-            NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,rid,closure_type", Int(member["member_id"]), 1, "fa-check", "Voting", $voting_name, "voting_view", JSONEncode(params), 0, 0)
+            @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,rid,closure_type", Int(member["member_id"]), 1, "fa-check", "Voting", $voting_name, "voting_view", JSONEncode(params), 0, 0)
 
             i = i + 1
         }
 
-        DBUpdate("votings", $votingID, {"flags->notifics":1})
+        DBUpdate("@1votings", $votingID, {"flags->notifics":1})
     }
 }

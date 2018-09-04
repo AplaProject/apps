@@ -1,5 +1,5 @@
 contract DelegateRefresh{
-    func NotInArray(val string, arr array) bool{
+    func notInArray(val string, arr array) bool{
         var i int
         // info arr
         while i < Len(arr){
@@ -21,13 +21,13 @@ contract DelegateRefresh{
     conditions{
         MainCondition()
         var appId roleId int
-        appId = Int(DBFind("applications").Where({name:"Basic application", deleted:0, ecosystem:$ecosystem_id}).One("id"))
+        appId = Int(DBFind("@1applications").Where({ecosystem:$ecosystem_id, name:"Basic application", deleted:0}).One("id"))
         if appId == 0{
             warning "Application not found"
         }
         roleId = getAppRoleId(appId, "role_delegate")
 
-        $role = DBFind("roles").Where({id:roleId, deleted:0}).Row()
+        $role = DBFind("@1roles").Where({id:roleId, deleted:0}).Row()
         if !$role{
             warning "Role not found"
         }
@@ -36,17 +36,17 @@ contract DelegateRefresh{
     action{
         // get delegates ids
         var delegateIds currentDelegates ecosystems array i ecoId int rid string
-        ecosystems = DBFind("ecosystems").Columns("id").Where({ecosystem:1})
+        ecosystems = DBFind("@1ecosystems").Columns("id")
         while i < Len(ecosystems) {
             var eco delegateParam map
             eco = ecosystems[i]
             ecoId = Int(eco["id"])
-            delegateParam = DBFind("parameters").Where({name:"delegate_account", ecosystem:ecoId}).Row()
+            delegateParam = DBFind("@1parameters").Where({name:"delegate_account", ecosystem:ecoId}).Row()
             if !delegateParam{
-                delegateParam = DBFind("parameters").Where({name:"founder_account", ecosystem:ecoId}).Row()
+                delegateParam = DBFind("@1parameters").Where({name:"founder_account", ecosystem:ecoId}).Row()
             }
 
-            if NotInArray(delegateParam["value"], delegateIds){
+            if notInArray(delegateParam["value"], delegateIds){
                 delegateIds = Append(delegateIds, delegateParam["value"])
             }
             i = i + 1
@@ -54,14 +54,14 @@ contract DelegateRefresh{
 
         // remove old role assigns
         rid = Int($role["id"])
-        currentDelegates = DBFind("roles_participants").Where({"role->id":rid, deleted:0}).Columns("id,member->member_id")
+        currentDelegates = DBFind("@1roles_participants").Where({"role->id":rid, deleted:0}).Columns("id,member->member_id")
         var delegate map id int
         i = 0
         while i < Len(currentDelegates){
             delegate = currentDelegates[i]
-            if NotInArray(delegate["member.member_id"], delegateIds){
+            if notInArray(delegate["member.member_id"], delegateIds){
                 id = Int(delegate["id"])
-                RolesUnassign("row_id", id)
+                @1RolesUnassign("row_id", id)
             }
             i = i + 1
         }
@@ -71,11 +71,11 @@ contract DelegateRefresh{
         i = 0
         while i < Len(delegateIds) {
             delegateId = Int(delegateIds[i])
-            key = DBFind("keys").WhereId(delegateId).Row()
+            key = DBFind("@1keys").WhereId(delegateId).Row()
             if key {
                 // check role dup
-                if !DBFind("roles_participants").Where({"member->member_id":delegateId, "role->id":rid, deleted:0}).Row(){
-                    RolesAssign("rid,member_id", rid, Int(key["id"]))
+                if !DBFind("@1roles_participants").Where({"member->member_id":delegateId, "role->id":rid, deleted:0}).Row(){
+                    @1RolesAssign("rid,member_id", rid, Int(key["id"]))
                 }
             }
             i = i + 1

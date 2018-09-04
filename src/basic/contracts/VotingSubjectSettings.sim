@@ -23,7 +23,7 @@ contract VotingSubjectSettings {
 
         $STARTED = 3
         $FINISHED = 4
-        $voting = DBFind("votings").Where({id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("optional,voting->type,flags->full_data").Row()
+        $voting = DBFind("@1votings").Where({id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("optional,voting->type,flags->full_data").Row()
 
         if !$voting {
             warning "Voting already started. Can not edit document"
@@ -33,7 +33,7 @@ contract VotingSubjectSettings {
             warning "This vote is a system. Change settings not allowed"
         }
         var role map
-        role = DBFind("roles").Where({id:$roleID, deleted:0}).Row()
+        role = DBFind("@1roles").Where({id:$roleID, deleted:0}).Row()
         if !role {
             warning "Specified role not found"
         }
@@ -55,8 +55,8 @@ contract VotingSubjectSettings {
         optional["role_id"] = $roleID
         optional["role_vacancies"] = $vacancies
 
-        DBUpdate("votings", $votingID, {optional:optional})
+        DBUpdate("@1votings", $votingID, {optional:optional})
 
-        VotingSubjectCheck("votingID", $votingID)
+        @1VotingSubjectCheck("votingID", $votingID)
     }
 }

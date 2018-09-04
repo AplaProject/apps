@@ -5,13 +5,13 @@ contract RolesAssign {
     }
     func getMemberInfo(kid int) map {
         var res member map
-        member = DBFind("members").WhereId(kid).Row()
+        member = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:kid}).Row()
         if member {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         }else{
-            member = DBFind("keys").WhereId(kid).Row()
+            member = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:kid}).Row()
             if member {
                 res["member_id"] = member["id"]
                 res["member_name"] = IdToAddress(Int(member["id"]))
@@ -21,7 +21,7 @@ contract RolesAssign {
         return res
     }
     conditions {
-        $role = DBFind("roles").WhereId($rid).Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Row()
+        $role = DBFind("@1roles").Where({id:$rid}).Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Row()
         if (Int($role["role_type"]) == 2){
             warning "Elective role can be assigned only during voting"
         }
@@ -29,7 +29,7 @@ contract RolesAssign {
             warning "Role not found"
         }
 
-        if !DBFind("keys").WhereId($member_id).Row() {
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$member_id}).Row() {
             warning "Key not found"
         }
 
@@ -40,8 +40,8 @@ contract RolesAssign {
         var specialRules map prev_contract string stack array
         stack = JSONDecode(JSONEncode($stack))
         prev_contract = stack[0]
-        if Len(stack)>2{
-            prev_contract = stack[Len(stack)-2]
+        if Len(stack) > 2{
+            prev_contract = stack[Len(stack) - 2]
         }
         specialRules["@1VotingValidatorAccept"] = "Validator"
         specialRules["@1DelegateRefresh"] = "Delegate"
@@ -49,10 +49,10 @@ contract RolesAssign {
         specialRules["@1VotingTemplateRun"] = "Investor with voting rights"
         specialRules["@1VotingTokensRefundCreate"] = "Investor with voting rights"
         if specialRules[prev_contract] != $role["role_name"] {
-            RolesAccessCheck("rid", $rid)
+            @1RolesAccessCheck("rid", $rid)
         }
 
-        $assigned = DBFind("roles_participants").Where({"role->id":$rid, "member->member_id":$member_id, deleted:0}).One("id")
+        $assigned = DBFind("@1roles_participants").Where({"role->id":$rid, "member->member_id":$member_id, deleted:0}).One("id")
     }
 
     action {
@@ -73,6 +73,7 @@ contract RolesAssign {
         m["member"] = member
         m["appointed"] = appointer
         m["date_created"] = BlockTime()
-        DBInsert("roles_participants", m)
+        m["ecosystem"] = $ecosystem_id
+        DBInsert("@1roles_participants", m)
     }
 }

@@ -6,20 +6,20 @@ contract RolesUnassign {
     conditions {
         // check record
         var assigned role map
-        assigned = DBFind("roles_participants").WhereId($row_id).Columns("id,role->id").Row()
+        assigned = DBFind("@1roles_participants").WhereId($row_id).Columns("id,role->id").Row()
         if !assigned {
             warning "Participant not found"
         }
 
-        role = DBFind("roles").WhereId(Int(assigned["role.id"])).Columns("id,creator->member_id,role_name").Row()
+        role = DBFind("@1roles").WhereId(Int(assigned["role.id"])).Columns("id,creator->member_id,role_name").Row()
         if !role {
             warning "Role not found in the roles registry"
         }
 
         var specialRules map prev_contract string
         prev_contract = $stack[0]
-        if Len($stack)>2{
-            prev_contract = $stack[Len($stack)-2]
+        if Len($stack) > 2{
+            prev_contract = $stack[Len($stack) - 2]
         }
         specialRules["@1VotingValidatorAccept"] = "Candidate for validators"
         specialRules["@1DelegateRefresh"] = "Delegate"
@@ -29,7 +29,7 @@ contract RolesUnassign {
         specialRules["@1sysparams_ValidatorResign"] = "Validator"
 
         if specialRules[prev_contract] != role["role_name"] {
-            RolesAccessCheck("rid", Int(role["id"]))
+            @1RolesAccessCheck("rid", Int(role["id"]))
         }
     }
 
@@ -38,6 +38,6 @@ contract RolesUnassign {
         var m map
         m["deleted"] = 1
         m["date_deleted"] = BlockTime()
-        DBUpdate("roles_participants", $row_id, m)
+        DBUpdate("@1roles_participants", $row_id, m)
     }
 }

@@ -12,17 +12,17 @@ contract VotingDecisionCheck {
         }
     }
     func percentPartOfTotal(part, total int) int {
-            if total == 0{ total = 1 }
-            var percent int
-            percent = Int((part * 100)/total)
-            if percent > 100 {
-                percent = 100
-            }
-            return percent   
+        if total == 0{ total = 1 }
+        var percent int
+        percent = Int((part * 100) / total)
+        if percent > 100 {
+            percent = 100
+        }
+        return percent
     }
     func totalSummForTypeVotingVoters(votingId int) int {
         var type_number_voters array
-        type_number_voters = DBFind("votings_participants").Where({voting_id:$votingID})
+        type_number_voters = DBFind("@1votings_participants").Where({voting_id:$votingID})
         var i int
         i = 0
         var summ int
@@ -36,12 +36,12 @@ contract VotingDecisionCheck {
     }
     func closeNotes(){
         var notes array i int
-        notes = DBFind("notifications").Where({page_name:"voting_view", "page_params->voting_id":$votingID})
+        notes = DBFind("@1notifications").Where({page_name:"voting_view", "page_params->voting_id":$votingID})
         while i < Len(notes){
             var note map
             note = notes[i]
-            NotificationsClose("notific_id", Int(note["id"]))
-            i=i+1
+            @1NotificationsClose("notific_id", Int(note["id"]))
+            i = i + 1
         }
     }
     conditions {
@@ -51,7 +51,7 @@ contract VotingDecisionCheck {
         $FINISHED = 4
         $INVALID = 5
 
-        $voting = DBFind("votings").WhereId($votingID).Columns("voting->name,voting->count_type_voters,voting->type,voting->quorum,voting->type_decision,flags->success,progress->number_voters,progress->percent_voters,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params,status").Row()
+        $voting = DBFind("@1votings").WhereId($votingID).Columns("voting->name,voting->count_type_voters,voting->type,voting->quorum,voting->type_decision,flags->success,progress->number_voters,progress->percent_voters,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params,status").Row()
         $voting_name = $voting["voting.name"]
         $voting_type = Int($voting["voting.type"]) //system or custom
         $type_decision = Int($voting["voting.type_decision"])
@@ -65,12 +65,12 @@ contract VotingDecisionCheck {
         $flag_success = $voting["flags.success"]
         $quorum = Int($voting["voting.quorum"])
         $percent_voters = Int($voting["progress.percent_voters"])
-        $status =  Int($voting["status"])
+        $status = Int($voting["status"])
 
         var prevContract string
         prevContract = $stack[0]
-        if Len($stack)>2{
-            prevContract = $stack[Len($stack)-2]
+        if Len($stack) > 2{
+            prevContract = $stack[Len($stack) - 2]
         }
         if prevContract != "@1VotingUpdate"{
             // if $percent_voters < $quorum && $quorum > 50 || $status != $FINISHED {
@@ -79,7 +79,7 @@ contract VotingDecisionCheck {
             }
         }
 
-        $subject_id = DBFind("votings_subject").Where({voting_id:$votingID}).One("id")
+        $subject_id = DBFind("@1votings_subject").Where({voting_id:$votingID}).One("id")
         if !$subject_id {
             warning "Subject of voting is not found"
         }
@@ -98,7 +98,7 @@ contract VotingDecisionCheck {
                 flag_decision = $REJECT // none of the candidates has been added yet
 
                 var subjects array
-                subjects = DBFind("votings_subject").Where({voting_id:$votingID}).Order({number_accept:"-1"}).Columns("voting_id,number_accept,subject->member_id,subject->member_name,subject->image_id")
+                subjects = DBFind("@1votings_subject").Where({voting_id:$votingID}).Order({number_accept:"-1"}).Columns("voting_id,number_accept,subject->member_id,subject->member_name,subject->image_id")
                 i = 0
                 while i < Len(subjects) {
                     var subject map
@@ -111,13 +111,13 @@ contract VotingDecisionCheck {
                             if percent_voters >= $quorum {
                                 // added candidate to the role
                                 var role map
-                                role = DBFind("roles").Columns("id,role_type,role_name,image_id").WhereId(Int($optional_role_id)).Row()
+                                role = DBFind("@1roles").Columns("id,role_type,role_name,image_id").WhereId(Int($optional_role_id)).Row()
                                 if role {
                                     var member assignedMember map mid rid string
                                     member["member_id"] = subject["subject.member_id"]
                                     mid = member["member_id"]
                                     rid = role["id"]
-                                    assignedMember = DBFind("roles_participants").Where({"member->member_id":mid, "role->id":rid, deleted:0}).Row()
+                                    assignedMember = DBFind("@1roles_participants").Where({"member->member_id":mid, "role->id":rid, deleted:0}).Row()
 
                                     if !assignedMember {
                                         member["member_name"] = subject["subject.member_name"]
@@ -137,7 +137,8 @@ contract VotingDecisionCheck {
                                         m["member"] = member
                                         m["appointed"] = appointed
                                         m["date_created"] = BlockTime()
-                                        DBInsert("roles_participants", m)
+                                        m["ecosystem"] = $ecosystem_id
+                                        DBInsert("@1roles_participants", m)
 
                                         candidates_added_count = candidates_added_count + 1
                                         // if at least one of the candidates was added to the role, then the voting decision is considered successful
@@ -153,7 +154,7 @@ contract VotingDecisionCheck {
 
             if $type_decision == 3 {
                 var subject map
-                subject = DBFind("votings_subject").Where({voting_id:$votingID}).Columns("id,number_accept").Row()
+                subject = DBFind("@1votings_subject").Where({voting_id:$votingID}).Columns("id,number_accept").Row()
                 if subject {
                     if (Int($voting["voting.count_type_voters"]) == 0){
                         percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
@@ -176,7 +177,7 @@ contract VotingDecisionCheck {
 
             if $type_decision == 4 {
                 var subject map
-                subject = DBFind("votings_subject").Where({voting_id:$votingID}).Columns("id,number_accept,subject->table,subject->table_id,subject->column,subject->column_value").Row()
+                subject = DBFind("@1votings_subject").Where({voting_id:$votingID}).Columns("id,number_accept,subject->table,subject->table_id,subject->column,subject->column_value").Row()
                 if subject {
                     if (Int($voting["voting.count_type_voters"]) == 0){
                         percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
@@ -253,7 +254,7 @@ contract VotingDecisionCheck {
 
             if $type_decision == 5 {
                 var subject map
-                subject = DBFind("votings_subject").Where({voting_id:$votingID}).Columns("id,number_accept,subject->contract_accept,subject->contract_reject,subject->contract_accept_params,subject->contract_reject_params").Row()
+                subject = DBFind("@1votings_subject").Where({voting_id:$votingID}).Columns("id,number_accept,subject->contract_accept,subject->contract_reject,subject->contract_accept_params,subject->contract_reject_params").Row()
                 if subject {
                     $contract_accept = subject["subject.contract_accept"]
                     $contract_reject = subject["subject.contract_reject"]
@@ -289,6 +290,6 @@ contract VotingDecisionCheck {
             }
         }
 
-        DBUpdate("votings", $votingID, {"flags->decision":flag_decision})
+        DBUpdate("@1votings", $votingID, {"flags->decision":flag_decision})
     }
 }

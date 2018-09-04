@@ -10,12 +10,13 @@ contract VotingInvite {
         member["member_name"] = IdToAddress(Int(key["id"]))
         m["voting_id"] = votingId
         m["member"] = member
-        DBInsert("votings_participants", m)
+        m["ecosystem"] = $ecosystem_id
+        DBInsert("@1votings_participants", m)
     }
     conditions {
         $STARTED = 3
         $FINISHED = 4
-        $voting = DBFind("votings").Where({id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Row()
+        $voting = DBFind("@1votings").Where({id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Row()
         if !$voting {
             warning "Voting has expired. Can not add new participants"
         }
@@ -29,26 +30,26 @@ contract VotingInvite {
         }
         var isAdded string
         if $type_participants == 2 {
-            if !DBFind("keys").WhereId($var_id).Row(){
+            if !DBFind("@1keys").Where({ecosystem: $ecosystem_id, id:$var_id}).Row(){
                 warning "Key not found"
             }
-            isAdded = DBFind("votings_participants").Where({voting_id:$votingID,"member->member_id":$var_id}).One("id")
+            isAdded = DBFind("@1votings_participants").Where({voting_id:$votingID,"member->member_id":$var_id}).One("id")
             if isAdded {
                 warning "Member has already been added before"
             }
         }
 
         if $type_participants == 3 {
-            isAdded = DBFind("votings_participants").Where({voting_id:$votingID}).One("id")
+            isAdded = DBFind("@1votings_participants").Where({voting_id:$votingID}).One("id")
             if isAdded {
                 warning "Voting participants have already been added before"
             }
-            if Len(DBFind("roles_participants").Where({"role->id":$var_id, deleted:0})) == 0 {
+            if Len(DBFind("@1roles_participants").Where({"role->id":$var_id, deleted:0})) == 0 {
                 warning "Roles participants not found"
             }
         }
         if ($type_participants == 4 || $type_participants == 5) {
-            isAdded = DBFind("votings_participants").Where({voting_id:$votingID,"member->role_id":$var_id}).One("id")
+            isAdded = DBFind("@1votings_participants").Where({voting_id:$votingID,"member->role_id":$var_id}).One("id")
             if isAdded {
                 if ($type_participants == 4){
                     warning "Members of this role have already been added to the vote"
@@ -57,8 +58,8 @@ contract VotingInvite {
                     warning "This role have already been added to the vote"
                 }
             }
-            if Len(DBFind("roles_participants").Where({"role->id":$var_id, deleted:0})) == 0 {
-                    warning "Roles participants not found"
+            if Len(DBFind("@1roles_participants").Where({ecosystem: $ecosystem_id, "role->id":$var_id, deleted:0})) == 0 {
+                warning "Roles participants not found"
             }
         }
     }
@@ -67,7 +68,7 @@ contract VotingInvite {
         var i int
         if $type_participants == 1 { // everybody
             var keys array
-            keys = DBFind("keys")
+            keys = DBFind("@1keys")
             while i < Len(keys) {
                 addVotingKey(keys[i], $votingID)
                 $number_participants = $number_participants + 1
@@ -76,33 +77,34 @@ contract VotingInvite {
         }
         if $type_participants == 2 { // manual
             var key map
-            key = DBFind("keys").WhereId($var_id).Row()
+            key = DBFind("@1keys").WhereId($var_id).Row()
             addVotingKey(key, $votingID)
             $number_participants = $number_participants + 1
         }
         if $type_participants == 3 { // role
             var roles array
-            roles = DBFind("roles_participants").Where({"role->id":$var_id, deleted:0}).Order("id")
+            roles = DBFind("@1roles_participants").Where({"role->id":$var_id, deleted:0}).Order("id")
             while i < Len(roles) {
                 var role m map
                 role = roles[i]
                 m["voting_id"] = $votingID
                 m["member"] = role["member"]
-                DBInsert("votings_participants", m)
+                m["ecosystem"] = $ecosystem_id
+                DBInsert("@1votings_participants", m)
                 $number_participants = $number_participants + 1
                 i = i + 1
             }
         }
         if $type_participants == 4 { // all participants in the selected roles vote
             var roles array
-            roles = DBFind("roles_participants").Where({"role->id":$var_id, deleted:0}).Order("id")
+            roles = DBFind("@1roles_participants").Where({"role->id":$var_id, deleted:0}).Order("id")
             while i < Len(roles) {
                 var role map
                 role = roles[i]
                 var cust map
-                cust= JSONToMap(role["member"])
+                cust = JSONToMap(role["member"])
                 cust["role_id"] = $var_id
-                DBInsert("votings_participants", {voting_id: $votingID, member: cust})
+                DBInsert("@1votings_participants", {ecosystem: $ecosystem_id, voting_id: $votingID, member: cust})
                 $number_participants = $number_participants + 1
                 i = i + 1
             }
@@ -114,16 +116,16 @@ contract VotingInvite {
             var json string
             json = JSONEncode(role)
             $role_id_send = $var_id
-            DBInsert("votings_participants", {voting_id: $votingID, member: json}) 
-            $number_participants = $number_participants + 1 
+            DBInsert("@1votings_participants", {ecosystem: $ecosystem_id, voting_id: $votingID, member: json})
+            $number_participants = $number_participants + 1
         }
         var v map
-        v["progress->number_participants"] =  $number_participants
+        v["progress->number_participants"] = $number_participants
         if $type_participants == 3 {
-            v["voting->role_id"] =  $var_id
-            DBUpdate("votings", $votingID, v)
+            v["voting->role_id"] = $var_id
+            DBUpdate("@1votings", $votingID, v)
         }else{
-            DBUpdate("votings", $votingID, v)
+            DBUpdate("@1votings", $votingID, v)
         }
     }
 }

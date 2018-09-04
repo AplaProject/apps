@@ -23,9 +23,9 @@ contract VotingValidatorAccept{
         }
 
         var appId templateId int params map
-        appId = Int(DBFind("applications").Where({name:"Basic application"}).Columns("name,id").One("id"))
+        appId = Int(DBFind("@1applications").Where({ecosystem: $ecosystem_id, name:"Basic application"}).Columns("name,id").One("id"))
         templateId = Int(AppParam(appId,"voting_validators_template_id", $ecosystem_id))
-        if !DBFind("voting_templates").WhereId(templateId).One("id"){
+        if !DBFind("@1voting_templates").WhereId(templateId).One("id"){
             warning "Voting template not found"
         }
         if $VotingTemplateId != templateId{
@@ -40,9 +40,9 @@ contract VotingValidatorAccept{
         if !candidateId {
             warning "Candidate key id not found"
         }
-        $oldRoleRowId = Int(DBFind("roles_participants").Where({deleted:0, "role->id":oldRoleId, "member->member_id":candidateId}).One("id"))
+        $oldRoleRowId = Int(DBFind("@1roles_participants").Where({deleted:0, "role->id":oldRoleId, "member->member_id":candidateId}).One("id"))
 
-        $roleId = Int(DBFind("roles").Where({id:roleId, deleted:0}).One("id"))
+        $roleId = Int(DBFind("@1roles").Where({id:roleId, deleted:0}).One("id"))
         if $roleId == 0 {
             warning "Validator role not found"
         }
@@ -50,8 +50,8 @@ contract VotingValidatorAccept{
 
     func action{
         if $oldRoleRowId > 0 {
-            RolesUnassign("row_id", $oldRoleRowId)
+            @1RolesUnassign("row_id", $oldRoleRowId)
         }
-        RolesAssign("rid,member_id", $roleId, Int($KeyId))
+        @1RolesAssign("rid,member_id", $roleId, Int($KeyId))
     }
 }

@@ -4,7 +4,7 @@ contract MembershipDecide {
         Accept int
     }
     conditions {
-        $request = DBFind("notifications").WhereId($notific_id).Columns("id,closed,sender->member_id,page_params->ecosystem_id").Row()
+        $request = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$notific_id}).Columns("id,closed,sender->member_id,page_params->ecosystem_id").Row()
 
 
         if Int($request["closed"]) == 1 {
@@ -13,7 +13,7 @@ contract MembershipDecide {
 
         var founder_id ecoId int
         ecoId = Int($request["page_params.ecosystem_id"])
-        founder_id = DBFind("parameters").Where({name:"founder_account", ecosystem:ecoId}).One("value")
+        founder_id = DBFind("@1parameters").Where({name:"founder_account", ecosystem:ecoId}).One("value")
 
         if founder_id != $key_id {
             warning "You are not the founder of the ecosystem"
@@ -30,7 +30,7 @@ contract MembershipDecide {
 
             var pub string mid int
             mid = Int($request["sender.member_id"])
-            pub = DBFind("keys").WhereId(mid).One("pub")
+            pub = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:mid}).One("pub")
             DBInsert(table_name, {id:mid, pub:pub})
         }
         else{
@@ -39,13 +39,13 @@ contract MembershipDecide {
 
         var icon header body page ecoName ecoId string
         ecoId = $request["page_params.ecosystem_id"]
-        ecoName = DBFind("ecosystems").Where({id:ecoId}).One("name")
+        ecoName = DBFind("@1ecosystems").Where({id:ecoId}).One("name")
         icon = "icon icon-user-follow"
         header = "Request is accepted"
         body = Sprintf("Your request to membership for ecosystem '%v' (%v) is accepted", ecoName, ecoId)
         page = "membership_user_view"
 
-        NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", $request["sender.member_id"], 1, icon, header, body, page, params)
-        NotificationsClose("notific_id", $notific_id)
+        @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", $request["sender.member_id"], 1, icon, header, body, page, params)
+        @1NotificationsClose("notific_id", $notific_id)
     }
 }
