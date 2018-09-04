@@ -3,6 +3,12 @@ contract AuctionProcess {
         step_rate money
         lot_id int
     }
+    func storeHistory(id int){
+        var vars map
+        vars["step_rate"] = $step_rate
+        vars["lot_id"] = $lot_id
+        DBInsert(lots_blocks, "block_id,block_time,txhash,contract_name,contract_params,lot_id", $block_id, $block_time, $txhash, $this_contract, vars, id)
+    }
     conditions {
         $lot_map = DBFind("lots").Where("id=$", $lot_id).Row()
         if ($lot_map["type_bargain"] == 1){
@@ -132,5 +138,6 @@ contract AuctionProcess {
             notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", $member_id, 1, "icon icon-envelope", "Аукцион закончен", "Подробнее", "view_lots_start_auction", notific_params)
             lots_Close ("id",$lot_id)
         }
+        storeHistory($lot_id)
     }
 }

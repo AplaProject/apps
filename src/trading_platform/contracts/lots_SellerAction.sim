@@ -31,7 +31,7 @@ contract lots_SellerAction {
         }
         return s
     }
-    func appendAll(items ...)array{ 
+    func appendAll(items ...)array{
         return items
     }
     func safeFloat(s string)float{
@@ -52,25 +52,51 @@ contract lots_SellerAction {
         rid = 1
         notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, params)
     }
+    func storeHistory(id int){
+        var vars map
+        vars["Action"] = $Action
+        vars["Id"] = $Id
+        vars["PhotoId"] = $PhotoId
+        vars["TypeId"] = $TypeId
+        vars["Name"] = $Name
+        vars["Description"] = $Description
+        vars["DateStart"] = $DateStart
+        vars["TimeStart"] = $TimeStart
+        vars["DateEnd"] = $DateEnd
+        vars["TimeEnd"] = $TimeEnd
+        vars["TypeBargain"] = $TypeBargain
+        vars["AmountStarting"] = $AmountStarting
+        vars["OrderMin"] = $OrderMin
+        vars["OrderMax"] = $OrderMax
+        vars["Location"] = $Location
+        vars["Condition"] = $Condition
+        vars["Count"] = $Count
+        vars["Weight"] = $Weight
+        vars["WeightType"] = $WeightType
+        vars["Length"] = $Length
+        vars["Width"] = $Width
+        vars["Height"] = $Height
+        DBInsert(lots_blocks, "block_id,block_time,txhash,contract_name,contract_params,lot_id", $block_id, $block_time, $txhash, $this_contract, vars, id)
+    }
     conditions {
         if $PhotoId == 0{
             warning "Пожалуйста добавьте изображение лота"
-        } 
+        }
         if $TypeBargain == 1 {
             if ($OrderMin == "") {
-				info("Минимальная ставка не указана")
-			}
-			if ($OrderMax == "") {
-				info("Максимальная ставка не указана")
-			}
+                info("Минимальная ставка не указана")
+            }
+            if ($OrderMax == "") {
+                info("Максимальная ставка не указана")
+            }
             if $OrderMin == Money(0) {
                 info("Минимальная ставка не указана")
             }
             if $OrderMax == Money(0) {
                 info("Максимальная ставка не указана")
             }
-            $OrderMin = Money($OrderMin)*Money(1000000000000000000)
-		    $OrderMax = Money($OrderMax)*Money(1000000000000000000)
+            $OrderMin = Money($OrderMin) * Money(1000000000000000000)
+            $OrderMax = Money($OrderMax) * Money(1000000000000000000)
         }
         $Id = Int($Id)
         if !($Action == "create" || $Action == "edit") {
@@ -126,6 +152,7 @@ contract lots_SellerAction {
             args = Append(args,$key_id)
             id = DBInsert("lots", fields, args...)
             notifyAdmin(id)
+            storeHistory(id)
             return
         }
         if $Action == "edit"{

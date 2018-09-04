@@ -1,0 +1,70 @@
+SetVar(this_page,lots_blocks_list)
+SetVar(Where,"id>0")
+If(GetVar(Search)){
+    SetVar(Where,"lot_id='#Search#'")
+}.Else{
+    SetVar(Search,)
+}
+
+If(#Action#=="info"){
+    Include(lots_block_info)
+    Div(){
+        Button(Body: Назад, Page: #this_page#)
+    }
+}.Else{
+    Div(content-wrapper){
+        SetTitle(Просмотр истории блоков)
+
+        Form(panel panel-primary){
+            Div(panel-body){
+                Div(row){
+                    Div(col-md-12 col-xs-12){
+                        Div(input-group){
+                            Div(input-group-addon){
+                                "Номер лота"
+                            }
+                            Input(Name: Search, Type: number, Value: #Search#)
+                            Div(input-group-btn){
+                                Button(Class: btn btn-default, Page: #this_page#, PageParams: "Search=Val(Search)"){
+                                    Em(Class: fa fa-search)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                DBFind(lots_blocks, src_blocks).Where("#Where#").Count(blocks_count).Limit(25).Order("id DESC").Custom(_hash){
+                    Button(Body: #txhash#, Page: #this_page#, Class: btn btn-link, PageParams: "Id=#id#,Action=info").Popup(50, "Подробная информация")
+                }
+                Div(row){
+                    Div(col-md-12){
+                        If(#blocks_count#>0){
+                            Div(table-responsive){
+                                Table(src_blocks)
+                            }
+                        }.Else{
+                            Div(text-center h3){
+                                Не найдено
+                            }
+                        }
+                    }
+                }
+
+                If(GetVar(Search)){
+                    Div(row){
+                        Div(col-md-12 mt-lg){
+                            Div(text-center){
+                                Button(Body: LangRes(show_all), Class: btn btn-primary, Page: #this_page#)
+                            }
+                        }
+                    }
+                }
+            }.Style(
+                th,td {text-align:center;}
+                .img-circle {height: 30px;width: 30px; border: 1px solid #5A5D63;}
+                .center {display:flex; align-items:center;}
+                .photo {height: 80px; max-width: 120px;}
+            )
+        }
+    }
+}
