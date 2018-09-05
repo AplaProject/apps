@@ -1,163 +1,163 @@
-contract lots_SellerAction {
-    data {
-        Action string
-        Id string "optional"
-        PhotoId int
-        TypeId int
-        Name string
-        Description string
-        DateStart string "date"
-        TimeStart string "date"
-        DateEnd string "date"
-        TimeEnd string "date"
-        TypeBargain int
-        AmountStarting money
-        OrderMin string "optional"
-        OrderMax string "optional"
+    contract lots_SellerAction {
+        data {
+            Action string
+            Id string "optional"
+            PhotoId int
+            TypeId int
+            Name string
+            Description string
+            DateStart string "date"
+            TimeStart string "date"
+            DateEnd string "date"
+            TimeEnd string "date"
+            TypeBargain int
+            AmountStarting money
+            OrderMin string "optional"
+            OrderMax string "optional"
 
-        Location string
-        Condition int
+            Location string
+            Condition int
 
-        Count int
-        Weight string "optional"
-        WeightType string "optional"
-        Length string "optional"
-        Width string "optional"
-        Height string "optional"
-    }
-    func trimZeroTime(s string) string{
-        if Contains(s, "T00:00:00Z"){
-            s = s Replace(s, "T00:00:00Z", "")
+            Count int
+            Weight string "optional"
+            WeightType string "optional"
+            Length string "optional"
+            Width string "optional"
+            Height string "optional"
         }
-        return s
-    }
-    func appendAll(items ...)array{
-        return items
-    }
-    func safeFloat(s string)float{
-        if s {
-            return Float(s)
-        }
-        return 0.0
-    }
-    func notifyAdmin(lotId int){
-        var rid closureType sender int textHeader pageName string params map
-        closureType = 2
-        sender = 1
-        textHeader = "Новый лот: требуется подтверждение"
-        pageName = "lots_view"
-        params["lot_id"] = lotId
-        params["lot_status"] = 0
-        params = JSONEncode(params)
-        rid = 1
-        notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, params)
-    }
-    func storeHistory(id int){
-        var vars map
-        vars["Action"] = $Action
-        vars["Id"] = $Id
-        vars["PhotoId"] = $PhotoId
-        vars["TypeId"] = $TypeId
-        vars["Name"] = $Name
-        vars["Description"] = $Description
-        vars["DateStart"] = $DateStart
-        vars["TimeStart"] = $TimeStart
-        vars["DateEnd"] = $DateEnd
-        vars["TimeEnd"] = $TimeEnd
-        vars["TypeBargain"] = $TypeBargain
-        vars["AmountStarting"] = $AmountStarting
-        vars["OrderMin"] = $OrderMin
-        vars["OrderMax"] = $OrderMax
-        vars["Location"] = $Location
-        vars["Condition"] = $Condition
-        vars["Count"] = $Count
-        vars["Weight"] = $Weight
-        vars["WeightType"] = $WeightType
-        vars["Length"] = $Length
-        vars["Width"] = $Width
-        vars["Height"] = $Height
-        DBInsert("lots_blocks", "block_id,block_time,txhash,contract_name,contract_params,lot_id", $block, $block_time, Sprintf("%x", $txhash), $this_contract, vars, id)
-    }
-    conditions {
-        if $PhotoId == 0{
-            warning "Пожалуйста добавьте изображение лота"
-        }
-        if $TypeBargain == 1 {
-            if ($OrderMin == "") {
-                info("Минимальная ставка не указана")
+        func trimZeroTime(s string) string{
+            if Contains(s, "T00:00:00Z"){
+                s = s Replace(s, "T00:00:00Z", "")
             }
-            if ($OrderMax == "") {
-                info("Максимальная ставка не указана")
-            }
-            if $OrderMin == Money(0) {
-                info("Минимальная ставка не указана")
-            }
-            if $OrderMax == Money(0) {
-                info("Максимальная ставка не указана")
-            }
-            $OrderMin = Money($OrderMin) * Money(1000000000000000000)
-            $OrderMax = Money($OrderMax) * Money(1000000000000000000)
+            return s
         }
-        $Id = Int($Id)
-        if !($Action == "create" || $Action == "edit") {
-            warning "Lot: unknown action"
+        func appendAll(items ...)array{
+            return items
         }
-        if $Action == "create" {
-            RoleConditions("role", "Seller")
-        }else{
-            $lot = DBFind("lots").Where("id=? and deleted=0", $Id).Row()
+        func safeFloat(s string)float{
+            if s {
+                return Float(s)
+            }
+            return 0.0
+        }
+        func notifyAdmin(lotId int){
+            var rid closureType sender int textHeader pageName string params map
+            closureType = 1
+            sender = 1
+            textHeader = "Новый лот: требуется подтверждение"
+            pageName = "lots_view"
+            params["lot_id"] = lotId
+            params["lot_status"] = 0
+            params = JSONEncode(params)
+            rid = 1
+            notifications_Send("rid,closure_type,sender,text_header,page_name,params_map", rid, closureType, sender, textHeader, pageName, params)
+        }
+        func storeHistory(id int){
+            var vars map
+            vars["Action"] = $Action
+            vars["Id"] = $Id
+            vars["PhotoId"] = $PhotoId
+            vars["TypeId"] = $TypeId
+            vars["Name"] = $Name
+            vars["Description"] = $Description
+            vars["DateStart"] = $DateStart
+            vars["TimeStart"] = $TimeStart
+            vars["DateEnd"] = $DateEnd
+            vars["TimeEnd"] = $TimeEnd
+            vars["TypeBargain"] = $TypeBargain
+            vars["AmountStarting"] = $AmountStarting
+            vars["OrderMin"] = $OrderMin
+            vars["OrderMax"] = $OrderMax
+            vars["Location"] = $Location
+            vars["Condition"] = $Condition
+            vars["Count"] = $Count
+            vars["Weight"] = $Weight
+            vars["WeightType"] = $WeightType
+            vars["Length"] = $Length
+            vars["Width"] = $Width
+            vars["Height"] = $Height
+            DBInsert("lots_blocks", "block_id,block_time,txhash,contract_name,contract_params,lot_id", $block, $block_time, Sprintf("%x", $txhash), $this_contract, vars, id)
+        }
+        conditions {
+            if $PhotoId == 0{
+                warning "Пожалуйста добавьте изображение лота"
+            }
+            if $TypeBargain == 1 {
+                if ($OrderMin == "") {
+                    info("Минимальная ставка не указана")
+                }
+                if ($OrderMax == "") {
+                    info("Максимальная ставка не указана")
+                }
+                if $OrderMin == Money(0) {
+                    info("Минимальная ставка не указана")
+                }
+                if $OrderMax == Money(0) {
+                    info("Максимальная ставка не указана")
+                }
+                $OrderMin = Money($OrderMin) * Money(1000000000000000000)
+                $OrderMax = Money($OrderMax) * Money(1000000000000000000)
+            }
+            $Id = Int($Id)
+            if !($Action == "create" || $Action == "edit") {
+                warning "Лот: неизвестное действие"
+            }
+            if $Action == "create" {
+                RoleConditions("role", "Seller")
+            }else{
+                $lot = DBFind("lots").Where("id=? and deleted=0", $Id).Row()
 
-            if !$lot {
-                warning "Lot not found"
-            }
-            if $lot["status"] > 0 {
-                warning "You cannot edit a confirmed lot"
-            }
-            if $lot["seller"] != $key_id {
-                warning "You are not owner of the lot"
+                if !$lot {
+                    warning "Лот не найден"
+                }
+                if $lot["status"] > 0 {
+                    warning "Вы не можете редактировать подтвержденный лот"
+                }
+                if $lot["seller"] != $key_id {
+                    warning "Вы не являетесь владельцем данного лота"
+                }
+
             }
 
+            $mapLocation = JSONDecode($Location)
+            $Location = $mapLocation["address"]
+            $Weight = safeFloat($Weight)
+            $WeightType = Int($WeightType)
+            $Length = safeFloat($Length)
+            $Width = safeFloat($Width)
+            $Height = safeFloat($Height)
+
+            if $OrderMin > $OrderMax {
+                warning "Минимальная ставка больше максимальной"
+            }
+            $dateStart = Sprintf("%v %v", trimZeroTime($DateStart), $TimeStart)
+            $dateEnd = Sprintf("%v %v", trimZeroTime($DateEnd), $TimeEnd)
+            $catId = Int(DBFind("lots_types").Where("id=?", $TypeId).One("category"))
         }
 
-        $mapLocation = JSONDecode($Location)
-        $Location = $mapLocation["address"]
-        $Weight = safeFloat($Weight)
-        $WeightType = Int($WeightType)
-        $Length = safeFloat($Length)
-        $Width = safeFloat($Width)
-        $Height = safeFloat($Height)
-
-        if $OrderMin > $OrderMax {
-            warning "Минимальная ставка больше максимальной"
+        action {
+            var fields string args array id int
+            if $TypeBargain == 1 {
+                args = appendAll($Name, $Description, $PhotoId, $dateStart, $dateEnd, $AmountStarting, $OrderMin, $OrderMax, 0, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
+                fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain,map_location"
+            }
+            if $TypeBargain == 2 {
+                args = appendAll($Name, $Description, $PhotoId, $dateStart, $dateEnd, $AmountStarting, 0, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
+                fields = "name,description,photo,date_start,date_end,amount_starting,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain,map_location"
+            }
+            @1buffer_Manager("Action,Key", "clean", "last_uploaded_image")
+            if $Action == "create"{
+                fields = Sprintf("%v,timestamp date_creation,seller", fields)
+                args = Append(args,$block_time)
+                args = Append(args,$key_id)
+                id = DBInsert("lots", fields, args...)
+                notifyAdmin(id)
+                storeHistory(id)
+                return
+            }
+            if $Action == "edit"{
+                DBUpdate("lots", $Id, fields, args...)
+                return
+            }
         }
-        $dateStart = Sprintf("%v %v", trimZeroTime($DateStart), $TimeStart)
-        $dateEnd = Sprintf("%v %v", trimZeroTime($DateEnd), $TimeEnd)
-        $catId = Int(DBFind("lots_types").Where("id=?", $TypeId).One("category"))
     }
-
-    action {
-        var fields string args array id int
-        if $TypeBargain == 1 {
-            args = appendAll($Name, $Description, $PhotoId, $dateStart, $dateEnd, $AmountStarting, $OrderMin, $OrderMax, 0, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
-            fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain,map_location"
-        }
-        if $TypeBargain == 2 {
-            args = appendAll($Name, $Description, $PhotoId, $dateStart, $dateEnd, $AmountStarting, 0, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
-            fields = "name,description,photo,date_start,date_end,amount_starting,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain,map_location"
-        }
-        @1buffer_Manager("Action,Key", "clean", "last_uploaded_image")
-        if $Action == "create"{
-            fields = Sprintf("%v,timestamp date_creation,seller", fields)
-            args = Append(args,$block_time)
-            args = Append(args,$key_id)
-            id = DBInsert("lots", fields, args...)
-            notifyAdmin(id)
-            storeHistory(id)
-            return
-        }
-        if $Action == "edit"{
-            DBUpdate("lots", $Id, fields, args...)
-            return
-        }
-    }
-}
