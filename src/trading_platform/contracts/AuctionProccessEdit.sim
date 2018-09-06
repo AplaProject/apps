@@ -3,11 +3,11 @@ contract AuctionProccessEdit {
         lot_id int
     }
     conditions {
-        
+
     }
     action {
         $lot_map = DBFind("lots").Where("id=$", $lot_id).Row()
-        if($lot_map["status"] == 1){
+        if $lot_map["status"] == 1{
             DBUpdate("lots",$lot_id,"status",2)
             var buers array
             buers = DBFind("lots_tracks").Where("lot_id=? and deleted=0", $lot_id)
@@ -21,11 +21,13 @@ contract AuctionProccessEdit {
                 notific_params["lot_id"] = $lot_id
 
                 notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", $member_id, 1, "icon icon-envelope", "Аукцион начался", "Подробнее", "view_lots_start_auction", notific_params)
-                i=i+1
+                i = i + 1
             }
         }
-        if($lot_map["status"] == 2){
+        if $lot_map["status"] == 2{
             DBUpdate("lots",$lot_id,"status",3)
+
+            ClearInfoNotifications("lot_id",$lot_id)
 
             var notific_params map
             notific_params["lot_id"] = $lot_id
@@ -33,7 +35,8 @@ contract AuctionProccessEdit {
             $member_id = Int($lot_map["seller"])
 
             notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", $member_id, 1, "icon icon-envelope", "Аукцион закончен", "Подробнее", "view_lots_start_auction", notific_params)
-            lots_Close ("id",$lot_id) 
+            lots_Close ("id",$lot_id)
+
         }
     }
 }
