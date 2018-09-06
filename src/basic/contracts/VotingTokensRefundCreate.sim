@@ -12,10 +12,10 @@ contract VotingTokensRefundCreate{
         if attackerId == 0{
             error "unblockAccounts. invalid attacker key"
         }
-        if !DBFind("@1keys").Where({ecosystem: $ecosystem_id, blocked:1, id:victimId}).One("id"){
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, blocked:1, id:victimId}).One("id"){
             DBUpdate("@1keys", victimId, {blocked:1})
         }
-        if !DBFind("@1keys").Where({ecosystem: $ecosystem_id, blocked:1, id:attackerId}).One("id"){
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, blocked:1, id:attackerId}).One("id"){
             DBUpdate("@1keys", attackerId, {blocked:1})
         }
     }
@@ -51,13 +51,13 @@ contract VotingTokensRefundCreate{
         $attackerId = attacker
 
         var app_id template_id int
-        app_id = Int(DBFind("@1applications").Where({ecosystem: $ecosystem_id, name:"Basic application"}).Columns("name,id").One("id"))
+        app_id = Int(DBFind("@1applications").Where({ecosystem:$ecosystem_id, name:"Basic application"}).Columns("name,id").One("id"))
         template_id = Int(AppParam(app_id,"voting_tokenrefund_template_id", $ecosystem_id))
         if template_id <= 0 {
             warning "Template id not found"
         }
 
-        $template = DBFind("@1voting_templates").WhereId(template_id).Row()
+        $template = DBFind("@1voting_templates").Where({ecosystem:$ecosystem_id, id:template_id}).Row()
         $votersRoleId = Int($template["voters"])
         $votingName = $template["title"]
         $typeParticipants = Int($template["type_participants"])
@@ -75,7 +75,7 @@ contract VotingTokensRefundCreate{
         }
         $desc = Sprintf("%v (victim: %v, attacker: %v, amount: %v)", $votingName, $victimId, $attackerId, $Amount)
 
-        if !DBFind("@1roles_participants").Where({"role->id":$votersRoleId, deleted:0}).One("id") {
+        if !DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$votersRoleId, deleted:0}).One("id") {
             warning Sprintf("Role (id: %v) does not contain members", $votersRoleId)
         }
     }
@@ -95,7 +95,7 @@ contract VotingTokensRefundCreate{
         m["voting_id"] = votingId
         m["status"] = 1 // 0.Accounts blocked 1.Discussion 2.Vote 3.Closed
         m["result"] = 0 // 0. discussion and voting 1. cancelled 2. the tokens returned
-        params["Id"] = DBInsert("tokenrefund", m)
+        params["Id"] = DBInsert("tokenrefund", m) //no $ecosystem_id
 
         paramsJSON = JSONEncode(params)
         @1VotingSubjectContract("votingID,contract_reject,contract_accept,contract_reject_params,contract_accept_params", votingId, $contractReject, $contractAccept, paramsJSON, paramsJSON)

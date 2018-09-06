@@ -83,10 +83,10 @@ contract NotificationsSend {
         }else{
             if $rid > 0{
                 $notify_type = 2 // is "role"
-                if !DBFind("@1roles").Where({id:$rid}).One("id") {
+                if !DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:$rid}).One("id") {
                     warning $this_contract + ": Recipient role not found"
                 }
-                if !DBFind("@1roles_participants").Where({"role->id":$rid, deleted:0}).One("id") {
+                if !DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$rid, deleted:0}).One("id") {
                     warning $this_contract + ": Recipient role does not contain members"
                 }
             } else{
@@ -99,7 +99,7 @@ contract NotificationsSend {
             $senderMember = getMemberInfo($key_id)
         }else{
             if $sender == 2 {
-                $senderRole = DBFind("@1roles").Where({id:$role_id}).Row()
+                $senderRole = DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:$role_id}).Row()
                 if !$senderRole {
                     warning $this_contract + ": Sender role not found"
                 }
@@ -120,7 +120,7 @@ contract NotificationsSend {
                     // Multiple closure: to each his own notification
                     $notify_type = 1
                     var participants array
-                    participants = DBFind("@1roles_participants").Where({"role->id":$rid, deleted:0}).Columns("member->member_id")
+                    participants = DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$rid, deleted:0}).Columns("member->member_id")
                     var i int
                     while i < Len(participants) {
                         var p map

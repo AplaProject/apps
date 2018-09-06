@@ -23,9 +23,9 @@ contract VotingValidatorAccept{
         }
 
         var appId templateId int params map
-        appId = Int(DBFind("@1applications").Where({ecosystem: $ecosystem_id, name:"Basic application"}).Columns("name,id").One("id"))
+        appId = Int(DBFind("@1applications").Where({ecosystem:$ecosystem_id, name:"Basic application"}).Columns("name,id").One("id"))
         templateId = Int(AppParam(appId,"voting_validators_template_id", $ecosystem_id))
-        if !DBFind("@1voting_templates").WhereId(templateId).One("id"){
+        if !DBFind("@1voting_templates").Where({ecosystem:$ecosystem_id, id:templateId}).One("id"){
             warning "Voting template not found"
         }
         if $VotingTemplateId != templateId{
@@ -36,13 +36,13 @@ contract VotingValidatorAccept{
         oldRoleId = getAppRoleId(appId, "role_candidate_for_validators", false)
         roleId = getAppRoleId(appId, "role_validator", true)
 
-        candidateId = DBFind("sysparams_candidate").Where({candidate_key_id:$KeyId}).One("candidate_key_id")
+        candidateId = DBFind("sysparams_candidate").Where({candidate_key_id:$KeyId}).One("candidate_key_id") //no $ecosystem_id
         if !candidateId {
             warning "Candidate key id not found"
         }
-        $oldRoleRowId = Int(DBFind("@1roles_participants").Where({deleted:0, "role->id":oldRoleId, "member->member_id":candidateId}).One("id"))
+        $oldRoleRowId = Int(DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, deleted:0, "role->id":oldRoleId, "member->member_id":candidateId}).One("id"))
 
-        $roleId = Int(DBFind("@1roles").Where({id:roleId, deleted:0}).One("id"))
+        $roleId = Int(DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:roleId, deleted:0}).One("id"))
         if $roleId == 0 {
             warning "Validator role not found"
         }

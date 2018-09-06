@@ -16,7 +16,7 @@ contract VotingInvite {
     conditions {
         $STARTED = 3
         $FINISHED = 4
-        $voting = DBFind("@1votings").Where({id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Row()
+        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Row()
         if !$voting {
             warning "Voting has expired. Can not add new participants"
         }
@@ -30,26 +30,26 @@ contract VotingInvite {
         }
         var isAdded string
         if $type_participants == 2 {
-            if !DBFind("@1keys").Where({ecosystem: $ecosystem_id, id:$var_id}).Row(){
+            if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$var_id}).Row(){
                 warning "Key not found"
             }
-            isAdded = DBFind("@1votings_participants").Where({voting_id:$votingID,"member->member_id":$var_id}).One("id")
+            isAdded = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID,"member->member_id":$var_id}).One("id")
             if isAdded {
                 warning "Member has already been added before"
             }
         }
 
         if $type_participants == 3 {
-            isAdded = DBFind("@1votings_participants").Where({voting_id:$votingID}).One("id")
+            isAdded = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID}).One("id")
             if isAdded {
                 warning "Voting participants have already been added before"
             }
-            if Len(DBFind("@1roles_participants").Where({"role->id":$var_id, deleted:0})) == 0 {
+            if Len(DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$var_id, deleted:0})) == 0 {
                 warning "Roles participants not found"
             }
         }
         if ($type_participants == 4 || $type_participants == 5) {
-            isAdded = DBFind("@1votings_participants").Where({voting_id:$votingID,"member->role_id":$var_id}).One("id")
+            isAdded = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID,"member->role_id":$var_id}).One("id")
             if isAdded {
                 if ($type_participants == 4){
                     warning "Members of this role have already been added to the vote"
@@ -58,7 +58,7 @@ contract VotingInvite {
                     warning "This role have already been added to the vote"
                 }
             }
-            if Len(DBFind("@1roles_participants").Where({ecosystem: $ecosystem_id, "role->id":$var_id, deleted:0})) == 0 {
+            if Len(DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$var_id, deleted:0})) == 0 {
                 warning "Roles participants not found"
             }
         }
@@ -83,7 +83,7 @@ contract VotingInvite {
         }
         if $type_participants == 3 { // role
             var roles array
-            roles = DBFind("@1roles_participants").Where({"role->id":$var_id, deleted:0}).Order("id")
+            roles = DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$var_id, deleted:0}).Order("id")
             while i < Len(roles) {
                 var role m map
                 role = roles[i]
@@ -97,7 +97,7 @@ contract VotingInvite {
         }
         if $type_participants == 4 { // all participants in the selected roles vote
             var roles array
-            roles = DBFind("@1roles_participants").Where({"role->id":$var_id, deleted:0}).Order("id")
+            roles = DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$var_id, deleted:0}).Order("id")
             while i < Len(roles) {
                 var role map
                 role = roles[i]

@@ -24,12 +24,12 @@ contract VotingTemplateRun{
 
     conditions{
         var template map
-        template = DBFind("@1voting_templates").WhereId($TemplateId).Row()
+        template = DBFind("@1voting_templates").Where({ecosystem:$ecosystem_id, id:$TemplateId}).Row()
         if !template{
             warning "Voting template not found"
         }
         if $KeyId != 0{
-            $keyFind = DBFind("@1keys").Where({ecosystem: $ecosystem_id, id:$KeyId}).Row()
+            $keyFind = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$KeyId}).Row()
             if !$keyFind{
                 warning "Key id not found"
             }
@@ -75,7 +75,7 @@ contract VotingTemplateRun{
             // role-candidates
             checkInput($candidates, "Candidate role")
             var candidate map
-            candidate = DBFind("@1roles").Where({id:$candidates, deleted:0}).Row()
+            candidate = DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:$candidates, deleted:0}).Row()
             if !candidate {
                 warning Sprintf("Candidates role (id: %v) not found", $candidates)
             }
@@ -107,7 +107,7 @@ contract VotingTemplateRun{
 
         }
         // check duplicated
-        if DBFind("@1votings").Where({ecosystem: $ecosystem_id, "voting->name":$votingName, "flags->decision":{"$nin":["1", "-1"]}, deleted:0}).Row(){
+        if DBFind("@1votings").Where({ecosystem:$ecosystem_id, "voting->name":$votingName, "flags->decision":{"$nin":["1", "-1"]}, deleted:0}).Row(){
             error "Same voting already created"
         }
 
@@ -115,7 +115,7 @@ contract VotingTemplateRun{
         if $participants == 3 {
             // if the type of the participants "in role" - check the role
             var role map
-            role = DBFind("@1roles").Where({id:$voters, deleted:0}).Row()
+            role = DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:$voters, deleted:0}).Row()
             if !role {
                 warning Sprintf("Voters role (id: %v) not found", $voters)
             }

@@ -5,12 +5,12 @@ contract VotingCandidateAccept {
     }
     func closeNotification(){
         var role_id_search int
-        role_id_search = Int(DBFind("@1notifications").Where({ecosystem: $ecosystem_id, "recipient->role_id":$role_id, page_name:"voting_view", "page_params->voting_id":$votingID, closed:0}).One("id"))
+        role_id_search = Int(DBFind("@1notifications").Where({ecosystem:$ecosystem_id, "recipient->role_id":$role_id, page_name:"voting_view", "page_params->voting_id":$votingID, closed:0}).One("id"))
         if role_id_search > 0 {
             @1NotificationsClose("notific_id", role_id_search)
         } else {
             var id int
-            id = Int(DBFind("@1notifications").Where({ecosystem: $ecosystem_id, "recipient->member_id":$key_id, page_name:"voting_view", "page_params->voting_id":$votingID, closed:0}).One("id"))
+            id = Int(DBFind("@1notifications").Where({ecosystem:$ecosystem_id, "recipient->member_id":$key_id, page_name:"voting_view", "page_params->voting_id":$votingID, closed:0}).One("id"))
             if id > 0 {
                 @1NotificationsClose("notific_id", id)
             }
@@ -22,7 +22,7 @@ contract VotingCandidateAccept {
         $STARTED = 3
         $FINISHED = 4
         $INVALID = 5
-        $voting = DBFind("@1votings").Columns("id,flags->decision,flags->notifics,status").WhereId($votingID).Row()
+        $voting = DBFind("@1votings").Columns("id,flags->decision,flags->notifics,status").Where({ecosystem:$ecosystem_id, id: $votingID}).Row()
         if !$voting {
             warning "Voting is not found"
         }
@@ -32,31 +32,31 @@ contract VotingCandidateAccept {
         if $voting["status"] != $STARTED {
             warning "Voting has not yet begun. Try again later, please"
         }
-        $subject_map = DBFind("@1votings_subject").Where({voting_id:$votingID, "subject->member_id":$candidateID}).Row()
+        $subject_map = DBFind("@1votings_subject").Where({ecosystem:$ecosystem_id, voting_id:$votingID, "subject->member_id":$candidateID}).Row()
         if !$subject_map {
             warning "Subject of voting is not found"
         }
-        $participant_role_id = DBFind("@1votings_participants").Where({voting_id:$votingID, "member->role_id":$role_id,"member->member_id":0}).One("id")
+        $participant_role_id = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID, "member->role_id":$role_id,"member->member_id":0}).One("id")
 
-        $check_type = DBFind("@1votings").Columns("id,voting,voting->type_participants").WhereId($votingID).Row()
+        $check_type = DBFind("@1votings").Columns("id,voting,voting->type_participants").Where({ecosystem:$ecosystem_id, id: $votingID}).Row()
         if (Int($check_type["voting.type_participants"]) < 5){
-            $participant_id = DBFind("@1votings_participants").Where({ecosystem: $ecosystem_id, voting_id:$votingID, "member->member_id":$key_id,decision:0}).One("id")
+            $participant_id = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID, "member->member_id":$key_id,decision:0}).One("id")
             if !$participant_id {
                 warning "You are not a participant in this voting"
             }
         }
 
         if $participant_role_id {
-            $rid = DBFind("@1votings_participants").Columns("id,voting_id,member->role_id").Where({ecosystem: $ecosystem_id, voting_id:$votingID, "member->role_id":$role_id}).Row()
+            $rid = DBFind("@1votings_participants").Columns("id,voting_id,member->role_id").Where({ecosystem:$ecosystem_id, voting_id:$votingID, "member->role_id":$role_id}).Row()
             if $rid {
                 var mem_role int
                 mem_role = Int($rid["member.role_id"])
-                $participant_id = DBFind("@1roles_participants").Columns("id,role,role->id,member,member->member_id").Where({ecosystem: $ecosystem_id, "member->member_id":$key_id,"role->id":mem_role,"deleted":0}).One("member.member_id")
+                $participant_id = DBFind("@1roles_participants").Columns("id,role,role->id,member,member->member_id").Where({ecosystem:$ecosystem_id, "member->member_id":$key_id,"role->id":mem_role,"deleted":0}).One("member.member_id")
                 if !$participant_id{
                     warning "You are not a participant in this voting"
                 } else {
                     var solo_role_vot map
-                    $membership_role_name = DBFind("@1members").Where({ecosystem: $ecosystem_id, id:$key_id}).Row()
+                    $membership_role_name = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:$key_id}).Row()
                     solo_role_vot["role_id"] = Int($rid["member.role_id"])
                     solo_role_vot["member_id"] = $key_id
                     solo_role_vot["member_name"] = $membership_role_name["member_name"]

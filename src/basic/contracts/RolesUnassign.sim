@@ -4,14 +4,14 @@ contract RolesUnassign {
     }
 
     conditions {
-        // check record
         var assigned role map
-        assigned = DBFind("@1roles_participants").WhereId($row_id).Columns("id,role->id").Row()
+        assigned = DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, id:$row_id }).Columns("id,role->id").Row()
         if !assigned {
             warning "Participant not found"
         }
-
-        role = DBFind("@1roles").WhereId(Int(assigned["role.id"])).Columns("id,creator->member_id,role_name").Row()
+        var buffer_id int
+        buffer_id = Int(assigned["role.id"])
+        role = DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:buffer_id}).Columns("id,creator->member_id,role_name").Row()
         if !role {
             warning "Role not found in the roles registry"
         }
