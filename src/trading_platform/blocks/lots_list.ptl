@@ -1,6 +1,6 @@
 DBFind(applications).Columns("id").Where("name='Trading Platform' AND deleted=0").Vars(application)
 DBFind(roles).Where("id=#role_id#").Columns("role_name").Vars(r)
-SetTitle(Торги)
+SetTitle(Все лоты)
 If(#isMobile# == 1){
     Button(Body: Dev Button, Class: btn btn-primary, Page: lots_edit)
     Button(Body: Dev Button, Class: btn btn-primary, Page: testtest)
@@ -105,7 +105,7 @@ Div(content-wrapper){
                 }
             }
 
-            DBFind(lots, src_lots).Where("#Where#").Count(lots_count).Limit(10).Custom(_name){
+            DBFind(lots, src_lots).Where("#Where#").Count(lots_count).Limit(10).Order("id DESC").Custom(_name){
                 Div(text-left){
                     LinkPage(Class: text-primary h5 text-bold, Page: lots_view, PageParams: "Id=#id#", Body: #name#)
                 }
@@ -174,8 +174,12 @@ Div(content-wrapper){
                         Em(Class:fa fa-times)
                     }
                 }
-                Div(#status_class#){
-                    AppParam(App: #application_id#, Name: lots_status, Index: #status_index#)
+                If(#status_index#==3){
+                    LinkPage(Body: Торги, Page: lots_rate, PageParams: "Id=#Id#", Class: #status_class#)
+                }.Else{
+                    Div(#status_class#){
+                        AppParam(App: #application_id#, Name: lots_status, Index: #status_index#)
+                    }
                 }
             }.Custom(_actions){
                 SetVar(track_id,)
@@ -210,15 +214,14 @@ Div(content-wrapper){
                         LinkPage(Body: Просмотр, Page: lots_view, PageParams: "Id=#id#")
                     }
                 }
-                Div(){
-                    Button(Body: Блоки, Class: btn btn-link, Page: lots_blocks_list, PageParams: "ParamBlock=#id#")
-                }
-            }.Order("id DESC")
+            }.Custom(_blocks){
+                LinkPage(Class: fa fa-info-circle, Page: lots_blocks_list, PageParams: "ParamBlock=#id#")
+            }
             Div(row){
                 Div(col-md-12){
                     If(#lots_count#>0){
                         Div(table-responsive){
-                            Table(src_lots,"ID=id,=_photo,Название лота=_name,Продавец=_seller,Начало / Окончание=_date_start,Стартовая цена=_amount_starting,Шаг (Min/Max)=_stps,Цена=_amount_final,Статус=_status,=_actions")
+                            Table(src_lots,"ID=id,=_photo,Название лота=_name,Продавец=_seller,Начало / Окончание=_date_start,Стартовая цена=_amount_starting,Шаг Min/Max=_stps,Цена=_amount_final,Статус=_status,Блокчейн=_blocks,=_actions")
                         }
                     }.Else{
                         Div(text-center h3){
