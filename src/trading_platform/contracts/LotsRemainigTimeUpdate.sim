@@ -5,8 +5,8 @@ contract LotsRemainigTimeUpdate {
         $statusBegin = 2
         $statusEnd = 3
     }
-    func getRemainingTime(lot map) string {
-        var day dDiff hour hDiff minute mDiff sDiff diff end now int lotEnd string prettyDiff array
+    func getRemainingTime(lot map) map {
+        var day dDiff hour hDiff minute mDiff diff end now int lotEnd string prettyDiff map
         minute = 60
         hour = 3600 //60 * minute
         day = 86400 //24 * hour
@@ -17,25 +17,21 @@ contract LotsRemainigTimeUpdate {
         now = $block_time
         diff = end - now
         if diff <= 0{
-            return "0 сек"
+            return prettyDiff
         }
         dDiff = Int(diff / day)
         if dDiff > 0{
-            prettyDiff = Append(prettyDiff, Sprintf("%v д", dDiff))
+            prettyDiff["days"] = dDiff
         }
         hDiff = Int((diff - dDiff * day) / hour)
         if hDiff > 0{
-            prettyDiff = Append(prettyDiff, Sprintf("%v ч", hDiff))
+            prettyDiff["hours"] = hDiff
         }
         mDiff = Int((diff - dDiff * day - hDiff * hour) / minute)
         if mDiff > 0{
-            prettyDiff = Append(prettyDiff, Sprintf("%v м", mDiff))
+            prettyDiff["minutes"] = mDiff
         }
-        sDiff = Int(diff - dDiff * day - hDiff * hour - mDiff * minute)
-        if sDiff > 0{
-            prettyDiff = Append(prettyDiff, Sprintf("%v с", sDiff))
-        }
-        return Join(prettyDiff, " ")
+        return prettyDiff
     }
     action {
         var lots array lot map lenLots i int
@@ -44,7 +40,7 @@ contract LotsRemainigTimeUpdate {
             lenLots = Len(lots)
             while i < lenLots{
                 lot = lots[i]
-                DBUpdate("lots", Int(lot["id"]), "remaining_time", getRemainingTime(lot))
+                DBUpdate("lots", Int(lot["id"]), "remaining_time_json", getRemainingTime(lot))
                 i = i + 1
             }
         }
