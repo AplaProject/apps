@@ -1,198 +1,240 @@
+DBFind(applications).Columns("id").Where("name='Trading Platform' AND deleted=0").Vars(application)
+DBFind(roles).Where("id=#role_id#").Columns("role_name").Vars(r)
+If(#notific_id#>0){
+    DBFind(notifications).Columns("id,page_params->lot_id").Where("id=#notific_id#").Vars(note)
+    If(#note_id#>0){
+        SetVar(Id,#note_page_params_lot_id#)
+    }
+}.Else{
+    SetVar(notific_id,)
+}
+If(#lot_length_decimal#>#lot_length#){
+    SetVar(lot_length,#lot_length_decimal#)
+}
+If(#lot_height_decimal#>#lot_height#){
+    SetVar(lot_height,#lot_height_decimal#)
+}
+If(#lot_width_decimal#>#lot_width#){
+    SetVar(lot_width,#lot_width_decimal#)
+}
+SetVar(placeholder,"метры")
+SetVar(date_format,"DD.MM.YY HH:MI")
+Div(content-wrapper){
+    Div(breadcrumb){
+        LinkPage($lots_list$, lots_list)
+        Span(/,mh)
+        Span(Class: text-muted, Body: $lots_view$)
+    }
 
-Div(Class: col-md-12 col-xs-12 pb-lg pt-lg){
-    Div(Class: input-group){
-        Div(media-box-body clearfix){
-            Div(Class: text-center){
-                Div(text-nowrap){
-                    Div(Class: text-center pr-lg mr-lg){
-                        Image(Class: img-fluid, Src: Binary().ById(#lot_photo#))
-                    }
-                    DBFind(members).Columns("id,member_name,image_id").Where("id=#lot_seller#").Vars(seller)
-                    If(Or(#seller_id#>0,#seller_id#<0)){
-                    }.Else{
-                        SetVar(seller_member_name,Address(#lot_seller#))
-                    }
-                    Div(Class: row input-group pt-lg pb-lg pr-lg){
-                        Div(Class: pr-lg text-bold){
-                            Label(Body: Продавец:)
-                        }
-                        LinkPage(Class:text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
-                            Div(Class:){#seller_member_name#}
-                        }
-                    }
-                    Div(Class: row input-group pt-lg pb-lg pr-lg){
-                        Div(Class: pr-lg text-bold){
-                            Label(Body: Категория:)
-                        }
-                        Div(Class:){
-                            AppParam(App: #application_id#, Name: lots_categories, Index: #type_category#)
-                        }
-                    }
-                    Div(Class: row input-group pt-lg pb-lg pr-lg){
-                        Div(Class: pr-lg text-bold){
-                            Label(Body: Вид:)
-                        }
-                        Div(Class:){
-                            ForList(src_type){
-                                LangRes(#resource_name#)
+    If(GetVar(Id)){
+        DBFind(lots,lot).Where("id=#Id#").Vars(lot)
+        DBFind(lots_types,src_type).Where("deleted=0 and id=#lot_lots_type_id#").Vars(type)
+        DBFind(roles).Columns("id,role_name").Where("id=#role_id#").Vars(r)
+        DBFind(lots_tracks).Where("lot_id=#Id# and key_id=#key_id# and deleted=0").Vars(track)
+        SetVar(left_col,"col-md-4 col-xs-4 text-left")
+        SetVar(right_col,"col-md-8 col-xs-8 text-left")
+        Div(Class: col-md-12 col-xs-12 pb-lg pt-lg){
+            Div(Class: input-group){
+                Div(media-box-body clearfix){
+                    Div(Class: text-center){
+                        Div(text-nowrap){
+                            Div(Class: text-center pr-lg mr-lg){
+                                Image(Class: img-fluid, Src: Binary().ById(#lot_photo#))
                             }
-                        }
-                    }
-                    Div(Class: row input-group pt-lg pb-lg pr-lg){
-                        Div(Class: pr-lg text-bold){
-                            Label(Body: Описание:)
-                        }
-                        Div(Class:){
-                            #lot_description#
-                        }
-                    }
-                    Div(Class: row input-group pt-lg pb-lg pr-lg){
-                        Div(Class: pr-lg text-bold){
-                            Label(Body: Адрес:)
-                        }
-                        Div(Class:){
-                            #lot_location#
-                        }
-                    }
-                    Div(Class: row input-group pt-lg pb-lg pr-lg){
-                        Div(Class: pr-lg text-bold){
-                            Label(Body: LangRes(lots_condition):)
-                        }
-                        Div(Class:){
-                            AppParam(App:#application_id#, Name:lots_condition, Index:#lot_condition#)
-                        }
-                    }
+                            DBFind(members).Columns("id,member_name,image_id").Where("id=#lot_seller#").Vars(seller)
+                            If(Or(#seller_id#>0,#seller_id#<0)){
+                            }.Else{
+                                SetVar(seller_member_name,Address(#lot_seller#))
+                            }
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: Продавец:)
+                                }
+                                LinkPage(Class:text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
+                                    Div(Class:){#seller_member_name#}
+                                }
+                            }
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: Категория:)
+                                }
+                                Div(Class:){
+                                    AppParam(App: #application_id#, Name: lots_categories, Index: #type_category#)
+                                }
+                            }
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: Вид:)
+                                }
+                                Div(Class:){
+                                    ForList(src_type){
+                                        LangRes(#resource_name#)
+                                    }
+                                }
+                            }
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: Описание:)
+                                }
+                                Div(Class:){
+                                    #lot_description#
+                                }
+                            }
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: Адрес:)
+                                }
+                                Div(Class:){
+                                    #lot_location#
+                                }
+                            }
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: LangRes(lots_condition):)
+                                }
+                                Div(Class:){
+                                    AppParam(App:#application_id#, Name:lots_condition, Index:#lot_condition#)
+                                }
+                            }
 
-                    Div(Class: row input-group pt-lg pb-lg pr-lg){
-                        Div(Class: pr-lg text-bold){
-                            Label(Body: LangRes(lots_length):)
-                        }
-                        Div(Class:){
-                            #lot_length# (м)
-                        }
-                    }
-                    Div(Class: row input-group pt-lg pb-lg pr-lg){
-                        Div(Class: pr-lg text-bold){
-                            Label(Body: LangRes(lots_height):)
-                        }
-                        Div(Class:){
-                            #lot_height# (м)
-                        }
-                    }
-                    Div(Class: row input-group pt-lg pb-lg pr-lg){
-                        Div(Class: pr-lg text-bold){
-                            Label(Body: LangRes(lots_width):)
-                        }
-                        Div(Class:){
-                            #lot_width# (м)
-                        }
-                    }
-                    Div(Class: row input-group pt-lg pb-lg pr-lg){
-                        Div(Class: pr-lg text-bold){
-                            Label(Body: Создан:)
-                        }
-                        Div(Class:){
-                            DateTime(#lot_date_creation#, DD.MM.YYYY HH:MI)
-                        }
-                    }
-                    Div(Class: row input-group pt-lg pb-lg pr-lg){
-                        Div(Class: pr-lg text-bold){
-                            Label(Body: Начало торгов:)
-                        }
-                        Div(Class:){
-                            DateTime(#lot_date_start#, DD.MM.YYYY HH:MI)
-                        }
-                    }
-                    Div(Class: row input-group pt-lg pb-lg pr-lg){
-                        Div(Class: pr-lg text-bold){
-                            Label(Body: Окончание торгов:)
-                        }
-                        Div(Class:){
-                            DateTime(#lot_date_end#, DD.MM.YYYY HH:MI)
-                        }
-                    }
-                    If(#lot_type_bargain# == 2){
-                        Div(Class: row input-group pt-lg pb-lg pr-lg){
-                            Div(Class: pr-lg text-bold){
-                                Label(Body: Цена:)
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: LangRes(lots_length):)
+                                }
+                                Div(Class:){
+                                    #lot_length# (м)
+                                }
                             }
-                            Div(Class:){
-                                Money(#lot_amount_starting#)
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: LangRes(lots_height):)
+                                }
+                                Div(Class:){
+                                    #lot_height# (м)
+                                }
                             }
-                        }
-                        Div(Class: row input-group pt-lg pb-lg pr-lg){
-                            Div(Class: pr-lg text-bold){
-                                Label(Body: Тип торга:)
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: LangRes(lots_width):)
+                                }
+                                Div(Class:){
+                                    #lot_width# (м)
+                                }
                             }
-                            Div(Class:){
-                                AppParam(App:#application_id#, Name:bargain_type, Index: #lot_type_bargain#)
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: Создан:)
+                                }
+                                Div(Class:){
+                                    DateTime(#lot_date_creation#, DD.MM.YYYY HH:MI)
+                                }
                             }
-                        }
-                    }.Else{
-                        Div(Class: row input-group pt-lg pb-lg pr-lg){
-                            Div(Class: pr-lg text-bold){
-                                Label(Body: Тип торга:)
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: Начало торгов:)
+                                }
+                                Div(Class:){
+                                    DateTime(#lot_date_start#, DD.MM.YYYY HH:MI)
+                                }
                             }
-                            Div(Class:){
-                                AppParam(App:#application_id#, Name:bargain_type, Index: #lot_type_bargain#)
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: Окончание торгов:)
+                                }
+                                Div(Class:){
+                                    DateTime(#lot_date_end#, DD.MM.YYYY HH:MI)
+                                }
                             }
-                        }
-                        Div(Class: row input-group pt-lg pb-lg pr-lg){
-                            Div(Class: pr-lg text-bold){
-                                Label(Body: LangRes(amount_starting):)
-                            }
-                            Div(Class:){
-                                Money(#lot_amount_starting#)
-                            }
-                        }
-                        Div(Class: row input-group pt-lg pb-lg pr-lg){
-                            Div(Class: pr-lg text-bold){
-                                Label(Body: Минимальная ставка:)
-                            }
-                            Div(Class:){
-                                Money(#lot_order_min#)
-                            }
-                        }
-                        Div(Class: row input-group pt-lg pb-lg pr-lg){
-                            Div(Class: pr-lg text-bold){
-                                Label(Body: Максимальная ставка:)
-                            }
-                            Div(Class:){
-                                Money(#lot_order_max#)
+                            If(#lot_type_bargain# == 2){
+                                Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                    Div(Class: pr-lg text-bold){
+                                        Label(Body: Цена:)
+                                    }
+                                    Div(Class:){
+                                        Money(#lot_amount_starting#)
+                                    }
+                                }
+                                Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                    Div(Class: pr-lg text-bold){
+                                        Label(Body: Тип торга:)
+                                    }
+                                    Div(Class:){
+                                        AppParam(App:#application_id#, Name:bargain_type, Index: #lot_type_bargain#)
+                                    }
+                                }
+                            }.Else{
+                                Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                    Div(Class: pr-lg text-bold){
+                                        Label(Body: Тип торга:)
+                                    }
+                                    Div(Class:){
+                                        AppParam(App:#application_id#, Name:bargain_type, Index: #lot_type_bargain#)
+                                    }
+                                }
+                                Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                    Div(Class: pr-lg text-bold){
+                                        Label(Body: LangRes(amount_starting):)
+                                    }
+                                    Div(Class:){
+                                        Money(#lot_amount_starting#)
+                                    }
+                                }
+                                Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                    Div(Class: pr-lg text-bold){
+                                        Label(Body: Минимальная ставка:)
+                                    }
+                                    Div(Class:){
+                                        Money(#lot_order_min#)
+                                    }
+                                }
+                                Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                    Div(Class: pr-lg text-bold){
+                                        Label(Body: Максимальная ставка:)
+                                    }
+                                    Div(Class:){
+                                        Money(#lot_order_max#)
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-    }
-    Div(form-group mt-lg){
-        If(#popup_back# == 1){
-            Button(Body:"Закрыть",Class: btn btn-gray pull-right,Page:lots_rate,PageParams: "Id=#Id#")
-        }
-        If(And(#lot_seller#==#key_id#,#lot_status#==0,#lot_deleted#==0,#r_role_name#=="Seller")){
-            Button(Class: btn btn-danger pull-right, Body: LangRes(lots_delete), Page: lots_list, Contract: lots_Delete, Params: "Id=#Id#").Alert($lots_delete_auction$, $lots_yes$, $lots_no$)
-            Button(Class: btn btn-default, Body: LangRes(lot_edit), Page: lots_edit, PageParams: "Id=#Id#")
-        }
-        If(And(#status_index#==1,#role_id#==1,#notific_id#>0)){
-            Button(Body: "Отклонить", Page: lots_reject, PageParams: "NotificId=#notific_id#,Id=#Id#", Class: btn btn-danger).Popup(Width: 40, Header: "Пожалуйста укажите причину отказа")
-            Button(Body: "Принять", Page: lots_view, Contract: lots_AdminAction, Params: "Action=accept,Id=#Id#,NotificId=#notific_id#,Comment=", Class: btn btn-success pull-right, PageParams: "Id=#Id#")
-        }.ElseIf(And(#r_role_name#=="Buyer",#notific_id#>0)){
-            If(#lot_status# == 1){
-                Button(Body: "Не интересует", Page: lots_list, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#,NotificId=#notific_id#", Class: btn btn-default)
-                Button(Body: "Отслеживать", Page: lots_list, Params: "Action=track_accept,NotificId=#notific_id#,Id=#Id#",PageParams: "Id=#Id#", Contract: lots_BuyerAction, Class: btn btn-success pull-right)
-            }.ElseIf(#lot_status# == 2){
-                Button(Body: "Не отслеживать", Page: lots_list, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#,NotificId=#notific_id#", Class: btn btn-default)
+            Div(form-group mt-lg){
+                If(#popup_back# == 1){
+                    Button(Body:"Закрыть",Class: btn btn-gray pull-right,Page:lots_rate,PageParams: "Id=#Id#")
+                }
+                If(And(#lot_seller#==#key_id#,#lot_status#==0,#lot_deleted#==0,#r_role_name#=="Seller")){
+                    Button(Class: btn btn-danger pull-right, Body: LangRes(lots_delete), Page: lots_list, Contract: lots_Delete, Params: "Id=#Id#").Alert($lots_delete_auction$, $lots_yes$, $lots_no$)
+                    Button(Class: btn btn-default, Body: LangRes(lot_edit), Page: lots_edit, PageParams: "Id=#Id#")
+                }
+                If(And(#status_index#==1,#role_id#==1,#notific_id#>0)){
+                    Button(Body: "Отклонить", Page: lots_reject, PageParams: "NotificId=#notific_id#,Id=#Id#", Class: btn btn-danger).Popup(Width: 40, Header: "Пожалуйста укажите причину отказа")
+                    Button(Body: "Принять", Page: lots_view, Contract: lots_AdminAction, Params: "Action=accept,Id=#Id#,NotificId=#notific_id#,Comment=", Class: btn btn-success pull-right, PageParams: "Id=#Id#")
+                }.ElseIf(And(#r_role_name#=="Buyer",#notific_id#>0)){
+                    If(#lot_status# == 1){
+                        Button(Body: "Не интересует", Page: lots_list, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#,NotificId=#notific_id#", Class: btn btn-default)
+                        Button(Body: "Отслеживать", Page: lots_list, Params: "Action=track_accept,NotificId=#notific_id#,Id=#Id#",PageParams: "Id=#Id#", Contract: lots_BuyerAction, Class: btn btn-success pull-right)
+                    }.ElseIf(#lot_status# == 2){
+                        Button(Body: "Не отслеживать", Page: lots_list, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#,NotificId=#notific_id#", Class: btn btn-default)
+                    }
+                }
             }
         }
+        If(#lot_status#==4){
+            Button(Body: Договор, Page: lots_view_contract, PageParams: "Id=#Id#", Class: ph btn btn-primary)
+        }.ElseIf(And(#lot_status# > 1,#lot_status#<4)){
+            Button(Body: Ставки, Page: lots_rate, PageParams: "Id=#Id#", Class: ph btn btn-primary)
+        }
+        If(#lot_contract_id#>0){
+            DBFind(binaries, src_binaries).Where("id=#lot_contract_id#")
+            Table(src_binaries, "$lots_contract$=data")
+        }
     }
-}
-If(#lot_status#==4){
-    Button(Body: Договор, Page: lots_view_contract, PageParams: "Id=#Id#", Class: ph btn btn-primary)
-}.ElseIf(And(#lot_status# > 1,#lot_status#<4)){
-    Button(Body: Ставки, Page: lots_rate, PageParams: "Id=#Id#", Class: ph btn btn-primary)
-}
-If(#lot_contract_id#>0){
-    DBFind(binaries, src_binaries).Where("id=#lot_contract_id#")
-    Table(src_binaries, "$lots_contract$=data")
-}
+}.Style(
+    th,td {text-align:center;}
+    .t4 {font-size:18px;}
+    .img-circle {height: 30px;width: 30px; border: 1px solid #5A5D63;}
+    .center {display:flex; align-items:center;}
+    .big_photo {max-height: 200px; max-width: 100%}
+)
