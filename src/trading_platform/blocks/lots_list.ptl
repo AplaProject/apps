@@ -7,9 +7,6 @@ If(#isMobile# == 1){
 	Div(Class: list-group-item){
 		Button(Body: Dev, Class: btn btn-primary, Page: lots_mobile)
 	}
-    Div(Class: list-group-item){
-		Button(Body: Mobile, Class: btn btn-primary, Page: testtest)
-	}
 }
 
 Div(content-wrapper){
@@ -36,10 +33,10 @@ Div(content-wrapper){
     
     Div(text-right){
         Data(status_icons, "Icon"){
-            fa fa-hourglass-start text-muted
+            fa fa-hourglass-start text-warning
             fa fa-hourglass-half text-success
             fa fa-hourglass-end text-info
-            fa fa-check
+            fa icon-book-open
             fa fa-times text-danger
         }
 
@@ -116,7 +113,13 @@ Div(content-wrapper){
                     LinkPage(Class: text-primary h5 text-bold, Page: lots_view, PageParams: "Id=#id#", Body: #name#)
                 }
             }.Custom(_photo){
-                Image(Src: Binary().ById(#photo#), Class:photo)
+                If(#isMobile# == 0){
+                    Image(Src: Binary().ById(#photo#), Class:photo)
+                }.Else{
+                    LinkPage(Page: lots_view, PageParams: "Id=#id#"){
+                        Image(Src: Binary().ById(#photo#), Class:photo)
+                    }
+                }
             }.Custom(_seller){
                 Div(text-nowrap){
                     DBFind(members).Columns("id,member_name,image_id").Where("id=#seller#").Vars(seller)
@@ -174,14 +177,18 @@ Div(content-wrapper){
                         Em(Class:fa fa-hourglass-end)
                     }
                     If(#status_index#==5){
-                        Em(Class:fa fa-check)
+                        Em(Class:fa icon-book-open)
                     }
                     If(#status_index#==6){
                         Em(Class:fa fa-times)
                     }
                 }
                 If(#status_index#==3){
-                    LinkPage(Body: Торги, Page: lots_rate, PageParams: "Id=#id#", Class: #status_class#)
+                    LinkPage(Body: Торги, Page: lots_rate, PageParams: "Id=#id#",Class: #status_class#).Style(text-decoration:underline;)
+                }.ElseIf(And(#status_index#==1,#seller#==#key_id#,#r_role_name#=="Seller")){
+                    LinkPage(Body: Проверка, Page: lots_view, PageParams: "Id=#id#",Class: #status_class#).Style(text-decoration:underline;)
+                }.ElseIf(#status_index#==5){
+                    LinkPage(Body: Продан, Page: lots_view_contract, PageParams: "Id=#id#",Class: #status_class#).Style(color:black; text-decoration:underline;)
                 }.Else{
                     Div(#status_class#){
                         AppParam(App: #application_id#, Name: lots_status, Index: #status_index#)
@@ -227,7 +234,7 @@ Div(content-wrapper){
                 Div(col-md-12){
                     If(#lots_count#>0){
                         Div(table-responsive){
-                            Table(src_lots,"ID=id,=_photo,Название лота=_name,Продавец=_seller,Начало / Окончание=_date_start,Стартовая цена=_amount_starting,Шаг Min/Max=_stps,Цена=_amount_final,Статус=_status,Блокчейн=_blocks,=_actions")
+                            Table(src_lots,"ID=id,=_photo,Название лота=_name,Продавец=_seller,Начало / Окончание=_date_start,Стартовая цена=_amount_starting,Шаг Min/Max=_stps,Цена=_amount_final,Статус=_status,Блокчейн=_blocks")
                         }
                     }.Else{
                         Div(text-center h3){
