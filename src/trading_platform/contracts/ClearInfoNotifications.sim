@@ -1,0 +1,70 @@
+contract ClearInfoNotifications {
+    data {
+        lot_id int "optional"
+    }
+    conditions {
+    
+    }
+    action {
+        if ($lot_id > 0){
+            var reject_info array
+            reject_info = DBFind("notifications").Where("page_params->lot_id=? and page_params->note_for=? and closed=0", $lot_id, "buyers")
+            if reject_info {
+                var i int
+                while i < Len(reject_info) {
+                    var p map
+                    p = reject_info[i]
+                    notifications_Close("notific_id",Int(p["id"]))
+                    i=i+1
+                }
+            }
+            var reject_lot_info array
+            reject_lot_info = DBFind("notifications").Columns("id,page_params->lot_id,page_name,closed,notification->header").Where("page_params->lot_id=? and page_name=? and closed=0", $lot_id, "view_lots_start_auction")
+            if reject_lot_info {
+                var i int
+                while i < Len(reject_lot_info) {
+                    var p map
+                    p = reject_lot_info[i]
+                    if(Str(p["notification.header"]) != "Аукцион закончен"){
+                        notifications_Close("notific_id",Int(p["id"]))
+                        i=i+1
+                    }
+                }
+            }
+        } else {
+            var reject_info array
+            reject_info = DBFind("notifications").Where("recipient->member_id=? and page_params->note_for=? and closed=0", $key_id, "buyers")
+            if reject_info {
+                var i int
+                while i < Len(reject_info) {
+                    var p map
+                    p = reject_info[i]
+                    notifications_Close("notific_id",Int(p["id"]))
+                    i=i+1
+                }
+            }
+            var reject_lot_info array
+            reject_lot_info = DBFind("notifications").Where("recipient->member_id=? and page_name=? and closed=0", $key_id, "view_lots_start_auction")
+            if reject_lot_info {
+                var i int
+                while i < Len(reject_lot_info) {
+                    var p map
+                    p = reject_lot_info[i]
+                    notifications_Close("notific_id",Int(p["id"]))
+                    i=i+1
+                }
+            }
+            var reject_buer_info array
+            reject_buer_info = DBFind("notifications").Where("recipient->member_id=? and notification->header=? and closed=0", $key_id, "Лот не продан: нет покупателей")
+            if reject_buer_info {
+                var i int
+                while i < Len(reject_buer_info) {
+                    var p map
+                    p = reject_buer_info[i]
+                    notifications_Close("notific_id",Int(p["id"]))
+                    i=i+1
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,232 @@
+Div(content-wrapper){
+    If(Or(#v_member_id#>0,#v_member_id#<0)){
+    }.Else{
+        SetVar(Name: v_member_id, Value: #key_id#)
+    }
+    If(#isMobile# == 1){
+        Div(Class: list-group-item){
+            Button(Body: Обновить список, Class: btn btn-primary, Page: mActiveLots)
+        }
+    }
+    DBFind(Name: members, Source: src_member).Columns("id,image_id,member_name,name_first,name_middle,name_last,company_name,company_position,member_info->information").Where("id=#v_member_id#").Vars(prefix)
+    DBFind(roles).Where("id=#role_id#").Columns("role_name").Vars(r)
+    DBFind(applications).Columns("id").Where("name='Trading Platform' AND deleted=0").Vars(application)
+    If(Or(#prefix_id#>0,#prefix_id#<0)){
+        If(Or(#isMobile#==0,#isMobile#==1)){
+            If(#prefix_id# == #key_id#){
+                Div(Class: panel panel-default){
+                    If(#r_role_name#=="Seller"){
+                        SetTitle(Мои торги)
+                        DBFind(lots, src_lots).Order("id DESC").Count(tettttt).Where("seller=#key_id# and deleted=0 and status=2 ")
+                        If(#tettttt#>0){
+                            ForList(Source: src_lots){
+                                Div(Class: col-md-12 col-xs-12 pb-lg pt-lg){
+                                    Div(Class: input-group){
+                                        Div(Class: pull-left pr-lg mr-lg){
+                                            Image(Src: Binary().ById(#photo#), Class:photo)
+                                        }
+                                        Div(media-box-body clearfix){ 
+                                            Div(Class: text-center){
+                                                Div(Class: row input-group){
+                                                    Span(Class: h4){
+                                                        LinkPage(Class: text-primary text-bold text-center, Page: lots_view, PageParams: "Id=#id#", Body: #name#)
+                                                    }
+                                                }
+                                                Div(text-nowrap){
+                                                    DBFind(members).Columns("id,member_name,image_id").Where("id=#seller#").Vars(seller)
+                                                    If(Or(#seller_id#>0,#seller_id#<0)){
+                                                    }.Else{
+                                                        SetVar(seller_member_name,Address(#seller#))
+                                                    }
+                                                    Div(Class: row input-group){
+                                                        Div(Class: pr-lg text-bold){
+                                                            Label(Body: Продавец: )
+                                                        }
+                                                        LinkPage(Class:text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
+                                                            Div(Class: ){#seller_member_name#}
+                                                        }
+                                                    }
+                                                    Div(Class: row input-group){
+                                                        Div(Class: pr-lg text-bold){
+                                                            Label(Body: Старт:)
+                                                        }
+                                                        Div(Class: ){
+                                                            DateTime(#date_start#, DD.MM.YY)
+                                                        }
+                                                    }
+                                                    Div(Class: row input-group){
+                                                        Div(Class: pr-lg text-bold){
+                                                            Label(Body: Окончание:)
+                                                        }
+                                                        Div(Class: ){
+                                                            DateTime(#date_end#, DD.MM.YY)
+                                                        }
+                                                    }
+                                                    Div(Class: row input-group){
+                                                        Div(Class: pr-lg text-bold){
+                                                            Label(Body: Статус:)
+                                                        }
+                                                        Div(Class: ){
+                                                            SetVar(status_index, Calculate(#status# + 1))
+                                                            SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+                                                            Div(#status_class#){
+                                                                If(#status_index#==2){
+                                                                    Div(Class: text-warning){
+                                                                        Span(Body: Ожидание начала)
+                                                                    }
+                                                                }           
+                                                                If(#status_index#==3){
+                                                                    Div(Class: text-success){
+                                                                        Span(Body: Торги)
+                                                                    }
+                                                                }
+                                                                If(#status_index#==4){
+                                                                    Div(Class: text-info){
+                                                                        Span(Body: Подписание договора)
+                                                                    }
+                                                                }
+                                                                If(#status_index#==5){
+                                                                    Div(Class: text-muted){
+                                                                        Span(Body: Продан)
+                                                                    }
+                                                                }
+                                                                If(#status_index#==6){
+                                                                    Div(Class: text-danger){
+                                                                        Span(Body: Отклонён)
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    If(#status#==4){
+                                                        Div(Class: row input-group){
+                                                            Div(Class: pr-lg text-bold){
+                                                                Label(Body: Договор:)
+                                                            }
+                                                            Div(Class: text-primary){
+                                                                Div(){
+                                                                    LinkPage(Body: Договор, Page: lots_view_contract, PageParams: "Id=#id#")
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }.Else{
+                            Span(Торгов нет)
+                        }
+                    }
+                    If(#r_role_name#=="Buyer") {
+                        SetTitle(Мои торги)
+                        DBFind(lots, src_lots).Order("id DESC").Count(tettttt2).Where("deleted=0 and status=2")
+                        If(#tettttt2#>0){
+                            ForList(Source: src_lots){
+                                Div(Class: col-md-12 col-xs-12 pb-lg pt-lg){
+                                    Div(Class: input-group){
+                                        Div(Class: pull-left pr-lg mr-lg){
+                                            Image(Src: Binary().ById(#photo#), Class:photo)
+                                        }
+                                        Div(media-box-body clearfix){ 
+                                            Div(Class: text-center){
+                                                Div(Class: row input-group){
+                                                    Span(Class: h4){
+                                                        LinkPage(Class: text-primary text-bold text-center, Page: lots_view, PageParams: "Id=#id#", Body: #name#)
+                                                    }
+                                                }
+                                                Div(text-nowrap){
+                                                    DBFind(members).Columns("id,member_name,image_id").Where("id=#seller#").Vars(seller)
+                                                    If(Or(#seller_id#>0,#seller_id#<0)){
+                                                    }.Else{
+                                                        SetVar(seller_member_name,Address(#seller#))
+                                                    }
+                                                    Div(Class: row input-group){
+                                                        Div(Class: pr-lg text-bold){
+                                                            Label(Body: Продавец: )
+                                                        }
+                                                        LinkPage(Class:text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
+                                                            Div(Class: ){#seller_member_name#}
+                                                        }
+                                                    }
+                                                    Div(Class: row input-group){
+                                                        Div(Class: pr-lg text-bold){
+                                                            Label(Body: Старт:)
+                                                        }
+                                                        Div(Class: ){
+                                                            DateTime(#date_start#, DD.MM.YY)
+                                                        }
+                                                    }
+                                                    Div(Class: row input-group){
+                                                        Div(Class: pr-lg text-bold){
+                                                            Label(Body: Окончание:)
+                                                        }
+                                                        Div(Class: ){
+                                                            DateTime(#date_end#, DD.MM.YY)
+                                                        }
+                                                    }
+                                                    Div(Class: row input-group){
+                                                        Div(Class: pr-lg text-bold){
+                                                            Label(Body: Статус:)
+                                                        }
+                                                        Div(Class: ){
+                                                            SetVar(status_index, Calculate(#status# + 1))
+                                                            SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+                                                            Div(#status_class#){
+                                                                If(#status_index#==2){
+                                                                    Div(Class: text-warning){
+                                                                        Span(Body: Ожидание начала)
+                                                                    }
+                                                                }           
+                                                                If(#status_index#==3){
+                                                                    Div(Class: text-success){
+                                                                        Span(Body: Торги)
+                                                                    }
+                                                                }
+                                                                If(#status_index#==4){
+                                                                    Div(Class: text-info){
+                                                                        Span(Body: Подписание договора)
+                                                                    }
+                                                                }
+                                                                If(#status_index#==5){
+                                                                    Div(Class: text-muted){
+                                                                        Span(Body: Продан)
+                                                                    }
+                                                                }
+                                                                If(#status_index#==6){
+                                                                    Div(Class: text-danger){
+                                                                        Span(Body: Отклонён)
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    If(#status#==4){
+                                                        Div(Class: row input-group){
+                                                            Div(Class: pr-lg text-bold){
+                                                                Label(Body: Договор:)
+                                                            }
+                                                            Div(Class: text-primary){
+                                                                Div(){
+                                                                    LinkPage(Body: Договор, Page: lots_view_contract, PageParams: "Id=#id#")
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }.Else{
+                            Span(Торгов нет)
+                        } 
+                    }
+                }
+            }
+        }
+    }
+}

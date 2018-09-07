@@ -2,6 +2,7 @@ contract AuctionProcess {
     data {
         step_rate money
         lot_id int
+        check_notif int "optional"
     }
     func storeHistory(id int){
         var vars map
@@ -12,6 +13,9 @@ contract AuctionProcess {
     conditions {
         $lot_map = DBFind("lots").Where("id=$", $lot_id).Row()
         if ($lot_map["type_bargain"] == 1){
+            if($lot_map["status"] != 2){
+                info("Аукцион закончен")
+            }
             if (Money($lot_map["amount_max"]) == Money(0)){
                 if ($step_rate < Money($lot_map["amount_starting"])){
                     info("Ставка не может быть меньше текущей")
@@ -36,6 +40,9 @@ contract AuctionProcess {
             }
         }
         if ($lot_map["type_bargain"] == 2){
+            if($lot_map["status"] != 2){
+                info("Аукцион закончен")
+            }
             $step_rate = Money($lot_map["amount_starting"])
         }
         
@@ -122,6 +129,7 @@ contract AuctionProcess {
         }
 
         if ($lot_map["type_bargain"] == 2){
+            
             DBUpdate("keys",$key_id,"-amount", percentrate)
             DBUpdate("keys", Int(EcosysParam("founder_account")),"+amount", percentrate)
             DBUpdate("keys",$key_id,"+deposit",$step_rate)
@@ -135,8 +143,13 @@ contract AuctionProcess {
 
             $member_id = Int($lot_map["seller"])
 
+            ClearInfoNotifications("lot_id",$lot_id)
+
             notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", $member_id, 1, "icon icon-envelope", "Аукцион закончен", "Подробнее", "view_lots_start_auction", notific_params)
             lots_Close ("id",$lot_id)
+        }
+        if ($check_notif > 0){
+            notifications_Close("notific_id",$check_notif)
         }
         storeHistory($lot_id)
     }

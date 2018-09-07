@@ -1,0 +1,41 @@
+contract TestCont {
+    data {
+
+    }
+    func getRemainingTime(lot map) string {
+        var day dDiff hour hDiff minute mDiff sDiff diff end now int lotEnd string prettyDiff array
+        minute = 60
+        hour = 60 * minute
+        day = 24 * hour
+        lotEnd = lot["date_end"]
+        lotEnd = Replace(lotEnd, "T", " ")
+        lotEnd = Replace(lotEnd, "Z", "")
+        end = UnixDateTime(lotEnd)
+        now = $block_time
+        diff = end - now
+        if diff <= 0{
+            return "0 сек"
+        }
+        dDiff = Int(diff / day)
+        if dDiff > 0{
+            prettyDiff = Append(prettyDiff, Sprintf("%v д", dDiff))
+        }
+        hDiff = Int((diff - dDiff * day) / hour)
+        if hDiff > 0{
+            prettyDiff = Append(prettyDiff, Sprintf("%v ч", hDiff))
+        }
+        mDiff = Int((diff - dDiff * day - hDiff * hour) / minute)
+        if mDiff > 0{
+            prettyDiff = Append(prettyDiff, Sprintf("%v м", mDiff))
+        }
+        sDiff = Int(diff - dDiff * day - hDiff * hour - mDiff * minute)
+        if sDiff > 0{
+            prettyDiff = Append(prettyDiff, Sprintf("%v с", sDiff))
+        }
+        return Join(prettyDiff, " ")
+    }
+    action{
+        $lot = DBFind("lots").Order("id desc").Row()
+        info getRemainingTime($lot)
+    }
+}

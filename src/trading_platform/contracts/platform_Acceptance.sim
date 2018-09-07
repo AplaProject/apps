@@ -22,6 +22,13 @@ contract platform_Acceptance {
             return res
         }
     conditions {
+        $check_role = DBFind("roles_participants").Where("role->name=? and member->member_id=? and deleted=0",$rname,$member_id)
+        if $check_role {
+            info("Пользователь уже назначен на эту роль")
+        }
+        if DBFind("notifications").Where("id=? and closed=1",$notific_id){
+            info("Решение по этому запросу уже принято")
+        }
         //actually we should find role from "string" and check it's RoleID and then transfer string data to RoleID "int"
         $rid = DBFind("roles").Columns("id,role_name").Where("role_name=?", $rname).One("id")
         if $rid != nil {
@@ -30,15 +37,15 @@ contract platform_Acceptance {
         //check role exist
         $role = DBFind("roles").Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Where("id=?", $rid).Row()
         if !$role {
-            warning "Role not found"
+            warning "Роль не найдена"
         }
         //check member_id
         if !DBFind("keys").Where("id=?", $member_id).Row() {
-            warning "Key not found"
+            warning "Ключ не найден"
         }
         //check if role not deleted
         if $role["deleted"] == 1 {
-            warning "This role has been deleted. The appointment of members is impossible"
+            warning "Эта роль была удалена. Назначение членов невозможно"
         }
         //special Rules
         var specialRules map prev_contract string stack array
