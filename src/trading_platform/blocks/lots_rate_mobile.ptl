@@ -1,0 +1,178 @@
+DBFind(applications).Columns("id").Where("name='Trading Platform' AND deleted=0").Vars(application)
+DBFind(roles).Where("id=#role_id#").Columns("role_name").Vars(r)
+If(#notific_id#>0){
+    DBFind(notifications).Columns("id,page_params->lot_id").Where("id=#notific_id#").Vars(note)
+    If(#note_id#>0){
+        SetVar(Id,#note_page_params_lot_id#)
+    }
+}.Else{
+    SetVar(notific_id,)
+}
+
+SetVar(date_format,"DD.MM.YY HH:MI")
+Div(content-wrapper){
+    Div(breadcrumb){
+        LinkPage($lots_list$, lots_list)
+        Span(/,mh)
+        LinkPage($lots_view$, lots_view,PageParams: "Id=#Id#")
+        Span(/,mh)
+        Span(Class: text-muted,Body: "Ставки")
+    }
+
+    If(GetVar(Id)){
+        DBFind(lots,lot).Where("id=#Id#").Vars(lot)
+        DBFind(lots_types,src_type).Where("deleted=0 and id=#lot_lots_type_id#").Vars(type)
+        DBFind(roles).Columns("id,role_name").Where("id=#role_id#").Vars(r)
+        DBFind(lots_tracks).Where("lot_id=#Id# and key_id=#key_id# and deleted=0").Vars(track)
+        DBFind(Name: buyers, Source: src_buyers).Where("lot_id = #Id#").Order(amount DESC, id ASC).Vars(i_rate)
+        SetVar(status_index, Calculate(#lot_status# + 1))
+        Div(Class: col-md-12 col-xs-12 pb-lg pt-lg){
+            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                Div(Class: pr-lg text-bold){
+                    Span(Body: #lot_id#. #lot_name#,Class: h3 text-center)
+                }
+                Div(Class:){
+
+                }
+            }
+            Div(Class: input-group){
+                Div(Class: pull-left pr-lg mr-lg){
+                    Image(Src: Binary().ById(#lot_photo#), Class:photo)
+                }
+                Div(text-left){
+                    If(#lot_type_bargain# == 1){
+                        Div(text-muted small_text){
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: Стартовая цена:)
+                                }
+                                Div(Class:){
+                                    Money(#lot_amount_starting#)
+                                }
+                            }
+                        }
+                        If(#i_rate_amount# > 0){
+                            Div(text-bold small_text){
+                                Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                    Div(Class: pr-lg text-bold){
+                                        Label(Body: Текущая цена:)
+                                    }
+                                    Div(Class:){
+                                        Money(#i_rate_amount#)
+                                    }
+                                }
+                            }
+                        }.Else{
+                            Div(text-bold small_text){
+                                Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                    Div(Class: pr-lg text-bold){
+                                        Label(Body: Текущая цена:)
+                                    }
+                                    Div(Class:){
+                                        Money(#lot_amount_starting#)
+                                    }
+                                }
+                            }
+                        }
+                    }.Else{
+                        Div(text-muted h5 mt0 pt0){
+                            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                                Div(Class: pr-lg text-bold){
+                                    Label(Body: цена:)
+                                }
+                                Div(Class:){
+                                    Money(#lot_amount_starting#)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Div(Class: row input-group pt-lg pb-lg pr-lg){
+                Div(Class: pr-lg text-bold){
+                    Label(Body: Описание:)
+                }
+                Div(Class:){
+                    LinkPage(Body:Link, Class: btn-link text-primary text-bold, Page: lots_view, PageParams: "Id=#Id#,popup_back=1")
+                }
+            }
+            Div(row pb-lg mb-lg){
+                Div(col-md-5){
+                    If(And(#lot_status#==2,#r_role_name#=="Buyer",#lot_type_bargain# == 1)){
+                        If(#rate_hight__buyer_id# == #key_id#){
+                            Input(Type: number)
+                        }.Else{
+                            Input(Name: StepRate, Type: number)
+                        }
+                        If(#i_rate_amount# > 0){
+                            SetVar(rate_min,Calculate(Exp:#i_rate_amount#+#lot_order_min#,Type:money))
+                            SetVar(rate_max,Calculate(Exp:#i_rate_amount#+#lot_order_max#,Type:money))
+                        }.Else{
+                            SetVar(rate_min,Calculate(Exp:#lot_amount_starting#+#lot_order_min#,Type:money))
+                            SetVar(rate_max,Calculate(Exp:#lot_amount_starting#+#lot_order_max#,Type:money))
+                        }
+                    }
+                }
+                Div(col-md-5){
+                    If(And(#lot_status#==2,#r_role_name#=="Buyer")){
+                        If(#lot_type_bargain# == 1){
+                            DBFind("buyers").Where("lot_id = #Id#").Order("amount DESC").Vars(rate_hight_)
+                            If(#rate_hight__buyer_id# == #key_id#){
+                                Button(Class: btn btn-primary btn-block disabled, Body: "Ставка")
+                            }.Else{
+                                Button(Class: btn btn-primary btn-block, Body: "Ставка", Contract:AuctionProcess, Page:lots_view, Params:"step_rate=Val(StepRate),lot_id=#Id#,check_notif=#notific_id#", PageParams: "Id=#Id#")
+                            }
+                        }.ElseIf(#lot_type_bargain# == 2){
+                            Button(Class: btn btn-primary, Body: "Купить",Contract:AuctionProcess,Page:lots_view,Params:"step_rate=0,lot_id=#Id#,check_notif=#notific_id#",PageParams: "Id=#Id#")
+                        }
+                    }
+                }
+            }
+            If(And(#lot_status#==2,#r_role_name#=="Buyer")){
+                Div(row text-muted){
+                    Div(col-md-7){
+                        If(#lot_type_bargain# == 1){
+                            Div(small_text mb-sm){
+                                min ставка Money(#rate_min#)
+                            }
+                            Div(small_text mb-sm){
+                                max ставка Money(#rate_max#)
+                            }
+                        }
+                    }
+                    Div(col-md-5){
+                        If(#lot_type_bargain# == 1){
+                            Div(small_text mb-sm){
+                                Окончание торгов
+                            }
+                            Div(small_text mb-sm){
+                                DateTime(#lot_date_end#, DD.MM.YYYY HH:MI)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}.Style(
+    .border_parent {
+        padding: 0 15px 15px 15px;
+    }
+    .border {
+        height:300px;
+        padding: 5px;
+        border:2px solid #e4eaec;
+    }
+    th,td {text-align:center;}
+    .t4 {font-size:18px;}
+    .img-circle {height: 30px;width: 30px; border: 1px solid #5A5D63;}
+    .center {display:flex; align-items:center;}
+    .big_photo {height: 300px; max-width: 100%}
+    .big_text {
+        font-weight: 800 !important;
+        font-size: 50px;
+    }
+    .small_text {
+        font-size: 14px;
+    }
+)
