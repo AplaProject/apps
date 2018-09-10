@@ -1,0 +1,253 @@
+DBFind(applications).Columns("id").Where("name='Trading Platform' AND deleted=0").Vars(application)
+DBFind(roles).Where("id=#role_id#").Columns("role_name").Vars(r)
+If(#notific_id#>0){
+    DBFind(notifications).Columns("id,page_params->lot_id").Where("id=#notific_id#").Vars(note)
+    If(#note_id#>0){
+        SetVar(Id,#note_page_params_lot_id#)
+    }
+}.Else{
+    SetVar(notific_id,)
+}
+
+SetVar(date_format,"DD.MM.YY HH:MI")
+Div(content-wrapper){
+If(GetVar(Id)){
+    DBFind(lots,lot).Where("id=#Id#").Vars(lot)
+    DBFind(lots_types,src_type).Where("deleted=0 and id=#lot_lots_type_id#").Vars(type)
+    DBFind(roles).Columns("id,role_name").Where("id=#role_id#").Vars(r)
+    DBFind(lots_tracks).Where("lot_id=#Id# and key_id=#key_id# and deleted=0").Vars(track)
+    Form(panel panel-default){
+        Div(panel-body){
+            Div(row mb-lg){
+                Div(col-sm-8){
+                    Div(h3 p0 m0){
+                        #lot_name#
+                    }
+                }
+                Div(col-sm-4){
+                    Div(row){
+                        If(#lot_deleted#==1){
+                            Div(text-danger){
+                                Span("Статус:", text-muted mr-sm) 
+                                LangRes(lot_deleted)
+                            }
+                        }.Else{
+                            SetVar(status_index, Calculate(#lot_status# + 1))
+                            SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
+                            Div(col-sm-6 #status_class#){
+                                Span("Статус:", text-muted mr-sm)
+                                If(#status_index#==2){
+                                    Span(Class:fa fa-hourglass-start)
+                                }
+                                If(#status_index#==3){
+                                    Span(Class:fa fa-hourglass-half)
+                                }
+                                If(#status_index#==4){
+                                    Span(Class:fa fa-hourglass-end)
+                                }
+                                If(#status_index#==5){
+                                    Span(Class:fa fa-check)
+                                }
+                                If(#status_index#==6){
+                                    Span(Class:fa fa-times)
+                                }
+                                If(#status_index#==3){
+                                    LinkPage(Body: Торги, Page: lots_rate, PageParams: "Id=#id#", Class: ml-sm #status_class#)
+                                }.Else{
+                                    Strong(AppParam(App: #application_id#, Name: lots_status, Index: #status_index#), ml-sm #status_class# text-uppercase)
+                                }
+                            }
+                            Div(col-sm-6){
+                                If(#lot_status#==4){
+                                    Button(Body: Договор, Page: lots_view_contract, PageParams: "Id=#Id#", Class: ph btn btn-primary)
+                                }.ElseIf(And(#lot_status# > 1,#lot_status#<4)){
+                                    Button(Body: Ставки, Page: lots_rate, PageParams: "Id=#Id#", Class: ph btn btn-primary)
+                                }
+                                If(#lot_contract_id#>0){
+                                    DBFind(binaries, src_binaries).Where("id=#lot_contract_id#")
+                                    Table(src_binaries, "$lots_contract$=data")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Div(){
+                Div(Class: col-md-12 col-xs-12 pb-lg pt-lg){
+    Div(Class: input-group){
+        Div(text-center mb){
+            Image(Src: Binary().ById(#lot_photo#), Class:big_photo m0 thumbnail)
+        }
+        DBFind(members).Columns("id,member_name,image_id").Where("id=#lot_seller#").Vars(seller)
+        If(Or(#seller_id#>0,#seller_id#<0)){
+        }.Else{
+            SetVar(seller_member_name,Address(#lot_seller#))
+        }
+        Div(Class: row input-group){
+            Div(Class: pr-lg text-bold){
+                Label(Body: продавец: )
+            }
+            LinkPage(Class: text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#lot_seller#"){
+                Div(Class: ){
+                    #seller_member_name#
+                }
+            }
+        }
+        Div(Class: row input-group){
+            Div(Class: pr-lg text-bold){
+                Label(Body: Категория: )
+            }
+            Div(Class: ){
+                AppParam(App: #application_id#, Name: lots_categories, Index: #type_category#)
+            }
+        }
+        Div(Class: row input-group){
+            Div(col-md-4 col-xs-4 mt-sm text-bold){
+                 Label(Body: Вид: )
+            }
+            Div(col-md-8 col-xs-8 mt-sm){
+                ForList(src_type){
+                    LangRes(#resource_name#)
+                }
+            }
+        }
+        Div(Class: row input-group){
+            Div(col-md-12 col-xs-12 text-muted){
+                #lot_description#
+            }
+        }
+        Div(col-sm-4){
+            Div(mb){
+                Map(Hmap:200, MapType:hybrid, Value:#lot_map_location#)
+            }
+            Div(Class: row input-group){
+                Div(col-md-4 col-xs-4 mt-sm text-bold){
+                    Адрес
+                }
+                Div(col-md-8 col-xs-8 mt-sm){
+                    #lot_location#
+                }
+            }
+
+            Div(Class: row input-group){
+                Div(col-md-4 col-xs-4 mt-sm text-bold){
+                    Strong(LangRes(lots_condition))
+                }
+                Div(col-md-8 col-xs-8 mt-sm){
+                    AppParam(App:#application_id#, Name:lots_condition, Index:#lot_condition#)
+                }
+            }
+            ArrayToSource(type_blocks, [#type_lots_params#])
+            ForList(type_blocks){
+                Div(row md){
+                    SetVar(block,AppParam(App:#application_id#, Name:lots_params, Index:#value#))
+                    Include(#block#)
+                }
+            }
+        }
+        Div(Class: row input-group){
+            Div(col-md-6 col-xs-4 text-bold){
+                Создан
+            }
+            Div(col-md-6 col-xs-8){
+                DateTime(#lot_date_creation#, DD.MM.YYYY HH:MI)
+            }
+        }
+        Div(Class: row input-group){
+            Div(col-md-6 col-xs-4 text-bold){
+                Начало торгов
+            }
+            Div(col-md-6 col-xs-8){
+                DateTime(#lot_date_start#, DD.MM.YYYY HH:MI)
+            }
+        }
+        Div(Class: row input-group){
+            Div(col-md-6 col-xs-4 text-bold){
+                Окончание торгов
+            }
+            Div(col-md-6 col-xs-8){
+                DateTime(#lot_date_end#, DD.MM.YYYY HH:MI)
+            }
+        }
+
+        If(#lot_type_bargain# == 2){
+            Div(Class: row input-group){
+                Div(col-md-6 col-xs-4 text-bold){
+                    Цена
+                }
+                Div(col-md-6 col-xs-8){
+                    Money(#lot_amount_starting#)
+                }
+            }
+            Div(Class: row input-group){
+                Div(col-md-6 col-xs-4 text-bold){
+                    Тип торга
+                }
+                Div(col-md-6 col-xs-8){
+                    AppParam(App:#application_id#, Name:bargain_type, Index: #lot_type_bargain#)
+                }
+            }
+        }.Else{
+            Div(Class: row input-group){
+                Div(col-md-6 col-xs-4 text-bold){
+                    Тип торга
+                }
+                Div(col-md-6 col-xs-8){
+                    AppParam(App:#application_id#, Name:bargain_type, Index: #lot_type_bargain#)
+                }
+            }
+
+            Div(Class: row input-group){
+                Div(col-md-6 col-xs-4 text-bold){
+                    LangRes(amount_starting)
+                }
+                Div(col-md-6 col-xs-8){
+                    Money(#lot_amount_starting#)
+                }
+            }
+
+            Div(Class: row input-group){
+                Div(col-md-6 col-xs-4 text-bold){
+                    Минимальная ставка
+                }
+                Div(col-md-6 col-xs-8){
+                    Money(#lot_order_min#)
+                }
+            }
+
+            Div(Class: row input-group){
+                Div(col-md-6 col-xs-4 text-bold){
+                    Максимальная ставка
+                }
+                Div(col-md-6 col-xs-8){
+                    Money(#lot_order_max#)
+                }
+            }
+        }
+    }
+}
+                
+            }
+            Div(form-group mt-lg){
+                If(#popup_back# == 1){
+                    Button(Body:"Закрыть",Class: btn btn-gray pull-right,Page:lots_rate,PageParams: "Id=#Id#")
+                }
+                If(And(#lot_seller#==#key_id#,#lot_status#==0,#lot_deleted#==0,#r_role_name#=="Seller")){
+                    Button(Class: btn btn-danger pull-right, Body: LangRes(lots_delete), Page: lots_list, Contract: lots_Delete, Params: "Id=#Id#").Alert($lots_delete_auction$, $lots_yes$, $lots_no$)
+                    Button(Class: btn btn-default, Body: LangRes(lot_edit), Page: lots_edit, PageParams: "Id=#Id#")
+                }
+                If(And(#status_index#==1,#role_id#==1,#notific_id#>0)){
+                    Button(Body: "Отклонить", Page: lots_reject, PageParams: "NotificId=#notific_id#,Id=#Id#", Class: btn btn-danger).Popup(Width: 40, Header: "Пожалуйста укажите причину отказа")
+                    Button(Body: "Принять", Page: lots_view, Contract: lots_AdminAction, Params: "Action=accept,Id=#Id#,NotificId=#notific_id#,Comment=", Class: btn btn-success pull-right, PageParams: "Id=#Id#")
+                }.ElseIf(And(#r_role_name#=="Buyer",#notific_id#>0)){
+                    If(#lot_status# == 1){
+                        Button(Body: "Не интересует", Page: lots_list, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#,NotificId=#notific_id#", Class: btn btn-default)
+                        Button(Body: "Отслеживать", Page: lots_list, Params: "Action=track_accept,NotificId=#notific_id#,Id=#Id#",PageParams: "Id=#Id#", Contract: lots_BuyerAction, Class: btn btn-success pull-right)
+                    }.ElseIf(#lot_status# == 2){
+                        Button(Body: "Не отслеживать", Page: lots_list, Contract: lots_BuyerAction, Params: "Action=track_reject,Id=#Id#,NotificId=#notific_id#", Class: btn btn-default)
+                    }
+                }
+            }
+        }
+    }
+}

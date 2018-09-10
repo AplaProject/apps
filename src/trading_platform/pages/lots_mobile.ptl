@@ -3,11 +3,13 @@ DBFind(roles).Where("id=#role_id#").Columns("role_name").Vars(r)
 SetTitle(Торги)
 SetVar(date_format,"DD.MM.YY HH:MI")
 If(#isMobile# == 1){
-    Div(Class: list-group-item){
-        Button(Body: Обновить список лотов, Class: btn btn-primary, Page: lots_mobile)
-    }
-    Div(Class: list-group-item){
-        Button(Body: testtest, Class: btn btn-primary, Page: testtest)
+    Div(Class: row input-group pt-lg pb-lg){
+        Div(Class: pr-lg text-bold pull-right){
+            Button(Class: btn btn-primary text-center, Page: lots_mobile, Body: Обновить список)
+        }
+        Div(Class: pr-lg text-bold pull-right){
+            Button(Class: btn btn-primary text-center, Page: app_upload_binary, Body: InputFile)
+        }
     }
 }
 
@@ -40,7 +42,9 @@ Div(content-wrapper){
         Div(Class: col-md-12 col-xs-12 pb-lg pt-lg){
             Div(Class: input-group){
                 Div(Class: pull-left pr-lg mr-lg){
-                    Image(Src: Binary().ById(#photo#), Class:photo)
+                    LinkPage(Page: lots_view, PageParams: "Id=#id#"){
+                        Image(Src: Binary().ById(#photo#), Class:photo)
+                    }
                 }
                 Div(media-box-body clearfix){ 
                     Div(Class: text-center){
@@ -87,29 +91,15 @@ Div(content-wrapper){
                                     SetVar(status_index, Calculate(#status# + 1))
                                     SetVar(status_class,AppParam(App: #application_id#, Name: lots_status_classes, Index: #status_index#))
                                     Div(#status_class#){
-                                        If(#status_index#==2){
-                                            Div(Class: text-warning){
-                                                Span(Body: Ожидание начала)
-                                            }
-                                        }           
                                         If(#status_index#==3){
-                                            Div(Class: text-success){
-                                                Span(Body: Торги)
-                                            }
-                                        }
-                                        If(#status_index#==4){
-                                            Div(Class: text-info){
-                                                Span(Body: Подписание договора)
-                                            }
-                                        }
-                                        If(#status_index#==5){
-                                            Div(Class: text-muted){
-                                                Span(Body: Продан)
-                                            }
-                                        }
-                                        If(#status_index#==6){
-                                            Div(Class: text-danger){
-                                                Span(Body: Отклонён)
+                                        LinkPage(Body: Торги, Page: lots_rate, PageParams: "Id=#id#",Class: #status_class#).Style(text-decoration:underline;)
+                                        }.ElseIf(And(#status_index#==1,#seller#==#key_id#,#r_role_name#=="Seller")){
+                                            LinkPage(Body: Проверка, Page: lots_view, PageParams: "Id=#id#",Class: #status_class#).Style(text-decoration:underline;)
+                                        }.ElseIf(#status_index#==5){
+                                            LinkPage(Body: Продан, Page: lots_view_contract, PageParams: "Id=#id#",Class: #status_class#).Style(color:black; text-decoration:underline;)
+                                        }.Else{
+                                            Div(#status_class#){
+                                                AppParam(App: #application_id#, Name: lots_status, Index: #status_index#)
                                             }
                                         }
                                     }
