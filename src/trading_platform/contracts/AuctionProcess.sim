@@ -45,23 +45,23 @@ contract AuctionProcess {
             }
             $step_rate = Money($lot_map["amount_starting"])
         }
-        
+
         var percentrate money
         percentrate = $step_rate / Money(100)
-    
+
         var checkamount money
         checkamount = Money(DBFind("keys").Where("id = ?",$key_id).One("amount"))
-        
+
         //$checksumm = DBFind("buyers").Where("lot_id=$ and buyer_id=$",$lot_id,$key_id).Order("id DESC").One("amount")
         $checksumm = DBFind("buyers").Where("lot_id=$ and buyer_id=$",$lot_id,$key_id).Order("amount DESC").One("amount")
         $checkdep = Money(DBFind("keys").Where("id = ?",$key_id).One("deposit"))
-        
+
         if ($lot_map["type_bargain"] == 2){
             if(percentrate + $step_rate + $checkdep > checkamount){
                 info("На счету недостаточно средств")
             }
         }
-        
+
         if ($lot_map["type_bargain"] == 1){
             if (Money($lot_map["amount_max"]) == Money(0)){
                 if(percentrate + $step_rate + $checkdep > checkamount){
@@ -75,11 +75,21 @@ contract AuctionProcess {
                     }
                 }
                 if(Money($checksumm) > Money(0)){
-                    if(Money(percentrate)+ Money($checkdep) + (Money($step_rate) - Money($checksumm)) > Money(checkamount)){
+                    if(Money(percentrate) + Money($checkdep) + (Money($step_rate) - Money($checksumm)) > Money(checkamount)){
                         info("На счету недостаточно средств")
                     }
                 }
             }
+        }
+    }
+    func closeMyOldNotify(){
+        var ids i lenNotes int note map notes array
+        notes = DBFind("notifications").Where("recipient->member_id=? and page_params->lot_id=? and page_params->rate_broken=? and closed=0", $key_id, $lot_id, 1).Columns("id")
+        lenNotes = Len(notes)
+        while i < lenNotes{
+            note = notes[i]
+            notifications_Close("notific_id", Int(note["id"]))
+            i = i + 1
         }
     }
     action {
@@ -111,6 +121,8 @@ contract AuctionProcess {
                 notific_params["lot_id"] = $lot_id
                 notific_params["rate_broken"] = 1
                 notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", Int($send_notif_rate_broken), 1, "icon icon-envelope", "Ваша ставка перебита", "Подробнее", "view_lots_start_auction", notific_params)
+                
+                closeMyOldNotify()
 
                 DBUpdate("keys",$key_id,"+deposit",secondrate)
                 DBUpdate("lots",$lot_id,"amount_max",$step_rate)
@@ -122,21 +134,21 @@ contract AuctionProcess {
                 }
                 if($dep_check["member_id"]){
                     DBUpdate("dep_user_list",Int($dep_check["id"]),"amount",$step_rate)
-                } 
+                }
             }
             DBUpdate("keys",$key_id,"-amount", percentrate)
-            DBUpdate("keys", Int(EcosysParam("founder_account")) ,"+amount", percentrate)
+            DBUpdate("keys", Int(EcosysParam("founder_account")),"+amount", percentrate)
         }
 
         if ($lot_map["type_bargain"] == 2){
-            
+
             DBUpdate("keys",$key_id,"-amount", percentrate)
             DBUpdate("keys", Int(EcosysParam("founder_account")),"+amount", percentrate)
             DBUpdate("keys",$key_id,"+deposit",$step_rate)
             DBInsert("buyers","amount,lot_id,buyer_id,percentrate,timestamp rate_date",$step_rate,$lot_id,$key_id,percentrate,$block_time)
             //DBInsert("dep_user_list","lot_id,member_id,amount",$lot_id,$key_id,$step_rate)
 
-			DBUpdate("lots",$lot_id,"status",3)
+            DBUpdate("lots",$lot_id,"status",3)
 
             var notific_params map
             notific_params["lot_id"] = $lot_id
