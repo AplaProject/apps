@@ -12,7 +12,7 @@ Div(content-wrapper){
                         }
                         Div(col-sm-6){
                             Div(input-group){
-                                DBFind(Name: member, Source: src_member)
+                                DBFind(Name: members, Source: src_member)
                                 Select(Name: MemberId, Source: src_member, NameColumn: member_name, ValueColumn: id)
                                 Div(input-group-btn){
                                     Button(Body: $send_notify$, Contract: DemoNotificationSingle, Class:btn btn-primary, Params: "MemberId=Val(MemberId)")
@@ -22,14 +22,12 @@ Div(content-wrapper){
                     }
                 }
             }
-            
             Div(h4){LangRes(code)}
             Div(panel panel-primary){
                 Div(panel-body){
                     If(#founder_value#==#key_id#){
                         Div(h5){
-                            DBFind(blocks).Where(name='demo_block_sendMessage').Vars(page)
-                            LinkPage(Page: "edit-block", PageParams: "id=#page_id#"){ $edit_page$ }
+                            LinkPage(Body: $edit_page$, Class: text-primary, Page: editor, PageParams: "open=block,name=demo_block_sendMessage")
                         }
                     }.Else{
                         Div(h5 text-bold){$page_code$}
@@ -42,10 +40,10 @@ Form(panel-body){
     }
     Div(col-sm-6){
         Div(input-group){
-            DBFind(Name: member, Source: src_member)
+            DBFind(Name: members, Source: src_member)
             Select(Name: MemberId, Source: src_member, NameColumn: member_name, ValueColumn: id)
             Div(input-group-btn){
-                Button(Body: Send Notification, Contract: DemoNotificationSingle, Class:btn btn-primary, Params: "MemberId=Val(MemberId)")
+                Button(Body: $send_notify$, Contract: DemoNotificationSingle, Class:btn btn-primary, Params: "MemberId=Val(MemberId)")
             }
         }
     }
@@ -54,7 +52,7 @@ Form(panel-body){
                     }
                     If(#founder_value#==#key_id#){
                         Div(h5){
-                            LinkPage(Page: "edit-contract", PageParams: "name=DemoNotificationSingle"){ $edit_contract$ }
+                            LinkPage(Body: $edit_contract$, Class: text-primary, Page: editor, PageParams: "open=contract,name=DemoNotificationSingle")
                         }
                     }.Else{
                         Div(h5 text-bold){$contract_code$}
@@ -62,27 +60,32 @@ Form(panel-body){
                     }
 Code(
 contract DemoNotificationSingle {
-  data {
-    MemberId int
-    SomeText string
-  }
-  
-  conditions {
-    $iconName = "fa-bell"
-    $textHeader="You got a message"
-    $pageName="demo_page_message"
-    $paramsVal= Sprintf("SomeText=%v", $SomeText)
-    $textBody = $SomeText
-  }
-  
-  action {
-    Notifications_Single_Send("MemberId,IconName,TextHeader,TextBody,PageName,ParamsVal", $MemberId, $iconName, $textHeader, $textBody, $pageName, $paramsVal)
-  }
-}    
+    data {
+        MemberId int
+        SomeText string
+    }
+    
+    conditions {
+        $member = DBFind("members").WhereId($MemberId).Row()
+        if !$member {
+            info "Member not found"
+        }
+    }
+    
+    action {
+        var icon, header, body, page string
+        icon = "fa-bell"
+        header = "You have got a message"
+        body = $SomeText
+        page = "demo_page_message"
+        var params map
+        params["SomeText"] = $SomeText
+        notifications_Send("member_id,sender,icon_name,text_header,text_body,page_name,params_map", $MemberId, 1, icon, header, body, page, params)
+    }
+}   
 )
                     }
                 }
-            
             Div(h4){LangRes(description)}
             Div(panel panel-primary){
                 Div(panel-body){
