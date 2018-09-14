@@ -23,9 +23,8 @@ contract VotingTemplateRun{
     }
 
     conditions{
-        var template map
-        template = DBFind("voting_templates").WhereId($TemplateId).Row()
-        if !template{
+        $template = DBFind("voting_templates").WhereId($TemplateId).Row()
+        if !$template{
             warning "Voting template not found"
         }
         if $KeyId != 0{
@@ -38,38 +37,24 @@ contract VotingTemplateRun{
             $Duration = 3
         }
 
-        var initContract string
-        initContract = template["init_contract"]
-        $voters = template["voters"]
-        $candidates = template["candidates"]
-        $votingName = Sprintf("%v [template id:%v]", template["title"], $TemplateId)
-        $volume = Int(template["volume"])
-        $quorum = Int(template["quorum"])
-        $type_voting = Int(template["type_voting"])
-        $participants = Int(template["type_participants"])
-        $decision = Int(template["type_decision"])
-        $vacancies = Int(template["vacancies"])
-
-        if initContract != "" && initContract != "NULL"{
-            var initParam map
-            if $decision == 4 && $type_voting == 2 {
-                // voting for new value of sysparam
-                initParam["Name"] = $ColumnName
-                initParam["Value"] = $NewValue
-            }else{
-                initParam["KeyId"] = $KeyId
-            }
-            CallContract(initContract, initParam)
-        }
+        $voters = $template["voters"]
+        $candidates = $template["candidates"]
+        $votingName = Sprintf("%v [template id:%v]", $template["title"], $TemplateId)
+        $volume = Int($template["volume"])
+        $quorum = Int($template["quorum"])
+        $type_voting = Int($template["type_voting"])
+        $participants = Int($template["type_participants"])
+        $decision = Int($template["type_decision"])
+        $vacancies = Int($template["vacancies"])
 
         $desc = Sprintf("template #%v", $TemplateId)
         if $type_voting < 1 || $type_voting > 2 {
             warning "Invalid type of voting"
         }
-        $contractAccept = emptyOrValue(template["contract_accept"])
-        $acceptParams = emptyOrValue(template["accept_params"])
-        $contractReject = emptyOrValue(template["contract_reject"])
-        $rejectParams = emptyOrValue(template["reject_params"])
+        $contractAccept = emptyOrValue($template["contract_accept"])
+        $acceptParams = emptyOrValue($template["accept_params"])
+        $contractReject = emptyOrValue($template["contract_reject"])
+        $rejectParams = emptyOrValue($template["reject_params"])
 
         if $decision == 1 || $decision == 2 {
             // role-candidates
@@ -124,6 +109,21 @@ contract VotingTemplateRun{
     }
 
     action{
+	    var initContract string
+		initContract = $template["init_contract"]
+		
+		if initContract != "" && initContract != "NULL"{
+            var initParam map
+            if $decision == 4 && $type_voting == 2 {
+                // voting for new value of sysparam
+                initParam["Name"] = $ColumnName
+                initParam["Value"] = $NewValue
+            }else{
+                initParam["KeyId"] = $KeyId
+            }
+            CallContract(initContract, initParam)
+        }
+		
         var votingId int
         votingId = VotingCreate("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval", $votingName, $type_voting, $desc, $participants, $decision, $volume, $quorum, $Duration)
 
