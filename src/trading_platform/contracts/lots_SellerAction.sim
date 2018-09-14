@@ -14,8 +14,9 @@ contract lots_SellerAction {
             AmountStarting money
             OrderMin string "optional"
             OrderMax string "optional"
+            IsMobile int "optional"
 
-            Location string
+            Location string "optional"
             Condition int
 
             Count int
@@ -79,6 +80,8 @@ contract lots_SellerAction {
             DBInsert("lots_blocks", "block_id,block_time,txhash,contract_name,contract_params,lot_id,kid", $block, $block_time, Sprintf("%x", $txhash), $this_contract, vars, id, $key_id)
         }
         conditions {
+            //warning $DateEnd
+
             if $PhotoId == 0{
                 warning "Пожалуйста добавьте изображение лота"
             }
@@ -118,32 +121,47 @@ contract lots_SellerAction {
                 }
 
             }
-
-            $mapLocation = JSONDecode($Location)
-            $Location = $mapLocation["address"]
+            //проверка на пустой мап
+            if ($IsMobile == 1){
+            } else {
+                $mapLocation = JSONDecode($Location)
+                $Location = $mapLocation["address"]
+            }
+            
             $Weight = safeFloat($Weight)
             $WeightType = Int($WeightType)
             $Length = safeFloat($Length)
             $Width = safeFloat($Width)
             $Height = safeFloat($Height)
-
+            
             if $OrderMin > $OrderMax {
                 warning "Минимальная ставка больше максимальной"
             }
             $dateStart = Sprintf("%v %v", trimZeroTime($DateStart), $TimeStart)
             $dateEnd = Sprintf("%v %v", trimZeroTime($DateEnd), $TimeEnd)
             $catId = Int(DBFind("lots_types").Where("id=?", $TypeId).One("category"))
+            
         }
 
         action {
             var fields string args array id int
             if $TypeBargain == 1 {
-                args = appendAll($Name, $Description, $PhotoId, $dateStart, $dateEnd, $AmountStarting, $OrderMin, $OrderMax, 0, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
-                fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain,map_location"
+                if ($IsMobile == 1){
+                    args = appendAll($Name, $Description, $PhotoId, $dateStart, $dateEnd, $AmountStarting, $OrderMin, $OrderMax, 0, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain)
+                    fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain"
+                } else {
+                    args = appendAll($Name, $Description, $PhotoId, $dateStart, $dateEnd, $AmountStarting, $OrderMin, $OrderMax, 0, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
+                    fields = "name,description,photo,date_start,date_end,amount_starting,order_min,order_max,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain,map_location"
+                }  
             }
             if $TypeBargain == 2 {
-                args = appendAll($Name, $Description, $PhotoId, $dateStart, $dateEnd, $AmountStarting, 0, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
-                fields = "name,description,photo,date_start,date_end,amount_starting,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain,map_location"
+                if ($IsMobile == 1){
+                    args = appendAll($Name, $Description, $PhotoId, $dateStart, $dateEnd, $AmountStarting, 0, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain)
+                    fields = "name,description,photo,date_start,date_end,amount_starting,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain"
+                } else {
+                    args = appendAll($Name, $Description, $PhotoId, $dateStart, $dateEnd, $AmountStarting, 0, $Count, $Weight, $WeightType, $Length, $Width, $Height, $TypeId, $catId, $Location, $Condition, $TypeBargain,$mapLocation)
+                    fields = "name,description,photo,date_start,date_end,amount_starting,contract_id,unit_count,weight_decimal,weight_type,length_decimal,width_decimal,height_decimal,lots_type_id,category,location,condition,type_bargain,map_location"
+                }   
             }
             @1buffer_Manager("Action,Key", "clean", "last_uploaded_image")
             if $Action == "create"{

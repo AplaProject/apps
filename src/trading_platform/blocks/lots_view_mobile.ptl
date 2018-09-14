@@ -28,6 +28,7 @@ Div(content-wrapper){
 
     If(GetVar(Id)){
         DBFind(lots,lot).Where("id=#Id#").Vars(lot)
+        SetVar(status_index, Calculate(#lot_status# + 1))
         DBFind(lots_types,src_type).Where("deleted=0 and id=#lot_lots_type_id#").Vars(type)
         DBFind(roles).Columns("id,role_name").Where("id=#role_id#").Vars(r)
         DBFind(lots_tracks).Where("lot_id=#Id# and key_id=#key_id# and deleted=0").Vars(track)
@@ -42,10 +43,10 @@ Div(content-wrapper){
                                 Span(Class:h3 text-center, Body: #Id#. #lot_name#)
                             }
                             Div(row input-group pb-lg){
-                                Div(col-xs-4){
+                                Div(){
                                     Image(Class: img-responsive, Src: Binary().ById(#lot_photo#))
                                 }
-                                Div(col-xs-8){
+                                Div(){
                                     Div(row input-group){
                                         Div(pr-lg){
                                             Категория:
@@ -73,7 +74,7 @@ Div(content-wrapper){
                                         Div(pr-lg){
                                             Продавец:
                                         }
-                                        LinkPage(Class:text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#seller#"){
+                                        LinkPage(Class:text-primary h5 text-bold, Page: profile_view, PageParams: "v_member_id=#lot_seller#"){
                                             Div(text-bold){#seller_member_name#}
                                         }
                                     }
@@ -240,7 +241,12 @@ Div(content-wrapper){
                 }
                 If(And(#lot_seller#==#key_id#,#lot_status#==0,#lot_deleted#==0,#r_role_name#=="Seller")){
                     Button(Class: btn btn-danger pull-right, Body: LangRes(lots_delete), Page: lots_mobile, Contract: lots_Delete, Params: "Id=#Id#").Alert($lots_delete_auction$, $lots_yes$, $lots_no$)
-                    Button(Class: btn btn-default, Body: LangRes(lot_edit), Page: lots_edit, PageParams: "Id=#Id#")
+                    If(#isMobile# == 1){
+                        Button(Class: btn btn-default, Body: LangRes(lot_edit), Page: create_mobile, PageParams: "Id=#Id#")
+                    }
+                    If(#isMobile# == 0){
+                        Button(Class: btn btn-default, Body: LangRes(lot_edit), Page: create_mobile, PageParams: "Id=#Id#")
+                    }
                 }
                 If(And(#status_index#==1,#role_id#==1,#notific_id#>0)){
                     Button(Body: "Отклонить", Page: lots_reject, PageParams: "NotificId=#notific_id#,Id=#Id#", Class: btn btn-danger).Popup(Width: 40, Header: "Пожалуйста укажите причину отказа")
