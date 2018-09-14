@@ -8,6 +8,8 @@ If(GetVar(Order)){}.Else{
     SetVar(Order,"id desc")
 }
 
+DBFind(applications).Columns("name,id").Where("name='Land registry'").Vars(application)
+
 DBFind(Name: land_registry, Source: src_land_registry).Where(#Where#).Order(#Order#).Custom(_id){
     Span(#id#)
 }.Custom(_owner){
@@ -62,16 +64,16 @@ DBFind(Name: land_registry, Source: src_land_registry).Where(#Where#).Order(#Ord
     }
 }.Count(reg_count)
 
-Div(content-wrapper){
+Div(Class: content-wrapper){
     Form(panel panel-primary){
-        Div(list-group-item){
+        Div(panel-body){
             Div(row){
                 Div(col-md-9 text-left){
                     Div(input-group){
                         Div(input-group-addon){
                             $buildings_use_class$
                         }
-                        AppParam(App:#application_id#, Name: buildings_use_class, Source:src_search)
+                        AppParam(App:#application_id#, Name: land_buildings_use_class, Source:src_search)
                         Select(Name: BuildingUse, Source: src_search, NameColumn: name, ValueColumn: id, Value: #Search#)
 
                         Div(input-group-btn){
@@ -101,25 +103,18 @@ Div(content-wrapper){
 
                 }
             }
-        }
-        Div(list-group-item){
-            If(#reg_count#>0){
+            Div(table-responsive){
                 Table(Source:src_land_registry, Columns: "ID=_id,$owner$=_owner,$area_size$=_area,$lr_address$=_address,$consideration_value$(INR)=_cons,$legal_status$=_legal,$encumbrance_certificate$=_encumberance,=_actions")
-            }.Else{
-                Div(text-center h3){
-                    records not found
-                }
             }
-            If(GetVar(Search)){
-                Form(text-center){
-                    Button(Page: #this#, Class: btn btn-primary btn-oval){
-                        LangRes(view_all)
+            If(GetVar(isSearch) == 1){
+                Div(row){
+                    Div(col-md-12 mt-lg){
+                        Div(text-center){
+                            Button(Body: View all, Class: btn btn-primary, Page: #this#, PageParams: "isSearch=0")
+                        }
                     }
                 }
             }
-        }
-        Div(panel-footer text-right){
-            Button(Page: land_registry_add, Class: btn btn-primary, Body: $lr_add$)
         }
     }
 }
