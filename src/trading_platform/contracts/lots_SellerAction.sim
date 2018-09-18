@@ -86,20 +86,24 @@ contract lots_SellerAction {
                 warning "Пожалуйста добавьте изображение лота"
             }
             if $TypeBargain == 1 {
-                if ($OrderMin == "") {
-                    info("Минимальная ставка не указана")
+                if ($OrderMin == "" || $OrderMin < 0) {
+                    info("Минимальная ставка указана не корректно")
                 }
-                if ($OrderMax == "") {
-                    info("Максимальная ставка не указана")
+                if ($OrderMax == "" || $OrderMax < 0) {
+                    info("Максимальная ставка указана не корректно")
                 }
-                if $OrderMin == Money(0) {
-                    info("Минимальная ставка не указана")
+                if ($OrderMin == Money(0) || $OrderMin < Money(0)){
+                    info("Минимальная ставка указана не корректно")
                 }
-                if $OrderMax == Money(0) {
-                    info("Максимальная ставка не указана")
+                if ($OrderMax == Money(0) || $OrderMin < Money(0)) {
+                    info("Максимальная ставка указана не корректно")
                 }
                 $OrderMin = Money($OrderMin) * Money(1000000000000000000)
-                $OrderMax = Money($OrderMax) * Money(1000000000000000000)
+                if ($OrderMax == 0) {
+                    $OrderMax = Money(0)
+                } else {
+                    $OrderMax = Money($OrderMax) * Money(1000000000000000000) 
+                }
             }
             $Id = Int($Id)
             if !($Action == "create" || $Action == "edit") {
@@ -135,8 +139,12 @@ contract lots_SellerAction {
             $Height = safeFloat($Height)
             
             if $OrderMin > $OrderMax {
-                warning "Минимальная ставка больше максимальной"
+                if ($OrderMax == Money(0)){
+                } else {
+                    warning "Минимальная ставка больше максимальной"
+                }
             }
+            
             $dateStart = Sprintf("%v %v", trimZeroTime($DateStart), $TimeStart)
             $dateEnd = Sprintf("%v %v", trimZeroTime($DateEnd), $TimeEnd)
             $catId = Int(DBFind("lots_types").Where("id=?", $TypeId).One("category"))
