@@ -1,6 +1,6 @@
-DBFind(notifications,notification_singles).Where({closed:0,"notification->type": 1, "recipient->member_id": #key_id#}).Columns("id,page_name,notification->icon,notification->header,notification->body").Count(count_singles)
+DBFind(@1notifications,notification_singles).Where({ecosystem:#ecosystem_id#, closed:0,"notification->type": 1, "recipient->member_id": #key_id#}).Columns("id,page_name,notification->icon,notification->header,notification->body").Count(count_singles)
 
-DBFind(notifications,notification_roles).Where({closed:0, "notification->type": 2, "recipient->role_id":#role_id#, {"$or":[{date_start_processing: $isnull}, {"processing_info->member_id": #key_id#}]}}).Columns("id,page_name,notification->icon,notification->header,notification->body,recipient->role_id").Count(count_current_role)
+DBFind(@1notifications,notification_roles).Where({ecosystem:#ecosystem_id#, closed:0, "notification->type": 2, "recipient->role_id":#role_id#, {"$or":[{date_start_processing: $isnull}, {"processing_info->member_id": #key_id#}]}}).Columns("id,page_name,notification->icon,notification->header,notification->body,recipient->role_id").Count(count_current_role)
 
 SetVar(limit,10).(limit_count,#limit#)
 SetVar(remaining,Calculate(#count_singles#+#count_current_role#-#limit#))
@@ -27,9 +27,9 @@ If(And(#limit_count#>0,#count_singles#>0)){
 }
 
 If(And(#limit_count#>0,#count_current_role#>0)){
-    DBFind(roles).WhereId(#role_id#).Columns("role_name").Vars(role)
+    DBFind(@1roles).Where({ecosystem:#ecosystem_id#, id:#role_id#}).Columns("role_name").Vars(role)
     Div(h6 mb-sm mt-lg ml-lg text-muted){
-        Role notifications (#role_role_name#):
+        $@1role_notifics$ (#role_role_name#):
     }
     ForList(notification_roles){
         If(#limit_count#>0){
@@ -52,7 +52,7 @@ If(And(#limit_count#>0,#count_current_role#>0)){
 }
 
 If(#remaining#>0){
-    Button(Class: btn btn-block btn-default, Page: notifications_list){
-        Show all notifications (#remaining# more)
+    Button(Class: btn btn-block btn-default, Page: @1notifications_list){
+        $@1notifications_show_all$ (#remaining# $@1more$)
     }
 }

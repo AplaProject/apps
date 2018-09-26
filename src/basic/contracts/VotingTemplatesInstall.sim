@@ -1,28 +1,33 @@
-contract VotingTemplatesInstall{
-    data{}
-    func applyTemplate(m map){
-        DBInsert("voting_templates", m)
+contract VotingTemplatesInstall {
+    data {
+        fill_ids string "optional"
+        Lang string "optional"
     }
-    func getAppRoleId(id int, name string) int{
+
+    func applyTemplate(m map) {
+        DBInsert("@1voting_templates", m)
+    }
+
+    func getAppRoleId(id int, name string) int {
         var rid int
-        rid = Int(AppParam(id, name))
+        rid = Int(AppParam(id, name, $ecosystem_id))
         if rid == 0{
-            warning Sprintf("Role not setted in application parameter '%v'", name)
+            warning Sprintf(LangRes("@1role_not_set_application_parameter", $Lang), name)
         }
         return rid
     }
-    conditions{
+
+    conditions {
         var appId int
-        appId = Int(DBFind("applications").Where({name:"Basic application", deleted:0}).One("id"))
+        appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Basic", deleted:0}).One("id"))
         if appId == 0{
-            warning "Application not found"
+            warning LangRes("@1app_not_found", $Lang)
         }
         $consensusRoleId = getAppRoleId(appId, "role_apla_consensus_asbl")
         $validatorRoleId = getAppRoleId(appId, "role_validator")
-
     }
 
-    action{
+    action {
         var template map
         // common
         template["quorum"] = 51
@@ -32,6 +37,7 @@ contract VotingTemplatesInstall{
         template["type"] = "law"
         template["voters"] = $consensusRoleId
         template["type_participants"] = 3 // by Role
+        template["ecosystem"] = $ecosystem_id
 
         // validator
         template["title"] = "Voting for Validator"
@@ -44,6 +50,10 @@ contract VotingTemplatesInstall{
         template["type_voting"] = 2
         template["subject"] = "Validator"
         applyTemplate(template)
+        
+        if $fill_ids == "yes" {
+            @1EditAppParam("Id,Value", Int(DBFind("@1app_params").Where({name: "voting_validators_template_id",ecosystem: $ecosystem_id}).One("id")), Int(DBFind("@1voting_templates").Where({title: "Voting for Validator",ecosystem: $ecosystem_id}).One("id")))
+        }
 
         // sysparam
         template["title"] = "Voting for System param value"
@@ -56,6 +66,10 @@ contract VotingTemplatesInstall{
         template["type_voting"] = 2
         template["subject"] = "System param"
         applyTemplate(template)
+        
+        if $fill_ids == "yes" {
+            @1EditAppParam("Id,Value", Int(DBFind("@1app_params").Where({name: "voting_sysparams_template_id",ecosystem: $ecosystem_id}).One("id")), Int(DBFind("@1voting_templates").Where({title: "Voting for System param value",ecosystem: $ecosystem_id}).One("id")))
+        }
 
         // valued ecosystem
         template["title"] = "Voting for Valued Ecosystem"
@@ -68,6 +82,10 @@ contract VotingTemplatesInstall{
         template["type_voting"] = 1
         template["subject"] = "Valued ecosystem"
         applyTemplate(template)
+        
+        if $fill_ids == "yes" {
+            @1EditAppParam("Id,Value", Int(DBFind("@1app_params").Where({name: "voting_ves_template_id",ecosystem: $ecosystem_id}).One("id")), Int(DBFind("@1voting_templates").Where({title: "Voting for Valued Ecosystem",ecosystem: $ecosystem_id}).One("id")))
+        }
 
         // tokenrefund
         template["title"] = "Token Refund"
@@ -80,5 +98,9 @@ contract VotingTemplatesInstall{
         template["type_voting"] = 2
         template["subject"] = "Token refund"
         applyTemplate(template)
+        
+        if $fill_ids == "yes" {
+            @1EditAppParam("Id,Value", Int(DBFind("@1app_params").Where({name: "voting_tokenrefund_template_id",ecosystem: $ecosystem_id}).One("id")), Int(DBFind("@1voting_templates").Where({title: "Token Refund",ecosystem: $ecosystem_id}).One("id")))
+        }
     }
 }

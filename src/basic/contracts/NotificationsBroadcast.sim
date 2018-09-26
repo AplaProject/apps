@@ -1,18 +1,20 @@
 contract NotificationsBroadcast {
     data {
+        RoleId int
         Header string
         Body string
-        RoleId int
+        Lang string "optional"
     }
+    
     func getMemberInfo(kid int) map {
         var res member map
-        member = DBFind("members").WhereId(kid).Row()
+        member = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:kid}).Row()
         if member {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         }else{
-            if DBFind("keys").Columns("id").WhereId(kid).Row() {
+            if DBFind("@1keys").Columns("id").Where({ecosystem:$ecosystem_id, id:kid}).Row() {
                 res["member_id"] = Str(kid)
                 res["member_name"] = IdToAddress(kid)
                 res["image_id"] = "0"
@@ -20,53 +22,58 @@ contract NotificationsBroadcast {
         }
         return res
     }
+    
     conditions {
-        if $role_id !=1 {
-            error "The action allowed only for admin"
+        if $RoleId !=1 {
+            error LangRes("@1admin_only_action", $Lang)
         }
-        if $ecosystem_id!=1 {
-            error "The action allowed only for admin from first ecosystem"
+        if $ecosystem_id != 1 {
+            error LangRes("@1first_ecosystem_admin_only_action", $Lang)
         }
-        $ecos = DBFind("ecosystems").Ecosystem(1).Columns("id")
+        $ecos = DBFind("@1ecosystems").Columns("id")
         $lenEcos = Len($ecos)
         if $lenEcos == 1{
-            error "Not found other ecosystems"
+            error LangRes("@1other_ecosystems_not_found", $Lang)
         }
+        $appId = Int(DBFind("@1applications").Columns("id").Where({ecosystem:1, name:"Basic"}).One("id"))
     }
+    
     action {
-        var i lenIds int eco map ids array table roleName bt string sender recipient params note map
+        var i lenIds int eco map ids array bt string sender recipient params note map
         bt = BlockTime()
-        roleName = DBFind("roles").WhereId($role_id).One("role_name")
         sender = getMemberInfo($key_id)
         sender["type"] = "1"
-
         note["header"] = $Header
         note["type"] = "1"
         note["icon"] = "icon-envelope"
         note["body"] = $Body
 
-        while i<$lenEcos{
+        while i < $lenEcos{
             eco = $ecos[i]
-            if eco["id"] != 1{
-                ids = DBFind("roles_participants").Where({"role->id":$RoleId, "role->type":3}).Columns("member->member_id")
+            var ecoId int
+            ecoId = Int(eco["id"])
+            if ecoId != 1 {
+                var adminRoleId int
+                adminRoleId = Int(AppParam($appId, "role_admin", ecoId))
+                ids = DBFind("@1roles_participants").Where({ecosystem:ecoId, "role->id":adminRoleId, "role->type":3}).Columns("member->member_id")
                 lenIds = Len(ids)
-                table = Sprintf("@%v_notifications", eco["id"])
                 var i_ids int
-                while i_ids<lenIds{
+                while i_ids < lenIds{
                     recipient = ids[i_ids]
                     recipient = getMemberInfo(Int(recipient["member.member_id"]))
                     var m map
                     m["recipient"] = recipient
                     m["sender"] = sender
                     m["notification"] = note
-                    m["page_name"] = "notifications_show"
+                    m["page_name"] = "@1notifications_show"
                     m["page_params"] = params
                     m["date_created"] = bt
-                    DBInsert(table, m)
-                    i_ids=i_ids+1
+                    m["ecosystem"] = ecoId
+                    DBInsert("@1notifications", m)
+                    i_ids = i_ids + 1
                 }
             }
-            i=i+1
+            i = i + 1
         }
     }
 }

@@ -2,16 +2,18 @@ contract RolesAssign {
     data {
         rid int
         member_id int
+        Lang string "optional"
     }
+
     func getMemberInfo(kid int) map {
         var res member map
-        member = DBFind("members").WhereId(kid).Row()
+        member = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:kid}).Row()
         if member {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         }else{
-            member = DBFind("keys").WhereId(kid).Row()
+            member = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:kid}).Row()
             if member {
                 res["member_id"] = member["id"]
                 res["member_name"] = IdToAddress(Int(member["id"]))
@@ -20,43 +22,41 @@ contract RolesAssign {
         }
         return res
     }
+
     conditions {
-        $role = DBFind("roles").WhereId($rid).Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Row()
+        $role = DBFind("@1roles").Where({id:$rid}).Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Row()
         if (Int($role["role_type"]) == 2){
-            warning "Elective role can be assigned only during voting"
+            warning LangRes("@1elective_role_voting_only", $Lang)
         }
         if !$role {
-            warning "Role not found"
+            warning LangRes("@1role_not_found", $Lang)
         }
 
-        if !DBFind("keys").WhereId($member_id).Row() {
-            warning "Key not found"
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$member_id}).Row() {
+            warning LangRes("@1key_not_found", $Lang)
         }
 
         if $role["deleted"] == 1 {
-            warning "This role has been deleted. The appointment of members is impossible"
+            warning LangRes("@1role_deleted_request_impossible", $Lang)
         }
 
-        var specialRules map prev_contract string stack array
-        stack = JSONDecode(JSONEncode($stack))
-        prev_contract = stack[0]
-        if Len(stack)>2{
-            prev_contract = stack[Len(stack)-2]
+        var specialRules map prev_contract string
+        prev_contract = $stack[0]
+        if Len($stack) > 2{
+            prev_contract = $stack[Len($stack) - 2]
         }
-        specialRules["@1VotingValidatorAccept"] = "Validator"
-        specialRules["@1DelegateRefresh"] = "Delegate"
-        specialRules["@1CandidateValidatorRequest"] = "Candidate for validators"
-        specialRules["@1VotingTemplateRun"] = "Investor with voting rights"
-        specialRules["@1VotingTokensRefundCreate"] = "Investor with voting rights"
-        if specialRules[prev_contract] != $role["role_name"] {
-            RolesAccessCheck("rid", $rid)
+        specialRules["@1VotingValidatorAccept"] = 1
+        specialRules["@1DelegateRefresh"] = 1
+        specialRules["@1CandidateValidatorRequest"] = 1
+        specialRules["@1VotingTemplateRun"] = 1
+        specialRules["@1VotingTokensRefundCreate"] = 1
+        if specialRules[prev_contract] != 1 {
+            @1RolesAccessCheck("rid", $rid)
         }
-
-        $assigned = DBFind("roles_participants").Where({"role->id":$rid, "member->member_id":$member_id, deleted:0}).One("id")
     }
 
     action {
-        if $assigned {
+        if DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$rid, "member->member_id":$member_id, deleted:0}).One("id") {
             // do not re-assign and do not warning because this contract may be called for other
             return
         }
@@ -73,6 +73,7 @@ contract RolesAssign {
         m["member"] = member
         m["appointed"] = appointer
         m["date_created"] = BlockTime()
-        DBInsert("roles_participants", m)
+        m["ecosystem"] = $ecosystem_id
+        DBInsert("@1roles_participants", m)
     }
 }

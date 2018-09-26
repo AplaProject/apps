@@ -1,0 +1,66 @@
+Div(fullscreen){
+    If(#deleted# == deleted){
+        SetTitle($@1apps_inactive$)
+        Div(breadcrumb){
+            LinkPage("$@1applications$", @1apps_list)
+            Span(/).Style(margin-right: 10px; margin-left: 10px;)
+            Span(Class: text-muted, Body: "$@1apps_inactive$")
+        }
+        DBFind(@1applications, src_applications).Where({deleted:1,ecosystem:#ecosystem_id#}).Order("id").Count(countvar).Custom(_actions){
+            Button(Class: btn btn-link, Page: @1apps_list, Contract: @1DelApplication, Params: "ApplicationId=#id#", Body: "$@1restore$")
+        }
+        If(#countvar# > 0) {
+            Table(Source: src_applications, Columns: "$@1name$=name,$@1conditions$=conditions,=_actions")
+        }.Else{
+            Div(content-wrapper){
+                Span(Class: text-muted, Body: $@1inactive_warning$)
+            }
+        }
+    }.Else{
+        SetTitle($@1applications$)
+        Div(breadcrumb){
+            Span(Class: text-muted, Body: $@1apps_list$)
+        }
+        AddToolButton(Title: $@1import$, Page: @1import_upload, Icon: icon-cloud-upload)
+        AddToolButton(Title: $@1apps_inactive$, Page: @1apps_list, Icon: icon-close, PageParams:"deleted=deleted")
+        AddToolButton(Title: $@1button_create$, Page: @1app_edit, Icon: icon-plus)
+
+        DBFind(@1buffer_data, src_buffer).Columns("value->app_id,value->app_name,value->menu_name,value->menu_id,value->count_menu").Where({key: export, member_id:#key_id#,ecosystem:#ecosystem_id#}).Vars(buffer)
+        DBFind(@1applications, src_applications).Where({deleted:0,ecosystem:#ecosystem_id#}).Order("id").Custom(_export){
+            Button(Class: btn btn-link, Contract: @1ExportNewApp, Params: "ApplicationId=#id#", Page: @1export_resources, Body: "$@1export_app$")
+        }.Custom(custom_name){
+            If(#id#==#buffer_value_app_id#){
+                Button(Class: btn btn-link, Page: @1app_contracts, Body: #name#)
+            }.Else{
+                Button(Class: btn btn-link, Contract: @1SelectApp, Params: "ApplicationId=#id#", Page: @1app_contracts, Body: #name#)
+            }  
+        }.Custom(custom_actions){
+            Button(Class: btn btn-link, Body: Em(Class: fa fa-edit), Page: @1app_edit, PageParams: "id=#id#")
+        }
+
+        Table(Source: src_applications, Columns: "$@1name$=custom_name,$@1conditions$=conditions,$@1export$=_export,=custom_actions")
+    }
+}.Style(
+    tbody > tr:nth-of-type(odd) {
+        background-color: #fafbfc;
+    }
+    tbody > tr > td {
+        word-break: break-all;
+        font-weight: 400;
+        font-size: 13px;
+        color: #666;
+        border-top: 1px solid #eee;
+        vertical-align: middle;
+    }
+    tr > *:first-child {
+        padding-left:20px;
+    }
+    tr > *:last-child {
+        padding-right:15px;
+        text-align:right;
+        width: 100px;
+    }
+    thead {
+        background-color: #eee;
+    }
+)

@@ -1,0 +1,40 @@
+contract EditSection {
+    data {
+        id int
+        title string
+        status int
+        urlname string
+        page string
+        Lang string "optional"
+    }
+
+    conditions {
+        if(!DBFind("@1sections").Columns("id,ecosystem").Where({id: $id,ecosystem: $ecosystem_id})){
+            warning LangRes("@1item_not_found", $Lang)
+        }
+        if $status < 0 || $status > 2 {
+            warning LangRes("@1status_must_0_2", $Lang)
+        }
+        if $status == 0 || $status == 1 {
+            var status_check map
+            status_check = DBFind("@1sections").Columns("id,status").Where({"id":$id,ecosystem:$ecosystem_id}).Row()
+            if (Int(JSONDecode(status_check["status"]))==2) {
+                warning LangRes("@1main_section_warning", $Lang)
+            }
+        }
+        if !DBFind("@1sections").Columns("id").Where({id:$id,ecosystem:$ecosystem_id}) {
+            warning Sprintf(LangRes("@1template_section_not_exist", $Lang), $id)
+        }
+    }
+
+    action {
+        if $status == 2 {
+            var status_check map
+            var curr_id int
+            status_check = DBFind("@1sections").Columns("id,status").Where({"status":$status,ecosystem:$ecosystem_id}).Row()
+            curr_id = Int(JSONDecode(status_check["id"]))
+            DBUpdate("@1sections", curr_id, {"status":1})
+        }
+        DBUpdate("@1sections", $id, {"title":$title,"status":$status,"urlname":$urlname,"page":$page}) 
+    }
+}

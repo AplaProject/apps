@@ -1,16 +1,18 @@
 contract NotificationsProcess {
     data {
         notific_id int
+        Lang string "optional"
     }
+    
     func getMemberInfo(kid int) map {
         var res member map
-        member = DBFind("members").WhereId(kid).Row()
+        member = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:kid}).Row()
         if member {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         }else{
-            member = DBFind("keys").WhereId(kid).Row()
+            member = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:kid}).Row()
             if member {
                 res["member_id"] = member["id"]
                 res["member_name"] = IdToAddress(Int(member["id"]))
@@ -19,24 +21,27 @@ contract NotificationsProcess {
         }
         return res
     }
+    
     conditions {
-        $notify = DBFind("notifications").WhereId($notific_id).Columns("recipient->role_id,sender->type,date_start_processing").Row()
+        $notify = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$notific_id}).Columns("recipient->role_id,sender->type,date_start_processing").Row()
         if !$notify {
-            warning "Notification not found"
+            warning LangRes("@1notification_not_found", $Lang)
         }
 
         if $notify["sender.type"] == 2{
             if $notify["date_start_processing"] != "" {
-                warning "Sorry, processing of this notification has already begun"
+                warning LangRes("@1notification_processing_started_already", $Lang)
             }
             var rid string
-            rid = $notify["recipient.role_id"]
-            if !DBFind("roles_participants").Where({"role->id":rid, "member->member_id":$key_id, deleted:0}).One("id") {
-                warning "Sorry, you are not part of the role for which this notification is intended"
+            rid = Int($notify["recipient.role_id"])
+            if rid > 0{
+                if !DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":rid, "member->member_id":$key_id, deleted:0}).One("id") {
+                    warning LangRes("@1notification_not_part_of_role", $Lang)
+                }
             }
         }else{
             if $notify["sender.type"] != 1 {
-                warning "Notification type not found"
+                warning LangRes("@1notification_type_not_found", $Lang)
             }
         }
     }
@@ -45,6 +50,6 @@ contract NotificationsProcess {
         var model map
         model["processing_info"] = getMemberInfo($key_id)
         model["date_start_processing"] = BlockTime()
-        DBUpdate("notifications", $notific_id, model)
+        DBUpdate("@1notifications", $notific_id, model)
     }
 }

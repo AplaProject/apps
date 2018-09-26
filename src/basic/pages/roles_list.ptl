@@ -1,34 +1,16 @@
-Div(){
-    Div(){
-        Span($roles$)
-        Div(pull-right){
-            Button(Page: roles_create, Class: ml btn-tool btn-link){
-                Em(Class: icon icon-plus)
-                Span(Body: Span($create$))
-            }.Popup(50, $new_role$)
-        }
-    }
-}.Style(
-    z-index: 1000;
-    font-size: 20px;
-    line-height: 45px;
-    height: 46px;
-    color: #000;
-    font-weight: normal;
-    padding: 0 20px;
-    border: 0;
-)
+SetTitle($@1roles$)
+AddToolButton(Page: @1roles_create, Icon: icon-plus, Title: $@1create$).Popup(50, $@1new_role$)
+
 Div(content-wrapper){
-    DBFind(applications).Where({name:"Basic application"}).Columns("name,id").Vars(application)
+    DBFind(@1applications).Where({name:"Basic", ecosystem:1}).Columns("name,id").Vars(application)
 
     If(GetVar(search)){
-        SetVar(where,{role_name:{"$like":#search#}})
+        SetVar(where,{role_name:{"$like":#search#}, ecosystem:#ecosystem_id#})
     }.Else{
-        SetVar(where,{id:{"$neq":0}}).(search,)
+        SetVar(where,{id:{"$neq":0}, ecosystem:#ecosystem_id#}).(search,)
     }
 
-    DBFind(roles,src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Count(roles_count).Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access->rids").Custom(_id){
-        JsonToSource(rids,#roles_access#)
+    DBFind(@1roles,src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Count(roles_count).Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access").Custom(_id){
         If(#deleted# == 0){
             SetVar(style_text,).(style_link,"text-primary")
         }.Else{
@@ -37,12 +19,12 @@ Div(content-wrapper){
         Span(Class: #style_text#, Body: #id#)
     }.Custom(_creator){
         If(And(#creator.member_name#!=NULL,#creator.member_name#!="")){
-            LinkPage(Class: #style_link# text-bold, Page: profile_view, PageParams: "v_member_id=#creator.member_id#"){
+            LinkPage(Class: #style_link# text-bold, Page: @1profile_view, PageParams: "v_member_id=#creator.member_id#"){
                 #creator.member_name#
             }
         }
     }.Custom(_name){
-        LinkPage(Class: #style_link# h5 text-bold, Page: roles_view, PageParams: "v_role_id=#id#"){
+        LinkPage(Class: #style_link# h5 text-bold, Page: @1roles_view, PageParams: "v_role_id=#id#"){
             If(#image_id#>0){
                 Image(Src: Binary().ById(#image_id#), Class: mr-sm).Style(width: 30px; border: 1px solid #5A5D63;)
                 #role_name#
@@ -58,13 +40,13 @@ Div(content-wrapper){
             Div(text-nowrap){DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI")}
         }
     }.Custom(_type){
-        Span(Class: #style_text#, Body: AppParam(App:#application_id#, Name: roles_types, Index: #role_type#))
+        Span(Class: #style_text#, Body: AppParam(Ecosystem: 1, App: #application_id#, Name: roles_types, Index: #role_type#))
     }.Custom(_status){
         Span(Class:#style_text#){
             If(#deleted# == 0){
-                LangRes(active)
+                LangRes(@1active)
             }.Else{
-                LangRes(deleted)
+                LangRes(@1deleted)
             }
         }
     }.Custom(_access){
@@ -74,8 +56,8 @@ Div(content-wrapper){
             SetVar(access,)
         }
 
-        If(And(#roles_access.rids#!="",#roles_access.rids#!="NULL")){
-            DBFind(roles,src_roles_list).Where({id:{"$in":[#roles_access.rids#]}}).Columns("id,role_name").Count(access_count).Order(role_name)
+        If(And(#roles_access#!="NULL",#roles_access#!="",#roles_access#!="[]")){
+            DBFind(@1roles,src_roles_list).Where({id:{"$in":#roles_access#}}).Columns("id,role_name").Count(access_count).Order(role_name)
             Div(#style_text# breaker){
                 ForList(src_roles_list){
                     If(And(#role_id#==#id#)){
@@ -93,12 +75,12 @@ Div(content-wrapper){
     }.Custom(_actions){
         Div(text-right button-group text-nowrap){
             If(#access#=="done"){
-                Button(Class: fa fa-edit btn btn-default, PageParams: "rid=#id#", Page: roles_create).Popup(50, $edit_role$)
                 If(And(#deleted#==0,#role_type#!=3)){
-                    Button(Class: fa fa-trash btn btn-danger, Contract: RolesDelete, Params: "rid=#id#", Page: roles_list).Alert(Text: $sure_want_delete$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                    Button(Class: fa fa-trash btn btn-danger mh-sm, Contract: @1RolesDelete, Params: "ops=D,rid=#id#", Page: @1roles_list).Alert(Text: $@1sure_want_delete$, ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
                 }.ElseIf(#deleted#==1){
-                    Button(Class: fa fa-recycle btn btn-info, Contract: RolesRestore, Params: "rid=#id#", Page: roles_list)
+                    Button(Class: fa fa-recycle btn btn-info mh-sm, Contract: @1RolesDelete, Params: "ops=R,rid=#id#", Page: @1roles_list)
                 }
+                Button(Class: fa fa-edit btn btn-default mh-sm, PageParams: "rid=#id#", Page: @1roles_create).Popup(50, $@1edit_role$)
             }
         }
     }
@@ -109,29 +91,29 @@ Div(content-wrapper){
                     Div(col-md-12){
                         Div(input-group){
                             Div(input-group-addon mt-sm){
-                                LangRes(name)
+                                LangRes(@1role)
                             }
                             Input(Name: search, Value: #search#)
                             Div(input-group-btn){
-                                Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: roles_list, PageParams: "search=Val(search)")
+                                Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: @1roles_list, PageParams: "search=Val(search)")
                             }
                         }
                     }
                 }
                 Div(table-responsive){
-                    Table(src_roles,"$id$=_id,$name$=_name,$type$=_type,$creator$=_creator,$created$ / $deleted$=_date,$status$=_status,$roles_access$=_access,=_actions")
+                    Table(src_roles,"$@1role$=_name,$@1type$=_type,$@1creator$=_creator,$@1role_created_deleted$=_date,$@1status$=_status,$@1roles_access$=_access,=_actions")
                 }
             }
             If(GetVar(search)){
                 Div(row){
                     Div(col-md-12 mt-lg text-center){
-                        Button(Body: $view_all$, Class: btn btn-primary, Page: roles_list)
+                        Button(Body: $@1view_all$, Class: btn btn-primary, Page: @1roles_list)
                     }
                 }
             }
         }.Else{
             Div(panel-body text-center h3){
-                Button(Body: $install_default_roles$, Class: btn btn-primary, Page: roles_list, Contract: RolesInstall)
+                Button(Body: $@1install_default_roles$, Class: btn btn-primary, Page: @1roles_list, Contract: @1RolesInstall)
             }
         }
     }

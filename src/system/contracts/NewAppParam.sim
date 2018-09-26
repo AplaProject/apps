@@ -1,0 +1,26 @@
+contract NewAppParam {
+    data {
+        ApplicationId int
+        Name string
+        Value string
+        Conditions string
+        Lang string "optional"
+    }
+
+    conditions {
+        ValidateCondition($Conditions, $ecosystem_id)
+
+        if $ApplicationId == 0 {
+            warning LangRes("@1aid_cannot_zero", $Lang)
+        }
+
+        if DBFind("@1app_params").Columns("id").Where({"name":$Name, ecosystem: $ecosystem_id}).One("id") {
+            warning Sprintf(LangRes("@1template_appparam_exists", $Lang), $Name)
+        }
+    }
+
+    action {
+        DBInsert("@1app_params", {"app_id": $ApplicationId, "name": $Name, "value": $Value,
+              "conditions": $Conditions,"ecosystem":$ecosystem_id})
+    }
+}

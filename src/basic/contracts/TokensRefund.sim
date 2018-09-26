@@ -1,0 +1,62 @@
+contract TokensRefund {
+    data {
+        SenderId string "optional"
+        RecipientId string
+        Amount string
+        Lang string "optional"
+    }
+
+    conditions {
+        if !($SenderId == $key_id || (Size($SenderId) > 0 && ($original_contract == "VotingDecisionAccept" || $original_contract == "TokensRefundAccept"))) {
+            error LangRes("@1sender_id_invalid", $Lang)
+        }
+        var addressLen int
+        addressLen = 24
+
+        $amount = Money($Amount)
+        if $SenderId == ""{
+            $SenderId = Sprintf("%v", $key_id)
+        }
+        if $amount <= 0 {
+            error LangRes("@1amount_less_equal_zero", $Lang)
+        }
+
+        if !HasPrefix($SenderId, "-") && Contains($SenderId, "-"){
+            // is address. convert to key id
+            $SenderId = Sprintf("%v", AddressToId($SenderId))
+        }
+        if !HasPrefix($RecipientId, "-") && Contains($RecipientId, "-"){
+            // is address. convert to key id
+            $RecipientId = Sprintf("%v", AddressToId($RecipientId))
+        }
+
+        if Size($SenderId) > addressLen{
+            $SenderId = Sprintf("%v", PubToID($SenderId))
+        }
+        if Size($RecipientId) > addressLen{
+            $RecipientId = Sprintf("%v", PubToID($RecipientId))
+        }
+
+        $RecipientId = Int($RecipientId)
+        $SenderId = Int($SenderId)
+        var sender recipient map
+        sender = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$SenderId}).Row()
+        if !sender{
+            error LangRes("@1sender_invalid", $Lang)
+        }
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$RecipientId}).Row(){
+            error LangRes("@1recipient_invalid", $Lang)
+        }
+        if sender["blocked"] == 1 {
+            error LangRes("@1sender_blocked", $Lang)
+        }
+        if sender["amount"] < $amount{
+            error Sprintf(LangRes("@1sender_amount_not_enough", $Lang), sender["amount"])
+        }
+    }
+
+    action {
+        DBUpdate("@1keys", $SenderId, {"-amount":$amount})
+        DBUpdate("@1keys", $RecipientId, {"+amount":$amount})
+    }
+}

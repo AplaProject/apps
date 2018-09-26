@@ -1,30 +1,30 @@
 contract RolesRequest {
     data {
         rid int
+        Lang string "optional"
     }
 
     conditions {
-        if !DBFind("roles").WhereId($rid).One("id") {
-            warning "Role not found"
+        if !DBFind("@1roles").WhereId($rid).One("id") {
+            warning LangRes("@1role_not_found", $Lang)
         }
 
-        if DBFind("roles_participants").Where({"role->id":$rid, "member->member_id":$key_id, deleted:0}).One("id") {
-            warning "You have already been added to the role"
+        if DBFind("@1roles_participants").Where({"role->id":$rid, "member->member_id":$key_id, deleted:0}).One("id") {
+            warning LangRes("@1role_you_added_already", $Lang)
         }
 
-        if DBFind("notifications").Where({page_name:"roles_request_view", "page_params->rid":$rid, "sender->member_id":$key_id, closed:0}).One("id") {
-            warning "Request already sent"
+        if DBFind("@1notifications").Where({ecosystem:$ecosystem_id, page_name:"@1roles_request_view", "page_params->rid":$rid, "sender->member_id":$key_id, closed:0}).One("id") {
+            warning LangRes("@1request_sent_already", $Lang)
         }
     }
-    
+
     action {
         var params map
         params["rid"] = $rid
-        
-        var member_id int
-        member_id = EcosysParam("founder_account") 
 
-        NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", 
-            member_id, 1, "fa-bars", "Roles", "New request received", "roles_request_view", params)
+        var member_id int
+        member_id = EcosysParam("founder_account")
+
+        @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", member_id, 1, "fa-bars", LangRes("@1roles", $Lang), LangRes("@1new_request_received", $Lang), "roles_request_view", params)
     }
 }

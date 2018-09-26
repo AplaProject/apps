@@ -1,0 +1,27 @@
+contract SectionLevelUp {
+    data {
+        id int
+        Lang string "optional"
+    }
+    
+    conditions {
+        if !DBFind("@1sections").Columns("id").Where({"id":$id,ecosystem:$ecosystem_id}) {
+            warning Sprintf(LangRes("@1template_section_not_exist", $Lang), $id)
+        }
+        $next = DBFind("@1sections").Columns("id").Where({"id":{"$lt":$id},ecosystem:$ecosystem_id})
+        if !$next {
+            warning  LangRes("@1section_already_top", $Lang)
+        }
+    }
+    
+    action {
+        var next_id int
+        var last_id int
+        next_id = $id - 1
+        $max_id = DBFind("@1sections").Columns("id").Order({"id":"-1"}).One("id")
+        last_id = $max_id + 1
+        DBUpdate("@1sections", next_id, {"id":last_id})
+        DBUpdate("@1sections", $id, {"id":next_id})
+        DBUpdate("@1sections", last_id, {"id":$id})
+    }
+}

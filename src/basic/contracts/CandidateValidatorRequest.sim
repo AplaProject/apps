@@ -1,0 +1,71 @@
+contract CandidateValidatorRequest {
+    data {
+        HostIp string
+        // CommissionPub string
+        CommissionAddress string
+        Description string "optional"
+        Comment string "optional"
+        Lang string "optional"
+    }
+
+    func isNotValidIp(ip string) bool {
+        var parts array
+        var i, lenParts, part int
+        parts = Split(ip, ".")
+
+        lenParts = Len(parts)
+        if lenParts != 4{
+            return true
+        }
+        while i < lenParts {
+            part = Int(parts[i])
+            if part < 0{
+                return true
+            }
+            if part > 255{
+                return true
+            }
+            i = i + 1
+        }
+
+        return false
+    }
+
+    conditions {
+        if $ecosystem_id != 1 {
+            warning LangRes("@1contract_first_ecosystem_only", $Lang)
+        }
+        $appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Basic"}).Columns("name,id").One("id"))
+        $CommissionAddress = AddressToId($CommissionAddress)
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$CommissionAddress}).Row(){
+            warning LangRes("@1address_invalid", $Lang)
+        }
+
+        if isNotValidIp($HostIp){
+            warning LangRes("@1enter_valid_ip", $Lang)
+        }
+    }
+
+    action {
+        var roleParam string roleId int
+        roleParam = "role_candidate_for_validators"
+        roleId = Int(AppParam($appId, roleParam, 1))
+
+        if !DBFind("@1roles").Where({ecosystem:1, id:roleId, deleted:0}).One("id"){
+            warning Sprintf(LangRes("@1role_app_param_not_found", $Lang), roleParam)
+        }
+        
+        @1RolesAssign("rid,member_id", roleId, $key_id)
+        //no $ecosystem_id
+        var m map
+        m["host_ip"] = $HostIp
+        m["commission_pub"] = ""
+        m["commission_address"] = $CommissionAddress
+        m["description"] = $Description
+        m["comment"] = $Comment
+        m["candidate_key_id"] = $key_id
+        m["date_created"] = BlockTime()
+        m["deleted"] = 0
+        DBInsert("@1sysparams_candidate", m)
+    }
+}

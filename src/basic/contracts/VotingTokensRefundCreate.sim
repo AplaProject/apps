@@ -1,0 +1,111 @@
+contract VotingTokensRefundCreate {
+    data {
+        VictimAccount string
+        SuspectAccount string
+        Amount int
+        Note string
+        Lang string "optional"
+    }
+    
+    func blockAccounts(victimId, attackerId int) {
+        if victimId == 0 {
+            error LangRes("@1victim_key_invalid", $Lang)
+        }
+        if attackerId == 0{
+            error LangRes("@1attacker_key_invalid", $Lang)
+        }
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, blocked:1, id:victimId}).One("id"){
+            DBUpdate("@1keys", victimId, {blocked:1})
+        }
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, blocked:1, id:attackerId}).One("id"){
+            DBUpdate("@1keys", attackerId, {blocked:1})
+        }
+    }
+    
+    func getKeyId(test string) int {
+        if Len(Split(test, "-")) > 1 {
+            // probably it is address
+            return AddressToId(test)
+        }
+        if "invalid" != IdToAddress(Int(test)){
+            // probably it is key_id
+            return Int(test)
+        }
+        return 0
+    }
+
+    conditions {
+        if $Amount <= 0 {
+            error LangRes("@1amount_invalid", $Lang)
+        }
+        if Size($Note) == 0 {
+            error LangRes("@1add_description", $Lang)
+        }
+        var victim attacker int
+        victim = getKeyId($VictimAccount)
+        attacker = getKeyId($SuspectAccount)
+        if victim == 0{
+            error LangRes("@1victim_address_invalid", $Lang)
+        }
+        if attacker == 0 {
+            error LangRes("@1suspect_address_invalid", $Lang)
+        }
+        $victimId = victim
+        $attackerId = attacker
+
+        var app_id template_id int
+        app_id = Int(DBFind("@1applications").Where({ecosystem:1, name:"Basic"}).Columns("name,id").One("id"))
+        template_id = Int(AppParam(app_id,"voting_tokenrefund_template_id", 1))
+        if template_id <= 0 {
+            warning LangRes("@1template_id_not_found", $Lang)
+        }
+
+        $template = DBFind("@1voting_templates").Where({ecosystem:$ecosystem_id, id:template_id}).Row()
+        $votersRoleId = Int($template["voters"])
+        $votingName = $template["title"]
+        $typeParticipants = Int($template["type_participants"])
+        $typeDecision = Int($template["type_decision"])
+        $typeVoting = Int($template["type_voting"])
+        $volume = Int($template["volume"])
+        $quorum = Int($template["quorum"])
+        $contractAccept = $template["contract_accept"]
+        $contractReject = $template["contract_reject"]
+
+        $desc = Sprintf("%v (" + LangRes("@1tokenrefund_victim", $Lang) + ": %v, " + LangRes("@1tokenrefund_attacker", $Lang) + ": %v, " + LangRes("@1amount", $Lang) + ": %v)", $votingName, $victimId, $attackerId, $Amount)
+
+        if !DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$votersRoleId, deleted:0}).One("id") {
+            warning Sprintf(LangRes("@1role_id_no_members", $Lang), $votersRoleId)
+        }
+    }
+
+    action {
+        var initContract string
+        initContract = $template["init_contract"]
+        
+        if Size(initContract) > 4 { // greater then "NULL"
+            var m map
+            CallContract(initContract, m)
+        }
+        
+        blockAccounts($victimId,$attackerId)
+        var votingId int params m map paramsJSON interval_days string
+        interval_days = "3"
+        votingId = @1VotingCreate("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $volume, $quorum, interval_days)
+
+        m["victim_key_id"] = $victimId
+        m["attacker_key_id"] = $attackerId
+        m["amount"] = $Amount
+        m["note"] = $Note
+        m["validator_key_id"] = $key_id
+        m["blocked_at"] = BlockTime()
+        m["voting_id"] = votingId
+        m["status"] = 1 // 0. Accounts blocked, 1. Discussion, 2. Vote, 3. Closed
+        m["result"] = 0 // 0. Discussion and voting, 1. Cancelled, 2. Tokens returned
+        params["Id"] = DBInsert("tokenrefund", m) //no $ecosystem_id
+
+        paramsJSON = JSONEncode(params)
+        @1VotingSubjectContract("votingID,contract_reject,contract_accept,contract_reject_params,contract_accept_params", votingId, $contractReject, $contractAccept, paramsJSON, paramsJSON)
+
+        @1VotingInvite("votingID,var_id", votingId, $votersRoleId)
+    }
+}

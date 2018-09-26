@@ -7,7 +7,9 @@ contract VotingSubjectContract {
 
         contract_reject string
         contract_reject_params string "optional"
+        Lang string "optional"
     }
+    
     func safeJsonToMap(m string) map {
         var res map
         if Size(m) > 0 { res = JSONToMap(m) }
@@ -17,13 +19,13 @@ contract VotingSubjectContract {
     conditions {
         $STARTED = 3
         $FINISHED = 4
-        $voting = DBFind("votings").Where({id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("id,date_started,voting->type,flags->full_data").Row()
+        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("id,date_started,voting->type,flags->full_data").Row()
         if !$voting {
-            warning "Voting already started. Can not edit document"
+            warning LangRes("@1voting_started_can_not_edit", $Lang)
         }
 
         if $voting["flags.full_data"] == 1 && $voting["voting.type"] == 2 {
-            warning "This vote is a system. Change settings not allowed"
+            warning LangRes("@1system_voting_can_not_edit", $Lang)
         }
     }
 
@@ -38,13 +40,13 @@ contract VotingSubjectContract {
         subject["contract_reject"] = $contract_reject
         subject["contract_reject_params"] = reject_params
 
-        $subject_id = DBFind("votings_subject").Where({voting_id:$votingID}).One("id")
+        $subject_id = DBFind("@1votings_subject").Where({ecosystem:$ecosystem_id, voting_id:$votingID}).One("id")
         if $subject_id {
-            DBUpdate("votings_subject", Int($subject_id), {subject:subject})
+            DBUpdate("@1votings_subject", Int($subject_id), {subject:subject})
         } else {
-            DBInsert("votings_subject", {voting_id:$votingID, subject:subject})
+            DBInsert("@1votings_subject", {ecosystem:$ecosystem_id, voting_id:$votingID, subject:subject})
         }
 
-        VotingSubjectCheck("votingID", $votingID)
+        @1VotingSubjectCheck("votingID", $votingID)
     }
 }

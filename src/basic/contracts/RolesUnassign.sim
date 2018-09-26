@@ -1,35 +1,36 @@
 contract RolesUnassign {
     data {
         row_id int
+        Lang string "optional"
     }
 
     conditions {
-        // check record
-        var assigned role map
-        assigned = DBFind("roles_participants").WhereId($row_id).Columns("id,role->id").Row()
+        var assigned map roleId int
+        assigned = DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, id:$row_id, deleted:0 }).Columns("id,role->id").Row()
         if !assigned {
-            warning "Participant not found"
+            warning LangRes("@1role_participant_not_found", $Lang)
         }
-
-        role = DBFind("roles").WhereId(Int(assigned["role.id"])).Columns("id,creator->member_id,role_name").Row()
-        if !role {
-            warning "Role not found in the roles registry"
+        var buffer_id int
+        buffer_id = Int(assigned["role.id"])
+        roleId = Int(DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:buffer_id}).One("id"))
+        if roleId == 0 {
+            warning LangRes("@1role_not_found_in_registry", $Lang)
         }
 
         var specialRules map prev_contract string
         prev_contract = $stack[0]
-        if Len($stack)>2{
-            prev_contract = $stack[Len($stack)-2]
+        if Len($stack) > 2{
+            prev_contract = $stack[Len($stack) - 2]
         }
-        specialRules["@1VotingValidatorAccept"] = "Candidate for validators"
-        specialRules["@1DelegateRefresh"] = "Delegate"
-        specialRules["@1CandidateValidatorRequest"] = "Candidate for validators"
-        specialRules["@1InvestorRefresh"] = "Investor with voting rights"
-        specialRules["@1VotingTokensRefundCreate"] = "Investor with voting rights"
-        specialRules["@1sysparams_ValidatorResign"] = "Validator"
+        specialRules["@1VotingValidatorAccept"] = 1
+        specialRules["@1DelegateRefresh"] = 1
+        specialRules["@1CandidateValidatorRequest"] = 1
+        specialRules["@1InvestorRefresh"] = 1
+        specialRules["@1VotingTokensRefundCreate"] = 1
+        specialRules["@1sysparams_ValidatorResign"] = 1
 
-        if specialRules[prev_contract] != role["role_name"] {
-            RolesAccessCheck("rid", Int(role["id"]))
+        if specialRules[prev_contract] != 1 {
+            @1RolesAccessCheck("rid", roleId)
         }
     }
 
@@ -38,6 +39,6 @@ contract RolesUnassign {
         var m map
         m["deleted"] = 1
         m["date_deleted"] = BlockTime()
-        DBUpdate("roles_participants", $row_id, m)
+        DBUpdate("@1roles_participants", $row_id, m)
     }
 }

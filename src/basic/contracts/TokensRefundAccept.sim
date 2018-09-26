@@ -1,0 +1,55 @@
+contract TokensRefundAccept {
+    data {
+        Id string
+        Lang string "optional"
+    }
+    
+    func closeNotes() {
+        var notes array
+        notes = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, page_name:"@1voting_view", "page_params->voting_id":$votingID})
+        var i int
+        while i < Len(notes){
+            var note map
+            note = notes[i]
+            var noteId int
+            noteId = Int(note["id"])
+            @1NotificationsClose("notific_id", noteId)
+            i = i + 1
+        }
+    }
+    
+    func refundAmount(victimId, attackerId, amount string) {
+        @1TokensRefund("SenderId,RecipientId,Amount", attackerId, victimId, amount)
+    }
+    
+    func unblockAccounts(victimId, attackerId string) {
+        if victimId == 0 {
+            error LangRes("@1victim_key_invalid", $Lang)
+        }
+        if attackerId == 0{
+            error LangRes("@1attacker_key_invalid", $Lang)
+        }
+        DBUpdate("@1keys", Int(victimId), {blocked:0})
+        DBUpdate("@1keys", Int(attackerId), {blocked:0})
+    }
+
+    conditions {
+        $Id = Int($Id)
+        $tokenrefund = DBFind("tokenrefund").WhereId($Id).Row() //no $ecosystem_id
+        if !$tokenrefund{
+            error LangRes("@1token_refund_not_found", $Lang)
+        }
+        $votingID = $tokenrefund["voting_id"]
+    }
+
+    action {
+        unblockAccounts($tokenrefund["victim_key_id"],$tokenrefund["attacker_key_id"])
+        closeNotes()
+        if $tokenrefund["result"] == 2 || $tokenrefund["status"] == 3{
+            return
+        }
+        refundAmount($tokenrefund["victim_key_id"],$tokenrefund["attacker_key_id"],$tokenrefund["amount"])
+        // status 3: closed; result 2: the tokens returned
+        DBUpdate("tokenrefund", $Id, {status:3, result:2})
+    }
+}

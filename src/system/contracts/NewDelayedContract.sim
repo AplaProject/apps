@@ -1,0 +1,33 @@
+contract NewDelayedContract {
+    data {
+        Contract string
+        EveryBlock int
+        Conditions string
+        BlockID int "optional"
+        Limit int "optional"
+        Lang string "optional"
+    }
+    conditions {
+        ValidateCondition($Conditions, $ecosystem_id)
+
+        if !HasPrefix($Contract, "@") {
+            $Contract = "@" + Str($ecosystem_id) + $Contract
+        }
+
+        if GetContractByName($Contract) == 0 {
+            error Sprintf(LangRes("@1template_unknown_contract", $Lang), $Contract)
+        }
+
+        if $BlockID == 0 {
+            $BlockID = $block + $EveryBlock
+        }
+
+        if $BlockID <= $block {
+            error LangRes("@1blockid_must_greater", $Lang)
+        }
+    }
+    action {
+        DBInsert("@1delayed_contracts", {"contract": $Contract, "key_id": $key_id, "block_id": $BlockID,
+            "every_block": $EveryBlock, "limit": $Limit, "conditions": $Conditions})
+    }
+}

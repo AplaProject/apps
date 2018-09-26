@@ -1,0 +1,26 @@
+contract SelectApp {
+    data {
+        ApplicationId int
+        Lang string "optional"
+    }
+
+    conditions {
+        $app = DBFind("@1applications").Columns("id,name").Where({id: $ApplicationId, ecosystem: $ecosystem_id}).Row()
+        if !$app{
+            LangRes("@1app_not_found", $Lang)
+        }
+    }
+
+    action {
+        var value map bufferId int
+        value["app_id"] = Str($ApplicationId)
+        value["app_name"] = $app["name"]
+
+        bufferId = Int(DBFind("@1buffer_data").Where({member_id: $key_id, key: "export", ecosystem: $ecosystem_id}).One("id"))
+        if bufferId >0 {
+            DBUpdate("@1buffer_data", bufferId, {"value": value})
+        } else {
+            DBInsert("@1buffer_data", {"member_id": $key_id,"key": "export","value": value, ecosystem: $ecosystem_id})
+        }
+    }
+}

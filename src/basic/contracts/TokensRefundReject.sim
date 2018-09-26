@@ -1,0 +1,31 @@
+contract TokensRefundReject {
+    data {
+        Id string
+        Lang string "optional"
+    }
+
+    func unblockAccounts(victimId, attackerId string) {
+        if victimId == 0 {
+            error LangRes("@1victim_key_invalid", $Lang)
+        }
+        if attackerId == 0{
+            error LangRes("@1attacker_key_invalid", $Lang)
+        }
+        DBUpdate("@1keys", Int(victimId), {blocked:0})
+        DBUpdate("@1keys", Int(attackerId), {blocked:0})
+    }
+
+    conditions {
+        $Id = Int($Id)
+        $tokenrefund = DBFind("tokenrefund").WhereId($Id).Row() //no $ecosystem_id
+        if !$tokenrefund{
+            error LangRes("@1token_refund_not_found", $Lang)
+        }
+    }
+
+    action {
+        unblockAccounts($tokenrefund["victim_key_id"],$tokenrefund["attacker_key_id"])
+        // status 3: closed; 1: return cancelled
+        DBUpdate("tokenrefund", $Id, {status:3, result:1})
+    }
+}

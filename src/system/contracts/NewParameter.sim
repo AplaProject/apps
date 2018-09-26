@@ -1,0 +1,20 @@
+contract NewParameter {
+    data {
+        Name string
+        Value string
+        Conditions string
+        Lang string "optional"
+    }
+    
+    conditions {
+        ValidateCondition($Conditions, $ecosystem_id)
+        
+        if DBFind("@1parameters").Columns("id").Where({name: $Name, ecosystem: $ecosystem_id}).One("id") {
+            warning Sprintf(LangRes("@1template_parameter_exists", $Lang), $Name)
+        }
+    }
+    
+    action {
+        DBInsert("@1parameters", {"name": $Name, "value":$Value, "conditions": $Conditions,"ecosystem": $ecosystem_id})
+    }
+}

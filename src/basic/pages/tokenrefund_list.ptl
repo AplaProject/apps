@@ -1,0 +1,38 @@
+Div(content-wrapper){
+    DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
+    SetTitle($@1tokenrefund_list$)
+
+    DBFind(@1tokenrefund,tokenrefunds).Order({id:"-1"}).Custom(_status){
+        If(#status#>0){
+            SetVar(sta,AppParam(Ecosystem:1, App:#application_id#, Name: tokenrefund_status, Index: #status#))
+            LangRes(#sta#)
+        }.Else{
+            $@1tokenrefund_status0$
+        }
+    }.Custom(_result){
+        If(#result#>0){
+            SetVar(res,AppParam(Ecosystem:1, App:#application_id#, Name: tokenrefund_result, Index: #result#))
+            LangRes(#res#)
+        }.Else{
+            $@1tokenrefund_result0$
+        }
+    }.Custom(_blocked){
+        DateTime(Format: YYYY-MM-DD HH:MI:SS, DateTime: #blocked_at#)
+    }.Custom(_closed){
+        DateTime(Format: YYYY-MM-DD HH:MI:SS, DateTime: #closed_at#)
+    }.Custom(_accounts){
+        Div(){$@1tokenrefund_victim$: #victim_key_id#}
+        Div(){$@1tokenrefund_attacker$: #attacker_key_id#}
+    }.Custom(_voting){
+        LinkPage(Page: @1voting_view, PageParams: "vID=#voting_id#"){##voting_id#}
+    }
+
+    AddToolButton(Title: $@1create_request$, Icon: icon-plus, Page: @1tokenrefund_create)
+
+    Div(panel panel-primary){
+        Div(table-responsive){
+            Table(tokenrefunds,"$@1accounts$=_accounts,$@1amount$=amount,$@1description$=note,$@1validator_id$=validator_id,$@1blocked_at$=_blocked,$@1voting$=_voting,$@1result$=_result,$@1status$=_status,$@1closed$=_closed")
+        }
+    }
+}
+

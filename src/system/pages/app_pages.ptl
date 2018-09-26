@@ -1,0 +1,50 @@
+DBFind(@1buffer_data, src_buffer).Columns("value->app_id").Where({key:export, member_id:#key_id#, ecosystem:#ecosystem_id#}).Vars(buffer)
+If(#buffer_value_app_id# > 0){
+    DBFind(@1applications, src_app).Where({id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}).Vars("application")
+
+    Div(content-wrapper){
+        SetTitle($@1pages$ : #application_name#)
+        AddToolButton(Title: $@1button_create$, Page: editor, Icon: icon-plus, PageParams: "create=page,appId=#buffer_value_app_id#")
+
+        SetVar(pager_table, @1pages).(pager_where, {app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}).(pager_page, @1app_pages).(pager_limit, 50)
+        Include(@1pager_header)
+
+        SetVar(admin_page, @1app_pages)
+        Include(@1admin_link)
+
+        DBFind(@1pages, src_pages).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#})
+
+        Form(panel panel-primary){
+            Div(panel-body){
+                Div(row){
+                    ForList(src_pages){
+                        Div(col-md-#width# col-sm-12){
+                            Div(list-group-item){
+                                Div(row){
+                                    Div(col-md-4){
+                                        LinkPage(Page: #name#, Class: text-primary h5, Body: "#name#")
+                                    }
+                                    Div(col-md-8){
+                                        Div(pull-right){
+                                            Span(LinkPage(Body: Em(Class: fa fa-history), Class: text-primary h4, Page: @1history, PageParams: "id=#id#,type=page")).Style(margin-right: 15px;)
+                                            Span(LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: @1properties_edit, PageParams: "edit_property_id=#id#,type=page")).Style(margin-right: 15px;)
+                                            Span(LinkPage(Body: Em(Class: fa fa-edit), Class: text-primary h4, Page: editor, PageParams: "open=page,name=#name#"))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Div(panel-footer clearfix){
+                Include(@1pager)
+            }
+        }
+    }
+}.Else{
+    SetTitle($@1pages$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1apps_select_error$)
+    }
+}

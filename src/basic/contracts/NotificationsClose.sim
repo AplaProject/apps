@@ -1,40 +1,38 @@
 contract NotificationsClose {
     data {
         notific_id int
+        Lang string "optional"
     }
 
     conditions {
-        $notify = DBFind("notifications").WhereId($notific_id).Columns("id,date_start_processing,processing_info->member_id,closed,sender->type").Row()
+        $notify = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$notific_id}).Columns("id,date_start_processing,processing_info->member_id,closed,notification->type").Row()
         if !$notify {
-            warning "Notification not found"
+            warning LangRes("@1notification_not_found", $Lang)
         }
-        if $notify["sender.type"] == 2{
+        if $notify["notification.type"] == 2{
             //role has processing check
             if $notify["date_start_processing"] == "" {
-                warning "Sorry, processing of this notification has not yet begun"
+                warning LangRes("@1notification_processing_not_started", $Lang)
             }
 
             if $notify["processing_info.member_id"] != $key_id {
-                warning "Sorry, processing of this notice began another member"
+                warning LangRes("@1notice_processing_started_another_member", $Lang)
             }
-
-            if $notify["closed"] > 0 {
-                warning "Sorry, this notification has already been closed before"
-            }
-        }else {
-            if $notify["sender.type"] != 1 { // not single
-                warning "Notification type not found"
-            }
+        }elif $notify["notification.type"] != 1 { // not single
+            warning LangRes("@1notification_type_not_found", $Lang)
         }
     }
 
     action {
-        if $notify["sender.type"] == 1{
-            NotificationsProcess("notific_id", $notific_id)
+        if $notify["closed"] > 0 {
+            return
+        }
+        if $notify["notification.type"] == 1{
+            @1NotificationsProcess("notific_id", $notific_id)
         }
         var m map
         m["date_closed"] = BlockTime()
         m["closed"] = 1
-        DBUpdate("notifications", $notific_id, m)
+        DBUpdate("@1notifications", $notific_id, m)
     }
 }

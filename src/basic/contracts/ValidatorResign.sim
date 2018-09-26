@@ -1,0 +1,29 @@
+contract ValidatorResign {
+    data {
+        Lang string "optional"
+    }
+    
+    func getParamInt(id int, name string) int {
+        var param int
+        param = Int(AppParam(id, name, 1))
+        if param == 0{
+            warning Sprintf(LangRes("@1application_parameter_not_set", $Lang), name)
+        }
+        return param
+    }
+    
+    conditions {
+        var roleValidatorId appId int
+        appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Basic", deleted:0}).One("id"))
+        roleValidatorId = getParamInt(appId, "role_validator")
+        if !RoleAccess(roleValidatorId) {
+            warning LangRes("@1not_validator_can_not_run", $Lang)
+        }
+        $assigned = DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "member->member_id":$key_id, "role->id":roleValidatorId, deleted:0}).One("id")
+    }
+
+    action {
+        @1RolesUnassign("row_id", Int($assigned))
+        @1NodeRemoveByKey()
+    }
+}
