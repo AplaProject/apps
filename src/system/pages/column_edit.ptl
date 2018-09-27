@@ -3,15 +3,15 @@ Div(content-wrapper){
     Div(breadcrumb){
         Div(){
             LinkPage($@1tables$, @1app_tables)
-            Span(/).Style(margin-right: 10px; margin-left: 10px;)
+            Span(/,mh)
             LinkPage($@1edit_table$, @1table_edit, PageParams:"tabl_id=#tabl_id#")
-            Span(/).Style(margin-right: 10px; margin-left: 10px;)
+            Span(/,mh)
             Span($@1edit_column$, text-muted)
         }
     }
 
-    DBFind(@1tables, src_mem).Columns("id,name,columns,conditions").Vars(pre).Where({id:#tabl_id#,ecosystem:#ecosystem_id#})
-    JsonToSource(src_columns, #pre_columns#)
+    DBFind(@1tables).Columns("id,name,columns,conditions").Where({id:#tabl_id#,ecosystem:#ecosystem_id#}).Vars(table)
+    JsonToSource(src_columns, #table_columns#)
     Form(panel panel-default){
         Div(panel-body){
             ForList(src_columns){
@@ -22,7 +22,7 @@ Div(content-wrapper){
                     }
                     Div(form-group){
                         Label($@1type$)
-                        SetVar(col_type, GetColumnType(#pre_name#, #key#))
+                        SetVar(col_type, GetColumnType(#table_name#, #key#))
                         If(#col_type# == character){
                             SetVar(input_type, "Character")
                         }
@@ -55,19 +55,38 @@ Div(content-wrapper){
                         }
                         Input(Name: Coltype, Disabled: "true", Value: #input_type#)
                     }
-                        Div(form-group){
-                        Label($@1update$)
-                        Input(Name: UpdateColumn)
+
+                    SetVar(isObject,0)
+                    JsonToSource(condition,#value#)
+                    ForList(condition){
+                        SetVar(isObject,1)
+                        If(#key#==read){
+                            Div(form-group){
+                                Label($@1reading$)
+                                Input(Name: ReadColumn, Value: #value#)
+                            }
+                        }.ElseIf(#key#==update){
+                            Div(form-group){
+                                Label($@1update$)
+                                Input(Name: UpdateColumn, Value: #value#)
+                            }
+                        }
                     }
-                    Div(form-group){
-                        Label($@1reading$)
-                        Input(Name: ReadColumn)
+                    If(#isObject#==0){
+                        Div(form-group){
+                            Label($@1reading$)
+                            Input(Name: ReadColumn, Value: true)
+                        }
+                        Div(form-group){
+                            Label($@1update$)
+                            Input(Name: UpdateColumn, Value: #value#)
+                        }
                     }
                 }
             }
         }
         Div(panel-footer clearfix text-right){
-            Button(Body: $@1save$, Contract: @1EditColumn, Class: btn btn-primary, Page: @1table_edit, PageParams: "tabl_id=#tabl_id#", Params: "TableName=#pre_name#,Name=Val(ColumnName),Type=Val(Coltype),UpdatePerm=Val(UpdateColumn),ReadPerm=Val(ReadColumn)")
+            Button(Body: $@1save$, Contract: @1EditColumn, Class: btn btn-primary, Page: @1table_edit, PageParams: "tabl_id=#tabl_id#", Params: "TableName=#table_name#,Name=Val(ColumnName),Type=Val(Coltype),UpdatePerm=Val(UpdateColumn),ReadPerm=Val(ReadColumn)")
         }
     }
 }
