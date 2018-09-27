@@ -2,7 +2,7 @@ contract VotingTokensRefundCreate {
     data {
         VictimAccount string
         SuspectAccount string
-        Amount int
+        Amount money
         Note string
         Lang string "optional"
     }
@@ -70,6 +70,12 @@ contract VotingTokensRefundCreate {
         $quorum = Int($template["quorum"])
         $contractAccept = $template["contract_accept"]
         $contractReject = $template["contract_reject"]
+        
+        var roleName string
+        roleName = DBFind("roles").Where({ecosystem:1, id:$votersRoleId}).One("role_name")
+        if !RoleAccess($votersRoleId){
+            warning Sprintf(LangRes("@template_only_role_allowed", $Lang), roleName)
+        }
 
         $desc = Sprintf("%v (" + LangRes("@1tokenrefund_victim", $Lang) + ": %v, " + LangRes("@1tokenrefund_attacker", $Lang) + ": %v, " + LangRes("@1amount", $Lang) + ": %v)", $votingName, $victimId, $attackerId, $Amount)
 
