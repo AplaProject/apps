@@ -1,0 +1,44 @@
+contract TokensLockoutMember {
+    data {
+        KeyId int
+        Value int
+    }
+    func getPermission() bool {
+        var array_permissions array result i int prevContract string
+        array_permissions = ["@1VotingTokensRefundCreate", "@1TokensRefundAccept", "@1TokensRefundReject"]
+
+        prevContract = $stack[0]
+        if Len($stack) > 2 {
+            prevContract = $stack[Len($stack) - 2]
+        }
+        while i < Len(array_permissions) {
+            var contract_name string
+            contract_name = array_permissions[i]
+            if contract_name==prevContract {
+                result = 1
+            }
+            i = i + 1
+        }
+
+        if result == 0 {
+            error LangRes("@1contract_chain_distorted", "en")
+        }
+        return 0
+    }
+    
+    conditions {
+        getPermission()
+        
+        if !DBFind("@1keys").Where({ecosystem:1, id:$KeyId}).One("id"){
+            error LangRes("@1key_not_found", "en")
+        }
+
+        if Int($Value) < 0 || Int($Value) > 1 {
+            error LangRes("@1value_between_0_and_1", "en")      
+        }
+    }
+
+    action {
+        DBUpdate("@1keys", $KeyId, {"blocked": $Value})
+    }
+}

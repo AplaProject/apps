@@ -2,14 +2,13 @@ contract MembershipDecide {
     data {
         notific_id int
         Accept int
-        Lang string "optional"
     }
     
     conditions {
         $request = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$notific_id}).Columns("id,closed,sender->member_id,page_params->ecosystem_id").Row()
 
         if Int($request["closed"]) == 1 {
-            warning LangRes("@1request_processed_already", $Lang)
+            warning LangRes("@1request_processed_already", "en")
         }
 
         var founder_id ecoId int
@@ -17,7 +16,7 @@ contract MembershipDecide {
         founder_id = DBFind("@1parameters").Where({name:"founder_account", ecosystem:ecoId}).One("value")
 
         if founder_id != $key_id {
-            warning LangRes("@1ecosystem_not_founder", $Lang)
+            warning LangRes("@1ecosystem_not_founder", "en")
         }
     }
     
@@ -41,8 +40,8 @@ contract MembershipDecide {
         ecoId = $request["page_params.ecosystem_id"]
         ecoName = DBFind("@1ecosystems").Where({id:ecoId}).One("name")
         icon = "icon icon-user-follow"
-        header = LangRes("@1request_accepted", $Lang)
-        body = Sprintf(LangRes("@1ecosystem_request_accepted", $Lang), ecoName, ecoId)
+        header = LangRes("@1request_approved", "en")
+        body = Sprintf(LangRes("@1ecosystem_request_approved", "en"), ecoName, ecoId)
         page = "membership_user_view"
 
         @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", $request["sender.member_id"], 1, icon, header, body, page, params)

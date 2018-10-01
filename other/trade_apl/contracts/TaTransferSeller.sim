@@ -1,0 +1,42 @@
+contract TaTransferSeller {
+    data {
+        SaleId int
+        NotificId int
+    }
+    func getRoleId(name string) int{
+        var rid int
+        rid = Int(AppParam($appId, name, $ecosystem_id))
+        if rid == 0{
+            warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), name)
+        }
+        return rid
+    }
+    conditions{
+        $appId = Int(DBFind("@1applications").Where({ecosystem:$ecosystem_id, name:"Trade APL"}).One("id"))
+        if $appId == 0{
+            warning LangRes("@1app_not_found", "en")
+        }
+        $currentRole = getRoleId("role_seller_apl")
+        if !RoleAccess($currentRole){
+            warning "this action allowed only for role id #" + $currentRole
+        }
+
+        $sale = DBFind("sales").Where({id:$SaleId}).Row()
+        if !$sale{
+            warning "sale not found"
+        }
+    }
+
+    action {
+        @1NotificationsClose("notific_id", $NotificId)
+        var s transfer map
+        s["key_id_seller"] = $key_id
+        s["seller_transferred_at"] = $time
+        DBUpdate("sales", Int($sale["id"]), s)
+
+        transfer["Amount"] = Money($sale["amount_apl"])
+        transfer["Sender_AccountId"] = $key_id
+        transfer["Recipient_AccountId"] = Int($sale["key_id_buyer"])
+        CallContract("@1TokensTransfer", transfer)
+    }
+}

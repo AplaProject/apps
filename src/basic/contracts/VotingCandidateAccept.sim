@@ -2,7 +2,6 @@ contract VotingCandidateAccept {
     data {
         votingID int
         CandidateID int
-        Lang string "optional"
         RoleId int
     }
     
@@ -28,17 +27,17 @@ contract VotingCandidateAccept {
         $INVALID = 5
         $voting = DBFind("@1votings").Columns("id,flags->decision,flags->notifics,status").Where({ecosystem:$ecosystem_id, id: $votingID}).Row()
         if !$voting {
-            warning LangRes("@1voting_not_found", $Lang)
+            warning LangRes("@1voting_not_found", "en")
         }
         if $voting["status"] == $FINISHED {
-            warning LangRes("@1voting_expired_can_not_vote", $Lang)
+            warning LangRes("@1voting_expired_can_not_vote", "en")
         }
         if $voting["status"] != $STARTED {
-            warning LangRes("@1voting_not_started", $Lang)
+            warning LangRes("@1voting_not_started", "en")
         }
-        $subject_map = DBFind("@1votings_subject").Where({ecosystem:$ecosystem_id, voting_id:$votingID, "subject->member_id":$candidateID}).Row()
+        $subject_map = DBFind("@1votings_subject").Where({ecosystem:$ecosystem_id, voting_id:$votingID, "subject->member_id":$CandidateID}).Row()
         if !$subject_map {
-            warning LangRes("@1voting_subject_not_found", $Lang)
+            warning LangRes("@1voting_subject_not_found", "en")
         }
         $participant_role_id = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID, "member->role_id":$RoleId,"member->member_id":0}).One("id")
 
@@ -46,7 +45,7 @@ contract VotingCandidateAccept {
         if (Int($check_type["voting.type_participants"]) < 5){
             $participant_id = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID, "member->member_id":$key_id,decision:0}).One("id")
             if !$participant_id {
-                warning LangRes("@1voting_not_participant", $Lang)
+                warning LangRes("@1voting_not_participant", "en")
             }
         }
     }
@@ -59,7 +58,7 @@ contract VotingCandidateAccept {
                 mem_role = Int($rid["member.role_id"])
                 $participant_id = DBFind("@1roles_participants").Columns("id,role,role->id,member,member->member_id").Where({ecosystem:$ecosystem_id, "member->member_id":$key_id,"role->id":mem_role,"deleted":0}).One("member.member_id")
                 if !$participant_id{
-                    warning LangRes("@1voting_not_participant", $Lang)
+                    warning LangRes("@1voting_not_participant", "en")
                 } else {
                     var solo_role_vot map
                     $membership_role_name = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:$key_id}).Row()
@@ -73,7 +72,7 @@ contract VotingCandidateAccept {
                     $participant_id = Int($rid["id"])
                 }
             } else {
-                warning LangRes("@1voting_not_participant", $Lang)
+                warning LangRes("@1voting_not_participant", "en")
             }
         }
         
@@ -88,7 +87,7 @@ contract VotingCandidateAccept {
             // write the result of the voting
             var m map
             m["decision_date"] = bt
-            m["decision"] = $candidateID
+            m["decision"] = $CandidateID
             DBUpdate("@1votings_participants", Int($participant_id), m)
 
             // increment count of accept

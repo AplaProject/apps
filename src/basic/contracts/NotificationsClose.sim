@@ -1,12 +1,11 @@
 contract NotificationsClose {
     data {
         notific_id int
-        Lang string "optional"
     }
 
     func getPermission() int {
         var array_permissions array result i int prevContract string
-        array_permissions = ["@1TokensRefundAccept", "@1VotingDecisionCheck", "@1VotingDelete"]
+        array_permissions = ["@1TokensRefundAccept", "@1TokensRefundReject", "@1VotingDecisionCheck", "@1VotingDelete"]
 
         prevContract = $stack[0]
         if Len($stack) > 2 {
@@ -27,12 +26,12 @@ contract NotificationsClose {
     conditions {
         $notify = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$notific_id}).Columns("id,date_start_processing,processing_info->member_id,closed,notification->type,recipient->member_id").Row()
         if !$notify {
-            warning LangRes("@1notification_not_found", $Lang)
+            warning LangRes("@1notification_not_found", "en")
         }
 
         // checking the type of notification
         if $notify["notification.type"] != 1 && $notify["notification.type"] != 2 {
-            warning LangRes("@1notification_type_not_found", $Lang)
+            warning LangRes("@1notification_type_not_found", "en")
         }
 
         // getting permission
@@ -42,18 +41,18 @@ contract NotificationsClose {
         // checking single notification
         if $notify["notification.type"] == 1 && flag_permission == 0 {
             if $notify["recipient.member_id"] != $key_id {
-                warning LangRes("@1notification_another_member", $Lang)
+                warning LangRes("@1notification_another_member", "en")
             }
         }
 
         // checking role notification
         if $notify["notification.type"] == 2 && flag_permission == 0 {
             if $notify["date_start_processing"] == "" {
-                warning LangRes("@1notification_processing_not_started", $Lang)
+                warning LangRes("@1notification_processing_not_started", "en")
             }
 
             if $notify["processing_info.member_id"] != $key_id {
-                warning LangRes("@1notice_processing_started_another_member", $Lang)
+                warning LangRes("@1notice_processing_started_another_member", "en")
             }     
         }
     }

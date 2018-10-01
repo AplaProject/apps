@@ -6,7 +6,14 @@ If(#tid#>0){
         DBFind(@1roles).Where({ecosystem:1, id:#template_voters#}).Columns("id,role_name").Vars(voters)
     }
 }
-DBFind(@1tokenrefund,tokenrefunds).Order({id:"-1"}).Count(refund_count).Custom(_status){
+
+If(GetVar(search)){
+    SetVar(Where,{$or:[{victim_key_id:{$eq:#search#}},{attacker_key_id:{$eq:#search#}}]})
+}.Else{
+    SetVar(Where,{}).(search,)
+}
+
+DBFind(@1tokens_refund, tokenrefunds).Where(#Where#).Order({id:"-1"}).Count(refund_count).Custom(_status){
     If(#status#>0){
         SetVar(sta,AppParam(Ecosystem:1, App:#application_id#, Name: tokenrefund_status, Index: #status#))
         LangRes(#sta#)
@@ -28,30 +35,57 @@ DBFind(@1tokenrefund,tokenrefunds).Order({id:"-1"}).Count(refund_count).Custom(_
     Div(){$@1tokens_refund_victim$: #victim_key_id#}
     Div(){$@1tokens_refund_attacker$: #attacker_key_id#}
 }.Custom(_voting){
-    LinkPage(Page: @1voting_view, PageParams: "vID=#voting_id#"){##voting_id#}
+    LinkPage(Page: @1voting_view, PageParams: "vID=#voting_id#", Body: $@1voting$ ##voting_id#)
 }
 
 SetTitle($@1tokens_refunds_list$)
-Div(content-wrapper){
-    Div(panel panel-primary){
-        If(And(#template_voters#>0,#template_voters#==#role_id#)){
-            AddToolButton(Title: $@1create_request$, Icon: icon-plus, Page: @1tokenrefund_create)
+If(And(#template_voters#>0,#template_voters#==#role_id#)){
+    AddToolButton(Title: $@1create_request$, Icon: icon-plus, Page: @1tokenrefund_create).Popup(Header: @1tokenrefund_create, Width: "30")
+}.Else{
+    Div(breadcrumb){
+        If(#voters_id#>0){
+            Span(Class: text-muted, Body: $@1tokens_refunds_list_allowed_role$ #voters_role_name#)
+            
         }.Else{
-            Div(text-muted text-center){
-                If(#voters_id#>0){
-                    $@1tokens_refunds_list_allowed_role$ #voters_role_name#
-                }.Else{
-                    $@1template_id_not_found$
+            Span(Class: text-muted, Body: $@1template_id_not_found$)
+            
+        }  
+    }
+}
+
+Div(content-wrapper){
+    Form(panel panel-primary){
+        Div(panel-body){
+            Div(row){
+                Div(col-md-12){
+                    Div(input-group){
+                        Div(input-group-addon){        
+                            LangRes(@1id)
+                        }
+                        Input(Name:search, Value:#search#)
+                        Div(input-group-btn){
+                            Button(Body:Em(Class:fa fa-search), Class:btn btn-default, Page:@1tokenrefund_list, PageParams:"search=Val(search)")
+                        }
+                    }
                 }
             }
-        }
-        If(#refund_count#>0){
-            Div(table-responsive){
-                Table(tokenrefunds,"$@1accounts$=_accounts,$@1amount$=amount,$@1description$=note,$@1validator_id$=validator_id,$@1blocked_at$=_blocked,$@1voting$=_voting,$@1result$=_result,$@1status$=_status,$@1closed$=_closed")
+            If(#refund_count#>0){
+                Div(table-responsive){
+                    Table(tokenrefunds,"$@1voting$=_voting,$@1accounts$=_accounts,$@1description$=note,$@1validator_id$=validator_id,$@1blocked_at$=_blocked,$@1closed$=_closed,$@1result$=_result,$@1amount$=amount,$@1status$=_status")
+                }
+            }.Else{
+                Div(text-center h3 text-muted){
+                    $@1tokens_refunds$ $@1not_founded$
+                }
             }
-        }.Else{
-            Div(text-center h3 text-muted){
-                $@1tokens_refunds$ $@1not_founded$
+            If(GetVar(search)){
+                Div(row){
+                    Div(col-md-12 mt-lg){
+                        Div(text-center){
+                            Button(Body: $@1view_all$, Class: btn btn-primary, Page: @1tokenrefund_list)
+                        }
+                    }
+                }
             }
         }
     }

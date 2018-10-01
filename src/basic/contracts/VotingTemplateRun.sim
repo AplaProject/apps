@@ -9,12 +9,11 @@ contract VotingTemplateRun {
         ColumnName string "optional"
         NewValue string "optional"
         TextDocument string "optional"
-        Lang string "optional"
     }
     
     func checkInput(value, name string) {
         if Size(value) == 0 || value == "NULL" {
-            warning Sprintf(LangRes("@1x_not_found", $Lang), name)
+            warning Sprintf(LangRes("@1x_not_found", "en"), name)
         }
     }
     
@@ -28,12 +27,12 @@ contract VotingTemplateRun {
     conditions {
         $template = DBFind("@1voting_templates").Where({ecosystem:$ecosystem_id, id:$TemplateId}).Row()
         if !$template{
-            warning LangRes("@1voting_template_not_found", $Lang)
+            warning LangRes("@1voting_template_not_found", "en")
         }
         if $KeyId != 0{
             $keyFind = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$KeyId}).Row()
             if !$keyFind{
-                warning LangRes("@1key_not_found", $Lang)
+                warning LangRes("@1key_not_found", "en")
             }
         }
         if $Duration <= 0{
@@ -42,7 +41,7 @@ contract VotingTemplateRun {
 
         $voters = $template["voters"]
         $candidates = $template["candidates"]
-        $votingName = Sprintf("%v [" + LangRes("@1template_id", $Lang) + ": %v]", $template["title"], $TemplateId)
+        $votingName = Sprintf("%v [" + LangRes("@1template_id", "en") + ": %v]", $template["title"], $TemplateId)
         $volume = Int($template["volume"])
         $quorum = Int($template["quorum"])
         $type_voting = Int($template["type_voting"])
@@ -51,9 +50,9 @@ contract VotingTemplateRun {
         $vacancies = Int($template["vacancies"])
         $countTypeVoters = Int($template["count_type_voters"])
 
-        $desc = Sprintf(LangRes("@1template", $Lang) + " #%v", $TemplateId)
+        $desc = Sprintf(LangRes("@1template", "en") + " #%v", $TemplateId)
         if $type_voting < 1 || $type_voting > 2 {
-            warning LangRes("@1voting_type_invalid", $Lang)
+            warning LangRes("@1voting_type_invalid", "en")
         }
         $contractAccept = emptyOrValue($template["contract_accept"])
         $acceptParams = emptyOrValue($template["accept_params"])
@@ -66,7 +65,7 @@ contract VotingTemplateRun {
             var candidate map
             candidate = DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:$candidates, deleted:0}).Row()
             if !candidate {
-                warning Sprintf(LangRes("@1candidate_role_id_not_found", $Lang), $candidates)
+                warning Sprintf(LangRes("@1candidate_role_id_not_found", "en"), $candidates)
             }
             $candidateId = Int(candidate["id"])
         }
@@ -82,13 +81,13 @@ contract VotingTemplateRun {
             checkInput($ColumnName, "ColumnName")
             checkInput($NewValue, "NewValue")
             if $type_voting == 2{
-                $desc = Sprintf(LangRes("@1parameter", $Lang) + ": %v, " + LangRes("@1value", $Lang) + ": %v", $ColumnName, $NewValue)
+                $desc = Sprintf(LangRes("@1parameter", "en") + ": %v, " + LangRes("@1value", "en") + ": %v", $ColumnName, $NewValue)
             }
 
             if $type_voting == 1{
                 checkInput($TableWritten, "TableWritten")
                 checkInput($RowId, "RowId")
-                $desc = Sprintf(LangRes("@1table", $Lang) + ": %v, " + LangRes("@1column", $Lang) + ": %v, " + LangRes("@1id", $Lang) + ": %v, " + LangRes("@1value", $Lang) + ": %v", $TableWritten, $ColumnName, $RowId, $NewValue)
+                $desc = Sprintf(LangRes("@1table", "en") + ": %v, " + LangRes("@1column", "en") + ": %v, " + LangRes("@1id", "en") + ": %v, " + LangRes("@1value", "en") + ": %v", $TableWritten, $ColumnName, $RowId, $NewValue)
             }
             if $RowId == "" || $RowId == "NULL"{
                 $RowId = 0
@@ -97,7 +96,7 @@ contract VotingTemplateRun {
         }
         // check duplicated
         if DBFind("@1votings").Where({ecosystem:$ecosystem_id, "voting->name":$votingName, "flags->decision":{"$nin":["1", "-1"]}, deleted:0}).Row(){
-            error LangRes("@1same_voting_created", $Lang)
+            error LangRes("@1same_voting_created", "en")
         }
 
 
@@ -106,7 +105,7 @@ contract VotingTemplateRun {
             var role map
             role = DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:$voters, deleted:0}).Row()
             if !role {
-                warning Sprintf(LangRes("@1voters_role_id_not_found", $Lang), $voters)
+                warning Sprintf(LangRes("@1voters_role_id_not_found", "en"), $voters)
             }
             $roleId = Int(role["id"])
         }
@@ -132,7 +131,7 @@ contract VotingTemplateRun {
         votingId = @1VotingCreate("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval,count_type_voters", $votingName, $type_voting, $desc, $participants, $decision, $volume, $quorum, $Duration, $countTypeVoters)
 
         if votingId == 0 {
-            warning LangRes("@1voting_creation_error", $Lang)
+            warning LangRes("@1voting_creation_error", "en")
         }
         // the default argument for Contract
         var defaultParams string
