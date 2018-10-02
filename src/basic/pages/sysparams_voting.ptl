@@ -1,7 +1,7 @@
 DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
 SetVar(tid, AppParam(Ecosystem:1, App:#application_id#, Name: voting_sysparams_template_id))
 DBFind(@1voting_templates,temps).WhereId(#tid#).Vars(template)
-SetVar(role_asbl,AppParam(App:#application_id#, Name:role_apla_consensus_asbl, Ecosystem:1)
+SetVar(role_asbl,AppParam(App:#application_id#, Name:role_apla_consensus_asbl, Ecosystem:1))
 SetTitle($@1voting$)
 
 Div(content-wrapper){
@@ -135,10 +135,12 @@ Div(content-wrapper){
                 }
             }
             If(`#full_nodes#`!=""){
+                SetVar(nodes_count,0)
                 ArrayToSource(src_full_nodes,`#full_nodes#`)
                 Div(mt-lg form-group text-left text-muted){
                     Label(){Nodes list}
                     ForList(src_full_nodes){
+                        SetVar(nodes_count,#src_full_nodes_index#)
                         JsonToSource(src_node,`#value#`)
                         Div(list-group-item){
                             Label(){node #key#}
@@ -162,7 +164,11 @@ Div(content-wrapper){
                                 RadioGroup(Name:Index, Source:src_full_nodes, NameColumn: value, ValueColumn: key)
                             }
                             Div(panel-footer text-right){
-                                Button(Body: $@1voting$, Class: btn btn-danger, Contract: @1VotingNodeRemove, Page: @1voting_list)
+                                If(#nodes_count#>2){
+                                    Button(Body: $@1voting$, Class: btn btn-danger, Contract: @1VotingNodeRemove, Page: @1voting_list)
+                                }.Else{
+                                    Button(Body: $@1voting$, Class: btn btn-danger disabled)
+                                }
                             }
                         }
                     }.Style(
