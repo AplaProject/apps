@@ -1,0 +1,139 @@
+contract VotingInvite {
+    data {
+        votingID int
+        var_id int //0, member_id, role_id
+    }
+
+    func addVotingKey(key map, votingId int) {
+        var m member map kid int name string
+        kid = Int(key["id"])
+        name = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:kid}).One("member_name")
+
+        member["member_id"] = kid
+        if name != "" {
+            member["member_name"] = name
+        }else{
+            member["member_name"] = IdToAddress(kid)
+        }
+        m["voting_id"] = votingId
+        m["member"] = member
+        m["ecosystem"] = $ecosystem_id
+        DBInsert("@1votings_participants", m)
+    }
+    
+    conditions {
+        $STARTED = 3
+        $FINISHED = 4
+        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Row()
+        if !$voting {
+            warning LangRes("@1voting_expired_can_not_add_participants", "en")
+        }
+
+        $type_participants = $voting["voting.type_participants"]
+        $type_voting = $voting["voting.type"]
+        $number_participants = Int($voting["progress.number_participants"])
+
+        if $number_participants > 1 && $type_voting == 2 {
+            warning LangRes("@1system_voting_can_not_add_participants", "en")
+        }
+        var isAdded string
+        if $type_participants == 2 {
+            if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$var_id}).Row(){
+                warning LangRes("@1key_not_found", "en")
+            }
+            isAdded = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID,"member->member_id":$var_id}).One("id")
+            if isAdded {
+                warning LangRes("@1member_added_before", "en")
+            }
+        }
+
+        if $type_participants == 3 {
+            isAdded = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID}).One("id")
+            if isAdded {
+                warning LangRes("@1voting_participants_added_before", "en")
+            }
+            if Len(DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$var_id, deleted:0})) == 0 {
+                warning LangRes("@1roles_participants_not_found", "en")
+            }
+        }
+        if ($type_participants == 4 || $type_participants == 5) {
+            isAdded = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID,"member->role_id":$var_id}).One("id")
+            if isAdded {
+                if ($type_participants == 4){
+                    warning LangRes("@1role_members_added_before", "en")
+                }
+                if ($type_participants == 5){
+                    warning LangRes("@1role_added_before", "en")
+                }
+            }
+            if Len(DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$var_id, deleted:0})) == 0 {
+                warning LangRes("@1roles_participants_not_found", "en")
+            }
+        }
+    }
+
+    action {
+        var i int
+        if $type_participants == 1 { // everybody
+            var keys array
+            keys = DBFind("@1keys").Where({id:{"$neq":$guest_key}, ecosystem:$ecosystem_id})
+            while i < Len(keys) {
+                addVotingKey(keys[i], $votingID)
+                $number_participants = $number_participants + 1
+                i = i + 1
+            }
+        }
+        if $type_participants == 2 { // manual
+            var key map
+            key = DBFind("@1keys").WhereId($var_id).Row()
+            addVotingKey(key, $votingID)
+            $number_participants = $number_participants + 1
+        }
+        if $type_participants == 3 { // role
+            var roles array
+            roles = DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$var_id, deleted:0}).Order("id")
+            while i < Len(roles) {
+                var role m map
+                role = roles[i]
+                m["voting_id"] = $votingID
+                m["member"] = role["member"]
+                m["ecosystem"] = $ecosystem_id
+                DBInsert("@1votings_participants", m)
+                $number_participants = $number_participants + 1
+                i = i + 1
+            }
+        }
+        if $type_participants == 4 { // all participants in the selected roles vote
+            var roles array
+            roles = DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$var_id, deleted:0}).Order("id")
+            while i < Len(roles) {
+                var role map
+                role = roles[i]
+                var cust map
+                cust = JSONToMap(role["member"])
+                cust["role_id"] = $var_id
+                DBInsert("@1votings_participants", {ecosystem: $ecosystem_id, voting_id: $votingID, member: cust})
+                $number_participants = $number_participants + 1
+                i = i + 1
+            }
+        }
+        if $type_participants == 5 { // one participant of the selected roles votes
+            var role map
+            role["role_id"] = $var_id
+            role["member_id"] = "0"
+            var json string
+            json = JSONEncode(role)
+            $role_id_send = $var_id
+            DBInsert("@1votings_participants", {ecosystem: $ecosystem_id, voting_id: $votingID, member: json})
+            $number_participants = $number_participants + 1
+        }
+        var v map
+        v["progress->number_participants"] = $number_participants
+        if $type_participants == 3 {
+            v["voting->role_id"] = $var_id
+            DBUpdate("@1votings", $votingID, v)
+        }else{
+            DBUpdate("@1votings", $votingID, v)
+        }
+    }
+}

@@ -1,0 +1,49 @@
+contract TokensTransfer {
+    data {
+        Amount money
+        Sender_AccountId int
+        Recipient_AccountId int
+        Comment string "optional"
+        //Signature string "optional hidden"
+    }
+
+    conditions {
+        //check amount
+        if $Amount == 0 {
+            error LangRes("@1amount_zero", "en")
+        }
+        if $Amount < 0 {
+            error LangRes("@1amount_less_zero", "en")
+        }
+
+        //check the sender
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Sender_AccountId}).One("id") {
+            error Sprintf(LangRes("@1sender_x_invalid", "en"), $Sender_AccountId)
+        }
+
+        //check balance
+        $sender_balance = Money(DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Sender_AccountId}).One("amount"))
+        if $Amount > $sender_balance {
+            error LangRes("@1amount_less_than_needed", "en")
+        }
+
+        //check the recipient
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Recipient_AccountId}).One("id") {
+            error Sprintf(LangRes("@1recipient_x_invalid", "en"), $Recipient_AccountId)
+        }
+    }
+
+    action {
+        DBUpdate("@1keys", $Sender_AccountId, {"-amount":$Amount})
+        DBUpdate("@1keys", $Recipient_AccountId, {"+amount":$Amount})
+        var m map
+        m["sender_id"] = $Sender_AccountId
+        m["recipient_id"] = $Recipient_AccountId
+        m["amount"] = $Amount
+        m["comment"] = $Comment
+        m["block_id"] = $block
+        m["txhash"] = $txhash
+        m["ecosystem"] = $ecosystem_id
+        DBInsert("@1history", m)
+    }
+}

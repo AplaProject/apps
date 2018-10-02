@@ -1,0 +1,37 @@
+contract MoneyTransfer {
+    data {
+        Recipient string
+        Amount string
+        Comment string "optional"
+    }
+    conditions {
+        $recipient = AddressToId($Recipient)
+        if $recipient == 0 {
+            error Sprintf(LangRes("@1template_recipient_invalid", "en"), $Recipient)
+        }
+        var total money
+        $amount = Money($Amount) 
+        if $amount <= 0 {
+            error LangRes("@1amount_must_greather_zero", "en")
+        }
+
+        var row map
+        var req money
+        row = DBFind("@1keys").Columns("amount").Where({id: $key_id, ecosystem: $ecosystem_id}).Row()
+        total = Money(row["amount"])
+        req = $amount + Money(100000000000000000) 
+        if req > total {
+            error Sprintf(LangRes("@1template_money_not_enough", "en"), total, req)
+        }
+    }
+    action {
+        DBUpdate("@1keys", $key_id, {"-amount": $amount})
+        if DBFind("@1keys").Columns("id").Where({id: $recipient, ecosystem: $ecosystem_id}).One("id") == nil {
+            DBInsert("@1keys", {"id": $recipient,"amount": $amount})
+        } else {
+            DBUpdate("@1keys", $recipient, {"+amount": $amount})
+        }
+        DBInsert("@1history", {"sender_id": $key_id,"recipient_id": $recipient,
+            "amount":$amount,"comment": $Comment,"block_id": $block,"txhash": $txhash})
+    }
+}

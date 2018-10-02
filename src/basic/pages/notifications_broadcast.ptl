@@ -1,0 +1,64 @@
+DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Basic"}).Vars(application)
+SetVar(role_admin, AppParam(Ecosystem:1, App: #application_id#, Name: role_admin))
+SetTitle($@1notifications_broadcast$)
+DBFind(@1ecosystems).Count(ecos_count)
+SetVar(left_col,"col-sm-3 mt text-right").(right_col,"col-sm-9")
+Div(content-wrapper){
+    Div(breadcrumb){
+        LinkPage($@1notifications$, @1notifications_list)
+        Span(/,mh)
+        Span($@1broadcast_send$,text-muted)
+    }
+
+    Div(row){
+        Div(col-sm-6 col-sm-offset-3){
+            If(And(#role_id#==#role_admin#,#ecosystem_id#==1,#ecos_count#>1)){
+                DBFind(@1roles,src_roles).Where({role_type:3, ecosystem:2}).Columns("id,role_name")
+                Form(panel panel-primary){
+                    Div(panel-body){
+                        Div(row mt){
+                            Div(#left_col#){
+                                LangRes(@1header)
+                            }
+                            Div(#right_col#){
+                                Input(Name: Header, Type: textarea)
+                            }
+                        }
+                        Div(row mt){
+                            Div(#left_col#){
+                                LangRes(@1body_text)
+                            }
+                            Div(#right_col#){
+                                Input(Name: Body, Type: textarea)
+                            }
+                        }
+                        Div(row mt){
+                            Div(#left_col#){
+                                LangRes(@1recipient)
+                            }
+                            Div(#right_col# mt){
+                                LangRes(@1ecosystems_administrators)
+                            }
+                        }
+                    }
+                    Div(panel-footer text-left){
+                        Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1notifications_list)
+                        Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Contract: @1NotificationsBroadcast, Params: "RoleId=#role_id#", Page: @1notifications_list)
+                    }
+                }
+            }.Else{
+                Div(col-sm-12 alert alert-warning text-center){
+                    If(#role_id#!=#role_admin#){
+                        LangRes(@1only_admin_action)
+                    }
+                    If(#ecosystem_id#!=1){
+                        LangRes(@1only_first_ecosystem_action)
+                    }
+                    If(#ecos_count#==1){
+                        LangRes(@1other_ecosystems_not_found)
+                    }
+                }
+            }
+        }
+    }
+}

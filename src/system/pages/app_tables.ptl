@@ -1,0 +1,53 @@
+DBFind(@1buffer_data, src_buffer).Columns("value->app_id").Where({key:export, member_id:#key_id#, ecosystem:#ecosystem_id#}).Vars(buffer)
+If(#buffer_value_app_id# > 0){
+    DBFind(@1applications, src_app).Where({id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}).Vars("application")
+
+    Div(content-wrapper){
+        SetTitle($@1tables$ : #application_name#)
+        AddToolButton(Title: $@1create$, Page: @1table_create, Icon: icon-plus, PageParams: "application_id=#application_id#")
+
+        SetVar(pager_table, @1tables).(pager_where, "{app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}").(pager_page, @1app_tables).(pager_limit, 50)
+        Include(@1pager_header)
+
+        SetVar(admin_page, @1app_tables)
+        Include(@1admin_link)
+
+        DBFind(@1tables, src_tables).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#})
+
+        Form(panel panel-primary){
+            Div(panel-body){
+                Div(row){
+                    ForList(src_tables){
+                        Div(col-md-#width# col-sm-12){
+                            Div(list-group-item){
+                                Div(row){
+                                    Div(col-md-4){
+                                        Span(Class: h5 text-bold, Body: "#id#").Style(margin-right: 10px;)
+                                        LinkPage(Page: @1table_view, Class: text-primary h5, Body: "#name#", PageParams: "tabl_id=#id#")
+                                    }
+                                    Div(col-md-8){
+                                        Div(pull-right){
+                                            Span(LinkPage(Body: Em(Class: fa fa-edit), Class: text-primary h4, Page: @1table_edit, PageParams: "tabl_id=#id#"))
+                                        }
+                                        Div(pull-right){
+                                            DBFind(#name#).Columns("id").Count(countvar)
+                                            Span(Class: h5 text-muted, Body: #countvar#).Style(margin-right: 50px;)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Div(panel-footer clearfix){
+                Include(@1pager)
+            }
+        }
+    }
+}.Else{
+    SetTitle($@1tables$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1apps_select_error$)
+    }
+}

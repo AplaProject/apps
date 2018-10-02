@@ -1,0 +1,158 @@
+DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
+SetTitle($@1voting_list$)
+
+If(GetVar(Search)){
+    SetVar(Where,{ecosystem:#ecosystem_id#, "voting->name":{"$like":#Search#}, deleted:0})
+}.Else{
+    SetVar(Where,{ecosystem:#ecosystem_id#, deleted:0}).(Search,)
+}
+
+SetVar(WAITING,1).(VALID,2).(STARTED,3).(FINISHED,4).(INVALID,5)
+SetVar(this_page,"@1voting_list")
+
+AddToolButton(Title: $@1templates_list$, Page: @1voting_templates_list, Icon: fa icon-pin)
+AddToolButton(Title: $@1create$, Page: @1voting_create, Icon: icon-plus).Popup(50, $@1new_voting$)
+
+Div(content-wrapper){
+    If(EcosysParam(Name:founder_account)==#key_id#){
+        Button(Body: $@1update_votings_statuses$, Class: btn btn-default, Page: #this_page#, Contract: @1VotingStatusUpdate)
+    }
+    SetVar(table,"@1votings").(per_page,20)
+    Div(mt){
+        Include(@1basic_paginator)
+    }
+    DBFind(#table#,src_voting).Where(#Where#).Order({id:-1}).Offset(#paginator_offset#).Limit(#per_page#).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->success,flags->decision,flags->full_data,progress->percent_success,progress->number_participants,creator->member_id,creator->member_name,date_started,date_ended,deleted,status,voting->count_type_voters,voting->volume,progress->number_voters").Count(count_votings).Custom(_id){
+        Span(Class: h5, Body: #id#)
+    }.Custom(_name){
+        LinkPage(Page: @1voting_view, PageParams: "vID=#id#"){
+            Span(Class: h5 text-bold m0, Body: #voting.name#)
+        }
+    }.Custom(_subject){
+        SetVar(decision, AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_decisions, Index: #voting.type_decision#))
+        Div(h6 m0){
+            If(Or(#status#==#STARTED#,#status#==#FINISHED#,#voting.type#==2)){
+                #decision#
+            }.Else{
+                If(#voting.type_decision# == 1){
+                    SetVar(link_page,"@1voting_decision_candidates")
+                }.ElseIf(#voting.type_decision# == 2){
+                    SetVar(link_page,"@1voting_decision_election")
+                }.ElseIf(#voting.type_decision# == 3){
+                    SetVar(link_page,"@1voting_decision_document")
+                }.ElseIf(#voting.type_decision# == 4){
+                    SetVar(link_page,"@1voting_decision_formal")
+                }.ElseIf(#voting.type_decision# == 5){
+                    SetVar(link_page,"@1voting_decision_contract")
+                }
+                Button(Body: #decision#, Class: btn btn-link, Page: #link_page#, PageParams: "vID=#id#,back_page=#this_page#").Popup(50, $@1subject_voting$)
+            }
+        }
+    }.Custom(_participants){
+        SetVar(participants, AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_participants, Index: #voting.type_participants#))
+        Div(h6 m0){
+            If(Or(#status#==#STARTED#,#status#==#FINISHED#,#voting.type#==2)){
+                #participants#
+            }.Else{
+                Button(Page: @1voting_invite, PageParams: "vID=#id#,back_page=#this_page#", Class: btn btn-link p0 text-bold, Body: #participants#).Popup(45, $@1participants_add$)
+            }
+        }
+    }.Custom(_creator){
+        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_member_id=#creator.member_id#", Body: #creator.member_name#)
+    }.Custom(_date){
+        SetVar(started_class,text-center text-bold h5 m0).(finished_class,text-center text-bold h5 m0)
+        If(Or(#status#==#STARTED#,#status#==#FINISHED#)){
+            SetVar(started_class,text-center text-muted h5 m0)
+        }
+        If(#status#==#FINISHED#){
+            SetVar(finished_class,text-center text-muted h5 m0)
+        }
+        P(Class: #started_class#, Body: DateTime(DateTime: #date_started#, Format: "DD.MM.YYYY HH:MI"))
+        P(Class: #finished_class#, Body: DateTime(DateTime: #date_ended#, Format: "DD.MM.YYYY HH:MI"))
+    }.Custom(_type){
+        Div(h6 m0 p0){
+            AppParam(Ecosystem:1, App:#application_id#, Name: type_voting, Index: #voting.type#) /
+            If(#voting.count_type_voters#==1){
+                $@1number_votes$
+            }.Else{
+                $@1percent_votes$
+            }
+        }
+    }.Custom(_progress){
+        Div(text-center h5 text-bold){
+            If(#voting.count_type_voters#==1){
+                #progress.number_voters# / #progress.number_participants#
+            }.Else{
+                #progress.percent_success# %
+            }
+        }
+    }.Custom(_decision){
+        Div(text-center){
+            If(#flags.decision# == 0){
+                If(And(#status#==#FINISHED#,#creator.member_id#==#key_id#)){
+                    Button(Body: LangRes(@1decision), Class: btn btn-primary, Contract: @1VotingDecisionCheck, Params: "votingID=#id#", Page: #this_page#)
+                }.Else{
+                    Div(text-muted){LangRes(@1no)}
+                }
+            }.ElseIf(#flags.decision# == -2){
+                Div(text-muted){LangRes(@1not_enough_votes)}
+            }.ElseIf(#flags.decision# == 1){
+                Div(text-success){LangRes(@1accepted)}
+            }.ElseIf(#flags.decision# == -1){
+                Div(text-danger){LangRes(@1rejected)}
+            }
+        }
+    }.Custom(_status){
+        SetVar(status_class, AppParam(Ecosystem:1, App:#application_id#, Name:voting_statuses_classes, Index:#status#))
+        Div(text-center #status_class#){
+            If(#status#==#STARTED#){
+                Button(Class: btn btn-link icon-eye, Page: @1voting_view, PageParams: "vID=#id#")
+            }.Else{
+                AppParam(Ecosystem:1, App:#application_id#, Name:voting_statuses, Index:#status#)
+            }
+        }
+    }.Custom(_actions){
+        Div(text-right){
+            If(And(#creator.member_id#==#key_id#,#status#==#INVALID#)){
+                Button(Class: fa fa-trash btn btn-default, Contract: @1VotingDelete, Params: "votingID=#id#", Page: #this_page#).Alert(Text: "$@1want_delete_voting$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+            }
+        }
+    }
+
+    Form(panel panel-primary){
+        Div(panel-body){
+            Div(row){
+                Div(col-md-12){
+                    Div(input-group){
+                        Div(input-group-addon){
+                            LangRes(@1voting)
+                        }
+                        Input(Name: Search, Value: #Search#)
+                        Div(input-group-btn){
+                            Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: #this_page#, PageParams: "Search=Val(Search)")
+                        }
+                    }
+                }
+                Div(col-md-12){
+                    If(#count_votings#>0){
+                        Div(table-responsive){
+                            Table(src_voting, "$@1voting$=_name,$@1type$=_type,$@1subject_voting$=_subject,$@1participants$=_participants,$@1date_start$ / $@1date_end$=_date,$@1creator$=_creator,$@1progress$=_progress,$@1decision$=_decision,$@1status$=_status,=_actions")
+                        }
+                    }.Else{
+                        Div(text-center h3 text-muted){
+                            $@1votings_not_found$
+                        }
+                    }
+                }
+            }
+            If(GetVar(Search)){
+                Div(row){
+                    Div(col-md-12 mt-lg){
+                        Div(text-center){
+                            Button(Body: $@1view_all$, Class: btn btn-default, Page: #this_page#)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

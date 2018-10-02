@@ -11,6 +11,22 @@ contract notifications_Send {
         page_name string
         params_map string // json encoded expected
     }
+    func getMemberInfo(kid int) map {
+        var res member map
+        member = DBFind("members").Where("id=?", kid).Row()
+        if member {
+            res["member_id"] = member["id"]
+            res["member_name"] = member["member_name"]
+            res["image_id"] = member["image_id"]
+        }else{
+            if DBFind("keys").Columns("id").Where("id=?", kid).Row() {
+                res["member_id"] = Str(kid)
+                res["member_name"] = IdToAddress(kid)
+                res["image_id"] = "0"
+            }
+        }
+        return res
+    }
     func sendNotify(recipient map){
         var notification map
         notification["header"] = $text_header
@@ -21,7 +37,7 @@ contract notifications_Send {
         if $sender == 1 && $senderMember {
             // send from member
             sender["type"] = $sender
-            sender["member_id"] = $senderMember["id"]
+            sender["member_id"] = $senderMember["member_id"]
             sender["member_name"] = $senderMember["member_name"]
             sender["image_id"] = $senderMember["image_id"]
         }else{
@@ -37,24 +53,10 @@ contract notifications_Send {
         DBInsert("notifications", "recipient,sender,notification,page_name,page_params,timestamp date_created",
         recipient, sender, notification, $page_name, $params_map, $block_time)
     }
-    func sendToMember(memberId int){
-        var member map
-        member = DBFind("members").Where("id=?", memberId).Row()
-        if !member {
-            warning Sprintf("%v:  Member not found (%v). The profile of the recipient was not found. The recipient must complete their profile to work with notifications", $this_contract, memberId)
-        }
-        var recipient map
-        recipient["member_id"] = member["id"]
-        recipient["member_name"] = member["member_name"]
-        recipient["image_id"] = member["image_id"]
-
-        sendNotify(recipient)
-    }
 
     func sendToRole(roleId int){
-        var role map
+        var role recipient map
         role = DBFind("roles").Where("id=?", roleId).Row()
-        var recipient map
         recipient["role_id"] = role["id"]
         recipient["role_name"] = role["role_name"]
         recipient["image_id"] = role["image_id"]
@@ -69,6 +71,9 @@ contract notifications_Send {
             $icon_name = "icon-envelope"
         }
         if $member_id != 0 {
+            if !DBFind("keys").Where("id=?", $member_id).Row(){
+                warning "Key not found"
+            }
             $notify_type = 1 // is "member"
         }else{
             if $rid > 0{
@@ -86,10 +91,7 @@ contract notifications_Send {
         $senderMember = nil
         $senderRole = nil
         if $sender == 1 {
-            $senderMember = DBFind("members").Where("id=?", $key_id).Row()
-            if !$senderMember {
-                warning $this_contract+": Sender not member"
-            }
+            $senderMember = getMemberInfo($key_id)
         }else{
             if $sender == 2 {
                 $senderRole = DBFind("roles").Where("id=?", $role_id).Row()
@@ -103,7 +105,7 @@ contract notifications_Send {
     }
     action {
         if $member_id != 0 {
-            sendToMember($member_id)
+            sendNotify(getMemberInfo($member_id))
         }else{
             if $rid > 0 {
                 if $closure_type == 1 {
@@ -120,7 +122,7 @@ contract notifications_Send {
                     while i < Len(participants) {
                         var p map
                         p = participants[i]
-                        sendToMember(Int(p["member.member_id"]))
+                        sendNotify(getMemberInfo(Int(p["member.member_id"])))
                         i=i+1
                     }
                 }

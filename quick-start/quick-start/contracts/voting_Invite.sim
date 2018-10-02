@@ -8,14 +8,14 @@ contract voting_Invite {
         if Size(m) > 0 { res = JSONToMap(m) }
         return res
     }
-    func addVotingMember(fullMember map, votingId int) {
-        var member map
-        member["member_id"] = fullMember["id"]
-        member["member_name"] = IdToAddress(Int(fullMember["id"]))
-        DBInsert("votings_participants", "voting_id,member", votingId, member)
+    func addVotingKey(key map, votingId int) {
+        var m map
+        m["member_id"] = key["id"]
+        m["member_name"] = IdToAddress(Int(key["id"]))
+        DBInsert("votings_participants", "voting_id,member", votingId, m)
     }
     conditions {
-        $voting = DBFind("votings").Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Where("id=$ and date_ended > now()", $votingID).Row()
+        $voting = DBFind("votings").Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Where("id=$ and date_ended > $", $votingID, BlockTime()).Row()
         if !$voting {
             warning "Voting has expired. Can not add new participants"
         }
@@ -29,6 +29,9 @@ contract voting_Invite {
         }
         var isAdded string
         if $type_participants == 2 {
+            if !DBFind("keys").Where("id=?", $var_id).Row(){
+                warning "Key not found"
+            }
             isAdded = DBFind("votings_participants").Where("voting_id=$ and member->member_id=$", $votingID, $var_id).One("id")
             if isAdded {
                 warning "Member has already been added before"
@@ -40,27 +43,28 @@ contract voting_Invite {
             if isAdded {
                 warning "Voting participants have already been added before"
             }
+            if Len(DBFind("roles_participants").Where("role->id=? and deleted=0", $var_id)) == 0 {
+                warning "Roles participants not found"
+            }
         }
     }
 
     action {
         var i int
         if $type_participants == 1 { // everybody
-            var members array
-            members = DBFind("members")
-            while i < Len(members) {
-                addVotingMember(members[i], $votingID)
+            var keys array
+            keys = DBFind("keys")
+            while i < Len(keys) {
+                addVotingKey(keys[i], $votingID)
                 $number_participants = $number_participants + 1
                 i = i + 1
             }
         }
         if $type_participants == 2 { // manual
-            var member map
-            member = DBFind("keys").Where("id=?", $var_id).Row()
-            if member {
-                addVotingMember(member, $votingID)
-                $number_participants = $number_participants + 1
-            }
+            var key map
+            key = DBFind("keys").Where("id=?", $var_id).Row()
+            addVotingKey(key, $votingID)
+            $number_participants = $number_participants + 1
         }
         if $type_participants == 3 { // role
             var roles array

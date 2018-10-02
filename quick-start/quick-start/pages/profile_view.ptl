@@ -4,7 +4,6 @@ Div(content-wrapper){
         SetVar(Name: v_member_id, Value: #key_id#)
     }
     DBFind(Name: members, Source: src_member).Columns("id,image_id,member_name,member_info->information").Where("id=#v_member_id#").Vars(prefix)
-    DBFind(Name: keys, Source: src_keys).Where("id=#v_member_id#").Vars(tokens)
     
     If(Or(#prefix_id#>0,#prefix_id#<0)){
     }.Else{
@@ -24,7 +23,7 @@ Div(content-wrapper){
                                         If(#prefix_id# == #key_id#){
                                             Button(Class: btn btn-link, Page: profile_edit, PageParams: "v_member_id=#key_id#"){
                                                 If(#prefix_image_id#>0){
-                                                    Image(Src: Binary().ById(#prefix_image_id#), Class: img-circle).Style(width: 80px; border: 1px solid #5A5D63;)
+                                                    Image(Src: Binary().ById(#prefix_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
                                                 }.Else{
                                                     Span(Class: fa icon-user fa-5x text-primary)
                                                 }
@@ -32,7 +31,7 @@ Div(content-wrapper){
                                             }
                                         }.Else{
                                             If(#prefix_image_id#>0){
-                                                Image(Src: Binary().ById(#prefix_image_id#), Class: img-circle).Style(width: 80px; border: 1px solid #5A5D63;)
+                                                Image(Src: Binary().ById(#prefix_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
                                             }.Else{
                                                 Span(Class: fa icon-user fa-5x)
                                             }
@@ -40,8 +39,10 @@ Div(content-wrapper){
                                         }
                                         Div(Class: h5 text-muted m0, Body: #prefix_member_info_information#)
                                     }.Else{
+                                        Div(text-muted m0 h5, Body: LangRes(wallet_address))
+                                        Div(Class: h5, Body: Address(#key_id#))
                                         Button(Class: btn btn-link, Page: profile_edit){
-                                            Span(Class: h4 text-bold, Body: LangRes(editing_profile))
+                                            Div(Class: h5 m0, Body: LangRes(editing_profile))
                                         }
                                     }
                                 }
@@ -62,49 +63,12 @@ Div(content-wrapper){
                             }.Else{
                                 Span(LangRes(no))
                             }
-                        }
-                    }
-                }
-                If(#prefix_id# == #key_id#){
-                    Div(list-group-item){
-                        P(Class: text-center text-bold h4 m0, Body: LangRes(tokens_transfer))
-                        Div(panel-body){
-                            Div(form-group){
-                                Div(row){
-                                    Div(col-md-12 mc-sm text-center){
-                                        Div(text-muted m0 h5, Body: LangRes(tokens))
-                                        Span(Class: h5 text-bold, Body: Money(#tokens_amount#) APL)
-                                    }
+                            If(#v_member_id# == #key_id#){
+                                SetVar(founder_account, EcosysParam("founder_account"))
+                                If(#founder_account# != #key_id#){
+                                Div(){
+                                    Button(Class: btn btn-link, Page: roles_request, Body: LangRes(request)).Popup(Header: $request$, Width: "30")
                                 }
-                                Div(row){
-                                    Div(col-md-12 mt-lg text-center){
-                                        Div(text-muted m0 h5, Body: LangRes(wallet_address))
-                                        Span(Class: h5, Body: Address(#prefix_id#))
-                                    }
-                                }
-                            }
-                            Div(list-group-item text-center){
-                                Div(row){
-                                    Div(col-md-3 mt-sm text-right){
-                                        Span(Class: h6 text-bold, Body: LangRes(recipient))
-                                    }
-                                    Div(col-md-9 mb-sm text-left){
-                                        Input(Name: Recipient_Account, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx")
-                                    }
-                                }
-                                Div(row){
-                                    Div(col-md-3 mt-sm text-right){
-                                        Span(Class: h6 text-bold, Body: LangRes(amount))
-                                    }
-                                    Div(col-md-9 mc-sm text-left){
-                                        Input(Name: Amount, Type: Number)
-                                    }
-                                }
-                            }
-                        }
-                        Div(row){
-                            Div(col-md-12 mc-sm){
-                                Button(Body: LangRes(send), Class: btn btn-default pull-right, Page: profile_view, Contract: SendTokens).Alert(Text: $want_send_tokens$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
                             }
                         }
                     }

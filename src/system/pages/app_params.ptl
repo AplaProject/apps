@@ -1,0 +1,46 @@
+DBFind(@1buffer_data, src_buffer).Columns("value->app_id").Where({key:export, member_id:#key_id#, ecosystem:#ecosystem_id#}).Vars(buffer)
+If(#buffer_value_app_id# > 0){
+    DBFind(@1applications, src_app).Where({id:#buffer_value_app_id#},ecosystem:#ecosystem_id#).Vars("application")
+
+    Div(content-wrapper){
+        SetTitle($@1app_params$: #application_name#)
+        AddToolButton(Title: $@1create$, Page: @1app_params_edit, Icon: icon-plus, PageParams: "application_id=#application_id#,create=create")
+
+        SetVar(pager_table, @1app_params).(pager_where, "{app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}").(pager_page, @1app_params).(pager_limit, 50)
+        Include(@1pager_header)
+
+        SetVar(admin_page, @1app_params)
+        Include(@1admin_link)
+
+        DBFind(@1app_params, src_appparameters).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#})
+
+        Form(panel panel-primary){
+            Div(panel-body){
+                Div(row){
+                    ForList(src_appparameters){
+                        Div(col-md-#width# col-sm-12){
+                            Div(list-group-item){
+                                Div(row){
+                                    Div(col-md-4){
+                                        Span(Class: h5, Body: "#name#")
+                                    }
+                                    Div(col-md-8 text-right){
+                                        Span(LinkPage(Body: Em(Class: fa fa-edit), Class: text-primary h4, Page: @1app_params_edit, PageParams: "id=#id#"))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Div(panel-footer clearfix){
+                Include(@1pager)
+            }
+        }
+    }
+}.Else{
+    SetTitle($@1app_params$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1apps_select_error$)
+    }
+}

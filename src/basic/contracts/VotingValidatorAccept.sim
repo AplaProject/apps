@@ -1,0 +1,59 @@
+contract VotingValidatorAccept {
+    data {
+        VotingTemplateId string
+        KeyId string
+        VotingId string
+    }
+    
+    func getAppRoleId(id int, name string, warn bool) int {
+        var rid int
+        rid = Int(AppParam(id, name, 1))
+        if rid == 0 && warn{
+            warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), name)
+        }
+        return rid
+    }
+    
+    func conditions {
+        var prev string
+        prev = $stack[0]
+        if Len($stack) > 2{
+            prev = $stack[Len($stack) - 2]
+        }
+        if prev != "@1VotingDecisionCheck"{
+            warning LangRes("@1contract_start_votingdecisioncheck_only", "en")
+        }
+
+        var appId templateId int params map
+        appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Basic"}).Columns("name,id").One("id"))
+        templateId = Int(AppParam(appId,"voting_validators_template_id", 1))
+        if !DBFind("@1voting_templates").Where({ecosystem:$ecosystem_id, id:templateId}).One("id"){
+            warning LangRes("@1voting_template_not_found", "en")
+        }
+        if $VotingTemplateId != templateId{
+            warning LangRes("@1template_incorrect", "en")
+        }
+
+        var candidateId oldRoleId roleId int roleName string
+        oldRoleId = getAppRoleId(appId, "role_candidate_for_validators", false)
+        roleId = getAppRoleId(appId, "role_validator", true)
+
+        candidateId = DBFind("sysparams_candidate").Where({candidate_key_id:$KeyId}).One("candidate_key_id") //no $ecosystem_id
+        if !candidateId {
+            warning LangRes("@1candidate_key_not_found", "en")
+        }
+        $oldRoleRowId = Int(DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, deleted:0, "role->id":oldRoleId, "member->member_id":candidateId}).One("id"))
+
+        $roleId = Int(DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:roleId, deleted:0}).One("id"))
+        if $roleId == 0 {
+            warning LangRes("@1validator_role_not_found", "en")
+        }
+    }
+
+    func action {
+        if $oldRoleRowId > 0 {
+            @1RolesUnassign("row_id", $oldRoleRowId)
+        }
+        @1RolesAssign("rid,member_id", $roleId, Int($KeyId))
+    }
+}

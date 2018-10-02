@@ -3,24 +3,34 @@ contract Roles_Assign {
         rid int
         member_id int
     }
-
+    func getMemberInfo(kid int) map {
+        var res member map
+        member = DBFind("members").Where("id=?", kid).Row()
+        if member {
+            res["member_id"] = member["id"]
+            res["member_name"] = member["member_name"]
+            res["image_id"] = member["image_id"]
+        }else{
+            member = DBFind("keys").Where("id=?", kid).Row()
+            if member {
+                res["member_id"] = member["id"]
+                res["member_name"] = IdToAddress(Int(member["id"]))
+                res["image_id"] = 0
+            }
+        }
+        return res
+    }
     conditions {
-        $role_map = DBFind("roles").Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Where("id=?", $rid).Row()
-        if !$role_map {
+        $role = DBFind("roles").Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Where("id=?", $rid).Row()
+        if !$role {
             warning "Role not found"
         }
-
-        $member_map = DBFind("members").Where("id=?", $member_id).Row()
-        if !$member_map {
-            warning Sprintf("Member not found (%v). The profile of the user was not found. The user must complete their profile to work with roles", $member_id)
+        
+        if !DBFind("keys").Where("id=?", $member_id).Row() {
+            warning "Key not found"
         }
 
-        $appointer_map = DBFind("members").Where("id=?", $key_id).Row()
-        if !$appointer_map {
-            warning "Appointer not found"
-        }
-
-        if $role_map["deleted"] == 1 {
+        if $role["deleted"] == 1 {
             warning "This role has been deleted. The appointment of members is impossible"
         }
 
@@ -35,7 +45,7 @@ contract Roles_Assign {
         specialRules["@1sysparams_CandidateValidatorRequest"] = "Candidate for validators"
         specialRules["@1voting_TemplateRun"] = "Investor with voting rights"
         specialRules["@1tokenrefund_Start"] = "Investor with voting rights"
-        if specialRules[prev_contract] != $role_map["role_name"] {
+        if specialRules[prev_contract] != $role["role_name"] {
             Roles_CheckAccess("rid", $rid)
         }
 
@@ -47,20 +57,15 @@ contract Roles_Assign {
             // do not re-assign and do not warning because this contract may be called for other
             return
         }
-        var role member appointed map
-        role["id"] = $role_map["id"]
-        role["type"] = $role_map["role_type"]
-        role["name"] = $role_map["role_name"]
-        role["image_id"] = $role_map["image_id"]
+        var role member appointer map
+        role["id"] = $role["id"]
+        role["type"] = $role["role_type"]
+        role["name"] = $role["role_name"]
+        role["image_id"] = $role["image_id"]
 
-        member["member_id"] = $member_map["id"]
-        member["member_name"] = $member_map["member_name"]
-        member["image_id"] = $member_map["image_id"]
+        member = getMemberInfo($member_id)
+        appointer = getMemberInfo($key_id)
 
-        appointed["member_id"] = $appointer_map["id"]
-        appointed["member_name"] = $appointer_map["member_name"]
-        appointed["image_id"] = $appointer_map["image_id"]
-
-        DBInsert("roles_participants", "role,member,appointed,timestamp date_created", role, member, appointed, $block_time)
+        DBInsert("roles_participants", "role,member,appointed,timestamp date_created", role, member, appointer, $block_time)
     }
 }

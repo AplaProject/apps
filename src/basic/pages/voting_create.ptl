@@ -1,0 +1,172 @@
+DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
+SetVar(this_page,"@1voting_create")
+
+If(GetVar(count_type_voters)==""){
+    SetVar(count_type_voters,0)
+}
+
+Form(){
+    Div(list-group-item){
+        Div(row mb-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    LangRes(@1vote_count_type)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                If(GetVar(count_type_voters)==0){
+                    Button(Body: $@1percent_votes$, Page: #this_page#, PageParams: "count_type_voters=0", Class: btn btn-primary disabled mr-lg).Popup(50, $@1new_voting$)
+                    Button(Body: $@1number_votes$, Page: #this_page#, PageParams: "count_type_voters=1", Class: btn btn-primary).Popup(50, $@1new_voting$)                
+                    
+                }.ElseIf(GetVar(count_type_voters)==1){
+                    Button(Body: $@1percent_votes$, Page: #this_page#, PageParams: "count_type_voters=0", Class: btn btn-primary mr-lg).Popup(50, $@1new_voting$)
+                    Button(Body: $@1number_votes$, Page: #this_page#, PageParams: "count_type_voters=1", Class: btn btn-primary disabled).Popup(50, $@1new_voting$)
+                }
+            }
+        }
+        Div(row){
+            Div(col-md-3 mt-sm text-right){
+                Label(For:type_decision){
+                    LangRes(@1decision)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                If(GetVar(count_type_voters)==0){
+                    AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_decisions, Source: procent_type_decisions)
+                    RadioGroup(Name: type_decision, Source: procent_type_decisions, NameColumn: name, ValueColumn: id)
+                }.ElseIf(GetVar(count_type_voters)==1){
+                    Data(numbers_type_decisions,"value,name"){
+                        3,$@1document$
+                        4,$@1database_write$
+                        5,$@1contract_run$
+                    }
+                    RadioGroup(Name: type_decision, Source: numbers_type_decisions, NameColumn: name, ValueColumn: value)
+                }.Else{
+                    Div(mt-sm text-warning){
+                        $@1please_select$ "$@1vote_count_type$"
+                    }
+                }
+            }
+        }
+    }
+    Div(list-group-item){
+        Div(row){
+            Div(col-md-3 mt-sm text-right){
+                Label(For: type_participants){
+                    LangRes(@1participants)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_participants, Source: type_voting_participants)
+                Select(Name: type_participants, Source: type_voting_participants, NameColumn: name, ValueColumn: id)
+            }
+        }
+    }
+    Div(list-group-item){
+        Div(row mb-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(For:voting_name){
+                    LangRes(@1name)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Input(Name: voting_name, Value: "New voting")
+            }
+        }
+        Div(row mb-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(For: volume){
+                    LangRes(@1voting_volume)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Input(Name: volume, Value: 75, Type: number)
+                Div(m0 h6 text-muted){
+                    If(GetVar(count_type_voters)==0){
+                        $@1voting_volume_desc$
+                    }.ElseIf(GetVar(count_type_voters)==1){
+                        $@1voting_volume_number_desc$
+                    }
+                }
+            }
+        }
+        SetVar(hide_quorum,)
+        If(GetVar(count_type_voters)==1){
+            SetVar(hide_quorum,"hidden")
+        }
+        Div(row mb-sm #hide_quorum#){
+            Div(col-md-3 mt-sm text-right){
+                Label(For: quorum){
+                    LangRes(@1voting_quorum)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Input(Name: quorum, Value: 51, Type: number)
+                Div(m0 h6 text-muted){
+                    $@1voting_quorum_desc$
+                }
+            }
+        }
+        Div(row mb-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(For: start_date){
+                    LangRes(@1date_start)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Div(row){
+                    Div(col-md-6){
+                        Input(Name: start_date, Type: date)
+                    }
+                    Div(col-md-6){
+                        Input(Name: start_time, Type: time)
+                    }
+                }
+            }
+        }
+        Div(row){
+            Div(col-md-3 mt-sm text-right){
+                Label(For: end_date){
+                    LangRes(@1date_end)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Div(row){
+                    Div(col-md-6){
+                        Input(Name: end_date, Type: date)
+                    }
+                    Div(col-md-6){
+                        Input(Name: end_time, Type: time)
+                    }
+                }
+            }
+        }
+    }    
+    Div(list-group-item){
+        Div(row){
+            Div(col-md-3 mt-sm text-right){
+                Label(For:description){
+                    LangRes(@1description)
+                }
+            }
+            Div(col-md-9 text-left){
+                Input(Name: description, Type: textarea)
+            }
+        }
+    }
+    Div(row mt){
+        Div(col-md-12){
+            Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1voting_list)
+            Input(Name: voting_type, Type: hidden, Value: 1)
+            Button(Body: LangRes(@1create), Class: btn btn-primary pull-right, Page: @1voting_list, Contract: @1VotingCreate, Params: "count_type_voters=#count_type_voters#")
+        }
+    }
+}

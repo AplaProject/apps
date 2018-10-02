@@ -1,0 +1,77 @@
+DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("id").Vars(application)
+SetVar(role_validator, AppParam(Ecosystem:1, App:#application_id#, Name: role_validator))
+
+If(GetVar(Search)!=""){
+    SetVar(pager_where,"{name:{$like:#Search#}}")
+}.Else{
+    SetVar(pager_where,"{id:{$gt:0}}").(Search,)
+}
+SetVar(this_page,@1sysparams_list)
+
+SetTitle($@1platform_parameters$)
+
+Div(){
+    Div(breadcrumb){
+        Div(Class:text-muted, Body: $@1platform_params_desc$)
+    }
+    Form(input-group){
+        Div(input-group-addon){
+            LangRes(@1name)
+        }
+        Input(Name: Search, Value: #Search#)
+        Div(input-group-btn){
+            Button(Class: btn btn-primary fa fa-search, Page: #this_page#, PageParams: "Search=Val(Search)")
+            If(GetVar(Search)!=""){
+                Button(Class: btn btn-default fa fa-close, Page: #this_page#)
+            }
+        }
+    }
+    SetVar(pager_table, @1system_parameters).(pager_page, #this_page#).(pager_limit, 25)
+    Include(@1pager_header)
+    DBFind(#pager_table#, src_sysparams).Where(#pager_where#).Order(id).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_actions){
+        SetVar(sp_id,0)
+        DBFind(@1contracts).Where({ecosystem:1, name:#name#}).Columns(id).Vars(sp)
+        If(#sp_id#>0){
+            LinkPage(Class: fa fa-edit, Page: @1sysparams_voting, PageParams: "param_index=#id#,param_name=#name#")
+        }.Else{
+            $@1contract_404$
+        }
+    }.Custom(_val){
+        Div(){
+            #value#
+        }.Style(max-width: 500px;overflow: hidden;)
+    }
+    DBFind(@1roles_participants).Where({ecosystem:#ecosystem_id#, "member->member_id":#key_id#, "role->id":#role_validator#, deleted:0}).Columns("id").Vars(validator)
+    If(#validator_id#>0){
+        AddToolButton(Title: $@1sysparams_validator_resign$, Icon: icon-pin, Page: @1sysparams_validator_resign)
+    }
+    Div(table-responsive){
+        Table(src_sysparams,"$@1name$=name,$@1value$=_val,=_actions")
+    }
+    Include(@1pager)
+}.Style(
+    tbody > tr:nth-of-type(odd) {
+        background-color: #fafbfc;
+    }
+    tbody > tr > td {
+        word-break: break-all;
+        font-weight: 400;
+        font-size: 13px;
+        color: #666;
+        border-top: 1px solid #eee;
+        vertical-align: middle;
+    }
+    tr > *:first-child {
+        padding-left:20px;
+    }
+    tr > *:last-child {
+        padding-right:30px;
+        text-align:right;
+    }
+    thead {
+        background-color: #eee;
+    }
+    table a {
+        font-size: 18px;
+    }
+)

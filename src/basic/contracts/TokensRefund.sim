@@ -1,0 +1,45 @@
+contract TokensRefund {
+    data {
+        SenderId int
+        RecipientId int
+        Amount money
+    }
+
+    conditions {
+        var prevContract string
+        prevContract = $stack[0]
+        if Len($stack) > 2 {
+            prevContract = $stack[Len($stack) - 2]
+        }
+        if prevContract != "@1TokensRefundAccept"{
+            error LangRes("@1contract_start_tokensrefundaccept_only", "en")
+        }
+
+        $amount = Money($Amount)
+        if $amount <= 0 {
+            error LangRes("@1amount_less_equal_zero", "en")
+        }
+        
+        $RecipientId = Int($RecipientId)
+        $SenderId = Int($SenderId)
+        var sender map
+        sender = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$SenderId}).Row()
+        if !sender{
+            error LangRes("@1sender_invalid", "en")
+        }
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$RecipientId}).Row(){
+            error LangRes("@1recipient_invalid", "en")
+        }
+        if sender["blocked"] == 1 {
+            error LangRes("@1sender_blocked", "en")
+        }
+        if sender["amount"] < $amount {
+            error Sprintf(LangRes("@1sender_amount_not_enough", "en"), sender["amount"])
+        }
+    }
+
+    action {
+        DBUpdate("@1keys", $SenderId, {"-amount": $amount})
+        DBUpdate("@1keys", $RecipientId, {"+amount": $amount})
+    }
+}

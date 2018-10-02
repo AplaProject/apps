@@ -1,0 +1,43 @@
+contract TaTransferManager {
+    data {
+        SaleId int
+        NotificId int
+    }
+    func getRoleId(name string) int{
+        var rid int
+        rid = Int(AppParam($appId, name, $ecosystem_id))
+        if rid == 0{
+            warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), name)
+        }
+        return rid
+    }
+    conditions{
+        $appId = Int(DBFind("@1applications").Where({ecosystem:$ecosystem_id, name:"Trade APL"}).One("id"))
+        if $appId == 0{
+            warning LangRes("@1app_not_found", "en")
+        }
+        $roleAplSeller = getRoleId("role_seller_apl")
+        $currentRole = getRoleId("role_sale_apl_manager")
+        if !RoleAccess($currentRole){
+            warning "this action allowed only for role id #" + $currentRole
+        }
+
+        $sale = DBFind("sales").Where({id:$SaleId}).Row()
+        if !$sale{
+            warning "Sale not found"
+        }
+    }
+
+    action {
+        @1NotificationsClose("notific_id", $NotificId)
+        DBUpdate("sales", Int($sale["id"]), {key_id_sale_apl_manager:$key_id})
+
+        // role Apla seller notification
+        var params map title page string
+        title = Sprintf("Transfer sale id %v", $sale["id"])
+        params["sale_id"] = $sale["id"]
+        page = "ta_transfer_seller"
+        @1NotificationsSend("rid,sender,text_header,page_name,params_map,closure_type,current_role_id", $roleAplSeller, 2, title, page, params, 1, $currentRole)
+
+    }
+}

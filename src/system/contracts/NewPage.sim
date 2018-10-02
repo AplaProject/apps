@@ -1,0 +1,51 @@
+contract NewPage {
+    data {
+        ApplicationId int
+        Name string
+        Value string
+        Menu string
+        Conditions string
+        ValidateCount int "optional"
+        ValidateMode string "optional"
+    }
+    func preparePageValidateCount(count int) int {
+        var min, max int
+        min = Int(EcosysParam("min_page_validate_count"))
+        max = Int(EcosysParam("max_page_validate_count"))
+
+        if count < min {
+            count = min
+        } else {
+            if count > max {
+                count = max
+            }
+        }
+        return count
+    }
+
+    conditions {
+        ValidateCondition($Conditions,$ecosystem_id)
+
+        if $ApplicationId == 0 {
+            warning LangRes("@1aid_cannot_zero", "en")
+        }
+
+        if DBFind("@1pages").Columns("id").Where({name: $Name, ecosystem: $ecosystem_id}).One("id") {
+            warning Sprintf(LangRes("@1template_page_exists", "en"), $Name)
+        }
+
+        $ValidateCount = preparePageValidateCount($ValidateCount)
+
+        if $ValidateMode {
+            if $ValidateMode != "1" {
+                $ValidateMode = "0"
+            }
+        }
+    }
+
+    action {
+        DBInsert("@1pages", {"name": $Name,"value": $Value, "menu": $Menu,
+             "validate_count":$ValidateCount,"validate_mode": $ValidateMode,
+             "conditions": $Conditions,"app_id": $ApplicationId,"ecosystem":$ecosystem_id})
+    }
+}

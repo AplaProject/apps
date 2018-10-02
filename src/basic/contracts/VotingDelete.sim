@@ -1,0 +1,29 @@
+contract VotingDelete {
+    data {
+        votingID int
+    }
+
+    conditions {
+        $INVALID = 5
+        var voting map bt string
+        bt = BlockTime()
+        voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id:$votingID, "creator->member_id":$key_id, "status":$INVALID}).Columns("id").Row()
+        if !voting {
+            warning LangRes("@1voting_delete_impossible", "en")
+        }
+    }
+
+    action {
+        DBUpdate("@1votings", $votingID, {deleted:1})
+        var notes array
+        notes = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, page_name:"@1voting_view", "page_params->voting_id":$votingID})
+        var i int
+        while i < Len(notes){
+            var note map noteId int
+            note = notes[i]
+            noteId = Int(note["id"])
+            @1NotificationsClose("notific_id", noteId)
+            i = i + 1
+        }
+    }
+}

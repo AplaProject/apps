@@ -1,0 +1,20 @@
+contract NewUser {
+    data {
+        NewPubkey string
+    }
+    conditions {
+        $newId = PubToID($NewPubkey)
+        if $newId == 0 {
+            error LangRes("@1wrong_pub", "en")
+        }
+        if DBFind("@1keys").Columns("id").Where({id: $newId, ecosystem: $ecosystem_id}).One("id") != nil {
+            error LangRes("@1template_user_exists", "en")
+        }
+
+        $amount = Money(1000) * Money(1000000000000000000)
+    }
+    action {
+        NewMoney($newId, Str($amount), "New user deposit")
+        SetPubKey($newId, StringToBytes($NewPubkey))
+    }
+}

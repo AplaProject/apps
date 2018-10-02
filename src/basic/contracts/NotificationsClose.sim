@@ -1,0 +1,72 @@
+contract NotificationsClose {
+    data {
+        notific_id int
+    }
+
+    func getPermission() int {
+        var array_permissions array result i int prevContract string
+        array_permissions = ["@1TokensRefundAccept", "@1TokensRefundReject", "@1VotingDecisionCheck", "@1VotingDelete"]
+
+        prevContract = $stack[0]
+        if Len($stack) > 2 {
+            prevContract = $stack[Len($stack) - 2]
+        }
+        while i < Len(array_permissions) {
+            var contract_name string
+            contract_name = array_permissions[i]
+            if contract_name==prevContract {
+                result = 1
+            }
+            i = i + 1
+        }
+        return result
+    }
+
+
+    conditions {
+        $notify = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$notific_id}).Columns("id,date_start_processing,processing_info->member_id,closed,notification->type,recipient->member_id").Row()
+        if !$notify {
+            warning LangRes("@1notification_not_found", "en")
+        }
+
+        // checking the type of notification
+        if $notify["notification.type"] != 1 && $notify["notification.type"] != 2 {
+            warning LangRes("@1notification_type_not_found", "en")
+        }
+
+        // getting permission
+        var flag_permission int
+        flag_permission = getPermission()
+
+        // checking single notification
+        if $notify["notification.type"] == 1 && flag_permission == 0 {
+            if $notify["recipient.member_id"] != $key_id {
+                warning LangRes("@1notification_another_member", "en")
+            }
+        }
+
+        // checking role notification
+        if $notify["notification.type"] == 2 && flag_permission == 0 {
+            if $notify["date_start_processing"] == "" {
+                warning LangRes("@1notification_processing_not_started", "en")
+            }
+
+            if $notify["processing_info.member_id"] != $key_id {
+                warning LangRes("@1notice_processing_started_another_member", "en")
+            }     
+        }
+    }
+
+    action {
+        if $notify["closed"] > 0 {
+            return
+        }
+        if $notify["notification.type"] == 1 {
+            @1NotificationsProcess("notific_id", $notific_id)
+        }
+        var m map
+        m["date_closed"] = BlockTime()
+        m["closed"] = 1
+        DBUpdate("@1notifications", $notific_id, m)
+    }
+}

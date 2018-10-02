@@ -1,0 +1,25 @@
+contract NewBlock {
+    data {
+        ApplicationId int
+        Name string
+        Value string
+        Conditions string
+    }
+
+    conditions {
+        ValidateCondition($Conditions, $ecosystem_id)
+
+        if $ApplicationId == 0 {
+            warning LangRes("@1aid_cannot_zero", "en")
+        }
+
+        if DBFind("@1blocks").Columns("id").Where({name:$Name, ecosystem: $ecosystem_id}).One("id") {
+            warning Sprintf(LangRes("@1template_block_exists", "en"), $Name)
+        }
+    }
+
+    action {
+        DBInsert("@1blocks", {"name": $Name, "value": $Value, "conditions": $Conditions,
+              "app_id": $ApplicationId,"ecosystem": $ecosystem_id})
+    }
+}
