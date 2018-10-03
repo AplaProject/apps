@@ -1,6 +1,10 @@
 DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Trade APL"}).Columns("id").Vars(application)
+SetVar(isStartProcessing,0)
 If(#notific_id#>0){
-    DBFind(@1notifications, n).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("page_params->wallet_id").Vars(note)
+    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("page_params->wallet_id,date_start_processing,notification->type,processing_info->member_id").Vars(note)
+    If(#note_date_start_processing#!=""){
+        SetVar(isStartProcessing,1)
+    }
 }
 
 SetVar(this_page, ta_asbl_contract)
@@ -20,8 +24,19 @@ Div(content-wrapper){
                         }
                     }
                     Div(panel-footer){
-                        Button(Body: $@1reject$, Class: btn btn-default, Page: default_page, Contract: TaAsblAction, Params: "Action=reject,WalletId=#note_page_params_wallet_id#")
-                        Button(Body: $@1accept$, Class: btn btn-primary pull-right, Page: default_page, Contract: TaAsblAction, Params: "Action=accept,WalletId=#note_page_params_wallet_id#")
+                        If(And(#note_processing_info_member_id#==#key_id#,#isStartProcessing#==1)){
+                            Button(Body: $@1reject$, Class: btn btn-default, Page: default_page, Contract: TaAsblAction, Params: "Action=reject,WalletId=#note_page_params_wallet_id#")
+                            Button(Body: $@1accept$, Class: btn btn-primary pull-right, Page: default_page, Contract: TaAsblAction, Params: "Action=accept,WalletId=#note_page_params_wallet_id#,NotificId=#notific_id#")
+                        }.ElseIf(#isStartProcessing#==1){
+                            Div(text-muted text-center){
+                                process begin another manager
+                            }
+                        }.ElseIf(#isStartProcessing#==0){
+                            Div(text-center){
+                                Button(Body: $@1processing$, Class: btn btn-primary, Page: #this_page#, PageParams: "notific_id=#notific_id#", Contract: @1NotificationsProcess, Params: "notific_id=#notific_id#")
+                            }
+                        }
+
                     }
                 }.Else{
                     Div(panel-body){

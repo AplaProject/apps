@@ -1,6 +1,7 @@
 contract TaKeyCheck {
     data {
         public_key string
+        current_role_id int
     }
 
     conditions {
@@ -10,14 +11,14 @@ contract TaKeyCheck {
 
         $public_key = Replace($public_key, " ", "")
         if HasPrefix($public_key, "04") {
-            $public_key = Substr($public_key, 2, Size($public_key)-2)
+            $public_key = Substr($public_key, 2, Size($public_key) - 2)
         }
         $userKey = PubToID($public_key)
 
         if $userKey == 0 {
             warning LangRes("@1public_key_invalid", "en")
         }
-        
+
         if DBFind("wallets").Where({key_id_buyer: $userKey}).One("id") != nil {
             warning LangRes("@1investor_added_already", "en")
         }
@@ -35,7 +36,7 @@ contract TaKeyCheck {
         if snapSwapRoleId == 0 {
             warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), "role_snapswap")
         }
-        
+
         if !RoleAccess(snapSwapRoleId) {
             warning Sprintf(LangRes("x_role_only_action", "en"), snapSwapRoleName)
         }
@@ -48,5 +49,12 @@ contract TaKeyCheck {
         var start_balance money
         start_balance = Money(1000000000000000)
         @1TokensSend("Recipient_Account,Amount", IdToAddress($userKey), start_balance)
+
+        // new user notification
+        var params map title page body string
+        title = "Welcome to APLA"
+        body = "Read please your contract"
+        page = "@1ta_notification"
+        @1NotificationsSend("member_id,sender,text_header,text_body,page_name,params_map,closure_type,current_role_id", $userKey, 2, title, body, page, params, 1, $current_role_id)
     }
 }
