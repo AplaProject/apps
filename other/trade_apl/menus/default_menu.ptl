@@ -1,13 +1,26 @@
-SetVar(unreaded_wallet_id,0).(exist_wallet_id,0)
-DBFind(@1wallets).Where({key_id_buyer:#key_id#, rejected_at:0, signed_at:0}).Vars(unreaded_wallet)
+SetVar(is_allowed, 0).(k_id, 0).(unreaded_wallet_id,0).(exist_wallet_id,0)
+DBFind(@1keys).Where({id:#key_id#}).Vars(k)
 DBFind(@1wallets).Where({key_id_buyer:#key_id#}).Vars(exist_wallet)
+DBFind(@1wallets).Where({key_id_buyer:#key_id#, rejected_at:0, signed_at:0}).Vars(unreaded_wallet)
 
-DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Trade APL"}).Columns("id").Vars(ta_app)
-SetVar(admin_role_id,0).(snapswap_role_id,0)
-SetVar(admin_role_id, AppParam(App:#ta_app_id#, Name:role_sale_apl_admin, Ecosystem: #ecosystem_id#))
-SetVar(snapswap_role_id, AppParam(App:#ta_app_id#, Name:role_snapswap, Ecosystem: #ecosystem_id#))
+If(#k_id#!=0){
+    If(#exist_wallet_id#>0){
+        If(#unreaded_wallet_id#==0){
+            SetVar(is_allowed, 1)
+        }
+    }.Else{
+        SetVar(is_allowed, 1)
+    }
+}
 
-If(Or(#role_id#>0,And(#unreaded_wallet_id#==0,#exist_wallet_id#!=0))){
+If(#is_allowed#==1){
+    DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Trade APL"}).Columns("id").Vars(ta_app)
+    SetVar(snapswap_role_id,0).(admin_role_id,0).(manager_role_id,0).(seller_role_id,0)
+    SetVar(snapswap_role_id, AppParam(App:#ta_app_id#, Name:role_snapswap, Ecosystem: #ecosystem_id#))
+    SetVar(admin_role_id, AppParam(App:#ta_app_id#, Name:role_sale_apl_admin, Ecosystem: #ecosystem_id#))
+    SetVar(manager_role_id, AppParam(App:#ta_app_id#, Name:role_sale_apl_manager, Ecosystem: #ecosystem_id#))
+    SetVar(seller_role_id, AppParam(App:#ta_app_id#, Name:role_seller_apl, Ecosystem: #ecosystem_id#))
+
     MenuItem(Title:$@1profile$, Page:@1profile_view, Icon:"icon-wallet")
     MenuItem(Title:$@1notifications$, Page:@1notifications_list, Icon:"icon-flag")
     MenuItem(Title:$@1ecosystem_members$, Page:@1members_list, Icon:"fa icon-people")
@@ -20,7 +33,8 @@ If(Or(#role_id#>0,And(#unreaded_wallet_id#==0,#exist_wallet_id#!=0))){
             MenuItem(Title:$@1sysparams_candidates$, Page:@1sysparams_candidates_list, Icon:"icon-graduation")
         }
     }
-    If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
+
+    If(And(#admin_role_id#>0,Or(#role_id#==#admin_role_id#,#role_id#==#manager_role_id#,#role_id#==#seller_role_id#))){
         MenuItem(Title:$@1ta_transfer_admin$, Page:@1ta_transfer_admin, Icon:"icon-credit-card")
     }
     If(And(#snapswap_role_id#>0,#role_id#==#snapswap_role_id#)){

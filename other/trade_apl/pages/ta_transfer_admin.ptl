@@ -1,68 +1,63 @@
 DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Trade APL"}).Columns("id").Vars(application)
-
 SetVar(this_page, @1ta_transfer_admin)
-SetVar(row,"row mt-sm").(col_left,"col-sm-4 mt-sm text-right").(col_right,"col-sm-8 text-left")
 SetVar(admin_role_id, AppParam(App:#application_id#, Name:role_sale_apl_admin, Ecosystem: #ecosystem_id#))
 SetVar(snapswap_role_id, AppParam(App:#application_id#, Name:role_snapswap, Ecosystem: #ecosystem_id#))
 
-SetTitle($@1ta_transfer_admin$)
-If(GetVar(Search)!=""){
-    SetVar(Where, {$or:[{"key_id_buyer":#Search#},{"key_id_sale_apl_manager":#Search#}, {"key_id_sale_apl_admin":#Search#}, {"key_id_seller":#Search#}]})
-}.Else{
-    SetVar(Where, {id:{$gt:0}}).(Search,)
-}
-DBFind(sales, sales).Where(#Where#).Order({id:-1}).Count(sales_count).Custom(_btat){
-    If(#buyer_transferred_at#>0){
-        DateTime(#buyer_transferred_at#, Format: YYYY-MM-DD HH:MI:SS)
-    }
-}.Custom(_mrat){
-    If(#manager_rejected_at#>0){
-        DateTime(#manager_rejected_at#, Format: YYYY-MM-DD HH:MI:SS)
-    }
-}.Custom(_srat){
-    If(#seller_rejected_at#>0){
-        DateTime(#seller_rejected_at#, Format: YYYY-MM-DD HH:MI:SS)
-    }
-}.Custom(_stat){
-    If(#seller_transferred_at#>0){
-        DateTime(#seller_transferred_at#, Format: YYYY-MM-DD HH:MI:SS)
-    }
-}.Custom(_cat){
-    If(#created_at#>0){
-        DateTime(#created_at#, Format: YYYY-MM-DD HH:MI:SS)
-    }
-}.Custom(_apl){
-    Money(#amount_apl#)
-}.Custom(_currency){
-    AppParam(App:#application_id#, Name:ta_currency_type, Ecosystem: #ecosystem_id#, Index: #currency_type#)
-}
-If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
-    AddToolButton(Title:$@1ta_add_transfer$, Page: @1ta_sale_form, Icon: icon-wallet).Popup(Header: $@1ta_add_transfer$, Width: "50")
-}
 Div(content-wrapper){
-    Div(row){
-        Div(col-md-12){
-            Form(input-group){
-                Div(input-group-addon){
-                    LangRes(@1key_id)
-                }
-                Input(Name: Search, Value: #Search#)
-                Div(input-group-btn){
-                    Button(Class: btn btn-primary fa fa-search, Page: #this_page#, PageParams: "Search=Val(Search),type=1")
-                    If(GetVar(Search)!=""){
-                        Button(Class: btn btn-default fa fa-close, Page: #this_page#)
-                    }
+	SetTitle($@1ta_transfer_admin$)
+	If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
+		AddToolButton(Title:$@1ta_sale_form$, Page: @1ta_sale_form, Icon: icon-wallet).Popup(Header: $@1ta_sale_form$, Width: "50")
+	}
+
+	If(GetVar(Search)!=""){
+		SetVar(Where, {$or:[{"key_id_buyer":#Search#},{"key_id_sale_apl_manager":#Search#}, {"key_id_sale_apl_admin":#Search#}, {"key_id_seller":#Search#}]})
+	}.Else{
+		SetVar(Where, {id:{$gt:0}}).(Search,)
+	}
+	
+    Form(panel panel-primary){
+        Div(panel-body){
+            Div(row){
+				Div(col-md-12){
+					Form(input-group){
+						Div(input-group-addon){
+							LangRes(@1key_id)
+						}
+						Input(Name: Search, Value: #Search#)
+						Div(input-group-btn){
+							If(GetVar(Search)!=""){
+								Button(Class: btn btn-default fa fa-close, Page: #this_page#)
+							}
+                            Button(Class: btn btn-default fa fa-search, Page: #this_page#, PageParams: "Search=Val(Search),type=1")
+						}
+					}
+				}
+            }
+
+			DBFind(sales, sales).Where(#Where#).Order({id:-1}).Count(sales_count).Custom(_btat){
+				Span(Class: text-muted, Body: DateTime(#buyer_transferred_at#, Format: YYYY-MM-DD HH:MI:SS))
+			}.Custom(_cat){
+				Span(Class: text-muted, Body: DateTime(#created_at#, Format: YYYY-MM-DD HH:MI:SS))
+			}.Custom(_amount){
+				Div(text-right){
+					Span(Class: text-bold, Body: #amount#).Style(margin-right:5px;)
+					Span(Class: text-bold, Body: AppParam(App:#application_id#, Name:ta_currency_type, Ecosystem: #ecosystem_id#, Index: #currency_type#))
+				}
+				Div(text-right){
+					Span(Class: text-bold, Body: Money(#amount_apl#)).Style(margin-right:5px;)
+					Span(Class: text-bold, Body: APL)
+				}
+			}.Custom(_info){
+                Button(Class: btn btn-link, Page: @1ta_transfer_view, PageParams: "Id=#id#"){
+                    Span(Class: text-bold, Body: LangRes(@1information))
+                }.Popup(Header: $@1information$, Width: "30")
+			}
+
+            Div(row){
+                Div(col-md-12){
+                    Table(sales,"$@1id$=id,$@1information$=_info,$@1key_id_buyer$=key_id_buyer,$@1investor_funds_transfer_date$=_btat,$@1created_at$=_cat,=_amount")
                 }
             }
-        }
-    }
-    If(#sales_count#>0){
-        Div(table-responsive){
-            Table(sales,"$@1id$=id,$@1key_id_buyer$=key_id_buyer,$@1amount$=amount,$@1currency_type$=_currency,$@1investor_funds_transfer_date$=_btat,$@1amount_apl$=_apl,$@1key_id_sale_apl_admin$=key_id_sale_apl_admin,$@1key_id_sale_apl_manager$=key_id_sale_apl_manager,$@1manager_reject_comment$=manager_reject_comment,$@1manager_rejected_at$=_mrat,$@1key_id_seller$=key_id_seller,$@1seller_reject_comment$=seller_reject_comment,$@1seller_rejected_at$=_srat,$@1seller_transferred_at$=_stat,$@1created_at$=_cat")
-        }
-    }.Else{
-        Div(h3 text-center){
-            $@1sales$ $@1not_founded$
         }
     }
 }
