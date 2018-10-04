@@ -2,7 +2,7 @@ contract InvestorRefresh {
     data {
         RoleId int
     }
-    
+
     func notInArray(val string, arr array) bool {
         var i lenArr int
         lenArr = Len(arr)
@@ -14,7 +14,7 @@ contract InvestorRefresh {
         }
         return true
     }
-    
+
     func getParamInt(id int, name string) int {
         var param int
         param = Int(AppParam(id, name, 1))
@@ -23,7 +23,15 @@ contract InvestorRefresh {
         }
         return param
     }
-    
+    func getRoleId(name string) int {
+        var rid int
+        rid = Int(EcosysParam(name))
+        if rid == 0{
+            warning Sprintf(LangRes("@1role_not_set_eco_parameter", "en"), name)
+        }
+        return rid
+    }
+
     conditions {
         var appId int
         appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Basic", deleted:0}).One("id"))
@@ -33,12 +41,12 @@ contract InvestorRefresh {
 
         var roleValidatorId roleInvestorId string
 
-        roleValidatorId = getParamInt(appId, "role_validator")
+        roleValidatorId = getRoleId("role_validator")
         if !RoleAccess(roleValidatorId) {
             warning LangRes("@1not_validator_can_not_run", "en")
         }
 
-        roleInvestorId = getParamInt(appId, "role_investor_with_voting_rights")
+        roleInvestorId = getRoleId("role_investor_with_voting_rights")
         $roleId = Int(DBFind("@1roles").Where({id:roleInvestorId, deleted:0}).One("id"))
         if $roleId == 0{
             warning LangRes("@1investor_role_not_found_or_removed", "en")
