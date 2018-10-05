@@ -2,11 +2,11 @@ contract VotingValidatorInit {
     data {
         KeyId int
     }
-    func getAppRoleId(id int, name string, warn bool) int {
+    func getRoleId(name string, warn bool) int {
         var rid int
-        rid = Int(AppParam(id, name, 1))
+        rid = Int(EcosysParam(name))
         if rid == 0 && warn{
-            warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), name)
+            warning Sprintf(LangRes("@1role_not_set_eco_parameter", "en"), name)
         }
         return rid
     }
@@ -14,9 +14,8 @@ contract VotingValidatorInit {
     conditions {
         ContractConditions("MainCondition")
 
-        var appId roleId participant_id int
-        appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Basic"}).Columns("name,id").One("id"))
-        roleId = getAppRoleId(appId, "role_validator", true)
+        var roleId participant_id int
+        roleId = getRoleId("role_validator", true)
         participant_id = Int(DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, deleted:0, "role->id":roleId, "member->member_id":$KeyId}).One("id"))
         if (participant_id > 0){
             warning LangRes("@1candidate_already_validator", "en")  
