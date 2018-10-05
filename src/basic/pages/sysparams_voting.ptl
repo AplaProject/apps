@@ -1,6 +1,7 @@
 DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
 SetVar(tid, AppParam(Ecosystem:1, App:#application_id#, Name: voting_sysparams_template_id))
 DBFind(@1voting_templates,temps).WhereId(#tid#).Vars(template)
+SetVar(role_asbl,AppParam(App:#application_id#, Name:role_apla_consensus_asbl, Ecosystem:1))
 SetTitle($@1voting$)
 
 Div(content-wrapper){
@@ -134,10 +135,12 @@ Div(content-wrapper){
                 }
             }
             If(`#full_nodes#`!=""){
+                SetVar(nodes_count,0)
                 ArrayToSource(src_full_nodes,`#full_nodes#`)
                 Div(mt-lg form-group text-left text-muted){
                     Label(){Nodes list}
                     ForList(src_full_nodes){
+                        SetVar(nodes_count,#src_full_nodes_index#)
                         JsonToSource(src_node,`#value#`)
                         Div(list-group-item){
                             Label(){node #key#}
@@ -149,6 +152,29 @@ Div(content-wrapper){
                         }
                     }
                 }.Style(word-break: break-all;)
+
+                If(#role_id#==#role_asbl#){
+                    Div(panel panel-primary){
+                        Form(){
+                            Div(panel-heading text-center h3){
+                                Span(#param_name#, text-uppercase): Span(LangRes(delete) $value$, text-lowercase)
+                            }
+                            Input(Name:Duration, Type:hidden, Value:21)
+                            Div(panel-body text-left text-break){
+                                RadioGroup(Name:Index, Source:src_full_nodes, NameColumn: value, ValueColumn: key)
+                            }
+                            Div(panel-footer text-right){
+                                If(#nodes_count#>2){
+                                    Button(Body: $@1voting$, Class: btn btn-danger, Contract: @1VotingNodeRemove, Page: @1voting_list)
+                                }.Else{
+                                    Button(Body: $@1voting$, Class: btn btn-danger disabled)
+                                }
+                            }
+                        }
+                    }.Style(
+                        .text-break label,.text-break td {word-break: break-all;}
+                    )
+                }
             }
         }
     }.Else{
