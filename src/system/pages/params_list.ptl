@@ -1,3 +1,10 @@
+If(GetVar(Search)!=""){
+    SetVar(pager_where,"{ecosystem:#ecosystem_id#, {$or:[{name:{$like:#Search#}}]}}")
+}.Else{
+    SetVar(pager_where,"{ecosystem:#ecosystem_id#}").(Search,)
+}
+SetVar(this_page,@1params_list)
+
 Div(fullscreen){
     SetTitle($@1ecosystem_parameters$)
     AddToolButton(Title: $@1style_manage$, Page: @1params_edit, Icon: icon-picture, PageParams:"stylesheet=stylesheet")
@@ -6,32 +13,41 @@ Div(fullscreen){
         Span(Class: text-muted, Body: $@1sysparams_section$)
     }
 
-    DBFind(@1parameters, src_appparameters).Where({ecosystem:#ecosystem_id#}).Order("id").Custom(custom_actions){
-        LinkPage(Body: Em(Class: fa fa-edit), Class: text-primary h4, Page: @1params_edit, PageParams: "id=#id#")
-    }
+    Include(search_body)
 
-    Table(src_appparameters, "$@1name$=name,$@1value$=value,$@1conditions$=conditions,=custom_actions").Style(
-        tbody > tr:nth-of-type(odd) {
-            background-color: #fafbfc;
-        }
-        tbody > tr > td {
-            word-break: break-all;
-            font-weight: 400;
-            font-size: 13px;
-            color: #666;
-            border-top: 1px solid #eee;
-            vertical-align: middle;
-        }
-        tr > *:first-child {
-            padding-left:20px;
-        }
-        tr > *:last-child {
-            padding-right:30px;
-            text-align:right;
-            width: 100px;
-        }
-        thead {
-            background-color: #eee;
-        }
-    )
+    SetVar(pager_table, @1parameters).(pager_page, @1params_list).(pager_limit, 25)
+    Include(@1pager_header)
+    
+    DBFind(@1parameters, src_appparameters).Limit(#pager_limit#).Where(#pager_where#).Order({id:-1}).Offset(#pager_offset#).Custom(custom_actions){
+        LinkPage(Body: Em(Class: fa fa-edit), Class: text-primary h4, Page: @1params_edit, PageParams: "id=#id#")
+    }.Count(count)
+    If(#count# !=0){
+        Table(src_appparameters, "$@1name$=name,$@1value$=value,$@1conditions$=conditions,=custom_actions").Style(
+            tbody > tr:nth-of-type(odd) {
+                background-color: #fafbfc;
+            }
+            tbody > tr > td {
+                word-break: break-all;
+                font-weight: 400;
+                font-size: 13px;
+                color: #666;
+                border-top: 1px solid #eee;
+                vertical-align: middle;
+            }
+            tr > *:first-child {
+                padding-left:20px;
+            }
+            tr > *:last-child {
+                padding-right:30px;
+                text-align:right;
+                width: 100px;
+            }
+            thead {
+                background-color: #eee;
+            }
+        )
+        Include(@1pager)
+    }.Else{
+        Span(Class: h4 text-center,Body: "$@1ecosystem_parameters$ $@1not_founded$")
+    }
 }

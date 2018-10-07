@@ -1,3 +1,10 @@
+If(GetVar(Search)!=""){
+    SetVar(pager_where,"{ecosystem:#ecosystem_id#,deleted:0,{$or:[{name:{$like:#Search#}}]}}")
+}.Else{
+    SetVar(pager_where,"{ecosystem:#ecosystem_id#,deleted:0}").(Search,)
+}
+SetVar(this_page,@1apps_list)
+
 Div(fullscreen){
     If(#deleted# == deleted){
         SetTitle($@1apps_inactive$)
@@ -25,8 +32,13 @@ Div(fullscreen){
         AddToolButton(Title: $@1apps_inactive$, Page: @1apps_list, Icon: icon-close, PageParams:"deleted=deleted")
         AddToolButton(Title: $@1create$, Page: @1app_edit, Icon: icon-plus)
 
+        Include(search_body)
+
+        SetVar(pager_table, @1applications).(pager_page, @1apps_list).(pager_limit, 25)
+        Include(@1pager_header)
+
         DBFind(@1buffer_data, src_buffer).Columns("value->app_id,value->app_name,value->menu_name,value->menu_id,value->count_menu").Where({key: export, member_id:#key_id#,ecosystem:#ecosystem_id#}).Vars(buffer)
-        DBFind(@1applications, src_applications).Where({deleted:0,ecosystem:#ecosystem_id#}).Order("id").Custom(_export){
+        DBFind(@1applications, src_applications).Limit(#pager_limit#).Where(#pager_where#).Order({id:-1}).Offset(#pager_offset#).Custom(_export){
             Button(Class: btn btn-link, Contract: @1ExportNewApp, Params: "ApplicationId=#id#", Page: @1export_resources, Body: "$@1export$")
         }.Custom(custom_name){
             If(#id#==#buffer_value_app_id#){
@@ -36,9 +48,14 @@ Div(fullscreen){
             }  
         }.Custom(custom_actions){
             Button(Class: btn btn-link, Body: Em(Class: fa fa-edit), Page: @1app_edit, PageParams: "id=#id#")
+        }.Count(count)
+        
+        If(#count# !=0){
+            Table(Source: src_applications, Columns: "$@1name$=custom_name,$@1conditions$=conditions,$@1export$=_export,=custom_actions")
+            Include(@1pager)
+        }.Else{
+            Span(Class: h4 text-center,Body: "$@1applications$ $@1not_founded$")
         }
-
-        Table(Source: src_applications, Columns: "$@1name$=custom_name,$@1conditions$=conditions,$@1export$=_export,=custom_actions")
     }
 }.Style(
     tbody > tr:nth-of-type(odd) {
