@@ -1,6 +1,8 @@
 contract TaKeyCheck {
     data {
         public_key string
+        key_type string
+        current_role_id int
     }
 
     conditions {
@@ -10,42 +12,50 @@ contract TaKeyCheck {
 
         $public_key = Replace($public_key, " ", "")
         if HasPrefix($public_key, "04") {
-            $public_key = Substr($public_key, 2, Size($public_key)-2)
+            $public_key = Substr($public_key, 2, Size($public_key) - 2)
         }
         $userKey = PubToID($public_key)
 
         if $userKey == 0 {
             warning LangRes("@1public_key_invalid", "en")
         }
-        
-        if DBFind("wallets").Where({key_id_buyer: $userKey}).One("id") != nil {
+
+        if DBFind("wallets").Where({key_id_buyer: $userKey}).One("id") {
             warning LangRes("@1investor_added_already", "en")
         }
-
-        var appId snapSwapRoleId int snapSwapRoleName string
-        appId = Int(DBFind("@1applications").Where({ecosystem: $ecosystem_id, name: "Trade APL"}).One("id"))
-        if appId == 0 {
-            warning LangRes("@1app_not_found", "en")
+		
+        if DBFind("keys").Where({id: $userKey}).One("id") {
+            warning LangRes("@1key_added_already", "en")
         }
 
-        snapSwapRoleId = Int(AppParam(appId, "role_snapswap", $ecosystem_id))
+        var snapSwapRoleId int snapSwapRoleName string
+        snapSwapRoleId = Int(EcosysParam("role_snapswap"))
+        snapSwapRoleName = DBFind("@1roles").Where({"id": snapSwapRoleId}).One("role_name")
+
         if snapSwapRoleId == 0 {
             warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), "role_snapswap")
         }
-        
-        snapSwapRoleName = DBFind("@1roles").Where({"id": snapSwapRoleId}).One("role_name")
 
-        if DBFind("@1roles_participants").Where({"member->member_id": $key_id, "role->id": snapSwapRoleId}).One("id") == nil {
+        if !RoleAccess(snapSwapRoleId) {
             warning Sprintf(LangRes("x_role_only_action", "en"), snapSwapRoleName)
         }
     }
 
     action {
+        DBInsert("@1keys", {"id": $userKey, "pub": $public_key})
         var start_balance money
         start_balance = Money(1000000000000000)
+        @1TokensSend("Recipient_Account,Amount", IdToAddress($userKey), start_balance)
 
-        DBUpdate("@1keys", $key_id, {"-amount": start_balance})
-        DBInsert("@1keys", {"id": $userKey, "amount": start_balance})
-        DBInsert("wallets", {"key_id_buyer": $userKey, "created_at": $block_time})
+        if $key_type == "investor" {
+            DBInsert("@1wallets", {"key_id_buyer": $userKey, "created_at": $block_time})
+
+            // new user notification
+            var params map title page body string
+            title = LangRes("@1ta_hello_user_description", "en")
+            body = LangRes("@1ta_read_contract", "en")
+            page = "@1ta_buyer_contract"
+            @1NotificationsSend("member_id,sender,text_header,text_body,page_name,params_map,closure_type,current_role_id", $userKey, 2, title, body, page, params, 1, $current_role_id)          
+        }
     }
 }

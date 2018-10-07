@@ -1,117 +1,74 @@
 DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Trade APL"}).Columns("id").Vars(application)
 
-SetVar(this_page, ta_transfer_admin)
+SetVar(this_page, @1ta_transfer_admin).(back_page,@1ta_sales)
 SetVar(row,"row mt-sm").(col_left,"col-sm-4 mt-sm text-right").(col_right,"col-sm-8 text-left")
-SetVar(admin_role_id, AppParam(App:#application_id#, Name:role_sale_apl_admin, Ecosystem: #ecosystem_id#))
-SetVar(snapswap_role_id, AppParam(App:#application_id#, Name:role_snapswap, Ecosystem: #ecosystem_id#))
 
 AppParam(App:#application_id#, Name:ta_currency_type, Ecosystem: #ecosystem_id#, Source:currency_type)
-SetTitle($@1ta_transfer_admin$)
-Div(content-wrapper){
-    Div(row mt-sm){
-        Div(col-lg-8 col-lg-offset-2){
-            DBFind(sales, sales).Order({id:-1}).Count(sales_count).Custom(_btat){
-                If(#buyer_transferred_at#>0){
-                    DateTime(#buyer_transferred_at#, Format: YYYY-MM-DD HH:MI:SS)
-                }
-            }.Custom(_mrat){
-                If(#manager_rejected_at#>0){
-                    DateTime(#manager_rejected_at#, Format: YYYY-MM-DD HH:MI:SS)
-                }
-            }.Custom(_srat){
-                If(#seller_rejected_at#>0){
-                    DateTime(#seller_rejected_at#, Format: YYYY-MM-DD HH:MI:SS)
-                }
-            }.Custom(_stat){
-                If(#seller_transferred_at#>0){
-                    DateTime(#seller_transferred_at#, Format: YYYY-MM-DD HH:MI:SS)
-                }
-            }.Custom(_cat){
-                If(#created_at#>0){
-                    DateTime(#created_at#, Format: YYYY-MM-DD HH:MI:SS)
-                }
-            }.Custom(_apl){
-                Money(#amount_apl#)
-            }.Custom(_currency){
-                AppParam(App:#application_id#, Name:ta_currency_type, Ecosystem: #ecosystem_id#, Index: #currency_type#)
-            }
-            If(And(#snapswap_role_id#>0,#role_id#==#snapswap_role_id#)){
-                AddToolButton(Title:$@1ta_add_public_key$, Page: @1ta_key_check, Icon: icon-wallet).Popup(Header: $@1ta_add_public_key$, Width: "50")
-            }
 
-            If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
-                Form(panel panel-primary){
-                    DBFind(wallets, wallets).Where({key_id_buyer:{$neq:0}, key_id_signer:{$neq:0}, rejected_at:0}).Count(wallets_count).Custom(_name){
-                        Address(#key_id_buyer#)
-                    }
-                    Div(panel-body){
-                        Div(#row#){
-                            Div(#col_left#){
-                                $@1wallet$
-                            }
-                            If(#wallets_count#==0){
-                                Div(#col_right# mt-sm){
-                                    Span($@1wallets$ $@1not_founded$, text-warning)
-                                }
-                            }.Else{
-                                Div(#col_right#){
-                                    Select(Name:WalletId, Source:wallets, NameColumn: _name, ValueColumn: id)
-                                }
-                            }
-                        }
-                        Div(#row#){
-                            Div(#col_left#){
-                                $@1investment_amount$
-                            }
-                            Div(#col_right#){
-                                Div(row){
-                                    Div(col-sm-8){
-                                        Input(Name:Amount, Type:number)
-                                    }
-                                    Div(col-sm-4){
-                                        Select(Name:CurrencyType, Source:currency_type, NameColumn: name, ValueColumn: id)
-                                    }
-                                }
-                            }
-                        }
-                        Div(#row#){
-                            Div(#col_left#){
-                                $@1amount_apl$
-                            }
-                            Div(#col_right#){
-                                Input(Name:AmountApl, Type:number)
-                            }
-                        }
-                        Div(#row#){
-                            Div(#col_left#){
-                                $@1investor_funds_transfer_date$
-                            }
-                            Div(#col_right#){
-                                Div(row){
-                                    Div(col-sm-6){
-                                        Input(Name:TransferredDate, Type:date)
-                                    }
-                                    Div(col-sm-6){
-                                        Input(Name:TransferredTime, Type:time)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Div(panel-footer text-center){
-                        If(#wallets_count#==0){
-                            Button(Body: $@1send_to_check$, Class: btn btn-primary disabled, Page: #this_page#)
-                        }.Else{
-                            Button(Body: $@1send_to_check$, Class: btn btn-primary, Page: #this_page#, Contract: TaTransferAdmin)
-                        }
-                    }
+DBFind(wallets, wallets).Where({key_id_buyer:{$neq:0}, key_id_signer:{$neq:0}, rejected_at:0}).Count(wallets_count).Custom(_name){
+    Address(#key_id_buyer#)
+}
+Form(){
+    Div(#row#){
+        Div(#col_left#){
+            $@1wallet$
+        }
+        If(#wallets_count#==0){
+            Div(#col_right# mt-sm){
+                Span($@1wallets$ $@1not_founded$, text-warning)
+            }
+        }.Else{
+            Div(#col_right#){
+                Select(Name:WalletId, Source:wallets, NameColumn: _name, ValueColumn: id)
+            }
+        }
+    }
+    Div(#row#){
+        Div(#col_left#){
+            $@1investment_amount$
+        }
+        Div(#col_right#){
+            Div(row){
+                Div(col-sm-8){
+                    Input(Name:Amount, Type:number)
+                }
+                Div(col-sm-4){
+                    Select(Name:CurrencyType, Source:currency_type, NameColumn: name, ValueColumn: id)
                 }
             }
         }
     }
-    If(#sales_count#>0){
-        Div(table-responsive){
-            Table(sales,"$@1id$=id,$@1key_id_buyer$=key_id_buyer,$@1amount$=amount,$@1currency_type$=_currency,$@1buyer_transferred_at$=_btat,$@1amount_apl$=_apl,$@1key_id_sale_apl_admin$=key_id_sale_apl_admin,$@1key_id_sale_apl_manager$=key_id_sale_apl_manager,$@1manager_reject_comment$=manager_reject_comment,$@1manager_rejected_at$=_mrat,$@1key_id_seller$=key_id_seller,$@1seller_reject_comment$=seller_reject_comment,$@1seller_rejected_at$=_srat,$@1seller_transferred_at$=_stat,$@1created_at$=_cat")
+    Div(#row#){
+        Div(#col_left#){
+            $@1amount_apl$
+        }
+        Div(#col_right#){
+            Input(Name:AmountApl, Type:number)
+        }
+    }
+    Div(#row#){
+        Div(#col_left#){
+            $@1investor_funds_transfer_date$
+        }
+        Div(#col_right#){
+            Div(row){
+                Div(col-sm-6){
+                    Input(Name:TransferredDate, Type:date)
+                }
+                Div(col-sm-6){
+                    Input(Name:TransferredTime, Type:time)
+                }
+            }
+        }
+    }
+    Div(row mt){
+        Div(col-md-12 text-right){
+            Button(Body: LangRes(@1back), Class: btn btn-default pull-left, Page: #back_page#)
+            If(#wallets_count#==0){
+                Button(Body: $@1send_to_check$, Class: btn btn-primary disabled, Page: #this_page#)
+            }.Else{
+                Button(Body: $@1send_to_check$, Class: btn btn-primary, Page: #back_page#, Contract: TaTransferAdmin).Alert(Text: "$@1want_add_investor$", ConfirmButton: "$@1yes$", CancelButton: "$@1no$", Icon: question)
+            }
         }
     }
 }

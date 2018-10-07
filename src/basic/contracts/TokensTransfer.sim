@@ -4,10 +4,35 @@ contract TokensTransfer {
         Sender_AccountId int
         Recipient_AccountId int
         Comment string "optional"
-        //Signature string "optional hidden"
+    }
+    func getPermission() bool {
+        var array_permissions array result i int prevContract string
+        array_permissions = ["@1TokensSend", "@1TokensRefund"]
+
+        prevContract = $stack[0]
+        if Len($stack) > 2 {
+            prevContract = $stack[Len($stack) - 2]
+        }
+        while i < Len(array_permissions) {
+            var contract_name string
+            contract_name = array_permissions[i]
+            if contract_name==prevContract {
+                result = 1
+            }
+            i = i + 1
+        }
+
+        if result == 0 {
+            error LangRes("@1tokens_transfer_cannot_be_made", "en")
+        }
+        return 0
     }
 
+
     conditions {
+        //getting permission to run
+        getPermission()
+
         //check amount
         if $Amount == 0 {
             error LangRes("@1amount_zero", "en")
