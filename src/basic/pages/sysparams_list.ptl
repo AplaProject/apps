@@ -9,22 +9,13 @@ SetVar(this_page,@1sysparams_list)
 
 SetTitle($@1platform_parameters$)
 
-Div(){
+Div(fullscreen){
     Div(breadcrumb){
         Div(Class:text-muted, Body: $@1platform_params_desc$)
     }
-    Form(input-group){
-        Div(input-group-addon){
-            LangRes(@1name)
-        }
-        Input(Name: Search, Value: #Search#)
-        Div(input-group-btn){
-            Button(Class: btn btn-primary fa fa-search, Page: #this_page#, PageParams: "Search=Val(Search)")
-            If(GetVar(Search)!=""){
-                Button(Class: btn btn-default fa fa-close, Page: #this_page#)
-            }
-        }
-    }
+    
+    Include(search_body)
+
     SetVar(pager_table, @1system_parameters).(pager_page, #this_page#).(pager_limit, 25)
     Include(@1pager_header)
     DBFind(#pager_table#, src_sysparams).Where(#pager_where#).Order(id).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_actions){
@@ -39,15 +30,19 @@ Div(){
         Div(){
             #name#
         }.Style(min-width:200px;)
-    }
+    }.Count(count)
     DBFind(@1roles_participants).Where({ecosystem:#ecosystem_id#, "member->member_id":#key_id#, "role->id":#role_validator#, deleted:0}).Columns("id").Vars(validator)
     If(#validator_id#>0){
         AddToolButton(Title: $@1sysparams_validator_resign$, Icon: icon-pin, Page: @1sysparams_validator_resign)
     }
-    Div(table-responsive){
-        Table(src_sysparams,"$@1name$=_name,$@1value$=value,=_actions")
+    If(#count# != 0){
+        Div(table-responsive){
+            Table(src_sysparams,"$@1name$=_name,$@1value$=value,=_actions")
+        }
+        Include(@1pager)
+    }.Else{
+        Span(Class: h4 text-center,Body: "$@1platform_parameters$ $@1not_founded$")
     }
-    Include(@1pager)
 }.Style(
     tbody > tr:nth-of-type(odd) {
         background-color: #fafbfc;
