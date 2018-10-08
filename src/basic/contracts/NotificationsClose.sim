@@ -24,7 +24,7 @@ contract NotificationsClose {
 
 
     conditions {
-        $notify = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$notific_id}).Columns("id,date_start_processing,processing_info->member_id,closed,notification->type,recipient->member_id").Row()
+        $notify = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$notific_id}).Columns("id,date_start_processing,processing_info->member_id,closed,notification->type,recipient->member_id,recipient->role_id").Row()
         if !$notify {
             warning LangRes("@1notification_not_found", "en")
         }
@@ -68,5 +68,11 @@ contract NotificationsClose {
         m["date_closed"] = BlockTime()
         m["closed"] = 1
         DBUpdate("@1notifications", $notific_id, m)
+
+        if $notify["notification.type"] == 1 {
+            UpdateNotifications($ecosystem_id, Int($notify["recipient.member_id"]))
+        } else {
+            UpdateRolesNotifications($ecosystem_id, Int($notify["recipient.role_id"]))
+        }
     }
 }
