@@ -1,61 +1,53 @@
+SetVar(this_page, @1app_langres)
 If(GetVar(Search)!=""){
     SetVar(pager_where,"{ecosystem:#ecosystem_id#, {$or:[{name:{$like:#Search#}}, {res:{$like:#Search#}}]}}")
 }.Else{
     SetVar(pager_where,"{ecosystem:#ecosystem_id#}").(Search,)
 }
-SetVar(this_page,@1app_langres)
 
 Div(fullscreen){
     SetTitle("$@1lang_res$")
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: "$@1application_lang_res$")
+    }
     AddToolButton(Title: "$@1create$", Page: @1langres_add, Icon: icon-plus)
-    DBFind(@1languages, src_languages).Where({ecosystem:#ecosystem_id#}).Vars(check)
-    If(#check_id# > 0){
-        Div(breadcrumb){
-            Span(Class: text-muted, Body: "$@1application_lang_res$")
-        }
 
-        Include(@1search_body)
+    Include(@1search_body)
+    SetVar(pager_table, @1languages).(pager_page, @1app_langres).(pager_limit, 50)
+    Include(@1pager_header)
 
-        SetVar(pager_table, @1languages).(pager_page, @1app_langres).(pager_limit, 50)
-        Include(@1pager_header)
+    DBFind(@1languages, src_languages).Limit(#pager_limit#).Where(#pager_where#).Order({id:-1}).Offset(#pager_offset#).Custom(lang_name){
+        LinkPage(Page: @1langres_edit, Class: text-primary h5, Body: "#name#", PageParams: "lang_id=#id#")
+    }.Count(count)
 
-        DBFind(@1languages, src_languages).Limit(#pager_limit#).Where(#pager_where#).Order({id:-1}).Offset(#pager_offset#).Custom(lang_name){
-            LinkPage(Page: @1langres_edit, Class: text-primary h5, Body: "#name#", PageParams: "lang_id=#id#")
-        }.Count(count)
-
-        If(#count# !=0){
+    If(#count# != 0){
+        Div(table-responsive){
             Table(src_languages, "$@1name$=lang_name,$@1value$=res")  
-            Include(@1pager)    
-        }.Else{
-            Span(Class: h4 text-center,Body: "$@1lang_res$ $@1not_founded$")
-        }
+        }.Style(
+            tbody > tr:nth-of-type(odd) {
+                background-color: #fafbfc;
+            }
+            tbody > tr > td {
+                word-break: break-all;
+                font-weight: 400;
+                font-size: 13px;
+                color: #666;
+                border-top: 1px solid #eee;
+                vertical-align: middle;
+            }
+            tr > *:first-child {
+                padding-left:20px;
+            }
+            tr > *:last-child {
+                padding-right:30px;
+                text-align:left;
+            }
+            thead {
+                background-color: #eee;
+            }
+        )
     }.Else{
-        Div(breadcrumb){
-            Span(Class: text-muted, Body: "$@1no_lang_res$")
-        }
+        Span(Class: h4 text-center, Body: "$@1lang_res$ $@1not_founded$")
     }
-}.Style(
-    tbody > tr:nth-of-type(odd) {
-        background-color: #fafbfc;
-    }
-    tbody > tr > td {
-        word-break: break-all;
-        font-weight: 400;
-        font-size: 13px;
-        color: #666;
-        border-top: 1px solid #eee;
-        vertical-align: middle;
-    }
-    tr > *:first-child {
-        width: 180px;
-        padding-left:20px;
-    }
-    tr > *:last-child {
-        padding-right:15px;
-        padding-left:80px;
-        text-align:left;
-    }
-    thead {
-        background-color: #eee;
-    }
-)
+}
+Include(@1pager)

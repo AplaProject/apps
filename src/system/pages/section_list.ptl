@@ -1,16 +1,17 @@
+SetVar(this_page, @1section_list)
 If(GetVar(Search)!=""){
     SetVar(pager_where,"{ecosystem:#ecosystem_id#, {$or:[{title:{$like:#Search#}}]}}")
 }.Else{
     SetVar(pager_where,"{ecosystem:#ecosystem_id#}").(Search,)
 }
-SetVar(this_page,@1section_list)
 
 Div(fullscreen){
     SetTitle($@1sections$)
-    AddToolButton(Title: $@1create$, Page: @1section_add, Icon: icon-plus)
     Div(breadcrumb){
         Span(Class: text-muted, Body: $@1sections_manage_page$)
     }
+    AddToolButton(Title: $@1create$, Page: @1section_add, Icon: icon-plus)
+
     Include(@1search_body)
     SetVar(pager_table, @1sections).(pager_page, @1section_list).(pager_limit, 25)
     Include(@1pager_header)
@@ -29,36 +30,40 @@ Div(fullscreen){
         Button(Body: Em(Class: fa fa-arrow-down), Class: btn btn-link, Page: @1section_list, Contract: @1SectionLevelDown, Params: "id=#id#")
         Button(Body: Em(Class: fa fa-arrow-up), Class: btn btn-link, Page: @1section_list, Contract: @1SectionLevelUp, Params: "id=#id#")
     }.Custom(custom_action){
-        Span(LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: @1section_access, PageParams: "id=#id#")).Style(margin-right: 20px;)
-        Span(LinkPage(Body: Em(Class: fa fa-edit), Class: text-primary h4, Page: @1section_edit, PageParams: "id=#id#"))
+        LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: @1section_access, PageParams: "id=#id#")
+    }.Custom(_title){
+        LinkPage(Page: @1section_edit, Class: text-primary h5, Body: "#title#", PageParams: "id=#id#")
     }.Count(count)
 
-    If(#count# == 0){
-        Span(Class: h4 text-center,Body: "$@1sections$ $@1not_founded$")
+    If(#count# != 0){
+        Div(table-responsive){
+            Table(src_sections, "$@1title$=_title,$@1link$=urlname,$@1section_page$=page,$@1status$=custom_status,=custom_order,=custom_action")
+        }.Style(
+            tbody > tr:nth-of-type(odd) {
+                background-color: #fafbfc;
+            }
+            tbody > tr > td {
+                word-break: break-all;
+                font-weight: 400;
+                font-size: 13px;
+                color: #666;
+                border-top: 1px solid #eee;
+                vertical-align: middle;
+            }
+            tr > *:first-child {
+                padding-left:20px;
+            }
+            tr > *:last-child {
+                padding-right:30px;
+                text-align:right;
+                width: 100px;
+            }
+            thead {
+                background-color: #eee;
+            }
+        )
     }.Else{
-        Table(src_sections, "$@1name$=name,$@1title$=title,$@1link$=urlname,$@1section_page$=page,$@1status$=custom_status,=custom_order,=custom_action").Style(
-        tbody > tr:nth-of-type(odd) {
-            background-color: #fafbfc; 
-        }
-        tbody > tr > td {
-            word-break: break-all;
-            font-weight: 400;
-            font-size: 13px;
-            color: #666;
-            border-top: 1px solid #eee;
-            vertical-align: middle;
-        }
-        tr  > *:first-child {
-            padding-left:20px;
-        }
-        tr  > *:last-child {
-            padding-right:30px;
-            text-align:right; 
-            width: 100px;
-        }
-        thead {
-            background-color: #eee;
-        })
-        Include(@1pager)
+        Span(Class: h4 text-center, Body: "$@1sections$ $@1not_founded$")
     }
 }
+Include(@1pager)

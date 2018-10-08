@@ -1,83 +1,65 @@
+SetVar(this_page, @1apps_list)
 If(GetVar(Search)!=""){
     SetVar(pager_where,"{ecosystem:#ecosystem_id#,deleted:0,{$or:[{name:{$like:#Search#}}]}}")
 }.Else{
     SetVar(pager_where,"{ecosystem:#ecosystem_id#,deleted:0}").(Search,)
 }
-SetVar(this_page,@1apps_list)
 
 Div(fullscreen){
-    If(#deleted# == deleted){
-        SetTitle($@1apps_inactive$)
-        Div(breadcrumb){
-            LinkPage("$@1applications$", @1apps_list)
-            Span(/).Style(margin-right: 10px; margin-left: 10px;)
-            Span(Class: text-muted, Body: "$@1apps_inactive$")
-        }
-        DBFind(@1applications, src_applications).Where({deleted:1,ecosystem:#ecosystem_id#}).Order("id").Count(countvar).Custom(_actions){
-            Button(Class: btn btn-link, Page: @1apps_list, Contract: @1DelApplication, Params: "ApplicationId=#id#", Body: "$@1restore$")
-        }
-        If(#countvar# > 0) {
-            Table(Source: src_applications, Columns: "$@1name$=name,$@1conditions$=conditions,=_actions")
+    SetTitle($@1applications$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1apps_list$)
+    }
+    AddToolButton(Title: $@1import$, Page: @1import_upload, Icon: icon-cloud-upload)
+    AddToolButton(Title: $@1apps_inactive$, Page: @1apps_list_inactive, Icon: icon-close)
+    AddToolButton(Title: $@1create$, Page: @1app_edit, Icon: icon-plus)
+
+    Include(@1search_body)
+    SetVar(pager_table, @1applications).(pager_page, @1apps_list).(pager_limit, 25)
+    Include(@1pager_header)
+
+    DBFind(@1buffer_data, src_buffer).Columns("value->app_id,value->app_name,value->menu_name,value->menu_id,value->count_menu").Where({key: export, member_id:#key_id#,ecosystem:#ecosystem_id#}).Vars(buffer)
+    DBFind(@1applications, src_applications).Limit(#pager_limit#).Where(#pager_where#).Order(id).Offset(#pager_offset#).Custom(_export){
+        Button(Class: btn btn-link, Contract: @1ExportNewApp, Params: "ApplicationId=#id#", Page: @1export_resources, Body: "$@1export$")
+    }.Custom(custom_name){
+        If(#id#==#buffer_value_app_id#){
+            Button(Class: btn btn-link, Page: @1app_contracts, Body: #name#)
         }.Else{
-            Div(content-wrapper){
-                Span(Class: text-muted, Body: $@1inactive_warning$)
-            }
-        }
-    }.Else{
-        SetTitle($@1applications$)
-        Div(breadcrumb){
-            Span(Class: text-muted, Body: $@1apps_list$)
-        }
-        AddToolButton(Title: $@1import$, Page: @1import_upload, Icon: icon-cloud-upload)
-        AddToolButton(Title: $@1apps_inactive$, Page: @1apps_list, Icon: icon-close, PageParams:"deleted=deleted")
-        AddToolButton(Title: $@1create$, Page: @1app_edit, Icon: icon-plus)
-
-        Include(@1search_body)
-
-        SetVar(pager_table, @1applications).(pager_page, @1apps_list).(pager_limit, 25)
-        Include(@1pager_header)
-
-        DBFind(@1buffer_data, src_buffer).Columns("value->app_id,value->app_name,value->menu_name,value->menu_id,value->count_menu").Where({key: export, member_id:#key_id#,ecosystem:#ecosystem_id#}).Vars(buffer)
-        DBFind(@1applications, src_applications).Limit(#pager_limit#).Where(#pager_where#).Order({id:-1}).Offset(#pager_offset#).Custom(_export){
-            Button(Class: btn btn-link, Contract: @1ExportNewApp, Params: "ApplicationId=#id#", Page: @1export_resources, Body: "$@1export$")
-        }.Custom(custom_name){
-            If(#id#==#buffer_value_app_id#){
-                Button(Class: btn btn-link, Page: @1app_contracts, Body: #name#)
-            }.Else{
-                Button(Class: btn btn-link, Contract: @1SelectApp, Params: "ApplicationId=#id#", Page: @1app_contracts, Body: #name#)
-            }  
-        }.Custom(custom_actions){
-            Button(Class: btn btn-link, Body: Em(Class: fa fa-edit), Page: @1app_edit, PageParams: "id=#id#")
-        }.Count(count)
-        
-        If(#count# !=0){
+            Button(Class: btn btn-link, Contract: @1SelectApp, Params: "ApplicationId=#id#", Page: @1app_contracts, Body: #name#)
+        }  
+    }.Custom(custom_actions){
+        LinkPage(Class: text-primary h4, Body: Em(Class: fa fa-cogs), Page: @1app_edit, PageParams: "id=#id#")
+    }.Count(count)
+    
+    If(#count# != 0){
+        Div(table-responsive){
             Table(Source: src_applications, Columns: "$@1name$=custom_name,$@1conditions$=conditions,$@1export$=_export,=custom_actions")
-            Include(@1pager)
-        }.Else{
-            Span(Class: h4 text-center,Body: "$@1applications$ $@1not_founded$")
-        }
+        }.Style(
+            tbody > tr:nth-of-type(odd) {
+                background-color: #fafbfc;
+            }
+            tbody > tr > td {
+                word-break: break-all;
+                font-weight: 400;
+                font-size: 13px;
+                color: #666;
+                border-top: 1px solid #eee;
+                vertical-align: middle;
+            }
+            tr > *:first-child {
+                padding-left:20px;
+            }
+            tr > *:last-child {
+                padding-right:30px;
+                text-align:right;
+                width: 100px;
+            }
+            thead {
+                background-color: #eee;
+            }
+        )
+    }.Else{
+        Span(Class: h4 text-center, Body: "$@1applications$ $@1not_founded$")
     }
-}.Style(
-    tbody > tr:nth-of-type(odd) {
-        background-color: #fafbfc;
-    }
-    tbody > tr > td {
-        word-break: break-all;
-        font-weight: 400;
-        font-size: 13px;
-        color: #666;
-        border-top: 1px solid #eee;
-        vertical-align: middle;
-    }
-    tr > *:first-child {
-        padding-left:20px;
-    }
-    tr > *:last-child {
-        padding-right:15px;
-        text-align:right;
-        width: 100px;
-    }
-    thead {
-        background-color: #eee;
-    }
-)
+}
+ Include(@1pager)
