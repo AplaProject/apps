@@ -5,7 +5,7 @@ contract TokensTransfer {
         Recipient_AccountId int
         Comment string "optional"
     }
-    func getPermission() bool {
+    func getPermission() {
         var array_permissions array result i int prevContract string
         array_permissions = ["@1TokensSend", "@1TokensRefund"]
 
@@ -25,9 +25,7 @@ contract TokensTransfer {
         if result == 0 {
             error LangRes("@1tokens_transfer_cannot_be_made", "en")
         }
-        return 0
     }
-
 
     conditions {
         //getting permission to run
@@ -41,26 +39,28 @@ contract TokensTransfer {
             error LangRes("@1amount_less_zero", "en")
         }
 
+        var sender_map map
+        sender_map = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Sender_AccountId}).Row()
+        var recipient_map map
+        recipient_map = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Recipient_AccountId}).Row()
+
         //check the sender
-        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Sender_AccountId}).One("id") {
+        if !sender_map {
             error Sprintf(LangRes("@1sender_x_invalid", "en"), $Sender_AccountId)
         }
-
-        //check balance
-        $sender_balance = Money(DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Sender_AccountId}).One("amount"))
-        if $Amount > $sender_balance {
+        if Money(sender_map["amount"]) < $Amount {
             error LangRes("@1amount_less_than_needed", "en")
         }
 
         //check the recipient
-        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Recipient_AccountId}).One("id") {
+        if !recipient_map {
             error Sprintf(LangRes("@1recipient_x_invalid", "en"), $Recipient_AccountId)
         }
     }
 
     action {
-        DBUpdate("@1keys", $Sender_AccountId, {"-amount":$Amount})
-        DBUpdate("@1keys", $Recipient_AccountId, {"+amount":$Amount})
+        DBUpdate("@1keys", $Sender_AccountId, {"-amount": $Amount})
+        DBUpdate("@1keys", $Recipient_AccountId, {"+amount": $Amount})
         var m map
         m["sender_id"] = $Sender_AccountId
         m["recipient_id"] = $Recipient_AccountId
