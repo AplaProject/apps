@@ -1,9 +1,9 @@
 SetVar(this_page,@1notifications_roles_send).(back_page,@1notifications_list)
-If(GetVar(TargetEcosystem)==""){
-    SetVar(TargetEcosystem,#ecosystem_id#)
+If(GetVar(SelectedId)==""){
+    SetVar(SelectedId,#ecosystem_id#)
 }
 DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Basic"}).Vars(application)
-DBFind(@1ecosystems, ecosystems).Columns("id,name").Count(eco_count)
+DBFind(@1ecosystems).Columns("id,name").WhereId(#SelectedId#).Vars(eco)
 Form(){
     Div(list-group-item){
         Div(row){
@@ -13,7 +13,8 @@ Form(){
                 }
             }
             Div(col-md-9 text-left){
-                Select(Name: eco_id, Source: ecosystems, NameColumn: name, ValueColumn: id, Value: #TargetEcosystem#)
+                Input(Name: eco_id, Type:hidden, Value: #eco_id#)
+                Button(Body: #eco_name#, Page: @1select, PageParams: "Type=ecosystem,back_page=#this_page#,Header=$@1create$", Class:btn btn-default).Popup(Header: $@1ecosystem$, Width: "50")
             }
         }
     }
@@ -25,12 +26,15 @@ Form(){
                 }
             }
             Div(col-md-9 mb-sm text-left){
-                DBFind(@1roles,source_roles).Where({ecosystem:#TargetEcosystem#, deleted:0}).Columns("id,role_name")
-                Select(Name: rid, Source: source_roles, NameColumn: role_name, ValueColumn: id)
-            }.Hide(eco_id!=#TargetEcosystem#)
-            Div(col-md-9 mb-sm text-left){
-                Button(Class: btn btn-primary fa fa-recycle, Page: #this_page#, Params: "TargetEcosystem=Val(eco_id)")
-            }.Show(eco_id!=#TargetEcosystem#)
+                DBFind(@1roles,source_roles).Where({ecosystem:#SelectedId#, deleted:0}).Columns("id,role_name").Count(roles_count)
+                If(#roles_count#>0){
+                    Select(Name: rid, Source: source_roles, NameColumn: role_name, ValueColumn: id)
+                }.Else{
+                    Div(mt-sm){
+                        $@1roles$ $@1not_founded$
+                    }
+                }
+            }
         }
         Div(row){
             Div(col-md-3 mt-sm text-right){
