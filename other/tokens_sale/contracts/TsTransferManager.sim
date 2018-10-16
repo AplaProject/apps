@@ -1,4 +1,4 @@
-contract TaTransferSeller {
+contract TsTransferManager {
     data {
         SaleId int
         NotificId int
@@ -20,25 +20,28 @@ contract TaTransferSeller {
         if $appId == 0{
             warning LangRes("@1app_not_found", "en")
         }
-        $currentRole = getRoleId("role_seller_apl")
+        $roleAplSeller = getRoleId("role_seller_apl")
+        $currentRole = getRoleId("role_sale_apl_manager")
         if !RoleAccess($currentRole){
             warning "this action allowed only for role id #" + $currentRole
         }
 
         $sale = DBFind("sales").Where({id:$SaleId}).Row()
         if !$sale{
-            warning "sale not found"
+            warning "Sale not found"
         }
     }
 
     action {
         @1NotificationsClose("notific_id", $NotificId)
-        var s transfer map
-        s["key_id_seller"] = $key_id
-        s["seller_transferred_at"] = $time
-        s["status"] = $FINISHED
-        DBUpdate("sales", Int($sale["id"]), s)
+        DBUpdate("sales", Int($sale["id"]), {key_id_sale_apl_manager:$key_id, status:$WAITING_SELLER})
 
-        @1TokensSend("Recipient_Account,Amount", $sale["key_id_buyer"], Money($sale["amount_apl"]))
+        // role Apla seller notification
+        var params map title page string
+        title = Sprintf("Transfer sale id %v", $sale["id"])
+        params["sale_id"] = $sale["id"]
+        page = "ts_transfer_seller"
+        @1NotificationsSend("rid,sender,text_header,page_name,params_map,closure_type,current_role_id", $roleAplSeller, 2, title, page, params, 1, $currentRole)
+
     }
 }
