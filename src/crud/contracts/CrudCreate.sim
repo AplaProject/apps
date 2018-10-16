@@ -180,7 +180,7 @@ contract CrudCreate {
         this =  names["pageRecords"]
         contractDelete =  names["contractDelete"]
         var body string
-        body = `DBFind(applications).Columns("id").Where("name='`+$appName+`' AND deleted=0").Vars(application)
+        body = `DBFind(applications).Columns("id").Where({name:"`+$appName+`", deleted:0}).Vars(application)
         SetTitle($`+this+`$)
         SetVar(page_name,`+this+`)
         Div(content-wrapper){
@@ -209,7 +209,7 @@ contract CrudCreate {
         var body pageRecords contractEdit string i int
         pageRecords =  names["pageRecords"]
         contractEdit =  names["contractEdit"]
-        body = `DBFind(applications).Columns("id").Where("name='`+$appName+`' AND deleted=0").Vars(application)
+        body = `DBFind(applications).Columns("id").Where({name:"`+$appName+`", deleted:0}).Vars(application)
         SetVar(title,$`+$prefix+`create$).(btn_title,$`+$prefix+`create$)`
         while i < $lenCols{
             body = body + `.(item_`+$cols[i]+`,)`
@@ -217,7 +217,7 @@ contract CrudCreate {
         }
         body = body+`
         If(GetVar(`+$ID+`)){
-            DBFind(`+$tableName+`).Where("id=#`+$ID+`#").Vars(item)
+            DBFind(`+$tableName+`).Where({id:#`+$ID+`#}).Vars(item)
             SetVar(title,$`+$prefix+`edit$ ##`+$ID+`#).(btn_title,$`+$prefix+`save$)
         }
         SetTitle(#title#)
@@ -267,9 +267,9 @@ contract CrudCreate {
         var body pageRecords string i int
         pageRecords = names["pageRecords"]
         body = body+`
-        DBFind(applications).Columns("id").Where("name='`+$appName+`' AND deleted=0").Vars(application)
+        DBFind(applications).Columns("id").Where({name:"`+$appName+`", deleted:0}).Vars(application)
         If(GetVar(`+$ID+`)){
-            DBFind(`+$tableName+`).Where("id=#`+$ID+`#").Vars(item)
+            DBFind(`+$tableName+`).Where({id:#`+$ID+`#}).Vars(item)
         }
         SetVar(title,$`+$prefix+`view$ ##`+$ID+`#)
         SetTitle(#title#)
@@ -334,12 +334,12 @@ contract CrudCreate {
                 `+ $ID +` int
             }
             conditions {
-                if !DBFind("`+$tableName+`").Where("id=? and `+dColName+`=0", $`+$ID+`).One("id") {
+                if !DBFind("`+$tableName+`").Where({id:$`+$ID+`, `+dColName+`:0"}).One("id") {
                     warning "Record not found"
                 }
             }
             action {
-                DBUpdate("`+$tableName+`", $`+ $ID +`, "`+dColName+`", 1)
+                DBUpdate("`+$tableName+`", $`+ $ID +`, {`+dColName+`:1})
             }
         }`
         return body
@@ -361,16 +361,16 @@ contract CrudCreate {
             conditions {
                 $`+$ID+` = Int($`+$ID+`)
                 if $`+$ID+` > 0{
-                    if !DBFind("`+$tableName+`").Where("id=?", $`+$ID+`).One("id") {
+                    if !DBFind("`+$tableName+`").Where({id:$`+$ID+`}).One("id") {
                         warning "Record not found"
                     }
                 }
             }
             action {
                 if $`+$ID+` > 0{
-                    DBUpdate("`+$tableName+`", $`+$ID+`, "`+$csvCols+`",`+globJoin($cols)+`)
+                    DBUpdate("`+$tableName+`", $`+$ID+`, {`+$csvCols+`:`+globJoin($cols)+`})
                 }else{
-                    DBInsert("`+$tableName+`", "`+$csvCols+`",`+globJoin($cols)+`)
+                    DBInsert("`+$tableName+`", {`+$csvCols+`:`+globJoin($cols)+`})
                 }
             }
         }`
@@ -455,15 +455,15 @@ contract CrudCreate {
     }
 
     conditions {
-        $table = DBFind("tables").Columns("columns").Where("name=?", $tableName).Row()
+        $table = DBFind("tables").Columns("columns").Where({name:$tableName}).Row()
         if !$table{
             warning "Table not found"
         }
         $lowerFirst = false // first letter for input global variables
         $ID = toCamel("id", $lowerFirst)
 
-        $appId = Int(DBFind("tables").Where("name=?", $tableName).Columns("app_id").One("app_id"))
-        $appName = DBFind("applications").Where("id=?", $appId).Columns("name").One("name")
+        $appId = Int(DBFind("tables").Where({name:$tableName}).Columns("app_id").One("app_id"))
+        $appName = DBFind("applications").Where({id:$appId}).Columns("name").One("name")
         if !$appName {
             warning "Application not found"
         }
