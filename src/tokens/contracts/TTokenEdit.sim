@@ -1,28 +1,75 @@
 contract TTokenEdit {
     data {
         Id string "optional"
-        Type int
         Title string
-        Amount string
-        Limited int
-        Ecosystem int
+        Amount money
+        LimitedDate string "optional"
+        LimitedTime string "optional"
         TypeWithdraw int
+        TypeEmission int
+    }
+    func trimZeroTime(s string) string {
+        if Contains(s, "T00:00:00Z") {
+            s = s Replace(s, "T00:00:00Z", "")
+        }
+        return s
+    }
+
+    func dateAddTime(d, t string) string {
+        var dt string
+        if Size(t) == 5 {
+            dt = Sprintf("%v %v:00", trimZeroTime(d), t)
+        }
+        return dt
+    }
+
+    func fixDatetimes() int{
+        var lim int
+        lim = UnixDateTime(dateAddTime($LimitedDate, $LimitedTime))
+
+        if lim == 0 { // invalid datetimes
+            var errs array
+            if Size($LimitedDate) < 10 {
+                errs = Append(errs, "date")
+            }
+            if Size($LimitedTime) < 5 {
+                errs = Append(errs, "time")
+            }
+            error Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), Join(errs, ", "))
+        }
+        if lim < $block_time{
+            error "Date invalid"
+        }
+        return lim
     }
     conditions {
+        MainCondition()
         $Id = Int($Id)
         if $Id > 0{
-            if !DBFind("tokens").Where({id:$Id}).One("id") {
+            if !DBFind("@1tokens").Where({id:$Id}).One("id") {
                 warning "Record not found"
             }
         }
+        if Size($Title) == 0{
+            error Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "title")
+        }
+        if $Amount <= 0{
+            error Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "amount")
+        }
+        if Contains($LimitedDate, "-") {
+            $limited = fixDatetimes()
+        }else{
+            $limited = 0
+        }
     }
     action {
+        TODO:Эмиссия производится на кошелек основателя экосистемы
         var m map
-        m = {type:$Type, title:$Title, amount:$Amount, limited:$Limited, ecosystem:$Ecosystem, type_withdraw:$TypeWithdraw}
+        m = {type_emission:$TypeEmission, title:$Title, amount:$Amount, limited:$limited, ecosystem:$ecosystem_id, type_withdraw:$TypeWithdraw}
         if $Id > 0{
-            DBUpdate("tokens", $Id, m)
+            DBUpdate("@1tokens", $Id, m)
         }else{
-            DBInsert("tokens", m)
+            DBInsert("@1tokens", m)
         }
     }
 }
