@@ -5,13 +5,13 @@ contract CrudCreate {
     func appendAll(a array, b ...)array{
         var i lenb int
         lenb = Len(b)
-        while i<lenb{
+        while i < lenb{
             if GetType(b[i]) == "[]interface {}"{
                 a = appendAll(a, b[i]...)
             }else{
                 a = Append(a, b[i])
             }
-            i=i+1
+            i = i + 1
         }
         return a
     }
@@ -28,7 +28,7 @@ contract CrudCreate {
             }else{
                 parts[i] = toCap(parts[i])
             }
-            i=i+1
+            i = i + 1
         }
         return Join(parts, "")
     }
@@ -73,17 +73,17 @@ contract CrudCreate {
     }
     func getColsTypes()array{
         var a array i int
-        while i<$lenCols{
+        while i < $lenCols{
             a[i] = GetColumnType($tableName, $cols[i])
-            i=i+1
+            i = i + 1
         }
         return a
     }
     func getCamelCols()array{
         var a array i int
-        while i<$lenCols{
+        while i < $lenCols{
             a[i] = toCamel($cols[i], $lowerFirst)
-            i=i+1
+            i = i + 1
         }
         return a
     }
@@ -91,16 +91,16 @@ contract CrudCreate {
         // Println("globJoin")
         var body array i lenCols int
         lenCols = Len(cols)
-        while i<lenCols{
-            body = Append(body, "$"+toCamel(cols[i], $lowerFirst))
-            i=i+1
+        while i < lenCols{
+            body = Append(body, "$" + toCamel(cols[i], $lowerFirst))
+            i = i + 1
         }
         return Join(body, ",")
     }
     func trim_s(s string)string{
         // Println("trim_s")
-        if Substr(s, Size(s)-1, 1) == "s"{
-            return Substr(s, 0, Size(s)-1)
+        if Substr(s, Size(s) - 1, 1) == "s"{
+            return Substr(s, 0, Size(s) - 1)
         }
         return s
     }
@@ -111,7 +111,7 @@ contract CrudCreate {
         lenTemp = Len(temp)
         while i < lenTemp{
             temp[i] = Substr(temp[i], 0, 1)
-            i=i+1
+            i = i + 1
         }
         return ToLower(Join(temp, "")) + "_"
     }
@@ -122,7 +122,7 @@ contract CrudCreate {
         while i < keysLen {
             key = keys[i]
             values = Append(values, m[key])
-            i=i+1
+            i = i + 1
         }
         return values
     }
@@ -130,7 +130,7 @@ contract CrudCreate {
         // Println("getPaginator")
         var body string
         body = `
-        DBFind(`+$tableName+`).Count(count)
+        DBFind(` + $tableName + `).Count(count)
         If(#page#>0){
             SetVar(prev_page,Calculate(#page#-1)
         }.Else{
@@ -166,9 +166,9 @@ contract CrudCreate {
     }
     func langsCols()string{
         var res array i int
-        while i<$lenCols{
+        while i < $lenCols{
             res = Append(res, Sprintf("$%v%v$=%v", $prefix, $cols[i], $cols[i]))
-            i=i+1
+            i = i + 1
         }
         return Join(res, ",")
     }
@@ -177,26 +177,26 @@ contract CrudCreate {
         var pageEdit pageView this contractDelete string
         pageEdit = names["pageEdit"]
         pageView = names["pageView"]
-        this =  names["pageRecords"]
-        contractDelete =  names["contractDelete"]
+        this = names["pageRecords"]
+        contractDelete = names["contractDelete"]
         var body string
-        body = `DBFind(applications).Columns("id").Where({name:"`+$appName+`", deleted:0}).Vars(application)
-        SetTitle($`+this+`$)
-        SetVar(page_name,`+this+`)
+        body = `DBFind("@1applications").Columns("id").Where({name:"` + $appName + `", deleted:0}).Vars(application)
+        SetTitle($` + this + `$)
+        SetVar(page_name,` + this + `)
         Div(content-wrapper){
-            AddToolButton(Title: Create, Page: `+pageEdit+`, Icon: icon-plus)
-            `+getPaginator()+`
+            AddToolButton(Title: Create, Page: ` + pageEdit + `, Icon: icon-plus)
+            ` + getPaginator() + `
             Div(panel panel-primary){
                 Div(panel-body){
                     Div(table-responsive){
-                        DBFind(`+$tableName+`,src_`+$tableName+`).Offset(#off#).Order(id).Custom(_actions){
+                        DBFind(` + $tableName + `,src_` + $tableName + `).Offset(#off#).Order(id).Custom(_actions){
                             Div(text-right text-nowrap){
-                                Button(Class: btn btn-info fa fa-eye mr-sm, Page: `+pageView+`, PageParams: "`+$ID+`=#id#")
-                                Button(Class: btn btn-default fa fa-edit mr-sm, Page: `+pageEdit+`, PageParams: "`+$ID+`=#id#")
-                                Button(Class: btn btn-danger fa fa-trash, Page: `+this+`, Contract: `+contractDelete+`, Params: "`+$ID+`=#id#").Alert($delete_alert$, $yes$, $no$)
+                                Button(Class: btn btn-info fa fa-eye mr-sm, Page: ` + pageView + `, PageParams: "` + $ID + `=#id#")
+                                Button(Class: btn btn-default fa fa-edit mr-sm, Page: ` + pageEdit + `, PageParams: "` + $ID + `=#id#")
+                                Button(Class: btn btn-danger fa fa-trash, Page: ` + this + `, Contract: ` + contractDelete + `, Params: "` + $ID + `=#id#").Alert($delete_alert$, $yes$, $no$)
                             }
                         }
-                        Table(src_`+$tableName+`,"`+langsCols()+`,=_actions")
+                        Table(src_` + $tableName + `,"` + langsCols() + `,=_actions")
                     }
                 }
             }
@@ -207,23 +207,23 @@ contract CrudCreate {
     func getPageEdit(names map)string{
         // Println("getPageEdit")
         var body pageRecords contractEdit string i int
-        pageRecords =  names["pageRecords"]
-        contractEdit =  names["contractEdit"]
-        body = `DBFind(applications).Columns("id").Where({name:"`+$appName+`", deleted:0}).Vars(application)
-        SetVar(title,$`+$prefix+`create$).(btn_title,$`+$prefix+`create$)`
+        pageRecords = names["pageRecords"]
+        contractEdit = names["contractEdit"]
+        body = `DBFind("@1applications").Columns("id").Where({name:"` + $appName + `", deleted:0}).Vars(application)
+        SetVar(title,$` + $prefix + `create$).(btn_title,$` + $prefix + `create$)`
         while i < $lenCols{
-            body = body + `.(item_`+$cols[i]+`,)`
-            i=i+1
+            body = body + `.(item_` + $cols[i] + `,)`
+            i = i + 1
         }
-        body = body+`
-        If(GetVar(`+$ID+`)){
-            DBFind(`+$tableName+`).Where({id:#`+$ID+`#}).Vars(item)
-            SetVar(title,$`+$prefix+`edit$ ##`+$ID+`#).(btn_title,$`+$prefix+`save$)
+        body = body + `
+        If(GetVar(` + $ID + `)){
+            DBFind(` + $tableName + `).Where({id:#` + $ID + `#}).Vars(item)
+            SetVar(title,$` + $prefix + `edit$ ##` + $ID + `#).(btn_title,$` + $prefix + `save$)
         }
         SetTitle(#title#)
         Div(content-wrapper){
             Div(breadcrumb){
-                LinkPage(Body: $`+pageRecords+`$, Page: `+pageRecords+`)
+                LinkPage(Body: $` + pageRecords + `$, Page: ` + pageRecords + `)
                 Span(/, mh)
                 Span(#title#, text-muted)
             }
@@ -231,30 +231,30 @@ contract CrudCreate {
                 Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
                     Form(panel panel-primary){
                         Div(panel-heading){
-                            LangRes(`+$prefix+`data_input)
+                            LangRes(` + $prefix + `data_input)
                         }
                         Div(panel-body){
-                            If(GetVar(`+$ID+`)){
-                                Input(Name: `+$ID+`, Type:hidden, Value: #`+$ID+`#)
+                            If(GetVar(` + $ID + `)){
+                                Input(Name: ` + $ID + `, Type:hidden, Value: #` + $ID + `#)
                             }`
-                            i=0
-                            while i<$lenCols{
-                                body = body+`
+                            i = 0
+                            while i < $lenCols{
+                                body = body + `
                                 Div(row mt-sm){
                                     Div(col-sm-4 mt-sm text-right){
-                                        LangRes(`+$prefix+$cols[i]+`)
+                                        LangRes(` + $prefix + $cols[i] + `)
                                     }
                                     Div(col-sm-8 text-left){
-                                        Input(Name: `+$camelCols[i]+`, Type:`+$pTypes[$types[i]]+`, Value: #item_`+$cols[i]+`#)
+                                        Input(Name: ` + $camelCols[i] + `, Type:` + $pTypes[$types[i]] + `, Value: #item_` + $cols[i] + `#)
                                     }
                                 }`
-                                i=i+1
+                                i = i + 1
                             }
-                            body = body+`
+                            body = body + `
                         }
                         Div(panel-footer text-right){
-                            Button(Body: LangRes(`+$prefix+`back), Page: `+pageRecords+`, Class: btn btn-default pull-left)
-                            Button(Body: #btn_title#, Page: `+pageRecords+`, Class: btn btn-primary, Contract: `+contractEdit+`)
+                            Button(Body: LangRes(` + $prefix + `back), Page: ` + pageRecords + `, Class: btn btn-default pull-left)
+                            Button(Body: #btn_title#, Page: ` + pageRecords + `, Class: btn btn-primary, Contract: ` + contractEdit + `)
                         }
                     }
                 }
@@ -266,51 +266,51 @@ contract CrudCreate {
         // Println("getPageView")
         var body pageRecords string i int
         pageRecords = names["pageRecords"]
-        body = body+`
-        DBFind(applications).Columns("id").Where({name:"`+$appName+`", deleted:0}).Vars(application)
-        If(GetVar(`+$ID+`)){
-            DBFind(`+$tableName+`).Where({id:#`+$ID+`#}).Vars(item)
+        body = body + `
+        DBFind("@1applications").Columns("id").Where({name:"` + $appName + `", deleted:0}).Vars(application)
+        If(GetVar(` + $ID + `)){
+            DBFind(` + $tableName + `).Where({id:#` + $ID + `#}).Vars(item)
         }
-        SetVar(title,$`+$prefix+`view$ ##`+$ID+`#)
+        SetVar(title,$` + $prefix + `view$ ##` + $ID + `#)
         SetTitle(#title#)
         Div(content-wrapper){
             Div(breadcrumb){
-                LinkPage(Body: $`+pageRecords+`$, Page: `+pageRecords+`)
+                LinkPage(Body: $` + pageRecords + `$, Page: ` + pageRecords + `)
                 Span(/, mh)
                 Span(#title#, text-muted)
             }
-            If(GetVar(`+$ID+`)){
+            If(GetVar(` + $ID + `)){
                 Div(row){
                     Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
                         Div(panel panel-primary){
                             Div(panel-heading){
-                                LangRes(`+$prefix+`data_view)
+                                LangRes(` + $prefix + `data_view)
                             }
                             Div(panel-body){`
-                            i=0
-                            while i<$lenCols{
-                                body = body+`
+                            i = 0
+                            while i < $lenCols{
+                                body = body + `
                                 Div(row mt-sm){
                                     Div(col-sm-4 text-right text-bold){
-                                        LangRes(`+$prefix+$cols[i]+`)
+                                        LangRes(` + $prefix + $cols[i] + `)
                                     }
                                     Div(col-sm-8 text-left){
-                                        #item_`+$cols[i]+`#
+                                        #item_` + $cols[i] + `#
                                     }
                                 }
                                 `
-                                i=i+1
+                                i = i + 1
                             }
-                            body = body+`}
+                            body = body + `}
                             Div(panel-footer text-left){
-                                Button(Body: LangRes(`+$prefix+`back), Page: `+pageRecords+`, Class: btn btn-default)
+                                Button(Body: LangRes(` + $prefix + `back), Page: ` + pageRecords + `, Class: btn btn-default)
                             }
                         }
                     }
                 }
             }.Else{
                 Div(h3 text-center){
-                    LangRes(`+$prefix+`item_not_found)
+                    LangRes(` + $prefix + `item_not_found)
                 }
             }
         }`
@@ -320,26 +320,26 @@ contract CrudCreate {
     func getContractDelete(name string)string{
         // Println("getContractDelete")
         var body dColName string i int
-        while i<$lenCols{
+        while i < $lenCols{
             if "delete" == $cols[i] || "deleted" == $cols[i]{
                 dColName = $cols[i]
             }
-            i=i+1
+            i = i + 1
         }
         if !dColName{
             return ""
         }
-        body = `contract `+name+` {
+        body = `contract ` + name + ` {
             data {
-                `+ $ID +` int
+                ` + $ID +` int
             }
             conditions {
-                if !DBFind("`+$tableName+`").Where({id:$`+$ID+`, `+dColName+`:0"}).One("id") {
+                if !DBFind("` + $tableName + `").Where({id:$` + $ID + `, ` + dColName + `:0"}).One("id") {
                     warning "Record not found"
                 }
             }
             action {
-                DBUpdate("`+$tableName+`", $`+ $ID +`, {`+dColName+`:1})
+                DBUpdate("` + $tableName + `", $` + $ID +`, {` + dColName + `:1})
             }
         }`
         return body
@@ -348,29 +348,35 @@ contract CrudCreate {
     func getContractEdit(name string)string{
         // Println("getContractEdit")
         var body dColName string i int
-        body = `contract `+name+` {
+        body = `contract ` + name + ` {
             data {
-                `+$ID+` string "optional"`
-                while i<$lenCols{
-                    body = body+`
-                    `+$camelCols[i]+` ` +$cTypes[$types[i]]
-                    i=i+1
+                ` + $ID + ` string "optional"`
+                while i < $lenCols{
+                    body = body + `
+                    ` + $camelCols[i] + ` ` +$cTypes[$types[i]]
+                    i = i + 1
                 }
                 body = body + `
             }
             conditions {
-                $`+$ID+` = Int($`+$ID+`)
-                if $`+$ID+` > 0{
-                    if !DBFind("`+$tableName+`").Where({id:$`+$ID+`}).One("id") {
+                $` + $ID + ` = Int($` + $ID + `)
+                if $` + $ID + ` > 0{
+                    if !DBFind("` + $tableName + `").Where({id:$` + $ID + `}).One("id") {
                         warning "Record not found"
                     }
                 }
             }
             action {
-                if $`+$ID+` > 0{
-                    DBUpdate("`+$tableName+`", $`+$ID+`, {`+$csvCols+`:`+globJoin($cols)+`})
+                var m map`
+                i = 0
+                while i < $lenCols{
+                    body = body + `m[` + $cols[i] + `] = $` + $camelCols[i]
+                    i = i + 1
+                }
+                body = body +`if $` + $ID + ` > 0{
+                    DBUpdate("` + $tableName + `", $` + $ID + `, m)
                 }else{
-                    DBInsert("`+$tableName+`", {`+$csvCols+`:`+globJoin($cols)+`})
+                    DBInsert("` + $tableName + `", m{` + $csvCols + `:` + globJoin($cols) + `})
                 }
             }
         }`
@@ -414,9 +420,9 @@ contract CrudCreate {
             makeLang(names["pageEdit"]),
             makeLang(names["pageView"])
         )
-        while i<$lenCols{
+        while i < $lenCols{
             res = Append(res, makeLang($cols[i]))
-            i=i+1
+            i = i + 1
         }
         return res
     }
@@ -442,12 +448,12 @@ contract CrudCreate {
         fileName = Sprintf("%v.json", Replace(ToLower($appName), " ", "_"))
         lenItems = Len(items)
         app["name"] = $appName
-        while i<lenItems{
+        while i < lenItems{
             item = items[i]
             if item["Type"] {
                 res = Append(res, item)
             }
-            i=i+1
+            i = i + 1
         }
 
         app["data"] = res
@@ -455,15 +461,15 @@ contract CrudCreate {
     }
 
     conditions {
-        $table = DBFind("tables").Columns("columns").Where({name:$tableName}).Row()
+        $table = DBFind("@1tables").Columns("columns").Where({name:$tableName}).Row()
         if !$table{
             warning "Table not found"
         }
         $lowerFirst = false // first letter for input global variables
         $ID = toCamel("id", $lowerFirst)
 
-        $appId = Int(DBFind("tables").Where({name:$tableName}).Columns("app_id").One("app_id"))
-        $appName = DBFind("applications").Where({id:$appId}).Columns("name").One("name")
+        $appId = Int(DBFind("@1tables").Where({name:$tableName}).Columns("app_id").One("app_id"))
+        $appName = DBFind("@1applications").Where({id:$appId}).Columns("name").One("name")
         if !$appName {
             warning "Application not found"
         }
