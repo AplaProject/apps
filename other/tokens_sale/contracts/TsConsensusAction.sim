@@ -17,7 +17,7 @@ contract TsConsensusAction {
         if !RoleAccess($roleConsensus){
             warning "this action allowed only for role id #" + $roleConsensus
         }
-        $wallet = DBFind("@1wallets").Where({id:$WalletId, rejected_at:0}).Row()
+        $wallet = DBFind("@1ts_wallets").Where({id:$WalletId, rejected_at:0}).Row()
         if !$wallet{
             warning "Buyer wallet not found"
         }
@@ -33,14 +33,14 @@ contract TsConsensusAction {
 
     action {
         if $Action == "accept"{
-            DBUpdate("@1wallets", Int($wallet["id"]), {key_id_signer:$key_id})
+            DBUpdate("@1ts_wallets", Int($wallet["id"]), {key_id_signer:$key_id})
             // buyer notification
             var params map
             params["wallet_id"] = $wallet["id"]
             @1NotificationsSend("member_id,sender,text_header,page_name,params_map,closure_type", Int($wallet["key_id_buyer"]), 1, "Your wallet approved", "ts_buyer_congratulation", params, 1)
 
         }elif $Action == "reject"{
-            DBUpdate("@1wallets", Int($wallet["id"]), {rejected_at:$time})
+            DBUpdate("@1ts_wallets", Int($wallet["id"]), {rejected_at:$time})
         }
         @1NotificationsClose("notific_id", $NotificId)
     }
