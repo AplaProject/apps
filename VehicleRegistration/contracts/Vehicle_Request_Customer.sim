@@ -1,0 +1,36 @@
+contract Vehicle_Request_Customer {
+    data {
+        Id int
+        A int
+        Seller_id int
+        Buyer_member_id int
+        Customer_Vehicle_Id int
+
+    }
+    conditions {
+
+    }
+    action {
+        if $A == 1 {
+            DBUpdate("customer_vehicle_request",$Id,{buyer_customer_status:"Approved",payment_status:"Pending"})
+            var h map
+            h["customer_id"] = $Seller_id
+            h["buyer_member_id"] = $Buyer_member_id
+            h["customer_vehicle_id"] = $Customer_Vehicle_Id
+            h["status"] = "Open"
+            h["result"] = "Seller Approved"
+            h["requested_time"] = BlockTime()
+            DBInsert("task_history", h)
+        }else{
+            DBUpdate("customer_vehicle_request",$Id, {buyer_customer_status:"Declined", status:"Closed", result:"Declined"})
+            var h map
+            h["customer_id"] = $Seller_id
+            h["buyer_member_id"] = $Buyer_member_id
+            h["customer_vehicle_id"] = $Customer_Vehicle_Id
+            h["status"] = "Closed"
+            h["result"] = "Seller Rejected"
+            h["requested_time"] = BlockTime()
+            DBInsert("task_history", h)
+        }
+    }
+}

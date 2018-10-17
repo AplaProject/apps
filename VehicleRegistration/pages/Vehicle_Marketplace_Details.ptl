@@ -1,0 +1,117 @@
+Div(Class:panel panel-info text-center){
+    Div(Class:panel-heading){
+        Span(Class:fa fa-bus).Style(font-size:40px) Span(Body:" TAMM - CUSTOMER",Class:h1).Style(font-family: "Arial Black", Gadget, sans-serif)
+    }
+}
+If(GetVar(Selected_Customer_Vehicle_Id)){
+    DBFind("customer_vehicles",customer_vehicles_src).WhereId(#Selected_Customer_Vehicle_Id#}).Vars(Selected_Customer_Vehicle)
+    DBFind("customers",customers_src).Where({member_id:#key_id#, result:"Approved", id:#Selected_Customer_Vehicle_customer_id#}).Count(Owner)
+    DBFind("customer_vehicle_request",src).Where({customer_vehicle_id:#Selected_Customer_Vehicle_Id#, buyer_member_id:#key_id#, buyer_customer_status:"Approved", payment_status:"Pending", seller_id:#Selected_Customer_Vehicle_customer_id#, result:"Pending"}).Vars(Selected_Customer_Vehicle_Request).Count(CustomerApproved)
+    DBFind("customer_vehicle_request",vehicle_request_src).Where({buyer_member_id:#key_id#, status:"Open", customer_vehicle_id:#Selected_Customer_Vehicle_Id#}).Vars(VehicleStatus).Count(RequestAlreadyExists)
+    DBFind("customer_vehicle_request",vehicle_request_src).Where({buyer_member_id:{$neq:#key_id#}, status:"Open", customer_vehicle_id:#Selected_Customer_Vehicle_Id#}).Count(SomeOneRequested)
+}
+Div(breadcrumb){
+	Div(){
+		LinkPage("Vehicle Marketplace", Page: Vehicle_Marketplace)
+		Span(/).Style(margin-right: 10px; margin-left: 10px;)
+
+		Span("Vehicle Details", text-muted)
+	}
+}
+Div(Class: content-wrapper){
+        Div(col-sm-2)
+        Div(col-sm-8){
+            Div(Class: panel panel-primary){
+                Div(Class: panel-heading text-white, Body: Span(Vehicle Details).Style(font-weight: bold))
+                Form(){
+                    Div(Class: list-group-item  text-center){
+                        Div(Class: row df f-valign){
+                            Div(text-center){
+                                 Image(Src: Binary().ById(#Selected_Customer_Vehicle_vehicle_image#),Alt:No Image, Class:img-sqaure mb-lg).Style(height: 150px; width:200px;)
+                            }
+                             Div(Class: col-md-4 text-right) {
+                                Span(Body: Vehicle Name)
+                            }
+                            Div(Class: col-md-6 text-center mb-lg) {
+                                Input(Value: #Selected_Customer_Vehicle_name#,Disabled: true)
+                            }
+                            Div(Class: col-md-4 text-right) {
+                                Span(Body: Vehicle Type)
+                            }
+                            Div(Class: col-md-6 text-center mb-lg) {
+                                Input(Value: #Selected_Customer_Vehicle_type#,Disabled: true)
+                            }
+
+                             Div(Class: col-md-4 text-right) {
+                                Span(Body: Fuel Type)
+                            }
+                            Div(Class: col-md-6 text-center mb-lg) {
+                                Input(Value: #Selected_Customer_Vehicle_fuel_type#,Disabled: true)
+                            }
+
+                            Div(Class: col-md-4 text-right) {
+                                Span(Body:Insurance Valid From)
+                            }
+                            Div(Class: col-md-6 text-center mb-lg) {
+                                Input(Value: #Selected_Customer_Vehicle_insurance_valid_from#,Disabled: true)
+                            }
+
+                             Div(Class: col-md-4 text-right) {
+                                Span(Body: Insurance Valid Till)
+                            }
+                            Div(Class: col-md-6 text-center mb-lg) {
+                                Input(Value: #Selected_Customer_Vehicle_insurance_valid_till#,Disabled: true)
+                            }
+                             Div(Class: col-md-4 text-right) {
+                                Span(Body: Registration Number)
+                            }
+                            Div(Class: col-md-6 text-center mb-lg) {
+                                Input(Value: #Selected_Customer_Vehicle_registration_no#,Disabled: true)
+                            }
+                           
+                            Div(Class: col-md-4 text-right) {
+                                Span(Body: key_features)
+                            }
+                            Div(Class: col-md-6 text-center mb-lg) {
+                                Input(Value: #Selected_Customer_Vehicle_key_features#, Disabled: true)
+                            }
+
+                            Div(col-sm-4 text-right){
+                                    Span(Body:Vehicle Price)
+                            }
+                            Div(col-sm-6 text-right mb-lg){
+                                Input(Value: #Price#,Disabled: true)
+                            }
+
+                        }.Style(color:black)
+                    }
+                    Div(Class: panel-footer clearfix){
+                        Div(Class: text-center){
+                            If(#CustomerApproved# == 0){
+                                If(#Owner#==0){
+                                    If(#RequestAlreadyExists# == 0){
+                                        If(#SomeOneRequested# == 0){
+                                            Button(Body: Buy, Class: btn btn-success,Params:"Seller_id=#Selected_Customer_Vehicle_customer_id#,Customer_vehicle_id=#Selected_Customer_Vehicle_Id#,Buyer_id=#key_id#",Contract: Buy_Vehicle,Page: Vehicle_Marketplace)
+                                        }.Else{
+                                            Span(Body: Sold Out,Class: btn btn-danger)
+                                        }
+                                    }.Else{
+                                        If(#VehicleStatus_buyer_customer_status# == Pending){
+                                            Button(Body:Request Sent, Class: btn btn-info)
+                                        }.Else{
+                                            Button(Body:Processing, Class: btn btn-info)
+                                        }
+                                        
+                                    }
+                                }.Else{
+                                    Button(Body: Back, Class: btn btn-default text-left, Page: Vehicle_Marketplace)   
+                                }
+                            }.Else{
+                                Button(Body: Pay,Class: btn btn-success, PageParams: "Id=#Selected_Customer_Vehicle_Request_id#,Seller_id=#Selected_Customer_Vehicle_customer_id#,Customer_vehicle_id=#Selected_Customer_Vehicle_Id#,Buyer_id=#key_id#",Page:Popup_Payment).Popup(Header:Registration Details,Width:50)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }

@@ -1,0 +1,52 @@
+contract Vehicle_Request_Maroor {
+    data {
+        Id int
+        A int
+        Seller_id int
+        Buyer_member_id int
+        Customer_Vehicle_Id int
+        EngineNo string "optional"
+        RegNo string "optional"
+        ChassisNo string "optional"
+
+    }
+    conditions {
+
+    }
+    action {
+        if $A == 1 {
+            var cvr map
+            cvr["maroor_status"] = "Approved"
+            cvr["insurance_status"] = "Pending"
+            cvr["engine_no"] = $EngineNo
+            cvr["registration_no"] = $RegNo
+            cvr["chassis_no"] = $ChassisNo
+            DBUpdate("customer_vehicle_request",$Id, cvr)
+            var h map
+            h["customer_id"] = $Seller_id
+            h["buyer_member_id"] = $Buyer_member_id
+            h["customer_vehicle_id"] = $Customer_Vehicle_Id
+            h["status"] = "Open"
+            h["result"] = "Maroor Approved"
+            h["requested_time"] = BlockTime()
+            DBInsert("task_history", h)
+
+            h["result"] ="Waiting For Insurance Approval"
+            DBInsert("task_history", h)
+        } else {
+            var cvr map
+            cvr["maroor_status"] = "Declined"
+            cvr["status"] = "Closed"
+            cvr["result"] = "Declined"
+            DBUpdate("customer_vehicle_request",$Id, cvr)
+            var h map
+            h["customer_id"] = $Seller_id
+            h["buyer_member_id"] = $Buyer_member_id
+            h["customer_vehicle_id"] = $Customer_Vehicle_Id
+            h["status"] = "Closed"
+            h["result"] = "Maroor Rejected"
+            h["requested_time"] = BlockTime()
+            DBInsert("task_history", h)
+        }
+    }
+}

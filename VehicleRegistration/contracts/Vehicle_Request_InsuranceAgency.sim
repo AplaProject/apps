@@ -1,0 +1,64 @@
+contract Vehicle_Request_InsuranceAgency {
+    data {
+        Id int
+        A int
+        Seller_id int
+        Buyer_member_id int
+        Customer_Vehicle_Id int
+        Buyer_id int "optional"
+        Insurance_Valid_From string "optional"
+        Insurance_Valid_Till string "optional"
+        Agency_Name string "optional"
+        Vehicle_Sale_Id int "optional"
+    }
+    conditions {
+
+    }
+    action {
+        if $A == 1 {
+            $Insurance_No = Random(1000000,1003492323)
+            var cvr map
+            cvr["insurance_status"] = "Approved"
+            cvr["insurance_valid_from"] = $Insurance_Valid_From
+            cvr["insurance_valid_till"] = $Insurance_Valid_Till
+            cvr["status"] = "Closed"
+            cvr["result"] = "Approved"
+            DBUpdate("customer_vehicle_request",$Id, cvr)
+            var cv map
+            cv["insurance_agency_name"] = $Agency_Name
+            cv["insurance_no"] = Int($Insurance_No)
+            cv["insurance_valid_from"] = $Insurance_Valid_From
+            cv["insurance_valid_till"] = $Insurance_Valid_Till
+            cv["customer_id"] = $Buyer_id
+            DBUpdate("customer_vehicles",$Customer_Vehicle_Id, cv)
+            var h map
+            h["customer_id"] = $Seller_id
+            h["buyer_member_id"] = $Buyer_member_id
+            h["customer_vehicle_id"] = $Customer_Vehicle_Id
+            h["status"] = "Open"
+            h["result"] = "Insurance Agency Approved"
+            h["requested_time"] = BlockTime()
+            DBInsert("task_history",h)
+
+            h["status"] = "Closed"
+            h["result"] = "Vehicle Transfered"
+            DBInsert("task_history", h)
+            DBUpdate("vehicle_sales", $Vehicle_Sale_Id, {sale_status:"Not For Sale", status:"Closed"})
+        } else {
+            var cvr map
+            cvr["insurance_status"] = "Declined"
+            cvr["status"] = "Closed"
+            cvr["result"] = "Declined"
+            DBUpdate("customer_vehicle_request",$Id, cvr)
+            var h map
+            h["customer_id"] = $Seller_id
+            h["buyer_member_id"] = $Buyer_member_id
+            h["customer_vehicle_id"] = $Customer_Vehicle_Id
+            h["status"] = "Closed"
+            h["result"] = "Insurance Agency Rejected"
+            h["requested_time"] = BlockTime()
+            DBInsert("task_history", h)
+        }
+
+    }
+}
