@@ -5,71 +5,134 @@ SetVar(btn_title,$@1create$).(item_type_emission,).(item_title,).(item_amount,).
 SetVar(this_page,@1t_token_edit).(back_page,@1t_tokens)
 
 If(GetVar(Id)){
-    DBFind(tokens).Where({id:#Id#}).Vars(item)
+    DBFind(@1tokens).Where({id:#Id#}).Vars(item)
     SetVar(btn_title,$@1save$)
+    If(GetVar(TypeEmission)==""){
+        SetVar(TypeEmission,#item_type_emission#)
+    }
+}.Else{
+    SetVar(Id,)
 }
-Form(){
-    If(GetVar(Id)){
-        Input(Name: Id, Type:hidden, Value: #Id#)
+SetTitle($@1emission_new$)
+Div(fullscreen-wrapper){
+    Div(breadcrumb){
+        LinkPage(Body: $@1tokens$, Page: #back_page#)
+        Span(/,mh)
+        Span($@1emission_new$, text-muted)
     }
-    Div(row mt-sm){
-        Div(col-sm-4 mt-sm text-right){
-            LangRes(@1title)
-            Span(*,text-danger)
-        }
-        Div(col-sm-8 text-left){
-            Input(Name: Title, Type:text, Value: #item_title#)
-        }
-    }
-    Div(row mt-sm){
-        Div(col-sm-4 mt-sm text-right){
-            LangRes(@1type_emission)
-            Span(*,text-danger)
-        }
-        Div(col-sm-8 text-left){
-            Select(Name: TypeEmission, Source:type_emission, NameColumn: name, ValueColumn: id, Value: #item_type_emission#)
-        }
-    }
-    Div(row mt-sm){
-        Div(col-sm-4 mt-sm text-right){
-            LangRes(@1type_withdraw)
-            Span(*,text-danger)
-
-        }
-        Div(col-sm-8 text-left){
-            Select(Name: TypeWithdraw, Source:type_withdraw, NameColumn: name, ValueColumn: id, Value: #item_type_withdraw#)
-        }
-    }
-    Div(row mt-sm){
-        Div(col-sm-4 mt-sm text-right){
-            LangRes(@1amount)
-            Span(*,text-danger)
-        }
-        Div(col-sm-8 text-left){
-            Input(Name: Amount, Type:money, Value: #item_amount#)
-        }
-    }
-    Div(row mt-sm){
-        Div(col-sm-4 mt-sm text-right){
-            LangRes(@1limited)
-        }
-        Div(col-sm-8 text-left){
-            If(GetVar(Id)==""){
-                Div(row){
-                    Div(col-md-6){
-                        Input(Name: LimitedDate, Type:number, Type: date)
+    Div(row){
+        Div(col-sm-8 col-sm-offset-2){
+            Form(panel panel-default){
+                Div(panel-body){
+                    If(GetVar(Id)){
+                        Input(Name: Id, Type:hidden, Value: #Id#)
                     }
-                    Div(col-md-6){
-                        Input(Name: LimitedTime, Type:number, Type: time)
+                    Div(row mt-sm){
+                        Div(col-sm-4 mt-sm text-right){
+                            LangRes(@1type_emission)
+                            Span(*,text-danger)
+                        }
+                        Div(col-sm-8 text-left){
+                            If(#item_type_emission#==1){
+                                AppParam(App:#application_id#, Name:type_emission, Index:#item_type_emission#)
+                            }.Else{
+                                ForList(type_emission){
+                                    If(#TypeEmission#==#id#){
+                                        Button(Body: #name#, Class: btn btn-default mr disabled)
+                                    }.Else{
+                                        Button(Body: #name#, Page:#this_page#, PageParams: "TypeEmission=#id#,Id=#Id#", Class: btn btn-default mr)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Div(row mt-sm){
+                        Div(col-sm-4 mt-sm text-right){
+                            LangRes(@1title)
+                            Span(*,text-danger)
+                        }
+                        Div(col-sm-8 text-left){
+                            If(GetVar(Id)==""){
+                                Input(Name: Title)
+                            }.Else{
+                                #item_title#
+                            }
+                        }
+                    }
+                    Div(row mt-sm){
+                        Div(col-sm-4 mt-sm text-right){
+                            LangRes(@1type_withdraw)
+                            Span(*,text-danger)
+
+                        }
+                        Div(col-sm-8 text-left){
+                            If(#item_type_withdraw#==1){
+                                AppParam(App:#application_id#, Name:type_withdraw, Index:#item_type_withdraw#)
+                            }.Else{
+                                Select(Name: TypeWithdraw, Source:type_withdraw, NameColumn: name, ValueColumn: id, Value: #item_type_withdraw#)
+                            }
+                        }
+                    }
+                    Div(row mt-sm){
+                        Div(col-sm-4 mt-sm text-right){
+                            LangRes(@1limited)
+                        }
+                        Div(col-sm-8 text-left){
+                            If(GetVar(Id)==""){
+                                Div(row){
+                                    Div(col-md-6){
+                                        Input(Name: LimitedDate, Type: date)
+                                    }
+                                    Div(col-md-6){
+                                        Input(Name: LimitedTime, Type: time)
+                                    }
+                                }
+                            }.Else{
+                                If(#item_limited#>0){
+                                    DateTime(DateTime: #item_limited#, Format: YYYY-MM-DD HH:MI:SS)
+                                }.Else{
+                                    $@1no$
+                                }
+                            }
+                        }
+                    }
+                    Div(row mt-sm){
+                        Div(col-sm-4 mt-sm text-right){
+                            LangRes(@1amount) (APL)
+                            Span(*,text-danger)
+                        }
+                        Div(col-sm-8 text-left){
+                            Input(Name: Amount, Type:number, Value: #item_amount#)
+                        }
+                    }
+                    If(#TypeEmission#==2){
+                        If(GetVar(Id)){
+                            JsonToSource(amounts, #item_amount#)
+                            Div(list-group-item mt-sm text-muted){
+                                Div(text-center){
+                                    $@1completed_stages$
+                                }
+                                ForList(amounts){
+                                    Div(row mt-sm){
+                                        Div(col-sm-4 text-right){
+                                            Money(#value#) (APL)
+                                        }
+                                        Div(col-sm-8 text-left){
+                                            DateTime(#key#, Format: YYYY-MM-DD HH:MI:SS)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-            }.Else{
-                DateTime(DateTime: #item_limited#, Format: YYYY-MM-DD HH:MI:SS)
+                Div(panel-footer){
+                    Button(Body: $@1back$, Page: #back_page#, Class: btn btn-default)
+                    If(GetVar(TypeEmission)!=""){
+                        Button(Body: #btn_title#, Page: #back_page#, Class: btn btn-primary pull-right, Contract: TokensEmissionCreate, Params: "TypeEmission=#TypeEmission#")
+                    }
+                }
             }
         }
-    }
-    Div(mt-lg){
-        Button(Body: $@1back$, Page: #back_page#, Class: btn btn-default)
-        Button(Body: #btn_title#, Page: #back_page#, Class: btn btn-primary pull-right, Contract: TTokenEdit)
     }
 }

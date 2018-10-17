@@ -2,7 +2,7 @@ DBFind(@1applications).Columns("id").Where({name:"Tokens", deleted:0}).Vars(appl
 SetTitle($@1tokens$)
 SetVar(this_page,@1t_tokens)
 Div(content-wrapper){
-    AddToolButton(Title: $@1create$, Page: @1t_token_edit, Icon: icon-plus).Popup(Header:$@1emission_new$, Width:50)
+    AddToolButton(Title: $@1create$, Page: @1t_token_edit, Icon: icon-plus)
 
     DBFind(tokens).Count(count)
     If(#page#>0){
@@ -46,11 +46,24 @@ Div(content-wrapper){
                     }
                 }.Custom(_actions){
                     Div(text-right text-nowrap){
-                        Button(Class: btn btn-info fa fa-eye mr-sm, Page: t_token_view, PageParams: "Id=#id#")
-                        Button(Class: btn btn-default fa fa-edit mr-sm, Page: t_token_edit, PageParams: "Id=#id#")
+                        If(#type_emission#==2){
+                            Button(Class: btn btn-default fa fa-edit mr-sm, Page: t_token_edit, PageParams: "Id=#id#")
+                        }
+                        Button(Class: btn btn-default fa fa-eye mr-sm, Page: t_token_view, PageParams: "Id=#id#")
+                    }
+                }.Custom(_type_withdraw){
+                    AppParam(App:#application_id#, Name:type_withdraw, Index:#type_withdraw#)
+                }.Custom(_type_emission){
+                    AppParam(App:#application_id#, Name:type_emission, Index:#type_emission#)
+                }.Custom(_amount){
+                    JsonToSource(amounts,#amount#)
+                    ForList(amounts){
+                        Div(){
+                            Span("Money(#value#)",mr).("(DateTime(#key#, Format: YYYY-MM-DD HH:MI:SS))",text-muted)
+                        }
                     }
                 }
-                Table(src_tokens,"$@1type_emission$=type_emission,$@1title$=title,$@1amount$=amount,$@1limited$=_lim,$@1ecosystem$=ecosystem,$@1type_withdraw$=type_withdraw,=_actions")
+                Table(src_tokens,"$@1type_emission$=_type_emission,$@1title$=title,$@1amount$=_amount,$@1limited$=_lim,$@1ecosystem$=ecosystem,$@1type_withdraw$=_type_withdraw,=_actions")
             }
         }
     }

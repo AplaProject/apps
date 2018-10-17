@@ -1,4 +1,4 @@
-contract TTokenEdit {
+contract TokensEmissionCreate {
     data {
         Id string "optional"
         Title string
@@ -46,8 +46,12 @@ contract TTokenEdit {
         MainCondition()
         $Id = Int($Id)
         if $Id > 0{
-            if !DBFind("@1tokens").Where({id:$Id}).One("id") {
+            $item = DBFind("@1tokens").Where({id:$Id}).Row()
+            if !$item {
                 warning "Record not found"
+            }
+            if $item["type_emission"] == 1 {
+                warning "Emission are not editable"
             }
         }
         if Size($Title) == 0{
@@ -61,15 +65,37 @@ contract TTokenEdit {
         }else{
             $limited = 0
         }
+        $guest = 4544233900443112470
+        $founder = Int(EcosysParam("founder_account"))
     }
     action {
-        TODO:Эмиссия производится на кошелек основателя экосистемы
-        var m map
-        m = {type_emission:$TypeEmission, title:$Title, amount:$Amount, limited:$limited, ecosystem:$ecosystem_id, type_withdraw:$TypeWithdraw}
+        var m amount map
         if $Id > 0{
+            m = $item
+            amount = JSONDecode($item["amount"])
+            if $item["type_emission"] == 2{
+                amount[Str($block_time)] = $Amount
+            }
+            m["amount"] = amount
+            if m["type_withdraw"] == 2{
+                $item["type_withdraw"] = $TypeWithdraw
+            }
             DBUpdate("@1tokens", $Id, m)
         }else{
-            DBInsert("@1tokens", m)
+            amount[Str($block_time)] = $Amount
+            m = {type_emission:$TypeEmission, title:$Title, amount:amount, limited:$limited, ecosystem:$ecosystem_id, type_withdraw:$TypeWithdraw}
+            $Id = DBInsert("@1tokens", m)
         }
+        DBUpdate("@1keys", $founder, {"+amount": $Amount})
+
+        var h map
+        h["sender_id"] = 0
+        h["recipient_id"] = $founder
+        h["amount"] = $Amount
+        h["comment"] = Sprintf("emission id %v", $Id)
+        h["block_id"] = $block
+        h["txhash"] = $txhash
+        h["ecosystem"] = $ecosystem_id
+        DBInsert("@1history", h)
     }
 }
