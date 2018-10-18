@@ -48,22 +48,23 @@ contract TokensEmissionCreate {
         if $Id > 0{
             $item = DBFind("@1tokens").Where({id:$Id}).Row()
             if !$item {
-                warning "Record not found"
+                warning "Emission not found"
             }
             if $item["type_emission"] == 1 {
                 warning "Emission are not editable"
             }
-        }
-        if Size($Title) == 0{
-            error Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "title")
-        }
-        if $Amount <= 0{
-            error Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "amount")
-        }
-        if Contains($LimitedDate, "-") {
-            $limited = fixDatetimes()
         }else{
-            $limited = 0
+            if Size($Title) == 0{
+                error Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "title")
+            }
+            if Contains($LimitedDate, "-") {
+                $limited = fixDatetimes()
+            }else{
+                $limited = 0
+            }
+        }
+        if $Id == 0 && $Amount <= 0{
+            error Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "amount")
         }
         $guest = 4544233900443112470
         $founder = Int(EcosysParam("founder_account"))
@@ -72,13 +73,13 @@ contract TokensEmissionCreate {
         var m amount map
         if $Id > 0{
             m = $item
-            amount = JSONDecode($item["amount"])
-            if $item["type_emission"] == 2{
+            amount = JSONDecode(m["amount"])
+            if m["type_emission"] == 2{
                 amount[Str($block_time)] = $Amount
+                m["amount"] = amount
             }
-            m["amount"] = amount
             if m["type_withdraw"] == 2{
-                $item["type_withdraw"] = $TypeWithdraw
+                m["type_withdraw"] = $TypeWithdraw
             }
             DBUpdate("@1tokens", $Id, m)
         }else{
@@ -86,16 +87,18 @@ contract TokensEmissionCreate {
             m = {type_emission:$TypeEmission, title:$Title, amount:amount, limited:$limited, ecosystem:$ecosystem_id, type_withdraw:$TypeWithdraw}
             $Id = DBInsert("@1tokens", m)
         }
-        DBUpdate("@1keys", $founder, {"+amount": $Amount})
+        if $Amount > 0 {
+            DBUpdate("@1keys", $founder, {"+amount": $Amount})
 
-        var h map
-        h["sender_id"] = 0
-        h["recipient_id"] = $founder
-        h["amount"] = $Amount
-        h["comment"] = Sprintf("emission id %v", $Id)
-        h["block_id"] = $block
-        h["txhash"] = $txhash
-        h["ecosystem"] = $ecosystem_id
-        DBInsert("@1history", h)
+            var h map
+            h["sender_id"] = 0
+            h["recipient_id"] = $founder
+            h["amount"] = $Amount
+            h["comment"] = Sprintf("emission id %v", $Id)
+            h["block_id"] = $block
+            h["txhash"] = $txhash
+            h["ecosystem"] = $ecosystem_id
+            DBInsert("@1history", h)
+        }
     }
 }

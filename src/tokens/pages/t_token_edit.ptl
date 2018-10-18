@@ -1,17 +1,16 @@
-DBFind(@1applications).Columns("id").Where({name:"Tokens", deleted:0}).Vars(application)
-AppParam(App:#application_id#, Name:type_emission, Source:type_emission)
-AppParam(App:#application_id#, Name:type_withdraw, Source:type_withdraw)
-SetVar(btn_title,$@1create$).(item_type_emission,).(item_title,).(item_amount,).(item_limited,).(item_ecosystem,).(item_type_withdraw,)
+DBFind(@1applications).Columns("id").Where({name:"Tokens", deleted:0, ecosystem:1}).Vars(application)
+AppParam(App:#application_id#, Name:type_emission, Source:type_emission, Ecosystem:1)
+AppParam(App:#application_id#, Name:type_withdraw, Source:type_withdraw, Ecosystem:1)
+SetVar(item_type_emission,).(item_title,).(item_amount,).(item_limited,).(item_ecosystem,).(item_type_withdraw,)
 SetVar(this_page,@1t_token_edit).(back_page,@1t_tokens)
-
+SetVar(btn_title,$@1execute$)
 If(GetVar(Id)){
     DBFind(@1tokens).Where({id:#Id#}).Vars(item)
-    SetVar(btn_title,$@1save$)
     If(GetVar(TypeEmission)==""){
         SetVar(TypeEmission,#item_type_emission#)
     }
 }.Else{
-    SetVar(Id,)
+    SetVar(Id,0)
 }
 SetTitle($@1emission_new$)
 Div(fullscreen-wrapper){
@@ -24,7 +23,7 @@ Div(fullscreen-wrapper){
         Div(col-sm-8 col-sm-offset-2){
             Form(panel panel-default){
                 Div(panel-body){
-                    If(GetVar(Id)){
+                    If(#Id#>0){
                         Input(Name: Id, Type:hidden, Value: #Id#)
                     }
                     Div(row mt-sm){
@@ -33,8 +32,10 @@ Div(fullscreen-wrapper){
                             Span(*,text-danger)
                         }
                         Div(col-sm-8 text-left){
-                            If(#item_type_emission#==1){
-                                AppParam(App:#application_id#, Name:type_emission, Index:#item_type_emission#)
+                            If(#Id#>0){
+                                Div(mt-sm){
+                                    AppParam(App:#application_id#, Name:type_emission, Index:#item_type_emission#, Ecosystem:1)
+                                }
                             }.Else{
                                 ForList(type_emission){
                                     If(#TypeEmission#==#id#){
@@ -52,10 +53,12 @@ Div(fullscreen-wrapper){
                             Span(*,text-danger)
                         }
                         Div(col-sm-8 text-left){
-                            If(GetVar(Id)==""){
-                                Input(Name: Title)
+                            If(#Id#>0){
+                                Div(mt-sm){
+                                    #item_title#
+                                }
                             }.Else{
-                                #item_title#
+                                Input(Name: Title)
                             }
                         }
                     }
@@ -67,7 +70,9 @@ Div(fullscreen-wrapper){
                         }
                         Div(col-sm-8 text-left){
                             If(#item_type_withdraw#==1){
-                                AppParam(App:#application_id#, Name:type_withdraw, Index:#item_type_withdraw#)
+                                Div(mt-sm){
+                                    AppParam(App:#application_id#, Name:type_withdraw, Index:#item_type_withdraw#, Ecosystem:1)
+                                }
                             }.Else{
                                 Select(Name: TypeWithdraw, Source:type_withdraw, NameColumn: name, ValueColumn: id, Value: #item_type_withdraw#)
                             }
@@ -78,7 +83,15 @@ Div(fullscreen-wrapper){
                             LangRes(@1limited)
                         }
                         Div(col-sm-8 text-left){
-                            If(GetVar(Id)==""){
+                            If(#Id#>0){
+                                Div(mt-sm){
+                                    If(#item_limited#>0){
+                                        DateTime(DateTime: #item_limited#, Format: YYYY-MM-DD HH:MI:SS)
+                                    }.Else{
+                                        $@1no$
+                                    }
+                                }
+                            }.Else{
                                 Div(row){
                                     Div(col-md-6){
                                         Input(Name: LimitedDate, Type: date)
@@ -87,39 +100,34 @@ Div(fullscreen-wrapper){
                                         Input(Name: LimitedTime, Type: time)
                                     }
                                 }
-                            }.Else{
-                                If(#item_limited#>0){
-                                    DateTime(DateTime: #item_limited#, Format: YYYY-MM-DD HH:MI:SS)
-                                }.Else{
-                                    $@1no$
-                                }
                             }
                         }
                     }
-                    Div(row mt-sm){
-                        Div(col-sm-4 mt-sm text-right){
-                            LangRes(@1amount) (APL)
-                            Span(*,text-danger)
-                        }
-                        Div(col-sm-8 text-left){
-                            Input(Name: Amount, Type:number, Value: #item_amount#)
+                    If(Or(#TypeEmission#==2,#Id#==0)){
+                        Div(row mt-sm){
+                            Div(col-sm-4 mt-sm text-right){
+                                LangRes(@1amount) (APL)
+                                Span(*,text-danger)
+                            }
+                            Div(col-sm-8 text-left){
+                                Input(Name: Amount, Type:number, Value: 0)
+                            }
                         }
                     }
-                    If(#TypeEmission#==2){
-                        If(GetVar(Id)){
-                            JsonToSource(amounts, #item_amount#)
-                            Div(list-group-item mt-sm text-muted){
-                                Div(text-center){
-                                    $@1completed_stages$
-                                }
-                                ForList(amounts){
-                                    Div(row mt-sm){
-                                        Div(col-sm-4 text-right){
-                                            Money(#value#) (APL)
-                                        }
-                                        Div(col-sm-8 text-left){
-                                            DateTime(#key#, Format: YYYY-MM-DD HH:MI:SS)
-                                        }
+
+                    If(#Id#>0){
+                        JsonToSource(amounts, #item_amount#)
+                        Div(list-group-item mt-sm text-muted){
+                            Div(text-center){
+                                $@1completed_stages$
+                            }
+                            ForList(amounts){
+                                Div(row mt-sm){
+                                    Div(col-sm-4 text-right){
+                                        Money(#value#) (APL)
+                                    }
+                                    Div(col-sm-8 text-left){
+                                        DateTime(#key#, Format: YYYY-MM-DD HH:MI:SS)
                                     }
                                 }
                             }
@@ -129,7 +137,7 @@ Div(fullscreen-wrapper){
                 Div(panel-footer){
                     Button(Body: $@1back$, Page: #back_page#, Class: btn btn-default)
                     If(GetVar(TypeEmission)!=""){
-                        Button(Body: #btn_title#, Page: #back_page#, Class: btn btn-primary pull-right, Contract: TokensEmissionCreate, Params: "TypeEmission=#TypeEmission#")
+                        Button(Body: #btn_title#, Page: #back_page#, Class: btn btn-primary pull-right, Contract: @1TokensEmissionCreate, Params: "TypeEmission=#TypeEmission#")
                     }
                 }
             }

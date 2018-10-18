@@ -1,10 +1,10 @@
-DBFind(@1applications).Columns("id").Where({name:"Tokens", deleted:0}).Vars(application)
+DBFind(@1applications).Columns("id").Where({name:"Tokens", deleted:0, ecosystem:1}).Vars(application)
 SetTitle($@1tokens$)
 SetVar(this_page,@1t_tokens)
 Div(content-wrapper){
     AddToolButton(Title: $@1create$, Page: @1t_token_edit, Icon: icon-plus)
 
-    DBFind(tokens).Count(count)
+    DBFind(@1tokens).Where({ecosystem:#ecosystem_id#}).Count(count)
     If(#page#>0){
         SetVar(prev_page,Calculate(#page#-1)
     }.Else{
@@ -35,35 +35,35 @@ Div(content-wrapper){
             Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)
         }
     }
+    DBFind(@1tokens,src_tokens).Where({ecosystem:#ecosystem_id#}).Offset(#off#).Order(id).Custom(_lim){
+        If(#limited#==0){
+            $@1no$
+        }.Else{
+            DateTime(DateTime: #limited#, Format: YYYY-MM-DD HH:MI:SS)
+        }
+    }.Custom(_actions){
+        Div(text-right text-nowrap){
+            If(#type_emission#==2){
+                Button(Class: btn btn-default fa fa-edit mr-sm, Page: @1t_token_edit, PageParams: "Id=#id#")
+            }
+            Button(Class: btn btn-default fa fa-eye mr-sm, Page: @1t_token_view, PageParams: "Id=#id#")
+        }
+    }.Custom(_type_withdraw){
+        AppParam(App:#application_id#, Name:type_withdraw, Index:#type_withdraw#, Ecosystem:1)
+    }.Custom(_type_emission){
+        AppParam(App:#application_id#, Name:type_emission, Index:#type_emission#, Ecosystem:1)
+    }.Custom(_amount){
+        JsonToSource(amounts,#amount#)
+        ForList(amounts){
+            Div(){
+                Span("Money(#value#)",mr).("(DateTime(#key#, Format: YYYY-MM-DD HH:MI:SS))",text-muted)
+            }
+        }
+    }
     Div(panel panel-primary){
         Div(panel-body){
             Div(table-responsive){
-                DBFind(tokens,src_tokens).Offset(#off#).Order(id).Custom(_lim){
-                    If(#limited#==0){
-                        $@1no$
-                    }.Else{
-                        DateTime(DateTime: #limited#, Format: YYYY-MM-DD HH:MI:SS)
-                    }
-                }.Custom(_actions){
-                    Div(text-right text-nowrap){
-                        If(#type_emission#==2){
-                            Button(Class: btn btn-default fa fa-edit mr-sm, Page: t_token_edit, PageParams: "Id=#id#")
-                        }
-                        Button(Class: btn btn-default fa fa-eye mr-sm, Page: t_token_view, PageParams: "Id=#id#")
-                    }
-                }.Custom(_type_withdraw){
-                    AppParam(App:#application_id#, Name:type_withdraw, Index:#type_withdraw#)
-                }.Custom(_type_emission){
-                    AppParam(App:#application_id#, Name:type_emission, Index:#type_emission#)
-                }.Custom(_amount){
-                    JsonToSource(amounts,#amount#)
-                    ForList(amounts){
-                        Div(){
-                            Span("Money(#value#)",mr).("(DateTime(#key#, Format: YYYY-MM-DD HH:MI:SS))",text-muted)
-                        }
-                    }
-                }
-                Table(src_tokens,"$@1type_emission$=_type_emission,$@1title$=title,$@1amount$=_amount,$@1limited$=_lim,$@1ecosystem$=ecosystem,$@1type_withdraw$=_type_withdraw,=_actions")
+                Table(src_tokens,"$@1title$=title,$@1type_emission$=_type_emission,$@1type_withdraw$=_type_withdraw,$@1amount$=_amount,$@1limited$=_lim,=_actions")
             }
         }
     }
