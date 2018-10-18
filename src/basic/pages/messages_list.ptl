@@ -1,0 +1,60 @@
+SetTitle($@1messenger$)
+AddToolButton(Page: @1message_create, Icon: icon-plus, Title: $@1create$).Popup(40, $@1message_create$)
+
+DBFind(@1notifications,threads).Where({ecosystem:#ecosystem_id#, "page_params->thread": {"$gt": 0}}).Order({"id":"-1"}).Limit(250).Count(threads_count).Columns("id,sender->member_id,sender->member_name,sender->image_id,notification->body,page_params->thread,date_created,closed")
+
+Div(content-wrapper){
+    If(#threads_count#>0){
+        Div(row){
+            Div(col-md-6 col-md-offset-3){
+                Form(panel panel-default){
+                    Div(panel-body){
+                        Div(list-group-item text-center){
+                            Span(Class: h3, Body: LangRes(@1message_active_threads))
+                        }
+                        ForList(threads){
+                            DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, "page_params->thread": #page_params.thread#}).Order({"id":"-1"}).Limit(1).Columns("id").Vars(check_last)
+                            If(#id# == #check_last_id#){
+                                Div(list-group-item){
+                                    Div(row){
+                                        Div(left-col col-offset pull-left text-center){
+                                            LinkPage(Page: @1profile_view, PageParams: "v_key_id=#sender.member_id#"){
+                                                If(#sender.image_id#>0){
+                                                    Image(Src: Binary().ById(#sender.image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                                }.Else{
+                                                    Span(Class: fa icon-user fa-5x)
+                                                }
+                                                Div(m0 h4 text-bold){#sender.member_name#}
+                                            }
+                                        }
+                                        Div(col-offset){
+                                            Span(Class: h4, Body: #notification.body#)
+                                            Div(Class: mt-sm text-muted, Body: DateTime(#date_created#,HH:MI DD.MM.YYYY))
+                                            Button(Body: LangRes(@1message_thread_show), Class: mt-sm btn btn-default, Page: @1message_view, PageParams: "notific_id=#id#")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }.Style(
+            .left-col {
+                display: inline-block;
+                min-width: 120px;
+            }
+            .col-offset {
+                margin-left: 20px;
+                margin-right: 20px;
+            }
+            .mt-md {margin-top: 10px;}
+        )
+    }.Else{
+        Div(panel panel-primary){
+            Div(h3 text-muted text-center){
+                    $@1messages_empty$
+            }
+        }
+    }
+}

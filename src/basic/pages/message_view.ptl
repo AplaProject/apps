@@ -1,0 +1,144 @@
+DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Basic"}).Vars(application)
+
+If(#notific_id#>0){
+    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("id,sender->member_id,sender->member_name,sender->image_id,notification->body,page_params->thread,date_created,closed").Vars(message)
+    If(#message_page_params_thread#>0){
+        SetVar(thread,#message_page_params_thread#)
+        DBFind(@1notifications,thread).Where({ecosystem:#ecosystem_id#, page_params->thread:#message_page_params_thread#}).Order("id").Count("thread_quantity").Columns("id,sender->member_id,sender->member_name,sender->image_id,notification->body,date_created")
+        DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#message_page_params_thread#}).Columns("id,sender->member_id,sender->member_name,sender->image_id,notification->body,date_created").Vars(init_message)
+    }.Else{
+        SetVar(thread,#message_id#)
+        DBFind(@1notifications,thread).Where({ecosystem:#ecosystem_id#, page_params->thread:#message_id#}).Order("id").Count("thread_quantity").Columns("id,sender->member_id,sender->member_name,sender->image_id,notification->body,date_created")
+        DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#message_id#}).Columns("id,sender->member_id,sender->member_name,sender->image_id,notification->body,date_created").Vars(init_message)
+    }
+    SetTitle($@1message_view$)
+    Form(){
+        Div(content-wrapper){
+            Div(row){
+                Div(col-md-6 col-md-offset-3){
+                    Form(panel panel-default){
+                        Div(panel-body){
+                            Div(list-group-item text-center){
+                                Span(Class: h3, Body: LangRes(@1message_from) #message_sender_member_name#)
+                            }
+                            Div(list-group-item){
+                                Div(row){
+                                    Div(left-col col-offset pull-left text-center){
+                                        LinkPage(Page: @1profile_view, PageParams: "v_key_id=#message_sender_member_id#"){
+                                            If(#message_sender_image_id#>0){
+                                                Image(Src: Binary().ById(#message_sender_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                            }.Else{
+                                                Span(Class: fa icon-user fa-5x)
+                                            }
+                                            Div(m0 h4 text-bold){#message_sender_member_name#}
+                                        }
+                                    }
+                                    Div(col-offset){
+                                        Span(Class: h4, Body: #message_notification_body#)
+                                        Div(Class: mt-sm text-muted, Body: DateTime(#message_date_created#,HH:MI DD.MM.YYYY))
+                                    }
+                                }
+                            }
+                        }
+                        Div(panel-footer){
+                            Div(row){
+                                Div(col-md-3 mt-sm text-right){
+                                    Label(){
+                                        Span(Body: LangRes(@1reply_text))
+                                    }
+                                }
+                                Div(col-md-9 text-left){
+                                    Input(Type: Hidden, Name: member_id, Value: "#message_sender_member_id#")
+                                    Input(Type: Hidden, Name: eco_id, Value: "#ecosystem_id#")
+                                    Input(Type: Hidden, Name: sender, Value: "1")
+                                    Input(Type: Hidden, Name: icon_name, Value: "icon-speech")
+                                    Input(Type: Hidden, Name: text_header, Value: "New message")
+                                    Input(Type: Hidden, Name: params_map, Value: `{"type":"message","thread":"#thread#"}`)
+                                    Input(Type: Hidden, Name: page_name, Value: "@1message_view")
+                                    Input(Type: textarea, Name: text_body, Value: "", Placeholder: $@1message_type_here$).Style(resize: vertical; min-height: 6em;)
+                                }
+                            }
+                            If(#message_closed# == 0){
+                                Div(mt-md){
+                                    Button(Body: LangRes(@1close), Class: btn btn-default, Contract: @1NotificationsClose, Params: "notific_id=#notific_id#", Page: @1messages_list)                            
+                                    Button(Body: LangRes(@1reply), Class: btn btn-primary pull-right, Contract: @1NotificationsSend, Params: "current_role_id=#role_id#", Page: @1messages_list)
+                                }
+                            }.Else{
+                                Div(mt-md text-right){
+                                    Button(Body: LangRes(@1reply), Class: btn btn-primary, Contract: @1NotificationsSend, Params: "current_role_id=#role_id#", Page: @1messages_list)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        If(#thread_quantity#>0){
+            Div(content-wrapper){
+                Div(row){
+                    Div(col-md-6 col-md-offset-3){
+                        Form(panel panel-default){
+                            Div(panel-body){
+                                Div(list-group-item text-center){
+                                    Span(Class: h3, Body: LangRes(@1message_thread_history))
+                                }
+                                Div(list-group-item){
+                                    Div(row){
+                                        Div(left-col col-offset pull-left text-center){
+                                            LinkPage(Page: @1profile_view, PageParams: "v_key_id=#init_message_sender_member_id#"){
+                                                If(#init_message_sender_image_id#>0){
+                                                    Image(Src: Binary().ById(#init_message_sender_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                                }.Else{
+                                                    Span(Class: fa icon-user fa-5x)
+                                                }
+                                                Div(m0 h4 text-bold){#init_message_sender_member_name#}
+                                            }
+                                        }
+                                        Div(col-offset){
+                                            Span(Class: h4, Body: #init_message_notification_body#)
+                                            Div(Class: mt-sm text-muted, Body: DateTime(#init_message_date_created#,HH:MI DD.MM.YYYY))
+                                        }
+                                    }
+                                }
+                                ForList(thread){
+                                    Div(list-group-item){
+                                        Div(row){
+                                            Div(left-col col-offset pull-left text-center){
+                                                LinkPage(Page: @1profile_view, PageParams: "v_key_id=#sender.member_id#"){
+                                                    If(#sender.image_id#>0){
+                                                        Image(Src: Binary().ById(#sender.image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                                    }.Else{
+                                                        Span(Class: fa icon-user fa-5x)
+                                                    }
+                                                    Div(m0 h4 text-bold){#sender.member_name#}
+                                                }
+                                            }
+                                            Div(col-offset){
+                                                Span(Class: h4, Body: #notification.body#)
+                                                Div(Class: mt-sm text-muted, Body: DateTime(#date_created#,HH:MI DD.MM.YYYY))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }.Style(
+        .left-col {
+            display: inline-block;
+            min-width: 120px;
+        }
+        .col-offset {
+            margin-left: 20px;
+            margin-right: 20px;
+        }
+        .mt-md {margin-top: 10px;}
+    )
+}.Else{
+    Div(md-12 alert alert-danger text-center){
+        Span(Body: LangRes(@1attention))
+    }
+}
