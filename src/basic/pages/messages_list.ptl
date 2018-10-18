@@ -1,7 +1,7 @@
 SetTitle($@1messenger$)
 AddToolButton(Page: @1message_create, Icon: icon-plus, Title: $@1create$).Popup(40, $@1message_create$)
 
-DBFind(@1notifications,threads).Where({ecosystem:#ecosystem_id#, "page_params->thread": {"$gt": 0}}).Order({"id":"-1"}).Limit(250).Count(threads_count).Columns("id,sender->member_id,sender->member_name,sender->image_id,notification->body,page_params->thread,date_created,closed")
+DBFind(@1notifications,threads).Where({ecosystem:#ecosystem_id#, "page_params->type":"message"}).Order({"id":"-1"}).Limit(250).Count(threads_count).Columns("id,sender->member_id,sender->member_name,sender->image_id,notification->body,page_params->thread,date_created,closed")
 
 Div(content-wrapper){
     If(#threads_count#>0){
@@ -13,8 +13,12 @@ Div(content-wrapper){
                             Span(Class: h3, Body: LangRes(@1message_active_threads))
                         }
                         ForList(threads){
-                            DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, "page_params->thread": #page_params.thread#}).Order({"id":"-1"}).Limit(1).Columns("id").Vars(check_last)
-                            If(#id# == #check_last_id#){
+                            If(#page_params.thread#>0){
+                                DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, "page_params->thread": #page_params.thread#}).Order({"id":"-1"}).Limit(1).Columns("id").Vars(last)
+                            }.Else{
+                                DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, "page_params->thread": #id#}).Count(thread_depth)
+                            }
+                            If(Or(#id#==#last_id#,#thread_depth#==0)){
                                 Div(list-group-item){
                                     Div(row){
                                         Div(left-col col-offset pull-left text-center){
