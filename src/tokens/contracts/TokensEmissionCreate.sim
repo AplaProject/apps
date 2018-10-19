@@ -50,9 +50,9 @@ contract TokensEmissionCreate {
             if Size(contractName) > 0{
                 contractId = GetContractByName(contractName)
                 if contractId == 0{
-                    warning "Condition contract for extension emission not found"
+                    error "Condition contract for extension emission not found"
                 }elif param["conditions"] != "false"{
-                    warning "Condition parameter 'emission_condition_contract' for extension emission must be not editable"
+                    error "Condition parameter 'emission_condition_contract' for extension emission must be not editable"
                 }
             }
         }
@@ -63,14 +63,19 @@ contract TokensEmissionCreate {
             @1NewParameter("Name,Value,Conditions", "emission_condition_contract", "", "ContractConditions(\"MainCondition\")")
         }
     }
+    func checkTokenExists(){
+        if DBFind("@1tokens").Where({ecosystem:$ecosystem_id}).Row(){
+            error "Token for current ecosystems already exists"
+        }
+    }
     conditions {
         if $Id > 0{
             $item = DBFind("@1tokens").Where({id:$Id}).Row()
             if !$item {
-                warning "Emission not found"
+                error "Emission not found"
             }
             if $item["type_emission"] == 1 {
-                warning "Emission are not editable"
+                error "Emission are not editable"
             }else{
                 var name string
                 name = getEmissionConditionContract()
@@ -79,6 +84,9 @@ contract TokensEmissionCreate {
                 }else{
                     MainCondition()
                 }
+            }
+            if Int($item["limited"]) > 0 && Int($item["limited"]) < $block_time{
+                error "Emission "
             }
         }else{
             MainCondition()
@@ -93,6 +101,7 @@ contract TokensEmissionCreate {
             if $TypeEmission == 2 {
                 getEmissionConditionContract()
             }
+            checkTokenExists()
         }
         if $Id == 0 && $Amount <= 0{
             error Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "amount")
