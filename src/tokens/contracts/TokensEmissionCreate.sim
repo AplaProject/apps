@@ -1,6 +1,6 @@
 contract TokensEmissionCreate {
     data {
-        Id string "optional"
+        Id int "optional"
         Title string
         Amount money
         LimitedDate string "optional"
@@ -42,9 +42,28 @@ contract TokensEmissionCreate {
         }
         return lim
     }
+    func getEmissionConditionContract() string{
+        var param map contractName string contractId int
+        param = DBFind("@1parameters").Where({ecosystem:$ecosystem_id, name:"emission_condition_contract"}).Row()
+        if param{
+            contractName = param["value"]
+            if Size(contractName) > 0{
+                contractId = GetContractByName(contractName)
+                if contractId == 0{
+                    warning "Condition contract for extension emission not found"
+                }elif param["conditions"] != "false"{
+                    warning "Condition parameter 'emission_condition_contract' for extension emission must be not editable"
+                }
+            }
+        }
+        return contractName
+    }
+    func createEmissionConditionParam() {
+        if !DBFind("@1parameters").Where({ecosystem:$ecosystem_id, name:"emission_condition_contract"}).Row(){
+            @1NewParameter("Name,Value,Conditions", "emission_condition_contract", "", "ContractConditions(\"MainCondition\")")
+        }
+    }
     conditions {
-        MainCondition()
-        $Id = Int($Id)
         if $Id > 0{
             $item = DBFind("@1tokens").Where({id:$Id}).Row()
             if !$item {
@@ -52,8 +71,17 @@ contract TokensEmissionCreate {
             }
             if $item["type_emission"] == 1 {
                 warning "Emission are not editable"
+            }else{
+                var name string
+                name = getEmissionConditionContract()
+                if name != "" {
+                    ContractConditions(name)
+                }else{
+                    MainCondition()
+                }
             }
         }else{
+            MainCondition()
             if Size($Title) == 0{
                 error Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "title")
             }
@@ -61,6 +89,9 @@ contract TokensEmissionCreate {
                 $limited = fixDatetimes()
             }else{
                 $limited = 0
+            }
+            if $TypeEmission == 2 {
+                getEmissionConditionContract()
             }
         }
         if $Id == 0 && $Amount <= 0{
@@ -70,6 +101,8 @@ contract TokensEmissionCreate {
         $founder = Int(EcosysParam("founder_account"))
     }
     action {
+        createEmissionConditionParam()
+
         var m amount map
         if $Id > 0{
             m = $item
@@ -88,9 +121,9 @@ contract TokensEmissionCreate {
             $Id = DBInsert("@1tokens", m)
         }
         if $Amount > 0 {
-            var keysTable string
-            keysTable = Sprintf("@%vkeys", $ecosystem_id)
-            DBUpdate(keysTable, $founder, {"+amount": $Amount})
+            var table string
+            table = Sprintf("@%vkeys", $ecosystem_id)
+            DBUpdate(table, $founder, {"+amount": $Amount})
 
             var h map
             h["sender_id"] = 0
