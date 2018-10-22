@@ -19,61 +19,66 @@ Div(content-wrapper){
                     Div(text-center text-bold h4 m0){
                         LangRes(@1user_info)
                     }
-                    Div(form-group){
-                        Div(row){
-                            Div(col-md-12 mt-sm text-center){
-                                If(Or(#member_id#>0,#member_id#<0)){
-                                    If(#member_id# == #key_id#){
-                                        Button(Class: btn btn-link, Page: @1profile_edit){
-                                            If(#member_image_id#>0){
-                                                Image(Src: Binary().ById(#member_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
-                                            }.Else{
-                                                Span(Class: fa icon-user fa-5x text-primary)
-                                            }
-                                            Div(m0 h4 text-bold){
-                                                #member_name#
-                                                If(#role_id# > 0){
-                                                    DBFind(@1roles).Where({ecosystem:#ecosystem_id#, id:#role_id#}).Columns("role_name").Vars(role)
-                                                    Span(Body: " (#role_role_name#)")
-                                                }
-                                            }
-                                        }
-                                    }.Else{
+                    Div(row mt-lg){
+                        Div(col-md-12 text-center){
+                            If(Or(#member_id#>0,#member_id#<0)){
+                                If(#member_id# == #key_id#){
+                                    Button(Class: btn btn-link, Page: @1profile_edit){
                                         If(#member_image_id#>0){
                                             Image(Src: Binary().ById(#member_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
                                         }.Else{
-                                            Span(Class: fa icon-user fa-5x)
+                                            Span(Class: fa icon-user fa-5x text-primary)
                                         }
-                                        Div(m0 h4 text-bold){#member_name#}
+                                        Div(m0 h4 text-bold){
+                                            #member_name#
+                                            If(#role_id# > 0){
+                                                DBFind(@1roles).Where({ecosystem:#ecosystem_id#, id:#role_id#}).Columns("role_name").Vars(role)
+                                                Span(Body: " (#role_role_name#)")
+                                            }
+                                        }
                                     }
-                                    Div(Class: h5 text-muted m0, Body: #member_info#)
                                 }.Else{
-                                    If(#v_key_id# == #key_id#){
-                                        Button(Class: btn btn-link, Page: @1profile_edit){
-                                            Div(Class: h4 m0, Body: LangRes(@1editing_profile))
-                                        }
+                                    If(#member_image_id#>0){
+                                        Image(Src: Binary().ById(#member_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                    }.Else{
+                                        Span(Class: fa icon-user fa-5x)
+                                    }
+                                    Div(m0 h4 text-bold){#member_name#}
+                                }
+                                Div(Class: h5 text-muted m0, Body: #member_info#)
+                            }.Else{
+                                If(#v_key_id# == #key_id#){
+                                    Button(Class: btn btn-link, Page: @1profile_edit){
+                                        Div(Class: h4 m0, Body: LangRes(@1editing_profile))
                                     }
                                 }
                             }
                         }
+                    }
+                    Div(row mt-lg){
+                        Div(col-md-12 text-center){
+                            Div(text-bold m0 h5, Body: LangRes(@1wallet_address))
+                            Span(Class: h5, Body: Address(#v_key_id#))
+                        }
+                    }
+                    If(#v_key_id# == #key_id#){
                         Div(row){
                             Div(col-md-12 mt text-center){
-                                Div(text-muted m0 h5, Body: LangRes(@1wallet_address))
-                                Span(Class: h5, Body: Address(#v_key_id#))
+                                Div(text-bold m0 h5, Body: LangRes(@1balance))
+                                Div(Class: m0 h5, Body: Money(#tokens_amount#) APL)
+                                Button(Class: btn-xs btn-link, Page: @1tokens_send, PageParams: "back_page=@1profile_view", Body: LangRes(@1tokens_send)).Popup(Header: $@1tokens_send$, Width: "50")
                             }
                         }
                     }
-                    Div(list-group-item text-center mb){
-                        Div(text-muted m0 h5, Body: LangRes(@1roles))
+                    Div(list-group-item text-center mt-lg){
+                        Div(text-bold m0 h5, Body: LangRes(@1roles))
                         DBFind(@1roles_participants).Where({ecosystem:#ecosystem_id#, "member->member_id":#v_key_id#, deleted:0}).Columns("id").Vars(check)
                         If(#check_id#>0){
                             DBFind(@1roles_participants,src_roles).Where({ecosystem:#ecosystem_id#, "member->member_id":#v_key_id#, deleted:0}).Columns("role->id,role->name").Order("id")
                             ForList(src_roles){
                                 Span(){
-                                    LinkPage(Page: @1roles_view, PageParams: "v_role_id=#role.id#"){
-                                        Span(Class: h5, Body: "#role.name#")
-                                    }
-                                }.Style(margin-right: 6px; margin-left: 6px;)
+                                    LinkPage(Class: h6 m0 text-primary, Page: @1roles_view, PageParams: "v_role_id=#role.id#", Body: "#role.name#")
+                                }.Style(margin-right: 5px; margin-left: 5px;)
                             }
                         }.Else{
                             Span(LangRes(@1no))
@@ -81,45 +86,11 @@ Div(content-wrapper){
                         If(#v_key_id# == #key_id#){
                             SetVar(founder_account, EcosysParam("founder_account"))
                             If(#founder_account# != #key_id#){
-                                Div(){
-                                    Button(Class: btn btn-link, Page: @1roles_request, Body: LangRes(@1request)).Popup(Header: $@1request$, Width: "30")
-                                }
-                            }
-                        }
-                    }
-                    If(#v_key_id# == #key_id#){
-                        Div(list-group-item mb){
-                            P(Class: text-center text-bold h4 m0, Body: LangRes(@1tokens_transfer))
-                            Div(form-group){
                                 Div(row){
-                                    Div(col-md-12 mt text-center){
-                                        Div(text-muted m0 h5, Body: LangRes(@1balance))
-                                        Span(Class: h5 text-bold, Body: Money(#tokens_amount#) APL)
+                                    Div(col-md-12 text-center){    
+                                        Button(Class: btn-xs btn-link, Page: @1roles_request, Body: LangRes(@1request)).Popup(Header: $@1request$, Width: "50")
                                     }
                                 }
-                            }
-                            Div(text-center){
-                                Div(row){
-                                    Div(col-md-3 mt-sm text-right){
-                                        Span(Class: h6 text-bold, Body: LangRes(@1recipient))
-                                    }
-                                    Div(col-md-9 mb-sm text-left){
-                                        Input(Name: Recipient_Account, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx")
-                                    }
-                                }
-                                Div(row){
-                                    Div(col-md-3 mt-sm text-right){
-                                        Span(Class: h6 text-bold, Body: LangRes(@1amount))
-                                    }
-                                    Div(col-md-9 text-left){
-                                        Input(Name: Amount, Type: Number)
-                                    }
-                                }
-                            }
-                        }
-                        Div(row){
-                            Div(col-md-12){
-                                Button(Body: LangRes(@1send), Class: btn btn-default pull-right, Page: @1profile_view, Contract: @1TokensSend).Alert(Text: "$@1want_send_tokens$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
                             }
                         }
                     }
