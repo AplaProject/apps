@@ -1,0 +1,105 @@
+DBFind(@1notifications,threads).Where({ecosystem:#ecosystem_id#, "page_params->type":"message",{"$or": [{"sender->member_id":#key_id#}, {"recipient->member_id":#key_id#}]}}).Order({"id":"-1"}).Limit(250).Count(threads_count).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_name,notification->body,notification->header,page_params->thread,date_created,closed")
+AddToolButton(Page: @1message_create, Icon: icon-plus, Title: $@1create$).Popup(40, $@1message_create$)
+SetTitle($@1messenger$)
+
+Div(content-wrapper){
+    If(#threads_count#>0){
+        Div(row){
+            Div(col-md-6 col-md-offset-3){
+                Form(panel panel-default){
+                    Div(panel-body){
+                        Div(list-group-item text-center){
+                            Span(Class: h4, Body: LangRes(@1message_active_threads))
+                        }
+                        ForList(threads){
+                            If(#page_params.thread#>0){
+                                DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, "page_params->thread": #page_params.thread#}).Order({"id":"-1"}).Limit(1).Columns("id").Vars(last)
+                            }.Else{
+                                DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, "page_params->thread": #id#}).Count(thread_depth)
+                            }
+                            If(Or(#id#==#last_id#,#thread_depth#==0)){
+                                If(Or(#closed#==1,#sender.member_id#==#key_id#)){SetVar(status,"read")}.Else{SetVar(status,"unread")}
+                                Div(list-group-item #status#){
+                                    Div(row){
+                                        Div(left-col col-offset pull-left text-center){
+                                            DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#id#}).Columns("sender->member_id,recipient->member_id,sender->member_name,recipient->member_name,sender->image_id,recipient->image_id").Vars(init_message)
+                                            If(#init_message_sender_member_id#!=#key_id#){
+                                                SetVar(talker_id,#init_message_sender_member_id#)
+                                                SetVar(talker_name,#init_message_sender_member_name#)
+                                                SetVar(talker_picture,#init_message_sender_image_id#)
+                                            }.Else{
+                                                SetVar(talker_id,#init_message_recipient_member_id#)
+                                                SetVar(talker_name,#init_message_recipient_member_name#)
+                                                SetVar(talker_picture,#init_message_recipient_image_id#)
+                                            }
+                                            LinkPage(Page: @1profile_view, PageParams: "v_key_id=#talker_id#"){
+                                                If(#talker_picture#>0){
+                                                    Image(Src: Binary().ById(#talker_picture#), Class: img-thumbnail mb-sm).Style(width: 80px; border: 1px solid #5A5D63;)
+                                                }.Else{
+                                                    Span(Class: fa icon-user fa-5x mb-sm)
+                                                }
+                                                Div(m0 h5 text-bold){#talker_name#}
+                                            }
+                                        }
+                                        Div(col-offset){
+                                            If(#notification.header#==""){
+                                                Span(Class: h4, Body: "No subject")
+                                            }.Else{
+                                                Span(Class: h4, Body: #notification.header#)
+                                            }
+                                            If(#sender.member_id#==#key_id#){
+                                                Div(mt-sm preview){
+                                                    Span(Class: text-muted, Body: "$@1you$: ")
+                                                    Span(#notification.body#)
+                                                }
+                                            }.Else{
+                                                Div(Class: mt-sm preview, Body: #notification.body#)
+                                            }
+                                            Button(Body: LangRes(@1message_thread_show), Class: mt btn btn-default, Page: @1message_view, PageParams: "notific_id=#id#")
+                                            Div(Class: tr-fixed text-muted, Body: DateTime(#date_created#,HH:MI DD.MM.YYYY))
+                                            If(GetVar(status)=="unread"){
+                                                Div(Class: badge br-fixed, Body: LangRes(@1unread))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }.Style(
+            .left-col {
+                display: inline-block;
+                min-width: 80px;
+            }
+            .col-offset {
+                margin-left: 20px;
+                margin-right: 20px;
+            }
+            .preview {
+                text-overflow: ellipsis;
+                overflow: hidden;
+                white-space: nowrap;
+                font-size: 14px;
+            }
+            .br-fixed {
+                position: absolute;
+                right: 10px;
+                bottom: 5px;
+            }
+            .tr-fixed {
+                position: absolute;
+                right: 10px;
+                top: 5px;
+            }
+            .unread {background-color: #fafafa;}
+        )
+    }.Else{
+        Div(panel panel-primary){
+            Div(h3 text-muted text-center){
+                    $@1messages_empty$
+            }
+        }
+    }
+}
