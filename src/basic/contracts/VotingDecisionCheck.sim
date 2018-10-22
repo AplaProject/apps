@@ -2,7 +2,7 @@ contract VotingDecisionCheck {
     data {
         votingID int
     }
-    
+
     func runContract(cont, p string) {
         if Size(cont) > 0 {
             var params map
@@ -12,7 +12,7 @@ contract VotingDecisionCheck {
             CallContract(cont, params)
         }
     }
-    
+
     func percentPartOfTotal(part, total int) int {
         if total == 0{ total = 1 }
         var percent int
@@ -22,7 +22,7 @@ contract VotingDecisionCheck {
         }
         return percent
     }
-    
+
     func totalSummForTypeVotingVoters(votingId int) int {
         var type_number_voters array
         type_number_voters = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID})
@@ -37,7 +37,7 @@ contract VotingDecisionCheck {
         }
         return summ
     }
-    
+
     func closeNotes() {
         var notes array i int
         notes = DBFind("@1notifications").Where({closed:0, ecosystem:$ecosystem_id, page_name:"@1voting_view", "page_params->voting_id":$votingID})
@@ -48,7 +48,7 @@ contract VotingDecisionCheck {
             i = i + 1
         }
     }
-    
+
     conditions {
         $WAITING = 1
         $VALID = 2
@@ -215,7 +215,13 @@ contract VotingDecisionCheck {
 
                             // type of voting - system
                             if $voting_type == 2 {
-                                @1UpdateSysParam("Name,Value,VotingId", column, $colValue, $votingID)
+                                if subject["subject.table"] == "@1ecosystems"{
+                                    var m map
+                                    m[column] = $colValue
+                                    DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
+                                }else{
+                                    @1UpdateSysParam("Name,Value,VotingId", column, $colValue, $votingID)
+                                }
                             }
                         } else {
                             flag_decision = $REJECT
@@ -250,7 +256,13 @@ contract VotingDecisionCheck {
 
                             // type of voting - system
                             if $voting_type == 2 {
-                                @1UpdateSysParam("Name,Value,VotingId", column, $colValue, $votingID)
+                                if subject["subject.table"] == "@1ecosystems"{
+                                    var m map
+                                    m[column] = $colValue
+                                    DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
+                                }else{
+                                    @1UpdateSysParam("Name,Value,VotingId", column, $colValue, $votingID)
+                                }
                             }
                         } else {
                             flag_decision = $REJECT
