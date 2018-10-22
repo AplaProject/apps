@@ -34,6 +34,9 @@ contract TokensEmissionCreate {
         }
     }
     conditions {
+        if $Amount <= 0 {
+            error "Invalid amount"
+        }
         if $Id > 0{
             $item = DBFind("@1tokens").Where({id:$Id}).Row()
             if !$item {
@@ -88,21 +91,32 @@ contract TokensEmissionCreate {
             m = {type_emission:$TypeEmission, title:$Title, amount:amount, ecosystem:$ecosystem_id, type_withdraw:$TypeWithdraw}
             $Id = DBInsert("@1tokens", m)
             if $TypeWithdraw == 2{
-                DBUpdate(ecosystemKeys, $guest, {"blocked": 0})
+                if DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$guest}).Row(){
+                    DBUpdate(ecosystemKeys, $guest, {"blocked": 0})
+                }else{
+                    // create guest account
+                    var guestAccount map
+                    guestAccount = DBFind("@1keys").Where({ecosystem:1, id:$guest}).Row()
+                    guestAccount["maxpay"] = 0
+                    guestAccount["multi"] = 0
+                    guestAccount["deleted"] = 0
+                    guestAccount["amount"] = 0
+                    guestAccount["blocked"] = 0
+                    guestAccount["ecosystem"] = $ecosystem_id
+                    DBInsert(ecosystemKeys, guestAccount)
+                }
             }
         }
-        if $Amount > 0 {
-            DBUpdate(ecosystemKeys, $founder, {"+amount": $Amount})
+        DBUpdate(ecosystemKeys, $founder, {"+amount": $Amount})
 
-            var h map
-            h["sender_id"] = 0
-            h["recipient_id"] = $founder
-            h["amount"] = $Amount
-            h["comment"] = Sprintf("emission id %v", $Id)
-            h["block_id"] = $block
-            h["txhash"] = $txhash
-            h["ecosystem"] = $ecosystem_id
-            DBInsert("@1history", h)
-        }
+        var h map
+        h["sender_id"] = 0
+        h["recipient_id"] = $founder
+        h["amount"] = $Amount
+        h["comment"] = Sprintf("emission id %v", $Id)
+        h["block_id"] = $block
+        h["txhash"] = $txhash
+        h["ecosystem"] = $ecosystem_id
+        DBInsert("@1history", h)
     }
 }
