@@ -1,0 +1,122 @@
+contract TokensEmissionCreate {
+    data {
+        Id int "optional"
+        Title string
+        Amount money
+        TypeWithdraw int
+        TypeEmission int
+    }
+
+    func getEmissionConditionContract() string{
+        var param map contractName string contractId int
+        param = DBFind("@1parameters").Where({ecosystem:$ecosystem_id, name:"emission_condition_contract"}).Row()
+        if param{
+            contractName = param["value"]
+            if Size(contractName) > 0{
+                contractId = GetContractByName(contractName)
+                if contractId == 0{
+                    error "Condition contract for extension emission not found"
+                }elif param["conditions"] != "false"{
+                    error "Condition parameter 'emission_condition_contract' for extension emission must be not editable"
+                }
+            }
+        }
+        return contractName
+    }
+    func createEmissionConditionParam() {
+        if !DBFind("@1parameters").Where({ecosystem:$ecosystem_id, name:"emission_condition_contract"}).Row(){
+            @1NewParameter("Name,Value,Conditions", "emission_condition_contract", "", "ContractConditions(\"MainCondition\")")
+        }
+    }
+    func checkTokenExists(){
+        if DBFind("@1tokens").Where({ecosystem:$ecosystem_id, withdraw:0}).Row(){
+            error "Token for current ecosystems already exists and emission not withdraw"
+        }
+    }
+    conditions {
+        if $Amount <= 0 {
+            error "Invalid amount"
+        }
+        if $Id > 0{
+            $item = DBFind("@1tokens").Where({id:$Id}).Row()
+            if !$item {
+                error "Emission not found"
+            }
+            if $item["type_emission"] == 1 {
+                error "Emission are not editable"
+            }else{
+                var name string
+                name = getEmissionConditionContract()
+                if name != "" {
+                    ContractConditions(name)
+                }else{
+                    MainCondition()
+                }
+            }
+        }else{
+            MainCondition()
+            if Size($Title) == 0{
+                error Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "title")
+            }
+            if $TypeEmission == 2 {
+                getEmissionConditionContract()
+            }
+            checkTokenExists()
+        }
+        if $Id == 0 && $Amount <= 0{
+            error Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "amount")
+        }
+        $guest = 4544233900443112470
+        $founder = Int(EcosysParam("founder_account"))
+    }
+    action {
+        createEmissionConditionParam()
+
+        var m amount map ecosystemKeys string
+        ecosystemKeys = Sprintf("@%vkeys", $ecosystem_id)
+
+        if $Id > 0{
+            m = $item
+            amount = JSONDecode(m["amount"])
+            if m["type_emission"] == 2{
+                amount[Str($block_time)] = $Amount
+                m["amount"] = amount
+            }
+            if m["type_withdraw"] == 2{
+                m["type_withdraw"] = $TypeWithdraw
+            }
+            DBUpdate("@1tokens", $Id, m)
+        }else{
+            amount[Str($block_time)] = $Amount
+            m = {type_emission:$TypeEmission, title:$Title, amount:amount, ecosystem:$ecosystem_id, type_withdraw:$TypeWithdraw}
+            $Id = DBInsert("@1tokens", m)
+            if $TypeWithdraw == 2{
+                if DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$guest}).Row(){
+                    DBUpdate(ecosystemKeys, $guest, {"blocked": 0})
+                }else{
+                    // create guest account
+                    var guestAccount map
+                    guestAccount = DBFind("@1keys").Where({ecosystem:1, id:$guest}).Row()
+                    guestAccount["maxpay"] = 0
+                    guestAccount["multi"] = 0
+                    guestAccount["deleted"] = 0
+                    guestAccount["amount"] = 0
+                    guestAccount["blocked"] = 0
+                    guestAccount["ecosystem"] = $ecosystem_id
+                    DBInsert(ecosystemKeys, guestAccount)
+                }
+            }
+        }
+        DBUpdate(ecosystemKeys, $founder, {"+amount": $Amount})
+
+        var h map
+        h["sender_id"] = 0
+        h["recipient_id"] = $founder
+        h["amount"] = $Amount
+        h["comment"] = Sprintf("emission id %v", $Id)
+        h["block_id"] = $block
+        h["txhash"] = $txhash
+        h["ecosystem"] = $ecosystem_id
+        DBInsert("@1history", h)
+    }
+}

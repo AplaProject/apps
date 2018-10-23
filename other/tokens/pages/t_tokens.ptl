@@ -1,0 +1,64 @@
+DBFind(@1applications).Columns("id").Where({name:"Tokens", deleted:0, ecosystem:1}).Vars(application)
+SetTitle($@1tokens$)
+SetVar(this_page,@1t_tokens)
+Div(content-wrapper){
+    AddToolButton(Title: $@1create$, Page: @1t_token_edit, Icon: icon-plus)
+
+    DBFind(@1tokens).Where({ecosystem:#ecosystem_id#}).Count(count)
+    If(#page#>0){
+        SetVar(prev_page,Calculate(#page#-1)
+    }.Else{
+        SetVar(page,0).(prev_page,0)
+    }
+    SetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#count#/#per_page#)).(next_page,#last_page#)
+    If(#count#>Calculate(#off#+#per_page#)){
+        SetVar(next_page,Calculate(#page#+1)
+    }
+    Div(button-group){
+        If(#page#>0){
+            Button(Body:"1", Class:btn btn-default, Page:#this_page#, PageParams: "page=0")
+        }.Else{
+            Button(Body:"1", Class:btn btn-default disabled)
+        }
+        If(#page#>1){
+            Button(Body:Calculate(#prev_page#+1),Class:btn btn-default, Page:#this_page#, PageParams:"page=#prev_page#")
+        }
+        If(And(#page#>0,#page#<#last_page#)){
+            Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)
+        }
+        If(#next_page#<#last_page#){
+            Button(Body:Calculate(#next_page#+1),Class:btn btn-default,Page:#this_page#, PageParams:"page=#next_page#")
+        }
+        If(#page#<#last_page#){
+            Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page:#this_page#, PageParams:"page=#last_page#")
+        }.ElseIf(#last_page#>0){
+            Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)
+        }
+    }
+    DBFind(@1tokens,src_tokens).Where({ecosystem:#ecosystem_id#}).Offset(#off#).Order(id).Custom(_actions){
+        Div(text-right text-nowrap){
+            If(And(#type_emission#==2,#withdraw#!=1)){
+                Button(Class: btn btn-default fa fa-edit mr-sm, Page: @1t_token_edit, PageParams: "Id=#id#")
+            }
+            Button(Class: btn btn-default fa fa-eye mr-sm, Page: @1t_token_view, PageParams: "Id=#id#")
+        }
+    }.Custom(_type_withdraw){
+        AppParam(App:#application_id#, Name:type_withdraw, Index:#type_withdraw#, Ecosystem:1)
+    }.Custom(_type_emission){
+        AppParam(App:#application_id#, Name:type_emission, Index:#type_emission#, Ecosystem:1)
+    }.Custom(_amount){
+        JsonToSource(amounts,#amount#)
+        ForList(amounts){
+            Div(){
+                Span("Money(#value#)",mr).("(DateTime(#key#, Format: YYYY-MM-DD HH:MI:SS))",text-muted)
+            }
+        }
+    }
+    Div(panel panel-primary){
+        Div(panel-body){
+            Div(table-responsive){
+                Table(src_tokens,"$@1title$=title,$@1type_emission$=_type_emission,$@1type_withdraw$=_type_withdraw,$@1amount$=_amount,=_actions")
+            }
+        }
+    }
+}
