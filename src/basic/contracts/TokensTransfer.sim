@@ -1,13 +1,14 @@
 contract TokensTransfer {
     data {
         Amount money
-        Sender_AccountId int
-        Recipient_AccountId int
+        SenderId int
+        RecipientId int
         Comment string "optional"
     }
+
     func getPermission() {
         var array_permissions array result i int prevContract string
-        array_permissions = ["@1TokensSend", "@1TokensRefund"]
+        array_permissions = ["@1TokensSend", "@1PoaTokensSend", "@1TokensRefund"]
 
         prevContract = $stack[0]
         if Len($stack) > 2 {
@@ -27,10 +28,44 @@ contract TokensTransfer {
         }
     }
 
-    conditions {
-        //getting permission to run
-        getPermission()
+    func checkSender() {
+        var sender_map map
+        sender_map = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$SenderId}).Row()
 
+        if !sender_map {
+            error Sprintf(LangRes("@1sender_x_invalid", "en"), $SenderId)
+        }
+        if Int(sender_map["blocked"]) != 0 {
+            error LangRes("@1sender_blocked", "en")
+        }
+        if Int(sender_map["deleted"]) != 0 {
+            error LangRes("@1sender_deleted", "en")
+        }
+        if Money(sender_map["amount"]) < $Amount {
+            error LangRes("@1amount_less_than_needed", "en")
+        }
+    }
+
+    func checkRecipient() {
+        var recipient_map map
+        recipient_map = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$RecipientId}).Row()
+
+        if !recipient_map {
+            error Sprintf(LangRes("@1recipient_x_invalid", "en"), $RecipientId)
+        }
+        if Int(recipient_map["blocked"]) != 0 {
+            error LangRes("@1recipient_blocked", "en")
+        }
+        if Int(recipient_map["deleted"]) != 0 {
+            error LangRes("@1recipient_deleted", "en")
+        }
+    }
+
+    conditions {
+        getPermission()   //getting permission to run
+        checkSender()     //check the sender
+        checkRecipient()  //check the recipient
+        
         //check amount
         if $Amount == 0 {
             error LangRes("@1amount_zero", "en")
@@ -38,32 +73,14 @@ contract TokensTransfer {
         if $Amount < 0 {
             error LangRes("@1amount_less_zero", "en")
         }
-
-        var sender_map map
-        sender_map = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Sender_AccountId}).Row()
-        var recipient_map map
-        recipient_map = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Recipient_AccountId}).Row()
-
-        //check the sender
-        if !sender_map {
-            error Sprintf(LangRes("@1sender_x_invalid", "en"), $Sender_AccountId)
-        }
-        if Money(sender_map["amount"]) < $Amount {
-            error LangRes("@1amount_less_than_needed", "en")
-        }
-
-        //check the recipient
-        if !recipient_map {
-            error Sprintf(LangRes("@1recipient_x_invalid", "en"), $Recipient_AccountId)
-        }
     }
 
     action {
-        DBUpdate("@1keys", $Sender_AccountId, {"-amount": $Amount})
-        DBUpdate("@1keys", $Recipient_AccountId, {"+amount": $Amount})
+        DBUpdate("@1keys", $SenderId, {"-amount": $Amount})
+        DBUpdate("@1keys", $RecipientId, {"+amount": $Amount})
         var m map
-        m["sender_id"] = $Sender_AccountId
-        m["recipient_id"] = $Recipient_AccountId
+        m["sender_id"] = $SenderId
+        m["recipient_id"] = $RecipientId
         m["amount"] = $Amount
         m["comment"] = $Comment
         m["block_id"] = $block

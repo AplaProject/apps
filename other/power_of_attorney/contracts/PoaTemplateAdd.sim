@@ -1,0 +1,55 @@
+contract PoaTemplateAdd {
+    data {
+        ContractName string
+        ParamArr array
+    }
+
+    func getMemberInfo(kid int) map {
+        var res member map
+        member = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:kid}).Row()
+        if member {
+            res["member_id"] = member["id"]
+            res["member_name"] = member["member_name"]
+            res["image_id"] = member["image_id"]
+        } else {
+            member = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:kid}).Row()
+            if member {
+                res["member_id"] = member["id"]
+                res["member_name"] = IdToAddress(Int(member["id"]))
+                res["image_id"] = 0
+            }
+        }
+        return res
+    }
+
+    conditions {
+        var role_id_param string
+        role_id_param = EcosysParam("role_admin")
+        if Size(role_id_param) == 0 {
+            error LangRes("@1poa_not_rights_to_create", "en") 
+        }
+        var role_id int
+        role_id = Int(role_id_param)
+        
+        if !RoleAccess(role_id) {
+            error LangRes("@1poa_not_rights_to_create", "en") 
+        }  
+    }
+    
+    action {
+        var i int params map
+        while i < Len($ParamArr) {
+            params[$ParamArr[i]] = ""
+            i = i + 1
+        }
+
+        var m map
+        m["creator"] = getMemberInfo($key_id)
+        m["contract"] = $ContractName
+        m["date_created"] = $block_time
+        m["params"] = params
+        m["deleted"] = 0
+        m["ecosystem"] = $ecosystem_id
+        $result = DBInsert("@1poa_templates", m)
+    }
+}
