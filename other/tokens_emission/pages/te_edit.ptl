@@ -2,37 +2,30 @@ DBFind(@1applications).Columns("id").Where({name:"Tokens emission", deleted:0, e
 AppParam(App:#application_id#, Name:type_emission, Source:type_emission, Ecosystem:1)
 AppParam(App:#application_id#, Name:type_withdraw, Source:type_withdraw, Ecosystem:1)
 SetVar(item_type_emission,).(item_title,).(item_amount,).(item_ecosystem,).(item_type_withdraw,)
-SetVar(this_page,@1te_edit).(back_page,@1te_list)
-SetVar(btn_title,$@1execute$)
-If(GetVar(Id)){
-    DBFind(@1tokens).Where({id:#Id#}).Vars(item)
-    If(GetVar(TypeEmission)==""){
-        SetVar(TypeEmission,#item_type_emission#)
-    }
-}.Else{
-    SetVar(Id,0)
+
+SetVar(this_page,@1te_edit)
+
+SetVar(type,0)
+DBFind(@1ecosystems).WhereId(#ecosystem_id#).Vars(item)
+If(#item_type_emission#>0){
+    SetVar(type,#item_type_emission#)
 }
-SetTitle($@1emission_new$)
+If(GetVar(TypeEmission)==""){
+    SetVar(TypeEmission,#item_type_emission#)
+}
+SetTitle($@1tokens$)
 Div(fullscreen-wrapper){
-    Div(breadcrumb){
-        LinkPage(Body: $@1tokens$, Page: #back_page#)
-        Span(/,mh)
-        Span($@1emission_new$, text-muted)
-    }
     Div(row){
         Div(col-sm-8 col-sm-offset-2){
             Form(panel panel-default){
                 Div(panel-body){
-                    If(#Id#>0){
-                        Input(Name: Id, Type:hidden, Value: #Id#)
-                    }
                     Div(row mt-sm){
                         Div(col-sm-4 mt-sm text-right){
                             LangRes(@1type_emission)
                             Span(*,text-danger)
                         }
                         Div(col-sm-8 text-left){
-                            If(#Id#>0){
+                            If(#type#>0){
                                 Div(mt-sm){
                                     AppParam(App:#application_id#, Name:type_emission, Index:#item_type_emission#, Ecosystem:1)
                                     If(#item_type_emission#==2){
@@ -56,9 +49,9 @@ Div(fullscreen-wrapper){
                             Span(*,text-danger)
                         }
                         Div(col-sm-8 text-left){
-                            If(#Id#>0){
+                            If(#type#>0){
                                 Div(mt-sm){
-                                    #item_title#
+                                    #item_token_title#
                                 }
                             }.Else{
                                 Input(Name: Title)
@@ -81,7 +74,7 @@ Div(fullscreen-wrapper){
                             }
                         }
                     }
-                    If(Or(#TypeEmission#==2,#Id#==0)){
+                    If(Or(#TypeEmission#==2,#type#==0)){
                         Div(row mt-sm){
                             Div(col-sm-4 mt-sm text-right){
                                 LangRes(@1amount) (APL)
@@ -99,8 +92,8 @@ Div(fullscreen-wrapper){
                         }
                     }
 
-                    If(#Id#>0){
-                        JsonToSource(amounts, #item_amount#)
+                    If(#type#>0){
+                        JsonToSource(amounts, #item_emission_amount#)
                         Div(list-group-item mt-sm text-muted){
                             Div(text-center){
                                 $@1completed_stages$
@@ -118,12 +111,9 @@ Div(fullscreen-wrapper){
                         }
                     }
                 }
-                Div(panel-footer){
-                    Button(Body: $@1back$, Page: #back_page#, Class: btn btn-default)
-                    Div(pull-right){
-                        If(And(#item_withdraw#!=1,GetVar(TypeEmission)!="",#item_type_emission#!=1)){
-                            Button(Body: #btn_title#, Page: #back_page#, Class: btn btn-primary, Contract: @1TeCreate, Params: "TypeEmission=#TypeEmission#")
-                        }
+                Div(panel-footer text-right){
+                    If(And(#item_withdraw#!=1,GetVar(TypeEmission)!="",#item_type_emission#!=1)){
+                        Button(Body: $@1emission_new$, Page: #this_page#, Class: btn btn-primary, Contract: @1TeCreate, Params: "TypeEmission=#TypeEmission#")
                     }
                 }
             }
