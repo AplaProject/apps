@@ -295,6 +295,12 @@
             "Type": "contracts"
         },
         {
+            "Name": "AdminCondition",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "// This contract is used to set \"admin\" rights.\r\n// Usually the \"admin\" role is used for this.\r\n// The role ID is written to the ecosystem parameter and can be changed.\r\n// The contract requests the role ID from the ecosystem parameter and the contract checks the rights.\r\n\r\ncontract AdminCondition {\r\n    conditions {\r\n        if EcosysParam(\"founder_account\") == $key_id {\r\n            return\r\n        }\r\n\r\n        var role_id_param string\r\n        role_id_param = EcosysParam(\"role_admin\")\r\n        if Size(role_id_param) == 0 {\r\n            warning \"Sorry, you do not have access to this action.\"\r\n        }\r\n\r\n        var role_id int\r\n        role_id = Int(role_id_param)\r\n        \r\n        if !RoleAccess(role_id) {\r\n            warning \"Sorry, you do not have access to this action.\"\r\n        }      \r\n    }\r\n}",
+            "Type": "contracts"
+        },
+        {
             "Name": "AppendMenu",
             "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
             "Value": "contract AppendMenu {\r\n    data {\r\n        Id     int\r\n        Value      string\r\n    }\r\n    conditions {\r\n        ConditionById(\"menu\", false)\r\n    }\r\n    action {\r\n        var row map\r\n        row = DBFind(\"@1menu\").Columns(\"value\").Where({id: $Id, ecosystem: $ecosystem_id})Row()\r\n        var val string\r\n        val = row[\"value\"] + \"\\r\\n\" + $Value\r\n        DBUpdate(\"@1menu\", $Id, {\"value\": val})\r\n\r\n    }\r\n}",
@@ -328,6 +334,12 @@
             "Name": "DelApplication",
             "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
             "Value": "contract DelApplication {\r\n    data {\r\n        ApplicationId int\r\n        Value int \"optional\"\r\n    }\r\n\r\n    conditions {\r\n        if(!DBFind(\"@1applications\").Columns(\"id,ecosystem\").Where({id: $ApplicationId,ecosystem: $ecosystem_id})){\r\n            warning LangRes(\"@1item_not_found\", \"en\")\r\n        }\r\n\r\n        if $Value < 0 || $Value > 1 {\r\n            error LangRes(\"@1value_incorrect\", \"en\")\r\n        }\r\n        RowConditions(\"@1applications\", $ApplicationId, false)\r\n    }\r\n\r\n    action {\r\n        DBUpdate(\"@1applications\", $ApplicationId, {\"deleted\": $Value})\r\n    }\r\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "DeveloperCondition",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "// This contract is used to set \"developer\" rights.\r\n// Usually the \"developer\" role is used for this.\r\n// The role ID is written to the ecosystem parameter and can be changed.\r\n// The contract requests the role ID from the ecosystem parameter and the contract checks the rights.\r\n\r\ncontract DeveloperCondition {\r\n    conditions {\r\n        if EcosysParam(\"founder_account\") == $key_id {\r\n            return\r\n        }\r\n\r\n        var role_id_param string\r\n        role_id_param = EcosysParam(\"role_developer\")\r\n        if Size(role_id_param) == 0 {\r\n            warning \"Sorry, you do not have access to this action.\"\r\n        }\r\n\r\n        var role_id int\r\n        role_id = Int(role_id_param)\r\n        \r\n        if !RoleAccess(role_id) {\r\n            warning \"Sorry, you do not have access to this action.\"\r\n        }\r\n    }\r\n}",
             "Type": "contracts"
         },
         {
