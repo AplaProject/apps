@@ -1,0 +1,90 @@
+SetVar(this_page, @1poa_template_list)
+Div(content-wrapper){
+    SetTitle($@1poa_template_list$)
+    Div(breadcrumb){
+        LinkPage($@1poa_list$, @1poa_list)
+        Span(/, mh)
+        Span($@1poa_template_list$, text-muted)
+    }
+    
+    SetVar(admin_role_id, EcosysParam(Name:role_admin))
+    If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
+        AddToolButton(Page: @1poa_template_add, Title: $@1template_add$).Popup(Header: $@1template_add$, Width: "50")
+    }
+
+    If(GetVar(Search)){
+        SetVar(Where,{name:{"$like":#Search#}})
+    }.Else{
+        SetVar(Where,{id:{"$neq":0}}).(Search,)
+    }
+    
+    Form(panel panel-primary){
+        Div(panel-body){
+            Div(row){
+                Div(col-md-12){
+                    Form(input-group){
+                        Div(input-group-addon){
+                            LangRes(@1name)
+                        }
+                        Input(Name: Search, Value: #Search#)
+                        Div(input-group-btn){
+                            If(GetVar(Search)!=""){
+                                Button(Class: btn btn-default fa fa-close, Page: #this_page#)
+                            }
+                            Button(Class: btn btn-default fa fa-search, Page: #this_page#, PageParams: "Search=Val(Search),type=1")
+                        }
+                    }
+                }
+            }
+
+            DBFind(@1poa_templates, src_poa).Order("contract").Where({ecosystem:#ecosystem_id#, deleted:0}).Columns("id,contract,params,creator->member_id,creator->member_name,date_created,deleted").Count(templates_count).Custom(_contract){
+                Button(Class: btn-xs btn-link, PageParams: "template_id=#id#", Page: @1poa_add){
+                    Span(Class: h5 text-bold, Body: #contract#)
+                }.Popup(50, $@1poa_add$)
+            }.Custom(_creator){
+                If(And(#creator.member_name#!=NULL,#creator.member_name#!="")){
+                    LinkPage(Class: text-primary, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
+                        #creator.member_name#
+                    }
+                }
+            }.Custom(_date){
+                Div(h6){
+                    Div(text-nowrap){DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI")}
+                }
+            }.Custom(_params){
+                Span(Class: text-muted h6){
+                    JsonToSource(pv, #params#)
+                    ForList(Source: pv, Index:s_ind){
+                        If(#s_ind#>1){
+                           Span(",").Style(margin-right: 5px;)
+                        }
+                        "#key#"
+                    }
+                }
+            }.Custom(_action){
+                If(#creator.member_id#==#key_id#){
+                    Div(text-right button-group text-nowrap){
+                        If(#deleted# == 0){
+                            Button(Class: fa fa-trash btn btn-danger mh-sm, Contract: @1PoaTemplateDelete, Params: "TemplateId=#id#", Page: #this_page#).Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                        }
+                        Button(Class: fa fa-edit btn btn-default mh-sm, PageParams: "template_id=#id#", Page: @1poa_template_edit).Popup(50, $@1template_edit$)
+                    }
+                }
+            }
+
+            Div(row){
+                Div(col-md-12){
+                    If(#templates_count#>0){
+                        Div(table-responsive){
+                            Table(src_poa, "$@1contract$=_contract,$@1date_created$=_date,$@1creator$=_creator,$@1params$=_params,=_action")
+                        }
+                    }.Else{
+                        Div(h4 text-muted text-center){
+                            $@1poa_template_list$ $@1not_founded$
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

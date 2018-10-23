@@ -1,5 +1,9 @@
+SetVar(this_page,@1notifications_roles_send).(back_page,@1notifications_list)
+If(GetVar(SelectedId)==""){
+    SetVar(SelectedId,#ecosystem_id#)
+}
 DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Basic"}).Vars(application)
-DBFind(@1ecosystems, ecosystems).Columns("id,name").Count(eco_count)
+DBFind(@1ecosystems).Columns("id,name").WhereId(#SelectedId#).Vars(eco)
 Form(){
     Div(list-group-item){
         Div(row){
@@ -9,7 +13,13 @@ Form(){
                 }
             }
             Div(col-md-9 text-left){
-                Select(Name: eco_id, Source: ecosystems, NameColumn: name, ValueColumn: id)
+                Input(Name: eco_id, Type:hidden, Value: #eco_id#)
+                Div(input-group){
+                    Input(Name: eco_id_v, Disabled: 1, Value: #eco_name#)
+                    Div(input-group-btn){
+                        Button(Body: LangRes(@1select), Page: @1select_page, PageParams: "Type=ecosystem,back_page=#this_page#,Header=$@1create$", Class:btn btn-primary).Popup(Header: $@1ecosystem$, Width: "50")
+                    }
+                }  
             }
         }
     }
@@ -21,8 +31,14 @@ Form(){
                 }
             }
             Div(col-md-9 mb-sm text-left){
-                DBFind(@1roles,source_roles).Where({ecosystem:#ecosystem_id#, deleted:0}).Columns("id,role_name")
-                Select(Name: rid, Source: source_roles, NameColumn: role_name, ValueColumn: id)
+                DBFind(@1roles,source_roles).Where({ecosystem:#SelectedId#, deleted:0}).Columns("id,role_name").Count(roles_count)
+                If(#roles_count#>0){
+                    Select(Name: rid, Source: source_roles, NameColumn: role_name, ValueColumn: id)
+                }.Else{
+                    Div(mt-sm){
+                        $@1roles$ $@1not_founded$
+                    }
+                }
             }
         }
         Div(row){
@@ -110,8 +126,8 @@ Form(){
     }
     Div(row mt-lg){
         Div(col-md-12){
-            Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1notifications_list, PageParams: "type=1")
-            Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1notifications_list, PageParams: "type=1", Contract: @1NotificationsSend, Params: "current_role_id=#role_id#")
+            Button(Body: LangRes(@1back), Class: btn btn-default, Page: #back_page#, PageParams: "type=1")
+            Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: #back_page#, PageParams: "type=1", Contract: @1NotificationsSend, Params: "current_role_id=#role_id#")
         }
     }
 }
