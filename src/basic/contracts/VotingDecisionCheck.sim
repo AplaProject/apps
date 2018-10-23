@@ -232,7 +232,7 @@ contract VotingDecisionCheck {
                         if total_summ_type_voter >= 1 {
                             flag_decision = $ACCEPT
 
-                            var column string
+                            var column string m map
                             column = Str(subject["subject.column"])
                             $colValue = Str(subject["subject.column_value"])
                             // type of voting - custom
@@ -249,7 +249,6 @@ contract VotingDecisionCheck {
                                 if colType == "double" {
                                     $colValue = Float($colValue)
                                 }
-                                var m map
                                 m[column] = $colValue
                                 DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
                             }
@@ -257,9 +256,14 @@ contract VotingDecisionCheck {
                             // type of voting - system
                             if $voting_type == 2 {
                                 if subject["subject.table"] == "@1ecosystems"{
-                                    var m map
                                     m[column] = $colValue
                                     DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
+                                }elif subject["subject.table"] == "@1pages"{
+                                    m = JSONDecode($colValue)
+                                    CallContract("@1EditPage", m)
+                                }elif subject["subject.table"] == "@1contracts"{
+                                    m = JSONDecode($colValue)
+                                    CallContract("@1EditContract", m)
                                 }else{
                                     @1UpdateSysParam("Name,Value,VotingId", column, $colValue, $votingID)
                                 }
