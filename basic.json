@@ -196,7 +196,7 @@
         },
         {
             "Name": "ecosystem_add_members",
-            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
             "Value": "Form(){\r\n    Label(Public Key)\r\n    P(Class: text-muted h6 m0, Body: \"$@1keys_must_be_separated$\")\r\n    Input(Name: memberskeys, Type: textarea)\r\n    Button(Contract: @1MembershipAdd, Class: btn btn-primary pull-right mt, Page:@1members_list, Body: $@1members_add$)\r\n    Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1members_list)\r\n}",
             "Menu": "default_menu",
             "Type": "pages"
@@ -548,7 +548,7 @@
         },
         {
             "Name": "MembershipAdd",
-            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
             "Value": "contract MembershipAdd {\r\n    data {\r\n        memberskeys string\r\n    }\r\n\r\n    func addPub(pub_key string) {\r\n        if HasPrefix(pub_key, \"04\") {\r\n            pub_key = Substr(pub_key, 2, Size(pub_key) - 2)\r\n        }\r\n        if Size(pub_key) < 128 {\r\n            error LangRes(\"@1key_too_short\", \"en\")\r\n        }\r\n        if Size(pub_key) > 128 {\r\n            error LangRes(\"@1key_too_long\", \"en\")\r\n        }\r\n\r\n        var k_id int\r\n        k_id = PubToID(pub_key)\r\n        if k_id == 0 {\r\n            warning LangRes(\"@1public_key_invalid\", \"en\")\r\n        }\r\n        $check_user = DBFind(\"@1keys\").Where({id:k_id, ecosystem:$ecosystem_id})\r\n        if $check_user {\r\n            error LangRes(\"@1key_already_exists\", \"en\")\r\n        }\r\n\r\n        DBInsert(\"@1keys\",{id:k_id, pub:pub_key, ecosystem:$ecosystem_id})\r\n    }\r\n\r\n    conditions {\r\n        if $memberskeys == \"\" {\r\n            warning LangRes(\"@1public_key_empty\", \"en\")\r\n        }\r\n        $memberskeys = Replace($memberskeys, \" \", \"\")\r\n        $memberskeys = Replace($memberskeys, \"\\n\", \"\")\r\n        $memberskeys = Replace($memberskeys, \"\\r\", \"\")\r\n\r\n        var admin_id int\r\n        admin_id = EcosysParam(\"role_admin\")\r\n       \r\n        if !RoleAccess(Int(admin_id)) {\r\n            warning LangRes(\"@1access_denied\", \"en\")\r\n        }\r\n\r\n        if ($ecosystem_id == 1) {\r\n            error LangRes(\"@1impossible_for_platform_ecosystem\", \"en\")\r\n        }\r\n    }\r\n\r\n    action {\r\n        if Contains($memberskeys, \",\") {\r\n            var pub_array array\r\n            pub_array = Split($memberskeys, \",\")\r\n\r\n            var i int\r\n            while i < Len(pub_array) {\r\n                var pub_key string\r\n                pub_key = Str(pub_array[i])\r\n                addPub(pub_key)\r\n                i = i + 1\r\n            }\r\n        } else {\r\n            addPub($memberskeys)\r\n        }\r\n    }\r\n}",
             "Type": "contracts"
         },
