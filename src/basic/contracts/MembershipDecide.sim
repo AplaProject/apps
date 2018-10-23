@@ -1,36 +1,35 @@
 contract MembershipDecide {
     data {
         notific_id int
-        Accept int
+        accept int
     }
-    
+
     conditions {
         $request = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$notific_id}).Columns("id,closed,sender->member_id,page_params->ecosystem_id,page_params->ecosystem_sender").Row()
-        var ecoId admin_id int
+        var ecoId int
         ecoId = Int($request["page_params.ecosystem_id"])
 
         if Int($request["closed"]) == 1 {
             warning LangRes("@1request_processed_already", "en")
         }
-        
+
         var admin_id int
         admin_id = EcosysParam("role_admin")
         if !RoleAccess(Int(admin_id)) {
             warning LangRes("@1access_denied", "en")
         }
     }
-    
+
     action {
         var params map
         params["ecosystem_id"] = $request["page_params.ecosystem_id"]
-        if ($Accept == 0){
+        if $accept == 1 {
             params["status"] = 1
-
             var pub string mid eco_id int
             mid = Int($request["sender.member_id"])
             eco_id = Int($request["page_params.ecosystem_id"])
-            pub = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:mid}).One("pub") 
-            DBInsert("@1keys", {id:mid,pub:pub,ecosystem:eco_id})
+            pub = DBFind("@1keys").Where({ecosystem:1, id:mid}).One("pub") 
+            DBInsert("@1keys", {id:mid, pub:pub, ecosystem:eco_id})
         }
         else{
             params["status"] = 0
@@ -45,6 +44,7 @@ contract MembershipDecide {
         page = "@1membership_user_view"
 
         @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,eco_id", $request["sender.member_id"], 1, icon, header, body, page, params, Int($request["page_params.ecosystem_sender"]))
+        @1NotificationsProcess("notific_id", $notific_id)
         @1NotificationsClose("notific_id", $notific_id)
     }
 }

@@ -6,18 +6,23 @@ contract MembershipRequest {
     conditions {
         if DBFind("@1notifications").Where({ecosystem:$ecosystem_num, "page_params->ecosystem_id":$ecosystem_num, "sender->member_id":$key_id, closed:0, page_name:"@1membership_admin_view"}).Row(){
             warning LangRes("@1request_sent_already", "en")
-        } 
+        }
+
+        if !DBFind("@1ecosystems").Where({id:$ecosystem_num}).One("id"){
+            error Sprintf(LangRes("@1template_eco_not_exist", "en"), $ecosystem_num)
+        }
+
+        $admin_id = Int(DBFind("@1parameters").Where({ecosystem:$ecosystem_num,name:"role_admin"}).One("value"))
+        if $admin_id == 0 { 
+            LangRes("@1recipient_role_not_found", "en")
+        }
     }
 
     action {
-        var notific_params map admin_id int
+        var notific_params map
         notific_params["ecosystem_id"] = $ecosystem_num
         notific_params["ecosystem_sender"] = $ecosystem_id
 
-        var admin_id int
-        admin_id = Int(DBFind("@1parameters").Where({ecosystem:$ecosystem_num,name:"role_admin"}).One("value"))
-        
-        @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id", admin_id, 1, "icon icon-user-follow", LangRes("@1membership_request_new", "en"), LangRes("@1details_view", "en"), "@1membership_admin_view", notific_params,1,$ecosystem_num)
-
+        @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id", $admin_id, 1, "icon icon-user-follow", LangRes("@1membership_request_new", "en"), LangRes("@1details_view", "en"), "@1membership_admin_view", notific_params,1,$ecosystem_num)
     }
 }

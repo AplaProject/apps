@@ -231,12 +231,6 @@
             "Value": "SetVar(this_page, @1params_list)\r\nIf(GetVar(Search)!=\"\"){\r\n    SetVar(pager_where,\"{ecosystem:#ecosystem_id#, {$or:[{name:{$like:#Search#}}]}}\")\r\n}.Else{\r\n    SetVar(pager_where,\"{ecosystem:#ecosystem_id#}\").(Search,)\r\n}\r\n\r\nDiv(fullscreen){\r\n    SetTitle($@1ecosystem_parameters$)\r\n    Div(breadcrumb){\r\n        Span(Class: text-muted, Body: $@1sysparams_section$)\r\n    }\r\n    AddToolButton(Title: $@1style_manage$, Page: @1params_edit, Icon: icon-picture, PageParams:\"stylesheet=stylesheet\")\r\n    AddToolButton(Title: $@1create$, Page: @1params_edit, Icon: icon-plus)\r\n\r\n    Include(@1search_body)\r\n    SetVar(pager_table, @1parameters).(pager_page, @1params_list).(pager_limit, 25)\r\n    Include(@1pager_header)\r\n    \r\n    DBFind(@1parameters, src_appparameters).Limit(#pager_limit#).Where(#pager_where#).Order(id).Offset(#pager_offset#).Custom(_name){\r\n        LinkPage(Page: @1params_edit, Class: text-primary h5, Body: \"#name#\", PageParams: \"id=#id#\")\r\n    }.Count(count)\r\n    \r\n    If(#count# != 0){\r\n        Div(table-responsive){\r\n            Table(src_appparameters, \"$@1name$=_name,$@1value$=value,$@1conditions$=conditions\")\r\n        }.Style(\r\n            tbody > tr:nth-of-type(odd) {\r\n                background-color: #ffffff;\r\n            }\r\n            tbody > tr > td {\r\n                word-break: break-all;\r\n                font-weight: 400;\r\n                font-size: 13px;\r\n                color: #666;\r\n                border-top: 1px solid #eee;\r\n                vertical-align: middle;\r\n            }\r\n            tr > *:first-child {\r\n                padding-left:20px;\r\n            }\r\n            tr > *:last-child {\r\n                padding-right:30px;\r\n                text-align:left;\r\n            }\r\n            thead {\r\n                background-color: #f6f7fa;\r\n            }\r\n        )\r\n    }.Else{\r\n        Span(Class: h4 text-center, Body: \"$@1ecosystem_parameters$ $@1not_founded$\")\r\n    }\r\n}\r\nInclude(@1pager)",
             "Menu": "admin_menu",
             "Type": "pages"
-        },        {
-            "Name": "ecosystem_add_members",
-            "Conditions": "ContractAccess(\"@1EditPage\")",
-            "Value": "Div(content-wrapper){\r\n    SetTitle($@1ecosystem_add_members$)\r\n    \r\n    Form(){\r\n        Div(list-group-item){\r\n            Div(row ms-sm){\r\n                Div(col-md-3 mt-sm text-right){\r\n                    Label(Public Key)\r\n                    Span(Class: text-danger,Body: *)\r\n                    P(Class: text-muted,Body: \"$@1keys_must_be_separated$\")\r\n                }\r\n                Div(col-md-9 text-left){\r\n                    Input(Name: memberskeys, Type: textarea)\r\n                }\r\n            }\r\n        }\r\n        Div(row mt){\r\n            Div(col-md-12){\r\n                Button(Body: LangRes(@1back), Class: btn btn-default pull-left, Page: @1members_list)\r\n                Button(Contract: @1MembershipAdd, Class: btn btn-primary pull-right, Page:@1members_list, Body: $@1members_add$)\r\n            }\r\n        }\r\n    }\r\n}"
-            "Menu": "admin_resources",
-            "Type": "pages"
         },
         {
             "Name": "properties_edit",
@@ -301,6 +295,12 @@
             "Type": "contracts"
         },
         {
+            "Name": "AdminCondition",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "// This contract is used to set \"admin\" rights.\r\n// Usually the \"admin\" role is used for this.\r\n// The role ID is written to the ecosystem parameter and can be changed.\r\n// The contract requests the role ID from the ecosystem parameter and the contract checks the rights.\r\n\r\ncontract AdminCondition {\r\n\tconditions {\r\n\t\tif EcosysParam(\"founder_account\") != $key_id {\r\n\t\t\twarning \"Sorry, you do not have access to this action.\"\r\n\t\t}\r\n\r\n\t\t// var role_id int\r\n\t\t// role_id = EcosysParam(\"role_admin\")\r\n\t\t// RoleAccess(role_id)\r\n\t}\r\n}\r\n",
+            "Type": "contracts"
+        },
+        {
             "Name": "AppendMenu",
             "Conditions": "ContractConditions(\"MainCondition\")",
             "Value": "contract AppendMenu {\r\n    data {\r\n        Id     int\r\n        Value      string\r\n    }\r\n    conditions {\r\n        ConditionById(\"menu\", false)\r\n    }\r\n    action {\r\n        var row map\r\n        row = DBFind(\"@1menu\").Columns(\"value\").Where({id: $Id, ecosystem: $ecosystem_id})Row()\r\n        var val string\r\n        val = row[\"value\"] + \"\\r\\n\" + $Value\r\n        DBUpdate(\"@1menu\", $Id, {\"value\": val})\r\n\r\n    }\r\n}",
@@ -323,16 +323,6 @@
             "Conditions": "ContractConditions(\"MainCondition\")",
             "Value": "contract CheckNodesBan {\r\n    action {\r\n        UpdateNodesBan($block_time)\r\n    }\r\n}",
             "Type": "contracts"
-        },        {
-            "Name": "DeveloperCondition",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "// This contract is used to set \"developer\" rights.\n// Usually the \"developer\" role is used for this.\n// The role ID is written to the ecosystem parameter and can be changed.\n// The contract requests the role ID from the ecosystem parameter and the contract checks the rights.\n\ncontract DeveloperCondition {\n\tconditions {\n\t\tif EcosysParam(\"founder_account\") != $key_id {\n\t\t\twarning \"Sorry, you do not have access to this action.\"\n\t\t}\n\n\t\t// var role_id int\n\t\t// role_id = EcosysParam(\"role_developer\")\n\t\t// RoleAccess(role_id)\n\t}\n}\n"
-            "Type": "contracts"
-        },        {
-            "Name": "AdminCondition",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "// This contract is used to set \"admin\" rights.\n// Usually the \"admin\" role is used for this.\n// The role ID is written to the ecosystem parameter and can be changed.\n// The contract requests the role ID from the ecosystem parameter and the contract checks the rights.\n\ncontract AdminCondition {\n\tconditions {\n\t\tif EcosysParam(\"founder_account\") != $key_id {\n\t\t\twarning \"Sorry, you do not have access to this action.\"\n\t\t}\n\n\t\t// var role_id int\n\t\t// role_id = EcosysParam(\"role_admin\")\n\t\t// RoleAccess(role_id)\n\t}\n}\n"
-            "Type": "contracts"
         },
         {
             "Name": "DeactivateContract",
@@ -344,6 +334,12 @@
             "Name": "DelApplication",
             "Conditions": "ContractConditions(\"MainCondition\")",
             "Value": "contract DelApplication {\r\n    data {\r\n        ApplicationId int\r\n        Value int \"optional\"\r\n    }\r\n\r\n    conditions {\r\n        if(!DBFind(\"@1applications\").Columns(\"id,ecosystem\").Where({id: $ApplicationId,ecosystem: $ecosystem_id})){\r\n            warning LangRes(\"@1item_not_found\", \"en\")\r\n        }\r\n\r\n        if $Value < 0 || $Value > 1 {\r\n            error LangRes(\"@1value_incorrect\", \"en\")\r\n        }\r\n        RowConditions(\"@1applications\", $ApplicationId, false)\r\n    }\r\n\r\n    action {\r\n        DBUpdate(\"@1applications\", $ApplicationId, {\"deleted\": $Value})\r\n    }\r\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "DeveloperCondition",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "// This contract is used to set \"developer\" rights.\r\n// Usually the \"developer\" role is used for this.\r\n// The role ID is written to the ecosystem parameter and can be changed.\r\n// The contract requests the role ID from the ecosystem parameter and the contract checks the rights.\r\n\r\ncontract DeveloperCondition {\r\n\tconditions {\r\n\t\tif EcosysParam(\"founder_account\") != $key_id {\r\n\t\t\twarning \"Sorry, you do not have access to this action.\"\r\n\t\t}\r\n\r\n\t\t// var role_id int\r\n\t\t// role_id = EcosysParam(\"role_developer\")\r\n\t\t// RoleAccess(role_id)\r\n\t}\r\n}\r\n",
             "Type": "contracts"
         },
         {
@@ -515,11 +511,6 @@
             "Type": "contracts"
         },
         {
-            "Name": "MembershipAdd",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract MembershipAdd {\n    data {\n        memberskeys string\n    }\n    conditions {\n        var admin_id int\n        admin_id = EcosysParam(\"role_admin\")\n       \n        if !RoleAccess(Int(admin_id)) {\n            warning LangRes(\"@1access_denied\", \"en\")\n        }\n\n        if ($ecosystem_id == 1) {\n            error LangRes(\"@1impossible_for_platform_ecosystem\", \"en\")\n        }\n        \n    }\n    action {\n        if $memberskeys == \"\" {\n            warning LangRes(\"@1public_key_empty\", \"en\")\n        }\n\n        $memberskeys = Replace($memberskeys, \" \", \"\")\n\n        if Contains($memberskeys, \",\") {\n            var keys_array array\n            keys_array = Split($memberskeys, \",\")\n            var i int\n            while i < Len(keys_array) {\n                $arraymemberskeys = Str(keys_array[i])\n                if HasPrefix($arraymemberskeys, \"04\") {\n                    $arraymemberskeys = Substr($arraymemberskeys, 2, Size($arraymemberskeys) - 2)\n                }\n                \n                if Size($arraymemberskeys) < 128 {\n                    error LangRes(\"@1key_too_short\", \"en\")+$arraymemberskeys\n                }\n                if Size($arraymemberskeys) > 128 {\n                    error LangRes(\"@1key_too_long\", \"en\")+$arraymemberskeys\n                }\n                $userKey = PubToID($arraymemberskeys)\n\n                if $userKey == 0 {\n                    warning LangRes(\"@1public_key_invalid\", \"en\")\n                }\n                $check_user = DBFind(\"keys\").Where({id:$userKey})\n                if $check_user {\n                    error LangRes(\"@1key_already_exists\", \"en\") +$arraymemberskeys\n                }\n                \n                DBInsert(\"@1keys\",{id:$userKey,pub:$arraymemberskeys,ecosystem:$ecosystem_id})\n                i = i + 1\n            }\n        } else {\n            if HasPrefix($memberskeys, \"04\") {\n                $memberskeys = Substr($memberskeys, 2, Size($memberskeys) - 2)\n            }\n            if Size($memberskeys) < 128 {\n                error LangRes(\"@1key_too_short\", \"en\")\n            }\n            if Size($memberskeys) > 128 {\n                error LangRes(\"@1key_too_long\", \"en\")\n            }\n            $userKey = PubToID($memberskeys)\n            \n            if $userKey == 0 {\n                warning LangRes(\"@1public_key_invalid\", \"en\")\n            }\n\n            $check_user = DBFind(\"@1keys\").Where({id:$userKey})\n            if $check_user {\n                error LangRes(\"@1key_already_exists\", \"en\") +$memberskeys\n            }\n\n            DBInsert(\"@1keys\",{id:$userKey,pub:$memberskeys,ecosystem:$ecosystem_id})\n        }\n    }\n}"
-            "Type": "contracts"
-        },        {
             "Name": "NewLang",
             "Conditions": "ContractConditions(\"MainCondition\")",
             "Value": "contract NewLang {\r\n    data {\r\n        Name string\r\n        Trans string\r\n    }\r\n\r\n    conditions {\r\n        EvalCondition(\"@1parameters\", \"changing_language\", \"value\")\r\n        if DBFind(\"@1languages\").Columns(\"id\").Where({name: $Name, ecosystem: $ecosystem_id}).One(\"id\") {\r\n            warning Sprintf(LangRes(\"@1template_langres_exists\", \"en\"), $Name)\r\n        }\r\n    }\r\n\r\n    action {\r\n        CreateLanguage($Name, $Trans)\r\n    }\r\n}",
