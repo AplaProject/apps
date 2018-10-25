@@ -1,0 +1,65 @@
+contract BindWallet {
+    data {
+        Id int
+        WalletId string "optional"
+    }
+    func sendInvite() {
+        if GetContractByName("@1NotificationsSend") == 0 {
+            error LangRes("@1notifications_install_needed", "en")
+        } else {
+            var w_id int 
+            w_id = AddressToId($WalletId)
+            $request = DBFind("@1notifications").Columns("id").Where({"recipient->member_id":w_id, "page_name":"contract_bind_request", "page_params->contract_id":$Id, "ecosystem":$ecosystem_id, "closed": 0})
+            if $request {
+                error LangRes("@1request_sent_already", "en")
+            }
+
+            var notific_params custom_params map
+            custom_params["contract_id"] = $Id
+            custom_params["contract_name"] = $cur["name"]
+            notific_params["member_id"] = AddressToId($WalletId)
+            notific_params["sender"] = 1
+            notific_params["icon_name"] = "icon icon-link"
+            notific_params["text_header"] = LangRes("@1request_contract_binding", "en")
+            notific_params["text_body"] = LangRes("@1details_view", "en")
+            notific_params["page_name"] = "contract_bind_request"
+            notific_params["params_map"] = custom_params
+            CallContract("@1NotificationsSend", notific_params)
+        }
+    }
+    func closeInvite() {
+        if GetContractByName("@1NotificationsClose") == 0 {
+            error LangRes("@1notifications_install_needed", "en")
+        } else {
+            $request = DBFind("@1notifications").Columns("id").Where({"recipient->member_id":$key_id, "page_name":"contract_bind_request", "page_params->contract_id":$Id, "ecosystem":$ecosystem_id, "closed":0})
+            var i int r map
+            while i < Len($request) {
+                r = $request[i]
+                var notific_params map
+                notific_params["notific_id"] = Int(r["id"])
+                CallContract("@1NotificationsClose", notific_params)
+                i = i + 1
+            }    
+        }
+    }
+
+    conditions {
+        $cur = DBFind("@1contracts").Columns("id,name,conditions,wallet_id").Where({id: $Id, ecosystem: $ecosystem_id}).Row()
+        if !$cur {
+            error Sprintf(LangRes("@1contract_x_not_exist", "en"), $Id)
+        }
+        if $WalletId != "" && AddressToId($WalletId) == 0 {
+            error LangRes("@1wallet_not_found", "en")
+        }
+        RowConditions("@1contracts", $Id, false)
+    }
+
+    action {
+        if $WalletId == "" || AddressToId($WalletId) == $key_id {
+            BndWallet($Id, $ecosystem_id)
+            closeInvite()
+        } else {
+            sendInvite()
+        }
+    }
+}
