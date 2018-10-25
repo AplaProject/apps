@@ -1,0 +1,40 @@
+contract VotingReplaceItem {
+    data {
+        Type string
+        Id int
+    }
+
+    conditions {
+        var appId int
+        appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Basic"}).Columns("name,id").One("id"))
+        $templateId = Int(AppParam(appId,"voting_edit_page_template_id", 1))
+        if $templateId == 0 {
+            warning LangRes("@1template_id_not_found", "en")
+        }
+        if !($Type == "@1pages" || $Type == "@1contracts"){
+            warning "Unsupported Type"
+        }
+        $item = DBFind($Type).Where({id:$Id, ecosystem:1}).Columns("id,name").Row()
+        if !$item{
+            error "Item not found"
+        }
+        var tempName string
+        if $Type == "@1pages"{
+            tempName = "temp_page"
+        }elif $Type == "@1contracts"{
+            tempName = "TempContract"
+        }
+        $newItem = DBFind($Type).Where({name:tempName, ecosystem:1}).Columns("id,value").Row()
+        if !$newItem{
+            error "Temp item not found"
+        }
+    }
+
+    action {
+        var m map
+        m["hash"] = Sha256($newItem["value"])
+        m["Id"] = $Id
+        m["Value"] = $newItem["value"]
+        @1VotingTemplateRun("TemplateId,Duration,TableWritten,RowId,ColumnName,NewValue", $templateId, 3, $Type, Str($Id), $item["name"], JSONEncode(m))
+    }
+}

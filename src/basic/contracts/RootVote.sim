@@ -1,16 +1,12 @@
-contract UpdateSysParam {
+contract RootVote {
     data {
-        Name string
-        Value string
         VotingId int
-        Conditions string "optional"
+        Id int
+        Type string
+        Params string
     }
 
     conditions {
-        if GetContractByName($Name) == 0{
-            warning LangRes("@1system_parameter_not_found", "en")
-        }
-
         var prev string
         prev = $stack[0]
         if Len($stack) > 2{
@@ -29,12 +25,26 @@ contract UpdateSysParam {
         if Int($voting["flags.success"]) != 1 {
             error LangRes("@1voting_error_success", "en")
         }
+        var types map
+        types = {"@1app_params":1, "@1blocks":1, "@1contracts":1, "@1pages":1, "@1menu":1, "@1tables":1}
+        if types[$Type] != 1{
+            error "Error type"
+        }
     }
 
     action {
-        var params map
-        params["Value"] = $Value
-        CallContract($Name, params)
-        DBUpdateSysParam($Name, $Value, $Conditions)
+        if $Type == "@1app_params"{
+            CallContract("@1EditAppParam", $Params)
+        }elif $Type == "@1blocks"{
+            CallContract("@1EditBlock", $Params)
+        }elif $Type == "@1contracts"{
+            CallContract("@1EditContract", $Params)
+        }elif $Type == "@1pages"{
+            CallContract("@1EditPage", $Params)
+        }elif $Type == "@1menu"{
+            CallContract("@1EditMenu", $Params)
+        }elif $Type == "@1tables"{
+            CallContract("@1EditTable", $Params)
+        }
     }
 }

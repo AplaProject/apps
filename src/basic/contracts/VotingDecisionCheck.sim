@@ -183,15 +183,16 @@ contract VotingDecisionCheck {
             }
 
             if $type_decision == 4 {
-                var subject map
+                var subject rootTypes map
                 subject = DBFind("@1votings_subject").Where({ecosystem:$ecosystem_id, voting_id:$votingID}).Columns("id,number_accept,subject->table,subject->table_id,subject->column,subject->column_value").Row()
+                rootTypes = {"@1app_params":1, "@1blocks":1, "@1contracts":1, "@1pages":1, "@1menu":1, "@1tables":1}
                 if subject {
                     if (Int($voting["voting.count_type_voters"]) == 0){
                         percent_voters = percentPartOfTotal(Int(subject["number_accept"]), $number_voters)
                         if percent_voters >= $quorum {
                             flag_decision = $ACCEPT
 
-                            var column string
+                            var column string m map
                             column = Str(subject["subject.column"])
                             $colValue = Str(subject["subject.column_value"])
                             // type of voting - custom
@@ -208,17 +209,16 @@ contract VotingDecisionCheck {
                                 if colType == "double" {
                                     $colValue = Float($colValue)
                                 }
-                                var m map
                                 m[column] = $colValue
                                 DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
                             }
-
                             // type of voting - system
                             if $voting_type == 2 {
                                 if subject["subject.table"] == "@1ecosystems"{
-                                    var m map
                                     m[column] = $colValue
                                     DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
+                                }elif rootTypes[subject["subject.table"]] == 1{
+                                    @1RootVote("VotingId,Id,Type,Params", $votingID, Int(subject["subject.table_id"]), subject["subject.table"], $colValue)
                                 }else{
                                     @1UpdateSysParam("Name,Value,VotingId", column, $colValue, $votingID)
                                 }
@@ -258,12 +258,8 @@ contract VotingDecisionCheck {
                                 if subject["subject.table"] == "@1ecosystems"{
                                     m[column] = $colValue
                                     DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
-                                }elif subject["subject.table"] == "@1pages"{
-                                    m = JSONDecode($colValue)
-                                    CallContract("@1EditPage", m)
-                                }elif subject["subject.table"] == "@1contracts"{
-                                    m = JSONDecode($colValue)
-                                    CallContract("@1EditContract", m)
+                                }elif rootTypes[subject["subject.table"]] == 1{
+                                    @1RootVote("VotingId,Id,Type,Params", $votingID, Int(subject["subject.table_id"]), subject["subject.table"], $colValue)
                                 }else{
                                     @1UpdateSysParam("Name,Value,VotingId", column, $colValue, $votingID)
                                 }
