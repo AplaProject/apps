@@ -1,9 +1,6 @@
 contract RootVote {
     data {
         VotingId int
-        Id int
-        Type string
-        Params string
     }
 
     conditions {
@@ -15,7 +12,7 @@ contract RootVote {
         if prev != "@1VotingDecisionCheck" {
             error LangRes("@1contract_start_votingdecisioncheck_only", "en")
         }
-        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id: $VotingId }).Columns("voting->type_decision,flags->success,voting->type").Row()
+        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id: $VotingId }).Columns("voting->count_type_voters,voting->type,voting->type_decision,flags->success").Row()
         if Int($voting["voting.type"]) != 2 {
             error LangRes("@1voting_type_invalid", "en")
         }
@@ -25,26 +22,42 @@ contract RootVote {
         if Int($voting["flags.success"]) != 1 {
             error LangRes("@1voting_error_success", "en")
         }
+        $subject = DBFind("@1votings_subject").Where({ecosystem:$ecosystem_id, voting_id:$VotingId}).Columns("id,subject->table,subject->table_id,subject->column,subject->column_value").Row()
+        $itemType = $subject["subject.table"]
         var types map
         types = {"@1app_params":1, "@1blocks":1, "@1contracts":1, "@1pages":1, "@1menu":1, "@1tables":1}
-        if types[$Type] != 1{
+        if types[$itemType] != 1{
             error "Error type"
         }
+        var hash string hashParams callParams item map
+        hashParams = JSONDecode($subject["subject.column_value"])
+        hash = hashParams["hash"]
+
+        callParams["Id"] = Int($subject["subject.table_id"])
+        if $itemType == "@1contracts"{
+            item = DBFind($itemType).Where({name:"TempContract", ecosystem:1}).Columns("value").Row()
+            callParams["Value"] = item["value"]
+        }elif $itemType == "@1pages"{
+            item = DBFind($itemType).Where({name:"temp_page", ecosystem:1}).Columns("value").Row()
+            callParams["Value"] = item["value"]
+        }
+        if Sha256(item["value"]) != hash{
+            error "Not matching hash"
+        }
+        $callParams = callParams
+        var editors map
+        // editors["@1app_params"] = "@1EditAppParam"
+        // editors["@1blocks"] = "@1EditBlock"
+        editors["@1contracts"] = "@1EditContract"
+        editors["@1pages"] = "@1EditPage"
+        // editors["@1menu"] = "@1EditMenu"
+        // editors["@1tables"] = "@1EditTable"
+        $editors = editors
     }
 
     action {
-        if $Type == "@1app_params"{
-            CallContract("@1EditAppParam", $Params)
-        }elif $Type == "@1blocks"{
-            CallContract("@1EditBlock", $Params)
-        }elif $Type == "@1contracts"{
-            CallContract("@1EditContract", $Params)
-        }elif $Type == "@1pages"{
-            CallContract("@1EditPage", $Params)
-        }elif $Type == "@1menu"{
-            CallContract("@1EditMenu", $Params)
-        }elif $Type == "@1tables"{
-            CallContract("@1EditTable", $Params)
+        if $editors[$itemType]{
+            CallContract($editors[$itemType], $callParams)
         }
     }
 }
