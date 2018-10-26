@@ -2,6 +2,7 @@ Div(content-wrapper){
     DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
     SetVar(template_id, AppParam(Ecosystem:1, App:#application_id#, Name: voting_validators_template_id))
     SetTitle($@1sysparams_candidates$)
+    AddToolButton(Title: $@1create_request$, Icon: icon-plus, Page: @1sysparams_candidate_validators_create).Popup(50, $@1sysparams_candidate_validators_form$)
 
     If(GetVar(search)){
         SetVar(where,{host_ip:#search#,"deleted":0})
@@ -23,7 +24,11 @@ Div(content-wrapper){
     }.Custom(_addr){
         Address(#commission_address#)
     }.Custom(custom_username){
+        SetVar(user_member_name, "")
         DBFind(members).Where({"id":#commission_address#,"ecosystem":#ecosystem_id#}).Vars(user)
+        If(GetVar(user_member_name)==""){
+            SetVar(user_member_name, Address(#commission_address#))
+        }
         LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#user_id#"){
             If(#user_image_id#>0){
                 Image(Src: Binary().ById(#user_image_id#), Class: img-circle).Style(height: 30px;width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
@@ -36,8 +41,6 @@ Div(content-wrapper){
             }
         }
     }.Count(count)
-
-    AddToolButton(Title: $@1create_request$, Icon: icon-plus, Page: @1sysparams_candidate_validators_create).Popup(50, $@1create_request$)
 
     Div(panel panel-primary){
         Form(){
@@ -57,7 +60,7 @@ Div(content-wrapper){
                         }
                     }
                     Div(table-responsive){
-                        Table(Source: src_candidates, Columns: "$@1host_ip$=host_ip,$@1name$=custom_username,$@1id$=commission_address,$@1commission_address$=_addr,$@1description_equipment$=description,$@1comment$=comment,$@1date_created$=_date,$@1voting$=_actions")
+                        Table(Source: src_candidates, Columns: "$@1host_ip$=host_ip,$@1name$=custom_username,$@1wallet$=_addr,$@1description_equipment$=description,$@1comment$=comment,$@1date_created$=_date,$@1voting$=_actions")
                     }
                 }
                 If(GetVar(search)){
@@ -68,7 +71,7 @@ Div(content-wrapper){
                     }.Style(padding-bottom:10px;)
                 }
             }.Else{
-                Div(h3 text-muted text-center){
+                Div(h4 text-muted text-center){
                     $@1candidates_404$
                 }
                 If(GetVar(search)){
