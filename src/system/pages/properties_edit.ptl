@@ -10,7 +10,7 @@ Div(Class: content-wrapper){
                 DBFind(@1menu, src_menus).Where({"ecosystem":#ecosystem_id#})
             }
             If(#type# == contract){
-                DBFind(Name: @1contracts, Source: src_contract).Columns("id,name,value,wallet_id,token_id,active,conditions,app_id").Where({"id":#edit_property_id#,"ecosystem":#ecosystem_id#}).Vars(item)
+                DBFind(Name: @1contracts, Source: src_contract).Columns("id,name,value,wallet_id,token_id,conditions,app_id").Where({"id":#edit_property_id#,"ecosystem":#ecosystem_id#}).Vars(item)
                 LinkPage($@1contracts$, @1app_contracts)
                 Span(/).Style(margin-right: 10px; margin-left: 10px;)
                 Span($@1edit_contract$, text-muted)
@@ -49,24 +49,44 @@ Div(Class: content-wrapper){
         }
         If(#type# == contract){
             Div(form-group){
-                Label($@1conditions$)
-                Input(Name: Conditions, Value: #item_conditions#)
-            }
-            Div(form-group){
                 Label($@1wallet$)
                 Div(row){
-                    Div(col-md-10){
-                        SetVar(address_item_wallet_id, Address(#item_wallet_id#))
-                        Input(Name: Wallet,Value: #address_item_wallet_id#)
-                    }
-                    Div(col-md-2){
-                        If(#item_active# == 0){
-                            Button(Body: $@1bind$, Class: btn btn-primary btn-block, Contract: @1ActivateContract, Params: "Id=#edit_property_id#", Page: @1app_contracts)
+                    Div(col-md-12){
+                        If(#item_wallet_id# == 0){
+                            Input(Name: WalletV, Value: 0, Disabled: "true")
                         }.Else{
-                            Button(Body: $@1unbind$, Class: btn btn-primary btn-block, Contract: @1DeactivateContract, Params: "Id=#edit_property_id#", Page: @1properties_edit, PageParams: "edit_property_id=#edit_property_id#,type=#type#")
+                            If(#item_wallet_id#==#key_id#){
+                                Div(input-group){
+                                    SetVar(address_item_wallet_id, Address(#item_wallet_id#))
+                                    Input(Name: WalletV, Value: #address_item_wallet_id#, Disabled: "true")
+                                    Div(input-group-btn){
+                                        Button(Body: $@1unbind$, Class: btn btn-default, Contract: @1UnbindWallet, Params: "Id=#edit_property_id#", Page: @1properties_edit, PageParams: "edit_property_id=#edit_property_id#,type=#type#").Alert(Text: $@1want_unbind_contract$, ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                                    }
+                                }
+                            }.Else{
+                                SetVar(address_item_wallet_id, Address(#item_wallet_id#))
+                                Input(Name: WalletV, Value: #address_item_wallet_id#, Disabled: "true")
+                            }
                         }
                     }
                 }
+            }
+            Div(form-group){
+                Div(row){
+                    Div(col-md-12){
+                        Span(Body: "$@1contract_binding_another_user_desc$", Class: m0 text-muted)
+                        Div(input-group){
+                            Input(Name: Wallet, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx")
+                            Div(input-group-btn){
+                                Button(Body: $@1bind$, Class: btn btn-default, Contract: @1BindWallet, Params: "Id=#edit_property_id#,WalletId=Val(Wallet)", Page: @1properties_edit, PageParams: "edit_property_id=#edit_property_id#,type=#type#").Alert(Text: $@1want_bind_contract$, ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                            }
+                        }
+                    }
+                }
+            }
+            Div(form-group){
+                Label($@1conditions$)
+                Input(Name: Conditions, Value: #item_conditions#)
             }
             Div(form-group text-right){
                 Button(Body: $@1save$, Class: btn btn-primary, Page: @1app_contracts, Contract: @1EditContract, Params: "Conditions=Val(Conditions),WalletId=Val(Wallet),Id=#edit_property_id#")

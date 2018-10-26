@@ -1,113 +1,98 @@
 DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Basic"}).Vars(application)
 DBFind(@1ecosystems, ecosystems).Columns("id,name").Count(eco_count)
 Form(){
-    Div(list-group-item){
-        Div(row){
-            Div(col-md-3 mt-sm text-right){
-                Label(){
-                    Span(Body: LangRes(@1ecosystem)).(Class: text-danger, Body:*)
-                }
+    Div(row){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1ecosystem)).(Class: text-danger, Body:*)
             }
-            Div(col-md-9 text-left){
-                Select(Name: eco_id, Source: ecosystems, NameColumn: name, ValueColumn: id)
-            }
+        }
+        Div(col-md-9 text-left){
+            Select(Name: eco_id, Source: ecosystems, NameColumn: name, ValueColumn: id)
         }
     }
-    Div(list-group-item){
-        Div(row){
-            Div(col-md-3 mt-sm text-right){
-                Label(){
-                    Span(Body: LangRes(@1recipient)).(Class: text-danger, Body:*)
+    Div(row mt-sm){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1recipient)).(Class: text-danger, Body:*)
+            }
+        }
+        Div(col-md-9 text-left){
+            DBFind(@1keys,src_keys).Where({ecosystem:#ecosystem_id#}).Columns("id").Custom(_name){
+                SetVar(m_member_name, "")
+                DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#id#}).Columns("id,member_name").Vars(m)
+                Address(#id#)
+                If(GetVar(m_member_name)!=""){
+                    " (#m_member_name#)"
                 }
             }
-            Div(col-md-9 text-left){
-                DBFind(@1keys,src_keys).Where({ecosystem:#ecosystem_id#}).Columns("id").Custom(_name){
-                    SetVar(m_member_name, "")
-                    DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#id#}).Columns("id,member_name").Vars(m)
-                    Address(#id#)
-                    If(GetVar(m_member_name)!=""){
-                        " (#m_member_name#)"
-                    }
-                }
-                Select(Name: member_id, Source: src_keys, NameColumn: _name, ValueColumn: id)
-            }
+            Select(Name: member_id, Source: src_keys, NameColumn: _name, ValueColumn: id)
         }
     }
-    Div(list-group-item){
-        Div(row){
-            Div(col-md-3 mt-sm text-right){
-                Label(){
-                    Span(Body: LangRes(@1sender)).(Class: text-danger, Body:*)
-                }
-            }
-            Div(col-md-9 text-left){
-                AppParam(Ecosystem: 1, App: #application_id#, Name: notification_sender, Source: src_sender)
-                Select(Name: sender, Source: src_sender, NameColumn: name, ValueColumn: id)
+    Div(row mt-sm){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1sender)).(Class: text-danger, Body:*)
             }
         }
-    }
-    Div(list-group-item){
-        Div(row){
-            Div(col-md-3 mt-sm text-right){
-                Label(){
-                    Span(Body: LangRes(@1icon)).(Class: text-danger, Body:*)
-                }
-            }
-            Div(col-md-9 mb-sm text-left){
-                AppParam(Ecosystem: 1, App: #application_id#, Name: notification_icon, Source: src_icon)
-                Select(Name: icon_name, Source: src_icon, NameColumn: name, ValueColumn: name)
-            }
+        Div(col-md-9 text-left){
+            AppParam(Ecosystem: 1, App: #application_id#, Name: notification_sender, Source: src_sender)
+            Select(Name: sender, Source: src_sender, NameColumn: name, ValueColumn: id)
         }
-        Div(row){
-            Div(col-md-3 mt-sm text-right){
-                Label(){
-                    Span(Body: LangRes(@1header)).(Class: text-danger, Body:*)
-                }
-            }
-            Div(col-md-9 mb-sm text-left){
-                Input(Name: text_header, Value: "Header text").Validate(minLength:3, maxLength:255)
-                InputErr(Name: text_header, minLength: $@1validate_name$, maxLength: $@1validate_role_name$)
-            }
-        }
-        Div(row){
-            Div(col-md-3 mt-sm text-right){
-                Label(){
-                    Span(Body: LangRes(@1body_text))
-                }
-            }
-            Div(col-md-9 text-left){
-                Input(Name: text_body, Value: "Body text")
-            }
-        }
-    }
-    Div(list-group-item){
-        Div(row){
-            Div(col-md-3 mt-sm text-right){
-                Label(){
-                    Span(Body: LangRes(@1page)).(Class: text-danger, Body:*)
-                }
-            }
-            Div(col-md-9 mb-sm text-left){
-                Input(Name: page_name, Value: "@1notifications_testpage").Validate(minLength:3, maxLength:255)
-                InputErr(Name: page_name, minLength: $@1validate_name$, maxLength: $@1validate_role_name$)
-            }
-        }
-        Div(row){
-            Div(col-md-3 mt-sm text-right){
-                Label(){
-                    Span(Body: LangRes(@1params))
-                }
-            }
-            Div(col-md-9 text-left){
-                Input(Name: params_map, Value: `{"param_int":"10","param_str":"my_string"}`)
-            }
-        }
-
     }
     Div(row mt-lg){
-        Div(col-md-12){
-            Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1notifications_list)
-            Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1notifications_list, Contract: @1NotificationsSend, Params: "current_role_id=#role_id#")
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1icon)).(Class: text-danger, Body:*)
+            }
+        }
+        Div(col-md-9 text-left){
+            AppParam(Ecosystem: 1, App: #application_id#, Name: notification_icon, Source: src_icon)
+            Select(Name: icon_name, Source: src_icon, NameColumn: name, ValueColumn: name)
         }
     }
+    Div(row mt-sm){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1header)).(Class: text-danger, Body:*)
+            }
+        }
+        Div(col-md-9 text-left){
+            Input(Name: text_header, Value: "Header text").Validate(minLength:3, maxLength:255)
+            InputErr(Name: text_header, minLength: $@1validate_name$, maxLength: $@1validate_role_name$)
+        }
+    }
+    Div(row mt-sm){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1body_text))
+            }
+        }
+        Div(col-md-9 text-left){
+            Input(Name: text_body, Value: "Body text")
+        }
+    }
+    Div(row mt-lg){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1page)).(Class: text-danger, Body:*)
+            }
+        }
+        Div(col-md-9 text-left){
+            Input(Name: page_name, Value: "@1notifications_testpage").Validate(minLength:3, maxLength:255)
+            InputErr(Name: page_name, minLength: $@1validate_name$, maxLength: $@1validate_role_name$)
+        }
+    }
+    Div(row mt-sm){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1params))
+            }
+        }
+        Div(col-md-9 text-left){
+            Input(Name: params_map, Value: `{"param_int":"10","param_str":"my_string"}`)
+        }
+    }
+    Button(Body: LangRes(@1send), Class: btn btn-primary pull-right mt, Page: @1notifications_list, Contract: @1NotificationsSend, Params: "current_role_id=#role_id#")
+    Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1notifications_list)
 }
