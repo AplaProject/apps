@@ -6,20 +6,19 @@ If(#buffer_value_app_id# > 0){
         SetTitle($@1binaries$: #application_name#)
         AddToolButton(Title:$@1binary_upload$, Page: @1app_upload_binary, Icon: icon-plus, PageParams: "application_id=#application_id#")
 
-        SetVar(pager_table, @1binaries).(pager_where, "{app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}").(pager_page, @1app_binary).(pager_limit, 50)
-        Include(@1pager_header)
-
-        SetVar(admin_page, @1app_binary)
+        SetVar(this_table, @1binaries).(this_page, @1app_binary).(pager_limit, 50)
+        SetVar(where, "{app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}")
         SetVar(hideLink, 0)
+        Include(@1pager_header)
         Include(@1admin_link)
 
-        DBFind(@1binaries, src_binparameters).Limit(#pager_limit#).Count(cnt).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}).Custom(_name){
+        DBFind(#this_table#, src).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where(#where#).Custom(_name){
             LinkPage(Page: @1app_upload_binary, PageParams: "id=#id#,application_id=#buffer_value_app_id#", Body: #name#)
         }.Custom(_img){
             Div(pull-right){
                 Image(Src: Binary().ById(#id#), Class: preview).Style(height: 40px; widht 40px;)
             }
-        }
+        }.Count(cnt)
 
         Form(panel panel-primary){
             Div(panel-body){
@@ -29,16 +28,14 @@ If(#buffer_value_app_id# > 0){
                             Div(list-group-item){
                                 Div(row){
                                     Div(col-md-12){
-                                        Table(src_binparameters,"=_name,=data,=_img")
+                                        Table(src,"=_name,=data,=_img")
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
-            Div(row mt){
-                Div(col-md-12){
+                Div(row){
                     Include(@1pager)
                 }
             }
