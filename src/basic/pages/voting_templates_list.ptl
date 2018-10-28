@@ -1,19 +1,28 @@
-DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
-SetTitle($@1voting_templates$)
-Div(breadcrumb){
-    LinkPage($@1votings$, @1voting_list)
-    Span(/, mh)
-    Span($@1voting_templates$, text-muted)
-}
+SetVar(this_page, @1voting_templates_list).(this_table, @1voting_templates)
+Include(@1pager_header)
 
-If(GetVar(Search)){
-    SetVar(Where,{ecosystem:#ecosystem_id#, "title":{"$like":#Search#}})
+SetTitle("$@1voting_templates$")
+Span(Class: h5 m0 mb ml-lg){
+    LinkPage(Class: ml-sm, Body: $@1votings$, Page: @1voting_list)
+    Span(Class: text-muted, Body: /).Style(margin-right: 10px; margin-left: 10px;)
+    Span(Class: text-muted, Body: $@1voting_templates$)
+}.Style(
+    display: inline-block;
+)
+
+If(GetVar(search)){
+    SetVar(where,{ecosystem:#ecosystem_id#, "title":{"$like":#search#}})
 }.Else{
-    SetVar(Where,{ecosystem:#ecosystem_id#, "id":{"$gt":0}}).(Search,)
+    SetVar(where,{ecosystem:#ecosystem_id#, "id":{"$gt":0}}).(search,)
 }
-SetVar(this_page,"@1voting_templates_list")
 
-DBFind(@1voting_templates, src_templates).Where(#Where#).Order(id).Count(template_count).Custom(_participants){
+Div(list-group-item ml-lg mr-lg){
+    SetVar(search_name, LangRes(@1name))
+    Include(@1search)
+}
+
+DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_participants){
     AppParam(Ecosystem:1, App:#application_id#, Name:type_voting_participants, Index: #type_participants#)
 }.Custom(_decision){
     AppParam(Ecosystem:1, App:#application_id#, Name:type_voting_decisions, Index: #type_decision#)
@@ -39,57 +48,38 @@ DBFind(@1voting_templates, src_templates).Where(#Where#).Order(id).Count(templat
     If(#vacancies#>0){
         #vacancies#
     }
-}
+}.Count(count)
 
-If(Or(#template_count#>0,#ecosystem_id#>1)){
+If(Or(#count#>0,#ecosystem_id#>1)){
     AddToolButton(Title: $@1create$, Page: @1voting_template_create, Icon: icon-plus).Popup(50, $@1voting_template_create$)
 }
 
-Div(content-wrapper){
-    Form(panel panel-primary){
-        If(#template_count#>0){
-            Div(panel-body){
-                Div(row){
-                    Div(col-md-12){
-                        Div(input-group){
-                            Div(input-group-addon){
-                                LangRes(@1template)
-                            }
-                            Input(Name: Search, Value: #Search#)
-                            Div(input-group-btn){
-                                Button(Body: Em(Class: fa fa-search), Class: btn btn-default, Page: #this_page#, PageParams: "Search=Val(Search)")
-                            }
-                        }
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src, "$@1template$=title,$@1voting_subject$=subject,$@1voting_volume$ / $@1voting_quorum$=_vq,$@1voting_type$=_type,$@1participants$=_participants,$@1decision$=_decision,$@1vacancies$=_vacancies,$@1contracts$=_contracts,=_actions")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1voting_templates_not_found$")
+            }
+            If(And(#count#==0,GetVar(Search)=="",#ecosystem_id#==1)){
+                Div(Class: text-center h6 mt-xl){
+                    Data(autofill, "value,description"){
+                        yes,$@1use_default_voting_templates$
+                        no,$@1select_default_templates_manually$
                     }
-                    Div(col-md-12){
-                        Div(table-responsive){
-                            Table(Source: src_templates, Columns:"$@1template$=title,$@1voting_subject$=subject,$@1voting_volume$ / $@1voting_quorum$=_vq,$@1voting_type$=_type,$@1participants$=_participants,$@1decision$=_decision,$@1vacancies$=_vacancies,$@1contracts$=_contracts,=_actions")
-                        }
-                    }
-                }
-                If(GetVar(Search)){
-                    Div(row){
-                        Div(col-md-12 mt-lg){
-                            Div(text-center){
-                                Button(Body: $@1view_all$, Class: btn btn-default, Page: #this_page#)
-                            }
-                        }
-                    }
+                    Button(Body: $@1install_default_templates$, Class: btn btn-primary, Page: @1voting_templates_list, Contract: @1VotingTemplatesInstall)
+                    RadioGroup(Name: fill_ids, Source: autofill, NameColumn: description, ValueColumn: value)
                 }
             }
-        }.ElseIf(#ecosystem_id#==1){
-            Div(panel-body text-center){
-                Data(autofill, "value,description"){
-                    yes,$@1use_default_voting_templates$
-                    no,$@1select_default_templates_manually$
-                }
-                RadioGroup(Name: fill_ids, Source: autofill, NameColumn: description, ValueColumn: value)
-                Button(Body: $@1install_default_templates$, Class: btn btn-primary, Page: @1voting_templates_list, Contract: @1VotingTemplatesInstall)
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
             }
-        }.Else{
-            Div(text-center h3 text-muted){
-                $@1voting_templates_not_found$
-            }
-        }
+        )
     }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
 }

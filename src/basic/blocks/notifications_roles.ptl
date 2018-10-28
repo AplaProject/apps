@@ -1,19 +1,28 @@
+SetVar(this_page, @1notifications_list).(this_table, @1notifications)
+Include(@1pager_header)
+
+SetTitle("$@1role_notifics$")
 SetVar(role_admin, EcosysParam(Ecosystem:1, Name: role_admin))
-SetTitle($@1role_notifics$)
 If(And(#role_id#==#role_admin#,#ecosystem_id#==1)){
     DBFind(@1ecosystems).Count(ecos_count)
     If(#ecos_count#>1){
-        AddToolButton(Title:$@1broadcast_send$, Page: @1notifications_broadcast, Icon: icon-plus)
+        AddToolButton(Title: $@1broadcast_send$, Page: @1notifications_broadcast, Icon: icon-plus)
     }
 }
 AddToolButton(Title: $@1send$, Page: @1notifications_roles_send, Icon: icon-plus).Popup(Header: $@1send$, Width: "50")
-If(GetVar(Search)){
-    SetVar(Where, {"ecosystem":#ecosystem_id#, "notification->type":2, "recipient->role_name":{"$like": #Search#}, "recipient->role_id":#role_id#})
+
+If(GetVar(search)){
+    SetVar(where, {"ecosystem":#ecosystem_id#, "notification->type":2, "recipient->role_name":{"$like": #search#}, "recipient->role_id":#role_id#})
 }.Else{
-    SetVar(Where, {"ecosystem":#ecosystem_id#, "notification->type":2, "recipient->role_id":#role_id#}).(Search,)
+    SetVar(where, {"ecosystem":#ecosystem_id#, "notification->type":2, "recipient->role_id":#role_id#}).(search,)
 }
 
-DBFind(@1notifications,src_notifications).Where(#Where#).Order([{closed: "1"},{id: "-1"}]).Limit(20).Columns("id,recipient->role_id,recipient->role_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,date_start_processing,processing_info->member_name,closed").Custom(_id){
+Div(list-group-item ml-lg mr-lg){
+    SetVar(search_name, LangRes(@1recipient)).(page_par, #type#)
+    Include(@1search)
+}
+
+DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"},{id:"-1"}]).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,recipient->role_id,recipient->role_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,date_start_processing,processing_info->member_name,closed").Custom(_id){
     If(#closed# == 0){
         SetVar(style_text,"text-normal").(style_link,"text-primary")
     }.Else{
@@ -82,36 +91,24 @@ DBFind(@1notifications,src_notifications).Where(#Where#).Order([{closed: "1"},{i
             }
         }
     }
-}
+}.Count(count)
 
-Form(panel panel-primary){
-    Div(panel-body){
-        Div(row){
-            Div(col-md-12){
-                Div(input-group){
-                    Div(input-group-addon){
-                        LangRes(@1recipient)
-                    }
-                    Input(Name: Search, Value: #Search#)
-                    Div(input-group-btn){
-                        Button(Class: btn btn-default fa fa-search, Page: @1notifications_list, PageParams: "Search=Val(Search),type=1")
-                    }
-                }
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src, "$@1icon$=_icon,$@1page$=_page,$@1sender$=_sender,=custom_arrow,$@1recipient$=_recipient,$@1processing$=_processing,$@1sent$ / $@1closed$=_date,$@1status$=_status,=_actions")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1role_notifics$ $@1not_founded$")
+            }                       
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
             }
-        }
-        Div(row){
-            Div(col-md-12){
-                Table(Source: src_notifications, Columns: "$@1icon$=_icon,$@1page$=_page,$@1sender$=_sender,=custom_arrow,$@1recipient$=_recipient,$@1processing$=_processing,$@1sent$ / $@1closed$=_date,$@1status$=_status,=_actions")
-            }
-        }
-        If(GetVar(Search)){
-            Div(row){
-                Div(col-md-12 mt-lg){
-                    Div(text-center){
-                        Button(Body: $@1view_all$, Class: btn btn-primary, Page: @1notifications_list, PageParams: "type=1")
-                    }
-                }
-            }
-        }
+        )
     }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
 }
