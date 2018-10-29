@@ -1,75 +1,62 @@
-SetVar(this_page, @1ts_wallets)
-SetVar(row,"row mt-sm").(col_left,"col-sm-4 mt-sm text-right").(col_right,"col-sm-8 text-left")
+SetVar(this_page, @1ts_wallets).(this_table, @1ts_wallets)
+Include(@1pager_header)
+
+SetTitle("$@1ts_wallets$")
 SetVar(snapswap_role_id, EcosysParam(Name:role_snapswap))
+If(And(#snapswap_role_id#>0,#role_id#==#snapswap_role_id#)){
+    AddToolButton(Title:$@1ts_add_public_key$, Page: @1ts_key_approve, Icon: icon-wallet).Popup(Header: $@1ts_add_public_key$, Width: "50")
+}
 
-Div(content-wrapper){
-    SetTitle($@1ts_wallets$)
-    If(And(#snapswap_role_id#>0,#role_id#==#snapswap_role_id#)){
-        AddToolButton(Title:$@1ts_add_public_key$, Page: @1ts_key_approve, Icon: icon-wallet).Popup(Header: $@1ts_add_public_key$, Width: "50")
+If(GetVar(search)!=""){
+    SetVar(where, {$or:[{"key_id_buyer":#search#},{"key_id_signer":#search#}]})
+}.Else{
+    SetVar(where, {id:{$gt:0}}).(search,)
+}
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, LangRes(@1key_id))
+    Include(@1search)
+}
+
+DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_rat){
+    If(#rejected_at#>0){
+        DateTime(#rejected_at#, Format: YYYY-MM-DD HH:MI:SS)
     }
-
-    SetVar(Where, {id:{$gt:0}})
-    If(GetVar(search)!=""){
-        SetVar(Where, {$or:[{"key_id_buyer":#search#},{"key_id_signer":#search#}]})
-    }.Else{
-        SetVar(search,)
+}.Custom(_sat){
+    If(#signed_at#>0){
+        DateTime(#signed_at#, Format: YYYY-MM-DD HH:MI:SS)
     }
-    
-    Form(panel panel-primary){
-        Div(panel-body){
-            Div(row){
-                Div(col-md-12){
-                    Form(input-group){
-                        Div(input-group-addon){
-                            LangRes(@1key_id)
-                        }
-                        Input(Name: search, Value: #search#)
-                        Div(input-group-btn){
-                            If(GetVar(search)!=""){
-                                Button(Class: btn btn-default fa fa-close, Page: #this_page#)
-                            }
-                            Button(Class: btn btn-default fa fa-search, Page: #this_page#, PageParams: "search=Val(search),type=1")
-                        }
-                    }
-                }
-            }
-
-            DBFind(@1ts_wallets, wallets).Where(#Where#).Order({id:-1}).Count(wallets_count).Custom(_rat){
-                If(#rejected_at#>0){
-                    DateTime(#rejected_at#, Format: YYYY-MM-DD HH:MI:SS)
-                }
-            }.Custom(_sat){
-                If(#signed_at#>0){
-                    DateTime(#signed_at#, Format: YYYY-MM-DD HH:MI:SS)
-                }
-            }.Custom(_cat){
-                If(#created_at#>0){
-                    Span(Class:text-muted, Body:DateTime(#created_at#, Format: YYYY-MM-DD HH:MI:SS))
-                }
-            }.Custom(_buyer){
-                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#key_id_buyer#"){
-                    Address(#key_id_buyer#)
-                }
-                Div(Class:text-muted m0 h6, Body:#key_id_buyer#)
-            }.Custom(_signer){
-                If(#key_id_signer#!=0){
-                    Span(Class:text-success, Body: Address(#key_id_signer#))
-                }
-            }
-
-            Div(row){
-                Div(col-md-12){
-                    If(#wallets_count#>0){
-                        Div(table-responsive){
-                            Table(wallets,"$@1id$=id,$@1key_id_investor$=_buyer,$@1created_at$=_cat,$@1rejected_at$=_rat,$@1signed_at$=_sat,$@1key_id_consensus$=_signer")
-                        }
-                    }.Else{
-                        Div(h4 text-muted text-center){
-                            $@1wallets$ $@1not_founded$
-                        }
-                    }
-                }
-            }
-        }
+}.Custom(_cat){
+    If(#created_at#>0){
+        Span(Class:text-muted, Body:DateTime(#created_at#, Format: YYYY-MM-DD HH:MI:SS))
     }
+}.Custom(_buyer){
+    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#key_id_buyer#"){
+        Address(#key_id_buyer#)
+    }
+    Div(Class:text-muted m0 h6, Body:#key_id_buyer#)
+}.Custom(_signer){
+    If(#key_id_signer#!=0){
+        Span(Class:text-success, Body: Address(#key_id_signer#))
+    }
+}.Count(count)
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src, "$@1id$=id,$@1key_id_investor$=_buyer,$@1created_at$=_cat,$@1rejected_at$=_rat,$@1signed_at$=_sat,$@1key_id_consensus$=_signer")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1wallets$ $@1not_founded$")
+            }                       
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
 }
