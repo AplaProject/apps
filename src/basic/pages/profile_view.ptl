@@ -4,7 +4,6 @@ Div(content-wrapper){
         SetVar(v_key_id,#key_id#)
     }
     DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#v_key_id#}).Columns("id,image_id,member_name,member_info->information").Vars(member)
-    DBFind(@1keys).Where({ecosystem:#ecosystem_id#, id:#v_key_id#}).Vars(tokens)
 
     If(Or(#member_id#>0,#member_id#<0)){
         SetVar(member_name, #member_member_name#).(member_info, #member_member_info_information#)
@@ -64,8 +63,19 @@ Div(content-wrapper){
                     If(#v_key_id# == #key_id#){
                         Div(row){
                             Div(col-md-12 mt text-center){
+                                DBFind(@1keys).Where({ecosystem:1, id:#v_key_id#}).Vars(apl)
+                                If(#ecosystem_id#>1){
+                                    DBFind(@1keys).Where({ecosystem:#ecosystem_id#, id:#v_key_id#}).Vars(tokens)
+                                }
                                 Div(text-bold m0 h5, Body: LangRes(@1balance))
-                                Div(Class: m0 h5, Body: Money(#tokens_amount#) APL)
+                                Div(Class: m0 h5, Body: Money(#apl_amount#) APL)
+                                If(#ecosystem_id#>1){
+                                    If(#tokens_amount#>0){
+                                        Div(Class: m0 h5, Body: Money(#tokens_amount#) ecosystem tokens)
+                                    }.Else{
+                                        Div(Class: m0 h5, Body: 0 ecosystem tokens)
+                                    }
+                                }
                                 Button(Class: btn-xs btn-link, Page: @1tokens_send, PageParams: "back_page=@1profile_view", Body: LangRes(@1tokens_send)).Popup(Header: $@1tokens_send$, Width: "50")
                             }
                         }
