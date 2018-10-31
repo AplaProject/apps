@@ -1,4 +1,5 @@
 DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Tokens sale"}).Columns("id").Vars(application)
+SetVar(row,"row mt-sm").(col_left,"col-sm-4 text-right").(col_right,"col-sm-8 text-left")
 SetVar(isStartProcessing,0)
 If(#notific_id#>0){
     DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("page_params->wallet_id,date_start_processing,notification->type,processing_info->member_id").Vars(note)
@@ -8,7 +9,7 @@ If(#notific_id#>0){
 }
 
 SetVar(this_page, ts_consensus_contract)
-SetTitle("Страница подписи представителем роли Apla Consensus")
+SetTitle($@1key_id_investor$)
 Div(content-wrapper){
     Div(row mt-sm){
         Div(col-lg-10 col-lg-offset-1){
@@ -16,11 +17,23 @@ Div(content-wrapper){
                 DBFind(@1ts_wallets).Where({id:#note_page_params_wallet_id#, rejected_at:0}).Vars(wallet)
                 If(#wallet_id#>0){
                     Div(panel-body){
-                        Div(){
-                            покупатель: Address(#wallet_key_id_buyer#)
+                        Div(#row#){
+                            Div(#col_left#){
+                                $@1key_id_investor$
+                            }
+                            Div(#col_right#){
+                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#wallet_key_id_buyer#"){
+                                    Address(#wallet_key_id_buyer#)
+                                }
+                            }
                         }
-                        Div(){
-                            дата подписания договора покупателем: DateTime(#wallet_signed_at#, "YYYY-MM-DD HH:MI:SS")
+                        Div(#row# text-muted){
+                            Div(#col_left#){
+                                $@1signed_at$
+                            }
+                            Div(#col_right#){
+                                DateTime(#wallet_signed_at#, "YYYY-MM-DD HH:MI:SS")
+                            }
                         }
                     }
                     Div(panel-footer){
@@ -29,7 +42,7 @@ Div(content-wrapper){
                             Button(Body: $@1accept$, Class: btn btn-primary pull-right, Page: default_page, Contract: TsConsensusAction, Params: "Action=accept,WalletId=#note_page_params_wallet_id#,NotificId=#notific_id#")
                         }.ElseIf(#isStartProcessing#==1){
                             Div(text-muted text-center){
-                                process begin another manager
+                                $@1notice_processing_started_another_member$
                             }
                         }.ElseIf(#isStartProcessing#==0){
                             Div(text-center){
@@ -40,7 +53,7 @@ Div(content-wrapper){
                     }
                 }.Else{
                     Div(panel-body){
-                        wallet не найден
+                        wallet $@1not_found$
                     }
                 }
             }
