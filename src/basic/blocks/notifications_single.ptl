@@ -1,20 +1,28 @@
+SetVar(this_page, @1notifications_list).(this_table, @1notifications)
+Include(@1pager_header)
+
+SetTitle("$@1single_notifics$")
 SetVar(role_admin, EcosysParam(Ecosystem:1, Name: role_admin))
-SetTitle($@1single_notifics$)
 If(And(#role_id#==#role_admin#,#ecosystem_id#==1)){
     DBFind(@1ecosystems).Count(ecos_count)
     If(#ecos_count#>1){
         AddToolButton(Title: $@1broadcast_send$, Page: @1notifications_broadcast, Icon: icon-plus)
     }
 }
+AddToolButton(Title: $@1send$, Page: @1notifications_single_send, Icon: icon-plus).Popup(Header: $@1send$, Width: "50")
 
-AddToolButton(Title:$@1send$, Page: @1notifications_single_send, Icon: icon-plus).Popup(Header: $@1create$, Width: "50")
-If(GetVar(Search)){
-    SetVar(Where,{"ecosystem":#ecosystem_id#, "notification->type":1, "recipient->member_name":#Search#, "recipient->member_id":#key_id#})
+If(GetVar(search)){
+    SetVar(where, {"ecosystem":#ecosystem_id#, "recipient->member_id":#key_id#, {$and: [{"notification->type":1}, {$or: [{"sender->member_name":{$like: #search#}},{"sender->role_name":{$like: #search#}}]}]}})
 }.Else{
-    SetVar(Where,{"ecosystem":#ecosystem_id#, "notification->type":1, "recipient->member_id":#key_id#}).(Search,)
+    SetVar(where, {"ecosystem":#ecosystem_id#, "notification->type":1, "recipient->member_id":#key_id#}).(search,)
 }
 
-DBFind(@1notifications,src_notifications).Where(#Where#).Order([{closed:"1"}, {id:"-1"}]).Limit(20).Columns("id,recipient->member_id,recipient->member_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,closed").Custom(custom_id){
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, LangRes(@1sender)).(page_par, #type#)
+    Include(@1search)
+}
+
+DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,recipient->member_id,recipient->member_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,closed").Custom(custom_id){
     If(#closed# == 0){
         SetVar(Name: style_text, Value: "text-normal")
         SetVar(Name: style_link, Value: "text-primary")
@@ -69,36 +77,24 @@ DBFind(@1notifications,src_notifications).Where(#Where#).Order([{closed:"1"}, {i
             Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, Contract: @1NotificationsClose, Params: "notific_id=#id#", Page: @1notifications_list).Alert(Text: "$@1want_close_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
         }
     }
-}
+}.Count(count)
 
-Form(panel panel-primary){
-    Div(panel-body){
-        Div(row){
-            Div(col-md-12){
-                Div(input-group){
-                    Div(input-group-addon){
-                        LangRes(@1recipient)
-                    }
-                    Input(Name: Search, Value: #Search#)
-                    Div(input-group-btn){
-                        Button(Class: btn btn-default fa fa-search, Page: @1notifications_list, PageParams: "Search=Val(Search)")
-                    }
-                }
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src, "$@1icon$=custom_icon,$@1page$=custom_page,$@1sender$=custom_sender,=custom_arrow,$@1recipient$=custom_recipient,$@1sent$ / $@1closed$=custom_date,$@1status$=custom_status,=actions")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1single_notifics$ $@1not_founded$")
+            }                       
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
             }
-        }
-        Div(row){
-            Div(col-md-12){
-                Table(Source: src_notifications, Columns: "$@1icon$=custom_icon,$@1page$=custom_page,$@1sender$=custom_sender,=custom_arrow,$@1recipient$=custom_recipient,$@1sent$ / $@1closed$=custom_date,$@1status$=custom_status,=actions")
-            }
-        }
-        If(GetVar(Search)){
-            Div(row){
-                Div(col-md-12 mt-lg){
-                    Div(text-center){
-                        Button(Body: $@1view_all$, Class: btn btn-primary, Page: @1notifications_list)
-                    }
-                }
-            }
-        }
+        )
     }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
 }

@@ -1,0 +1,23 @@
+contract PoaDelete {
+    data {
+        PoaeId int
+    }
+
+    conditions {
+        var poa_map map
+        poa_map = DBFind("@1poa").Where({"id":$PoaeId, "ecosystem":$ecosystem_id}).Columns("id,poa_sender->member_id").Row()
+        if !poa_map {
+            error LangRes("@1poa_not_found", "en") 
+        }
+        if Int(poa_map["poa_sender.member_id"]) != $key_id {
+            error LangRes("@1poa_not_rights_to_delete", "en") 
+        }
+    }
+
+    action {
+        var m map
+        m["deleted"] = 1
+        m["date_deleted"] = $block_time
+        DBUpdate("@1poa", $PoaeId, m)
+    }
+}

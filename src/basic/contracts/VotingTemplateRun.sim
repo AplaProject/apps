@@ -10,13 +10,13 @@ contract VotingTemplateRun {
         NewValue string "optional"
         TextDocument string "optional"
     }
-    
+
     func checkInput(value, name string) {
         if Size(value) == 0 || value == "NULL" {
             warning Sprintf(LangRes("@1x_not_found", "en"), name)
         }
     }
-    
+
     func emptyOrValue(value string) string {
         if value == "NULL" {
             value = ""
@@ -54,6 +54,21 @@ contract VotingTemplateRun {
         if $type_voting < 1 || $type_voting > 2 {
             warning LangRes("@1voting_type_invalid", "en")
         }
+        if $type_voting == 2 {
+            var prev string systemAllowed map
+            systemAllowed["@1VotingVesCreate"] = 1
+            systemAllowed["@1VotingValidatorCreate"] = 1
+            systemAllowed["@1VotingNodeAdd"] = 1
+            systemAllowed["@1VotingParamCreate"] = 1
+            systemAllowed["@1VotingNodeRemove"] = 1
+            prev = $stack[0]
+            if Len($stack) > 1 {
+                prev = $stack[Len($stack) - 2]
+            }
+            if systemAllowed[prev] != 1 {
+                warning LangRes("@1voting_type_invalid", "en")
+            }
+        }
         $contractAccept = emptyOrValue($template["contract_accept"])
         $acceptParams = emptyOrValue($template["accept_params"])
         $contractReject = emptyOrValue($template["contract_reject"])
@@ -77,11 +92,14 @@ contract VotingTemplateRun {
 
         if $decision == 4 {
             // formal decision
-            // in the system vote need only a field and a value
             checkInput($ColumnName, "ColumnName")
             checkInput($NewValue, "NewValue")
             if $type_voting == 2{
-                $desc = Sprintf(LangRes("@1parameter", "en") + ": %v, " + LangRes("@1value", "en") + ": %v", $ColumnName, $NewValue)
+                if $TableWritten == "@1ecosystems"{
+                    $desc = Sprintf("%v: %v, %v: %v, %v: %v, %v: %v", LangRes("@1table", "en"), $TableWritten, LangRes("@1column", "en"), $ColumnName, LangRes("@1id", "en"), $RowId, LangRes("@1value", "en"), $NewValue)
+                }else{
+                    $desc = Sprintf(LangRes("@1parameter", "en") + ": %v, " + LangRes("@1value", "en") + ": %v", $ColumnName, $NewValue)
+                }
             }
 
             if $type_voting == 1{
@@ -108,13 +126,16 @@ contract VotingTemplateRun {
                 warning Sprintf(LangRes("@1voters_role_id_not_found", "en"), $voters)
             }
             $roleId = Int(role["id"])
+            if !DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, deleted:0, "role->id":$roleId, "member->member_id":$key_id}).Row(){
+                warning LangRes("@1role_not_involved", "en")
+            }
         }
     }
 
     action {
         var initContract string
         initContract = $template["init_contract"]
-        
+
         if initContract != "" && initContract != "NULL" {
             var initParam map
             if $decision == 4 && $type_voting == 2 {
@@ -126,7 +147,7 @@ contract VotingTemplateRun {
             }
             CallContract(initContract, initParam)
         }
-        
+
         var votingId int
         votingId = @1VotingCreate("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval,count_type_voters", $votingName, $type_voting, $desc, $participants, $decision, $volume, $quorum, $Duration, $countTypeVoters)
 

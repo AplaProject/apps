@@ -1,7 +1,8 @@
 contract TokensSend {
     data {
         Amount money
-        Recipient_Account string
+        Recipient string
+        Comment string "optional"
     }
     func getPermission() {
         var array_permissions array result i int prevContract string
@@ -28,40 +29,13 @@ contract TokensSend {
     conditions {
         getPermission()
 
-        $recipient = AddressToId($Recipient_Account)
-        if $recipient == 0 {
-            error Sprintf(LangRes("@1recipient_x_invalid", "en"), $Recipient_Account)
-        }
-
-        var sender_map map
-        sender_map = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$key_id}).Row()
-        var recipient_map map
-        recipient_map = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$recipient}).Row()
-
-        //check the sender
-        if !sender_map {
-            error Sprintf(LangRes("@1sender_x_invalid", "en"), $key_id)
-        }
-        if Int(sender_map["blocked"]) != 0 {
-            error LangRes("@1sender_blocked", "en")
-        }
-        if Int(sender_map["deleted"]) != 0 {
-            error LangRes("@1sender_deleted", "en")
-        }
-
-        //check the recipient
-        if !recipient_map {
-            error Sprintf(LangRes("@1recipient_x_invalid", "en"), $recipient)
-        }
-        if Int(recipient_map["blocked"]) != 0 {
-            error LangRes("@1recipient_blocked", "en")
-        }
-        if Int(recipient_map["deleted"]) != 0 {
-            error LangRes("@1recipient_deleted", "en")
+        $recipient_id = AddressToId($Recipient)
+        if $recipient_id == 0 {
+            error Sprintf(LangRes("@1recipient_x_invalid", "en"), $Recipient)
         }
     }
 
     action {
-        @1TokensTransfer("Amount,Sender_AccountId,Recipient_AccountId", $Amount, $key_id, $recipient)
+        @1TokensTransfer("Amount,SenderId,RecipientId", $Amount, $key_id, $recipient_id)
     }
 }

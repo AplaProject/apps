@@ -1,54 +1,42 @@
-SetVar(this_page, @1params_list)
-If(GetVar(Search)!=""){
-    SetVar(pager_where,"{ecosystem:#ecosystem_id#, {$or:[{name:{$like:#Search#}}]}}")
+SetVar(this_page, @1params_list).(this_table, @1parameters)
+Include(@1pager_header)
+
+SetTitle("$@1ecosystem_parameters$")
+Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1sysparams_section$"))
+AddToolButton(Title: $@1style_manage$, Page: @1params_edit, Icon: icon-picture, PageParams:"stylesheet=stylesheet")
+AddToolButton(Title: $@1create$, Page: @1params_edit, Icon: icon-plus)
+
+If(GetVar(search)!=""){
+    SetVar(where,"{ecosystem:#ecosystem_id#, {$or:[{name:{$like:#search#}}]}}")
 }.Else{
-    SetVar(pager_where,"{ecosystem:#ecosystem_id#}").(Search,)
+    SetVar(where,"{ecosystem:#ecosystem_id#}").(search,)
 }
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, LangRes(@1name))
+    Include(@1search)
+}
+
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_name){
+    LinkPage(Page: @1params_edit, Class: text-primary h5, Body: "#name#", PageParams: "id=#id#")
+}.Count(count)
 
 Div(fullscreen){
-    SetTitle($@1ecosystem_parameters$)
-    Div(breadcrumb){
-        Span(Class: text-muted, Body: $@1sysparams_section$)
-    }
-    AddToolButton(Title: $@1style_manage$, Page: @1params_edit, Icon: icon-picture, PageParams:"stylesheet=stylesheet")
-    AddToolButton(Title: $@1create$, Page: @1params_edit, Icon: icon-plus)
-
-    Include(@1search_body)
-    SetVar(pager_table, @1parameters).(pager_page, @1params_list).(pager_limit, 25)
-    Include(@1pager_header)
-    
-    DBFind(@1parameters, src_appparameters).Limit(#pager_limit#).Where(#pager_where#).Order(id).Offset(#pager_offset#).Custom(_name){
-        LinkPage(Page: @1params_edit, Class: text-primary h5, Body: "#name#", PageParams: "id=#id#")
-    }.Count(count)
-    
-    If(#count# != 0){
-        Div(table-responsive){
-            Table(src_appparameters, "$@1name$=_name,$@1value$=value,$@1conditions$=conditions")
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src, "$@1name$=_name,$@1value$=value,$@1conditions$=conditions")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1ecosystem_parameters$ $@1not_founded$")
+            }                       
         }.Style(
+            margin-top:-15px;
             tbody > tr:nth-of-type(odd) {
-                background-color: #ffffff;
-            }
-            tbody > tr > td {
-                word-break: break-all;
-                font-weight: 400;
-                font-size: 13px;
-                color: #666;
-                border-top: 1px solid #eee;
-                vertical-align: middle;
-            }
-            tr > *:first-child {
-                padding-left:20px;
-            }
-            tr > *:last-child {
-                padding-right:30px;
-                text-align:left;
-            }
-            thead {
-                background-color: #f6f7fa;
+                background-color: #f8f9fc;
             }
         )
-    }.Else{
-        Span(Class: h4 text-center, Body: "$@1ecosystem_parameters$ $@1not_founded$")
     }
 }
-Include(@1pager)
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
+}

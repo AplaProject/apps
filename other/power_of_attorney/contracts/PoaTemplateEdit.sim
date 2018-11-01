@@ -1,0 +1,29 @@
+contract PoaTemplateEdit {
+    data {
+        TemplateId int
+        ParamArr array
+    }
+
+    conditions {
+        var poa_template_map map
+        poa_template_map = DBFind("@1poa_templates").Where({"id":$TemplateId, "ecosystem":$ecosystem_id}).Columns("id,creator->member_id").Row()
+        if !poa_template_map {
+            error LangRes("@1poa_template_not_found", "en")
+        }
+        if Int(poa_template_map["creator.member_id"]) != $key_id {
+            error LangRes("@1poa_not_rights_to_edit", "en") 
+        }
+    }
+    
+    action {
+        var i int params map
+        while i < Len($ParamArr) {
+            params[$ParamArr[i]] = ""
+            i = i + 1
+        }
+
+        var m map 
+        m["params"] = params
+        DBUpdate("@1poa_templates", $TemplateId, m)
+    }
+}
