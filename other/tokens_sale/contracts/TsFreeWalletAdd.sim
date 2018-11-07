@@ -1,0 +1,24 @@
+contract TsFreeWalletAdd {
+    data {
+        wallet_btc string
+        wallet_eth string
+    }
+
+    conditions {
+        var managerRoleId int managerRoleName string
+        managerRoleId = Int(EcosysParam("role_sale_manager"))
+        managerRoleName = DBFind("@1roles").Where({"id": managerRoleId}).One("role_name")
+
+        if managerRoleId == 0 {
+            warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), "role_sale_manager")
+        }
+
+        if !RoleAccess(managerRoleId) {
+            warning Sprintf(LangRes("x_role_only_action", "en"), managerRoleName)
+        }
+    }
+
+    action {
+        DBInsert("ts_wallets", {"wallet_btc": $wallet_btc, "wallet_eth": $wallet_eth})
+    }
+}
