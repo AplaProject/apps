@@ -8,13 +8,13 @@ If(And(#snapswap_role_id#>0,#role_id#==#snapswap_role_id#)){
 }
 
 If(GetVar(search)!=""){
-    SetVar(where, {$and: [{"key_id_buyer":{$neq:0}}, {$or:[{"wallet_btc":#search#},{"wallet_eth":#search#}]}]})
+    SetVar(where, {$and: [{"key_id_buyer":{$neq:0}}, {$or:[{"pub_buyer": {$like: #search#}},{"wallet_btc": {$like: #search#}},{"wallet_eth": {$like: #search#}}]}]})
 }.Else{
     SetVar(where, {"key_id_buyer":{$neq:0}}).(search,)
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
-    SetVar(search_name, LangRes(@1wallet))
+    SetVar(search_name, LangRes(@1pub_key) \ LangRes(@1wallet))
     Include(@1search)
 }
 
@@ -36,7 +36,10 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
     LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#key_id_buyer#"){
         Address(#key_id_buyer#)
     }
-    Div(Class:text-muted m0 h6, Body:#key_id_buyer#)
+    Div(){
+        Span(Class: h6 text-muted, Body: PUB:)
+        Span(Class: h6 text-muted ml-sm, Body: #pub_short_buyer#)
+    }
 }.Custom(_signer){
     If(#key_id_signer#!=0){
         Span(Class:text-success, Body: Address(#key_id_signer#))
