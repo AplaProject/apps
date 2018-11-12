@@ -17,10 +17,14 @@ contract PoaUpdateParams {
 
     conditions {
         var poa_map map
-        poa_map = DBFind("@1poa").Where({"id": $PoaId, "ecosystem":$ecosystem_id, "deleted": 0}).Columns("id,date_expiration,contract").Row()
+        poa_map = DBFind("@1poa").Where({"id": $PoaId, "ecosystem":$ecosystem_id, "deleted": 0}).Columns("id,date_expiration,contract,poa_recipient->member_id").Row()
 
         if !poa_map {
             error LangRes("@1poa_not_found", "en")
+        }
+
+        if Int(poa_map["poa_recipient.member_id"]) != $key_id {
+            error LangRes("@1poa_not_rights_to_change", "en") 
         }
 
         if UnixDateTime(BlockTime()) > Int(poa_map["date_expiration"]) {
