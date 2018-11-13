@@ -1,0 +1,85 @@
+DBFind(@1notifications,threads).Where({ecosystem:#ecosystem_id#, "page_params->type":"message",{"$or": [{"sender->member_id":#key_id#}, {"recipient->member_id":#key_id#}]}}).Order({"id":"-1"}).Limit(250).Count(threads_count).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_name,notification->body,notification->header,page_params->thread,date_created,closed")
+
+Div(content-wrapper){
+    Div(row){
+        Div(col-md-8 col-md-offset-2){
+            Div(list-group-item text-center){
+                Span(Class: h4 text-bold, Body: LangRes(@1message_active_threads))
+                Button(Class: btn-xs btn-link pull-right, Page: @1message_create){
+                    Em(Class: fa fa-2x icon-plus)
+                }.Popup(50, $@1message_create$)
+            }
+            If(#threads_count#>0){
+                ForList(threads){
+                    If(#page_params.thread#>0){
+                        DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, "page_params->thread": #page_params.thread#}).Order({"id":"-1"}).Limit(1).Columns("id").Vars(last)
+                    }.Else{
+                        DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, "page_params->thread": #id#}).Count(thread_depth)
+                    }
+                    If(Or(#id#==#last_id#,#thread_depth#==0)){
+                        If(Or(#closed#==1,#sender.member_id#==#key_id#)){SetVar(status,"read")}.Else{SetVar(status,"unread")}
+                        Div(list-group-item #status#){
+                            Div(row){
+                                Div(col-md-2 text-center){
+                                    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#id#}).Columns("sender->member_id,recipient->member_id,sender->member_name,recipient->member_name,sender->image_id,recipient->image_id").Vars(init_message)
+                                    If(#init_message_sender_member_id#!=#key_id#){
+                                        SetVar(talker_id,#init_message_sender_member_id#)
+                                        SetVar(talker_name,#init_message_sender_member_name#)
+                                        SetVar(talker_picture,#init_message_sender_image_id#)
+                                    }.Else{
+                                        SetVar(talker_id,#init_message_recipient_member_id#)
+                                        SetVar(talker_name,#init_message_recipient_member_name#)
+                                        SetVar(talker_picture,#init_message_recipient_image_id#)
+                                    }
+                                    LinkPage(Page: @1profile_view, PageParams: "v_key_id=#talker_id#"){
+                                        If(#talker_picture#>0){
+                                            Image(Src: Binary().ById(#talker_picture#), Class: img-thumbnail mb-sm).Style(max-height: 40px; border: 1px solid #5A5D63;)
+                                        }.Else{
+                                            Span(Class: fa icon-user fa-2x mb-sm)
+                                        }
+                                        Div(preview m0 h5){#talker_name#}
+                                    }
+                                }
+                                Div(col-md-10){
+                                    LinkPage(Page: @1message_view, PageParams: "notific_id=#id#"){
+                                        If(#notification.header#==""){
+                                            Div(Class: preview h4 m0, Body: "No subject")
+                                        }.Else{
+                                            Div(Class: preview h4 m0, Body: #notification.header#)
+                                        }
+                                        If(#sender.member_id#==#key_id#){
+                                            Div(Class: preview text-muted, Body: $@1you$: #notification.body#)
+                                        }.Else{
+                                            Div(Class: preview text-muted, Body: #notification.body#)
+                                        }
+                                    }
+                                    Div(Class: text-muted text-right){
+                                        If(GetVar(status)=="unread"){
+                                            Span(Class: badge mr-lg, Body: LangRes(@1unread))
+                                        }
+                                        Span(Class: h6, Body: DateTime(#date_created#, HH:MI DD.MM.YYYY))
+                                    }
+                                }
+                            }
+                        }.Style(
+                            height: 80px;
+                        )
+                    }
+                }
+            }.Else{
+                Div(list-group-item text-center text-muted){
+                    $@1messages_empty$
+                }
+            }
+        }
+    }.Style(
+        .preview {
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .unread {
+            background-color: #f7fafe;
+        }
+    )
+}
