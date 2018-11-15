@@ -36,9 +36,12 @@ contract TsKeyApprove {
         }
 
         $public_key = Replace($public_key, " ", "")
+        if HasPrefix($public_key, "04") {
+            $public_key = Substr($public_key, 2, Size($public_key) - 2)
+        }
         $userKey = PubToID($public_key)
 
-        if $userKey == 0 || Size($public_key) != 130 {
+        if $userKey == 0 || Size($public_key) != 128 {
             warning LangRes("@1public_key_invalid", "en")
         }
 
@@ -71,6 +74,7 @@ contract TsKeyApprove {
 
         if $key_type == "investor" {
             $wallet_id = getFreeWallet()
+            $public_key = "04" + $public_key
             $pub_short_buyer = Substr($public_key, 0, 12) + "..." + Substr($public_key, Size($public_key)-12, 12)
             DBUpdate("ts_wallets", $wallet_id, {"key_id_buyer": $userKey, "created_at": $block_time, "pub_buyer": $public_key, "pub_short_buyer": $pub_short_buyer})
 
