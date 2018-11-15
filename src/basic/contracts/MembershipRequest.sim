@@ -11,16 +11,16 @@ contract MembershipRequest {
         if $ecosystem_num == 1 {
             warning LangRes("@1impossible_for_platform_ecosystem", "en")
         }
-		
-		if !DBFind("@1ecosystems").Where({id:$ecosystem_num}).One("id"){
-			error Sprintf(LangRes("@1template_eco_not_exist", "en"), $ecosystem_num)
-		}
-        
-		if DBFind("@1keys").Where({id:$key_id, ecosystem:$ecosystem_num}) {
-			warning LangRes("@1member_added_before", "en")
-		}
-		
-		$free_membership = Int(DBFind("@1parameters").Where({ecosystem:$ecosystem_num, name:"free_membership"}).One("value"))
+
+        if !DBFind("@1ecosystems").Where({id:$ecosystem_num}).One("id"){
+            error Sprintf(LangRes("@1template_eco_not_exist", "en"), $ecosystem_num)
+        }
+
+        if DBFind("@1keys").Where({id:$key_id, ecosystem:$ecosystem_num}) {
+            warning LangRes("@1member_added_before", "en")
+        }
+
+        $free_membership = Int(DBFind("@1parameters").Where({ecosystem:$ecosystem_num, name:"free_membership"}).One("value"))
         if $free_membership == 0 {
             if DBFind("@1notifications").Where({ecosystem:$ecosystem_num, "page_params->ecosystem_id":$ecosystem_num, "sender->member_id":$key_id, closed:0, page_name:"@1membership_admin_view"}).Row(){
                 warning LangRes("@1request_sent_already", "en")
@@ -38,7 +38,7 @@ contract MembershipRequest {
             var notific_params map
             notific_params["ecosystem_id"] = $ecosystem_num
             notific_params["ecosystem_sender"] = $ecosystem_id
-			
+
             @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id", $admin_id, 1, "icon icon-user-follow", LangRes("@1membership_request_new", "en"), LangRes("@1details_view", "en"), "@1membership_admin_view", notific_params,1,$ecosystem_num)
         }
         if $free_membership == 1 {
@@ -48,15 +48,15 @@ contract MembershipRequest {
 
             var params map
             params["ecosystem_id"] = $ecosystem_num
-            params["status"] = 1			
-			
+            params["status"] = 1
+
             var icon header body page ecoName string
             ecoName = DBFind("@1ecosystems").Where({id:$ecosystem_num}).One("name")
             icon = "icon icon-user-follow"
             header = LangRes("@1request_approved", "en")
             body = Sprintf(LangRes("@1ecosystem_request_approved", "en"), ecoName, $ecosystem_num)
             page = "@1membership_user_view"
-        
+
             @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,eco_id", $key_id, 1, icon, header, body, page, params, $ecosystem_id)
         }
     }
