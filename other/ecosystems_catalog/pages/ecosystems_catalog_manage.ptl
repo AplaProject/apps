@@ -33,9 +33,9 @@ If(And(#buffered#==1,#buffer_value_switch#=="true")){
     SetVar(edit_info_web_page,#buffer_value_web_page#)
     SetVar(edit_info_web_form,#buffer_value_web_form#)
 }
-AppParam(Ecosystem: 1, App: #application_id#, Name: ec_visibility, Source: src_visibility)
-AppParam(Ecosystem: 1, App: #application_id#, Name: ec_type, Source: src_type)
-AppParam(Ecosystem: 1, App: #application_id#, Name: ec_payment, Source: src_payment)
+AppParam(Ecosystem: 1, App: #application_id#, Name: ecosystems_catalog_visibility, Source: src_visibility)
+AppParam(Ecosystem: 1, App: #application_id#, Name: ecosystems_catalog_type, Source: src_type)
+AppParam(Ecosystem: 1, App: #application_id#, Name: ecosystems_catalog_payment, Source: src_payment)
 
 Form(){
     Div(row){
@@ -48,8 +48,10 @@ Form(){
         Div(col-sm-8){
             Input(Name: Id, Type: hidden, Value: #edit_id#)
             If(GetVar(edit_page_id)){
+                SetVar(back_page_popup_header, $@1catalog_ecosystems_editing$)
                 Input(Name: Name, Value: #edit_name#, Disabled: true)
             }.Else{
+                SetVar(back_page_popup_header, $@1catalog_ecosystems_adding$)
                 Div(input-group){
                     If(#edit_id#==1){
                         Input(Name: Name, Value: $@1ecosystem_select$, Disabled: true)
@@ -57,7 +59,7 @@ Form(){
                         Input(Name: Name, Value: #edit_name#, Disabled: true)
                     }
                     Div(input-group-btn){
-                        Button(Body: LangRes(@1select), Page: @1select_page, PageParams: "Type=ecosystem_catalog,Header=$@1catalog_ecosystems_editing$,back_page=@1ec_manage", Class:btn btn-primary).Popup(Header: $@1ecosystem_select$, Width: "30")
+                        Button(Body: LangRes(@1select), Page: @1select_page, PageParams: "Type=ecosystem_catalog,Header=#back_page_popup_header#,back_page=@1ecosystems_catalog_manage", Class:btn btn-primary).Popup(Header: $@1ecosystem$, Width: "40")
                     }
                 }
             }
@@ -74,7 +76,7 @@ Form(){
             If(GetVar(edit_info_visibility)){
                 Select(Name: Visibility, Source: src_visibility, NameColumn: name, ValueColumn: id, Value: #edit_info_visibility#)
             }.Else{
-                Select(Name: Visibility, Source: src_visibility, NameColumn: name, ValueColumn: id, Value: 2)
+                Select(Name: Visibility, Source: src_visibility, NameColumn: name, ValueColumn: id)
             }
         }
     }
@@ -130,25 +132,18 @@ Form(){
         }
         Div(ml-lg pull-left){
             If(#edit_id#!=1){
-                If(#edit_info_logo#>0){
-                    Input(Name: Logo, Type: hidden, Value: #edit_info_logo#)
-                    Image(Src: Binary().ById(#edit_info_logo#)).Style(height: 36px;)
-                }.Else{
-                    Input(Name: Logo, Type: hidden, Value: 0)
-                    Span(Class: fa icon-layers fa-2x vc)
-                }
+                SetVar(ParamNames, "id;visibility;type;payment;description;logo;switch;conditions;hardware;email;phone;vde_page;vde_form;web_page;web_form")
+                Button(Class: btn btn-link p0, Page: @1upload_page, PageParams: "back_page=@1ecosystems_catalog_manage,back_page_popup=50,back_page_popup_header=#back_page_popup_header#,app_id=#application_id#,buffer_key=ecosystem_logo", Contract: @1FormStateSave, Params: "AppId=#application_id#,FormName=ecosystem_catalog_manage_form,ParamNames=#ParamNames#,Param1=Val(Id),Param2=Val(Visibility),Param3=Val(Type),Param4=Val(Payment),Param5=Val(Description),Param6=Val(Logo),Param7=Val(Switch),Param8=Val(Conditions),Param9=Val(Hardware),Param10=Val(Email),Param11=Val(Phone),Param12=Val(Vde_page),Param13=Val(Vde_form),Param14=Val(Web_page),Param15=Val(Web_form)"){
+                    If(#edit_info_logo#>0){
+                        Input(Name: Logo, Type: hidden, Value: #edit_info_logo#)
+                        Image(Src: Binary().ById(#edit_info_logo#)).Style(height: 36px;)
+                    }.Else{
+                        Input(Name: Logo, Type: hidden, Value: 0)
+                        Span(Class: fa icon-layers fa-2x vc)
+                    }
+                }.Popup(Header: $@1catalog_ecosystems_logo$, Width: 30)
             }.Else{
                 Span(Class: fa icon-layers fa-2x vc)
-            }
-        }
-        Div(ml pull-left){
-            If(#edit_id#!=1){
-                SetVar(ParamNames, "id;visibility;type;payment;description;logo;switch;conditions;hardware;email;phone;vde_page;vde_form;web_page;web_form")
-                Div(vc){
-                    Button(Class: btn btn-default btn-upload, Page: @1upload_page, PageParams: "back_page=@1ec_manage,back_page_popup=50,back_page_popup_header=$@1catalog_ecosystems_editing$,app_id=#application_id#,buffer_key=ecosystem_logo", Contract: @1FormStateSave, Params: "AppId=#application_id#,FormName=ecosystem_catalog_manage_form,ParamNames=#ParamNames#,Param1=Val(Id),Param2=Val(Visibility),Param3=Val(Type),Param4=Val(Payment),Param5=Val(Description),Param6=Val(Logo),Param7=Val(Switch),Param8=Val(Conditions),Param9=Val(Hardware),Param10=Val(Email),Param11=Val(Phone),Param12=Val(Vde_page),Param13=Val(Vde_form),Param14=Val(Web_page),Param15=Val(Web_form)"){
-                        Span(Class: h6, Body: $@1button_upload$)
-                    }.Popup(Header: $@1catalog_ecosystems_logo$, Width: 30)
-                }
             }
         }
         Div(ml-xl pull-left){
@@ -161,13 +156,7 @@ Form(){
                 Input(Name: Switch, Type: "checkbox", Value: "false", Class: m0).Style(display: inline-block;)
             }
         }
-    }.Style(
-        .vc {line-height: 36px;}
-        .btn-upload {
-            padding: 1px 6px;
-            border-radius: 3px;
-        }
-    )
+    }.Style(.vc{line-height: 36px;})
     Div(){
         Div(row mt-sm){
             Div(col-sm-4 mt-sm text-right){
@@ -289,13 +278,13 @@ Form(){
         Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt-sm disabled)
     }.Else{
         Div(){
-            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt-sm, Contract: @1EcManageInfo, Page: @1ec_list)
+            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt-sm, Contract: @1EcosystemsCatalogManageInfo, Page: @1ecosystems_catalog_list)
         }.Show("Switch=true")
         Div(){
-            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt-sm, Contract: @1EcManageInfo, Params:"Conditions=#edit_info_conditions#,Email=#edit_info_email#,Phone=#edit_info_phone#,Hardware=#edit_info_hardware#,Vde_page=#edit_info_vde_page#,Vde_form=#edit_info_vde_form#,Web_page=#edit_info_web_page#,Web_form=#edit_info_web_form#", Page: @1ec_list)
+            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt-sm, Contract: @1EcosystemsCatalogManageInfo, Params:"Conditions=#edit_info_conditions#,Email=#edit_info_email#,Phone=#edit_info_phone#,Hardware=#edit_info_hardware#,Vde_page=#edit_info_vde_page#,Vde_form=#edit_info_vde_form#,Web_page=#edit_info_web_page#,Web_form=#edit_info_web_form#", Page: @1ecosystems_catalog_list)
         }.Show("Switch=false")
     }
-    Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt-sm, Page: @1ec_list)
+    Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt-sm, Page: @1ecosystems_catalog_list)
 }.Style(
     .rv {resize: vertical;}
 )
