@@ -4,7 +4,6 @@ Include(@1pager_header)
 SetTitle("$@1ecosystems$")
 Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1ecosystems_list_desc$"))
 AddToolButton(Title: $@1update_metrics$, Page: @1ecosystems_metrics_update, Icon: icon-refresh).Popup(Header: $@1update_metrics$, Width: "30")
-AddToolButton(Title: $@1create$, Page: @1ecosystem_new, Icon: icon-plus).Popup(Header: $@1create$, Width: "30")
 
 If(GetVar(search)!=""){
     SetVar(where, "{name:{$like:#search#}}")
@@ -20,6 +19,9 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 DBFind(@1buffer_data).Where({ecosystem:#ecosystem_id#, member_id:#key_id#, key:"metrics"}).Vars(m)
 JsonToSource(src_metrics,#m_value#)
 
+DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(basic_application)
+SetVar(template_id, AppParam(Ecosystem:1, App:#basic_application_id#, Name: voting_ves_template_id))
+
 DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_id){
     Span(#id#)
 }.Custom(_name){
@@ -33,13 +35,21 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
             }
         }
     }
+}.Custom(valued){
+    If(#template_id#>0){
+        If(#is_valued#==0){
+            Button(Body: $@1start_voting_ves$, Class: btn-xs btn-link, Page: @1voting_list, Contract: @1VotingVesCreate, Params: "RowId=#id#")
+        }
+    }.ElseIf(#is_valued#==1){
+        $@1is_valued$
+    }
 }.Count(count)
 
 Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){
-                Table(src, "$@1id$=_id,$@1ecosystem_name$=_name,$@1metrics$=_metrics")
+                Table(src, "$@1id$=_id,$@1ecosystem_name$=_name,$@1metrics$=_metrics,$@1valued$=valued")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1ecosystems$ $@1not_founded$")
             }                       
