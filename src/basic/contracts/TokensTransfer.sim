@@ -4,6 +4,18 @@ contract TokensTransfer {
         SenderId int
         RecipientId int
         Comment string "optional"
+        Ecosystem int "optional"
+    }
+
+    func getEcosystem() {
+        $e_id = Int($Ecosystem)
+        if $e_id == 0 {
+            $e_id = $ecosystem_id
+        } else {
+            if !DBFind("@1ecosystems").Where({id:$e_id}).One("id") {
+                error Sprintf(LangRes("@1ecosystem_not_found", "en"), $e_id)
+            }
+        }    
     }
 
     func getPermission() {
@@ -30,7 +42,7 @@ contract TokensTransfer {
 
     func checkSender() {
         var sender_map map
-        sender_map = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$SenderId}).Row()
+        sender_map = DBFind("@1keys").Where({ecosystem:$e_id, id:$SenderId}).Row()
 
         if !sender_map {
             error Sprintf(LangRes("@1sender_x_invalid", "en"), $SenderId)
@@ -48,7 +60,7 @@ contract TokensTransfer {
 
     func checkRecipient() {
         var recipient_map map
-        recipient_map = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$RecipientId}).Row()
+        recipient_map = DBFind("@1keys").Where({ecosystem:$e_id, id:$RecipientId}).Row()
 
         if !recipient_map {
             error Sprintf(LangRes("@1recipient_x_invalid", "en"), $RecipientId)
@@ -62,6 +74,7 @@ contract TokensTransfer {
     }
 
     conditions {
+        getEcosystem()    //getting an ecosystem number
         getPermission()   //getting permission to run
         checkSender()     //check the sender
         checkRecipient()  //check the recipient
@@ -76,8 +89,11 @@ contract TokensTransfer {
     }
 
     action {
-        DBUpdate("@1keys", $SenderId, {"-amount": $Amount})
-        DBUpdate("@1keys", $RecipientId, {"+amount": $Amount})
+        var table_name string
+        table_name = "@" + Str($e_id) + "keys"
+        DBUpdate(table_name, $SenderId, {"-amount": $Amount})
+        DBUpdate(table_name, $RecipientId, {"+amount": $Amount})
+
         var m map
         m["sender_id"] = $SenderId
         m["recipient_id"] = $RecipientId
@@ -85,8 +101,9 @@ contract TokensTransfer {
         m["comment"] = $Comment
         m["block_id"] = $block
         m["txhash"] = $txhash
-        m["ecosystem"] = $ecosystem_id
+        m["ecosystem"] = $e_id
         m["type"] = 3
+        //m["created_at"] = $block_time
         DBInsert("@1history", m)
     }
 }

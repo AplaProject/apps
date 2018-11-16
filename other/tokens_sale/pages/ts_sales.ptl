@@ -13,7 +13,7 @@ If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
 }
 
 If(GetVar(search)!=""){
-    SetVar(where, {$or:[{"key_id_buyer":#search#},{"key_id_sale_apl_manager":#search#}, {"key_id_sale_apl_admin":#search#}, {"key_id_seller":#search#}]})
+    SetVar(where, {id:#search#})
 }.Else{
     SetVar(where, {id:{$gt:0}}).(search,)
 }
@@ -23,18 +23,18 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_btat){
+DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_id){
+    Span(#id#)
+    SetVar(w_wallet_btc,).(w_wallet_eth,).(w_pub_short_buyer,)
+    DBFind(@1ts_wallets).Where({"key_id_buyer":#key_id_buyer#}).Vars(w)
+}.Custom(_btat){
     Span(Class: text-muted, Body: DateTime(#buyer_transferred_at#, Format: YYYY-MM-DD HH:MI:SS))
 }.Custom(_cat){
     Span(Class: text-muted, Body: DateTime(#created_at#, Format: YYYY-MM-DD HH:MI:SS))
 }.Custom(_amount){
     Div(text-right){
-        Span(Class: text-bold, Body: #amount#).Style(margin-right:5px;)
-        Span(Class: text-bold, Body: AppParam(App:#application_id#, Name:ts_currency_type, Ecosystem: #ecosystem_id#, Index: #currency_type#))
-    }
-    Div(text-right){
         Span(Class: text-bold, Body: Money(#amount_apl#)).Style(margin-right:5px;)
-        Span(Class: text-bold, Body: APL)
+        Span(Class: text-bold, Body: APLA)
     }
 }.Custom(_info){
     Button(Class: btn-xs btn-link, Page: @1ts_transfer_view, PageParams: "Id=#id#"){
@@ -56,14 +56,26 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
     LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#key_id_buyer#"){
         Address(#key_id_buyer#)
     }
-    Div(Class:text-muted m0 h6, Body:#key_id_buyer#)
+    Div(){
+        Span(Class: h6 text-muted, Body: PUB:)
+        Span(Class: h6 text-muted ml-sm, Body: #w_pub_short_buyer#)
+    }
+}.Custom(_wlts){
+    Div(){
+        Span(Class: h6 text-muted, Body: BTC:)
+        Span(Class: h6 ml-sm, Body: #w_wallet_btc#)
+    }
+    Div(){
+        Span(Class: h6 text-muted, Body: ETH:)
+        Span(Class: h6 ml-sm, Body: #w_wallet_eth#)
+    }
 }.Count(count)
 
 Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){
-                Table(src, "$@1id$=id,$@1key_id_investor$=_buyer,$@1information$=_info,$@1investor_funds_transfer_date$=_btat,$@1created_at$=_cat,$@1status$=_status,=_action,=_amount")
+                Table(src, "$@1id$=_id,$@1key_id_investor$=_buyer,$@1wallets$=_wlts,$@1information$=_info,$@1investor_funds_transfer_date$=_btat,$@1created_at$=_cat,$@1status$=_status,=_action,=_amount")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1sales$ $@1not_founded$")
             }                       

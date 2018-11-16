@@ -18,9 +18,12 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(custom_id){
-    SetVar(Name: style_text, Value: "text-normal")
-    SetVar(Name: style_link, Value: "text-primary")
+DBFind(#this_table#, src).Where(#where#).Order({deleted:"1", id:"1"}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(custom_id){
+    If(#deleted# == 0){
+        SetVar(style_text, "text-normal").(style_link, "text-primary")
+    }.Else{
+        SetVar(style_text,"text-muted").(style_link,"text-muted")
+    }
     Span(Class: h6 text-muted, Body: #id#)
     SetVar(m_id, 0)
     DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#id#}).Vars(m)
@@ -32,8 +35,8 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
         SetVar(member_name, Address(#id#))
     }
 }.Custom(custom_member_id){
-    Button(Class: btn-xs btn-link, Page: @1tokens_send, PageParams: "v_key_id=#id#"){
-        Span(Class: h5, Body: Address(#id#))
+    Button(Class: btn-xs btn-link, Page: @1tokens_send, PageParams: "v_key_id=#id#,back_page=#this_page#"){
+        Span(Class: h5 #style_text#, Body: Address(#id#))
     }.Popup(Header: $@1tokens_send$, Width: "50")
 }.Custom(custom_username){
     LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#"){
@@ -48,10 +51,15 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
         }
     }
 }.Custom(actions){
-    If(#blocked#==0){
-        Button(Body: LangRes(@1block_key), Class: btn-xs btn-link pull-right, Page: #this_page#, Params:"KeyId=#id#,Value=1", Contract: @1BlockMember).Alert(Text: "$@1want_block_key$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+    If(#deleted#==0){
+        Button(Body: LangRes(@1delete), Class: btn-xs btn-link pull-right, Page: #this_page#, Params:"KeyId=#id#", Contract: @1DeleteMember).Alert(Text: "$@1want_delete_key$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+        If(#blocked#==0){
+            Button(Body: LangRes(@1block_key), Class: btn-xs btn-link pull-right, Page: #this_page#, Params:"KeyId=#id#,Value=1", Contract: @1BlockMember).Alert(Text: "$@1want_block_key$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+        }.Else{
+            Button(Body: LangRes(@1unblock_key), Class: btn-xs btn-link pull-right, Page: #this_page#, Params:"KeyId=#id#,Value=0", Contract: @1BlockMember).Alert(Text: "$@1want_unblock_key$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+        }
     }.Else{
-        Button(Body: LangRes(@1unblock_key), Class: btn-xs btn-link pull-right, Page: #this_page#, Params:"KeyId=#id#,Value=0", Contract: @1BlockMember).Alert(Text: "$@1want_unblock_key$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+        Span(Class: h6 text-muted pull-right, Body: $@1deleted$)
     }
 }.Count(count)
 

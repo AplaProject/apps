@@ -1,26 +1,28 @@
 contract TsTransferAdmin {
     data {
         WalletStr string
-        Amount string
         CurrencyType int
         AmountApl money
         TransferredDate string
         TransferredTime string
     }
-    func getRoleId(name string) int{
+
+    func getRoleId(name string) int {
         var rid int
         rid = Int(EcosysParam(name))
-        if rid == 0{
+        if rid == 0 {
             warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), name)
         }
         return rid
     }
+
     func trimZeroTime(s string) string {
         if Contains(s, "T00:00:00Z") {
             s = s Replace(s, "T00:00:00Z", "")
         }
         return s
     }
+
     func dateAddTime(d, t string) string {
         var dt string
         if Size(t) == 5 {
@@ -28,39 +30,61 @@ contract TsTransferAdmin {
         }
         return dt
     }
-    conditions{
+
+    conditions {
         $WAITING_MANAGER = 1
         $WAITING_SELLER = 2
         $FINISHED = 3
         $REJECTED = 4
-        if $AmountApl <= 0{
-            warning "invalid amount APL"
-        }
-        if $Amount <= 0.0{
-            warning "invalid amount"
+        if $AmountApl <= 0 {
+            warning "invalid amount APLA"
         }
 
         $transferredAt = UnixDateTime(dateAddTime($TransferredDate, $TransferredTime))
         if $transferredAt == 0 {
             warning "invalid transfer datetime"
         }
+        
         $appId = Int(DBFind("@1applications").Where({ecosystem:$ecosystem_id, name:"Tokens sale"}).One("id"))
-        if $appId == 0{
+        if $appId == 0 {
             warning LangRes("@1app_not_found", "en")
         }
-        $roleAplManager = getRoleId("role_sale_manager")
+        
         $currentRole = getRoleId("role_sale_admin")
-        if !RoleAccess($currentRole){
+        if !RoleAccess($currentRole) {
             warning "this action allowed only for role id #" + $currentRole
         }
 
-        $WalletId = AddressToId($WalletStr)
-        $wallet = DBFind("ts_wallets").Where({key_id_buyer:$WalletId}).Row()
-        if !$wallet{
-            warning "Buyer wallet not found"
-        }
-        if $CurrencyType <= 0 || $CurrencyType > 3{
+        if $CurrencyType <= 0 || $CurrencyType > 3 {
             warning "Invalid Currency Type"
+        }
+
+        if $CurrencyType == 1 {
+            $wallet = DBFind("ts_wallets").Where({wallet_btc: $WalletStr}).Row()
+        }
+        if $CurrencyType == 2 {
+            $wallet = DBFind("ts_wallets").Where({wallet_eth: $WalletStr}).Row()
+        }
+        if $CurrencyType == 3 {
+            if $WalletStr == "" {
+                warning LangRes("@1public_key_empty", "en")
+            }
+
+            $WalletStr = Replace($WalletStr, " ", "")
+            if HasPrefix($WalletStr, "04") {
+                $WalletStr = Substr($WalletStr, 2, Size($WalletStr) - 2)
+            }
+            var key_id_buyer int
+            key_id_buyer = PubToID($WalletStr)
+            if key_id_buyer == 0 || Size($WalletStr) != 128 {
+                warning LangRes("@1public_key_invalid", "en")
+            }
+            
+            $wallet = DBFind("ts_wallets").Where({key_id_buyer: key_id_buyer}).Row()
+        }
+
+        if !$wallet {
+            warning "Buyer wallet not found"
         }
     }
 
@@ -68,7 +92,6 @@ contract TsTransferAdmin {
         var sale map saleId int
         sale["key_id_buyer"] = $wallet["key_id_buyer"]
         sale["currency_type"] = $CurrencyType
-        sale["amount"] = $Amount
         sale["amount_apl"] = $AmountApl
         sale["key_id_sale_apl_admin"] = $key_id
         sale["created_at"] = $time
@@ -82,7 +105,7 @@ contract TsTransferAdmin {
         title = Sprintf("Check sale id %v", saleId)
         page = "ts_transfer_manager"
         params["sale_id"] = saleId
+        $roleAplManager = getRoleId("role_sale_manager")
         @1NotificationsSend("rid,sender,text_header,page_name,params_map,closure_type,current_role_id", $roleAplManager, 2, title, page, params, 1, $currentRole)
-
     }
 }

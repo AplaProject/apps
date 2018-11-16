@@ -1,0 +1,23 @@
+contract TsFreeWalletDelete {
+    data {
+        wallet_id int
+    }
+
+    conditions {
+        var adminRoleId int adminRoleName string
+        adminRoleId = Int(EcosysParam("role_sale_admin"))
+        adminRoleName = DBFind("@1roles").Where({"id": adminRoleId}).One("role_name")
+
+        if adminRoleId == 0 {
+            warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), "role_sale_admin")
+        }
+
+        if !RoleAccess(adminRoleId) {
+            warning Sprintf(LangRes("x_role_only_action", "en"), adminRoleName)
+        }
+    }
+
+    action {
+        DBUpdate("ts_wallets", $wallet_id, {"deleted": 1})
+    }
+}

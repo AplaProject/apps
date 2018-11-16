@@ -2,12 +2,11 @@ DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Tokens sale"}).Col
 
 SetVar(this_page, ts_transfer_manager)
 SetVar(role_param, role_sale_manager)
-SetVar(row,"row mt-sm").(col_left,"col-sm-4 text-right").(col_right,"col-sm-8 text-left")
 SetVar(needed_role_id, EcosysParam(Name:#role_param#))
 
 SetVar(isStartProcessing,0)
 If(#notific_id#>0){
-    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("page_params->sale_id,date_start_processing,notification->type,processing_info->member_id").Vars(note)
+    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("page_params->sale_id,date_start_processing,notification->type,processing_info->member_id,closed").Vars(note)
     If(#note_date_start_processing#!=""){
         SetVar(isStartProcessing,1)
     }
@@ -21,105 +20,125 @@ If(#notific_id#>0){
 SetVar(sale_id,0)
 If(#note_page_params_sale_id#>0){
     DBFind(@1ts_sales).Where({id:#note_page_params_sale_id#}).Vars(sale)
+    DBFind(@1ts_wallets).Where({key_id_buyer:#sale_key_id_buyer#}).Vars(wallet)
 }
-SetTitle($@1ts_transfer_manager$)
+
 Div(content-wrapper){
-    Div(row mt-sm){
-        Div(col-lg-10 col-lg-offset-1){
-            Form(panel panel-primary){
-                If(And(#needed_role_id#>0,#role_id#==#needed_role_id#,#sale_id#>0)){
-                    Div(panel-body){
-                        Div(#row#){
-                            Div(#col_left#){
-                                $@1key_id_investor$
-                            }
-                            Div(#col_right#){
-                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#sale_key_id_buyer#"){
-                                    Address(#sale_key_id_buyer#)
-                                }
-                            }
-                        }
-                        Div(#row#){
-                            Div(#col_left#){
-                                $@1amount$
-                            }
-                            Div(#col_right#){
-                                #sale_amount# AppParam(App:#application_id#, Name:ts_currency_type, Ecosystem: #ecosystem_id#, Index: #sale_currency_type#)
-                            }
-                        }
-                        Div(#row#){
-                            Div(#col_left#){
-                                $@1tokens$
-                            }
-                            Div(#col_right#){
-                                Money(#sale_amount_apl#) APL
-                            }
-                        }
-                        Div(#row# text-muted){
-                            Div(#col_left#){
-                                $@1investor_funds_transfer_date$
-                            }
-                            Div(#col_right#){
-                                DateTime(#sale_buyer_transferred_at#, Format: YYYY-MM-DD HH:MI:SS)
-                            }
-                        }
-                        Div(#row# text-muted){
-                            Div(#col_left#){
-                                $@1created_at$
-                            }
-                            Div(#col_right#){
-                                DateTime(#sale_created_at#, Format: YYYY-MM-DD HH:MI:SS)
-                            }
-                        }
-                        Div(#row# text-muted){
-                            Div(#col_left#){
-                                $@1created_by$
-                            }
-                            Div(#col_right#){
-                                Address(#sale_key_id_sale_apl_admin#)
-                            }
+    Form(){
+        If(And(#needed_role_id#>0,#role_id#==#needed_role_id#,#sale_id#>0)){
+            Div(list-group-item){
+                Div(text-center text-bold h4 m0){
+                    LangRes(@1ts_transfer_manager)
+                }
+            }
+            Div(list-group-item){
+                Div(row mt-sm){
+                    Div(col-sm-3 text-right text-bold){
+                        $@1key_id_investor$
+                    }
+                    Div(col-sm-9 text-left){
+                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#sale_key_id_buyer#"){
+                            Address(#sale_key_id_buyer#)
                         }
                     }
-                    Div(panel-footer){
-                        If(And(#note_processing_info_member_id#==#key_id#,#isStartProcessing#==1)){
-                            Button(Body: $@1reject$, Class: btn btn-danger, Page: ts_transfer_reject, PageParams: "RoleParam=#role_param#,notific_id=#notific_id#,back_page=#this_page#").Popup(50,"Rejected comment")
-                            Button(Body: $@1accept$, Class: btn btn-primary pull-right, Page: ts_sales, Contract: TsTransferManager, Params: "SaleId=#sale_id#,NotificId=#notific_id#")
-                        }.ElseIf(#isStartProcessing#==1){
-                            Div(text-muted text-center){
-                                process begin another manager
-                            }
-                        }.ElseIf(#isStartProcessing#==0){
-                            Div(text-center){
-                                Button(Body: $@1processing$, Class: btn btn-primary, Page: #this_page#, PageParams: "notific_id=#notific_id#", Contract: @1NotificationsProcess, Params: "notific_id=#notific_id#")
-                            }
+                }
+                Div(row){
+                    Div(col-sm-3 text-right text-bold){
+                        $@1tokens$
+                    }
+                    Div(col-sm-9 text-left){
+                        Money(#sale_amount_apl#) APLA
+                    }
+                }
+                Div(row mt-sm){
+                    Div(col-sm-3 text-right text-bold){
+                        $@1pub_key$
+                    }
+                    Div(col-sm-9 text-left){
+                        Span(Class: h6, Body: #wallet_pub_buyer#)
+                    }
+                }
+                Div(row){
+                    Div(col-sm-3 text-right text-bold){
+                        $@1ts_wallet_btc$
+                    }
+                    Div(col-sm-9 text-left){
+                        Span(Class: h6, Body: #wallet_wallet_btc#)
+                    }
+                }
+                Div(row){
+                    Div(col-sm-3 text-right text-bold){
+                        $@1ts_wallet_eth$
+                    }
+                    Div(col-sm-9 text-left){
+                        Span(Class: h6, Body: #wallet_wallet_eth#)
+                    }
+                }
+                Div(row mt-sm text-muted ){
+                    Div(col-sm-3 text-right text-bold){
+                        $@1investor_funds_transfer_date$
+                    }
+                    Div(col-sm-9 text-left){
+                        DateTime(#sale_buyer_transferred_at#, Format: YYYY-MM-DD HH:MI:SS)
+                    }
+                }
+                Div(row text-muted){
+                    Div(col-sm-3 text-right text-bold){
+                        $@1created_at$
+                    }
+                    Div(col-sm-9 text-left){
+                        DateTime(#sale_created_at#, Format: YYYY-MM-DD HH:MI:SS)
+                    }
+                }
+                Div(row text-muted){
+                    Div(col-sm-3 text-right text-bold){
+                        $@1created_by$
+                    }
+                    Div(col-sm-9 text-left){
+                        Address(#sale_key_id_sale_apl_admin#)
+                    }
+                }
+            }
+            If(#sale_status# == 1){
+                Div(list-group-item){
+                    If(And(#note_processing_info_member_id#==#key_id#,#isStartProcessing#==1)){
+                        Button(Body: $@1reject$, Class: btn btn-default, Page: ts_transfer_reject, PageParams: "RoleParam=#role_param#,notific_id=#notific_id#,back_page=#this_page#").Popup(50,"Rejected comment")
+                        Button(Body: $@1accept$, Class: btn btn-primary pull-right, Page: ts_sales, Contract: TsTransferManager, Params: "SaleId=#sale_id#,NotificId=#notific_id#")
+                    }.ElseIf(#isStartProcessing#==1){
+                        Div(text-muted text-center){
+                            process begin another manager
+                        }
+                    }.ElseIf(#isStartProcessing#==0){
+                        Div(text-right){
+                            Button(Body: $@1processing$, Class: btn btn-primary, Page: #this_page#, PageParams: "notific_id=#notific_id#", Contract: @1NotificationsProcess, Params: "notific_id=#notific_id#")
+                        }
+                    }
+                }
+            }
+        }.Else{
+            Div(list-group-item text-center h4){
+                If(#needed_role_id#>0){
+                    If(#needed_role_id#!=#role_id#){
+                        DBFind(@1parameters).Where({ecosystem:#ecosystem_id#, name:#role_param#}).Vars(param)
+                        Div(h4){
+                            This page only for role from parameter LinkPage(Page: @1params_edit, PageParams: "id=#param_id#,back_page=#this_page#", Body:#role_param#)
                         }
                     }
                 }.Else{
-                    Div(panel-body text-center){
-                        If(#needed_role_id#>0){
-                            If(#needed_role_id#!=#role_id#){
-                                DBFind(@1parameters).Where({ecosystem:#ecosystem_id#, name:#role_param#}).Vars(param)
-                                Div(h4){
-                                    this page only for role from parameter LinkPage(Page: @1params_edit, PageParams: "id=#param_id#,back_page=#this_page#", Body:#role_param#)
-                                }
-                            }
-                        }.Else{
-                            Div(h4){
-                                #role_param# not setted
-                            }
-                            Div(h4){
-                                LinkPage(Body:$@1ts_settings$, Page:ts_settings)
-                            }
-                        }
-
-                        If(#note_id_page_params_sale_id#>0){
-                            If(#sale_id#>0){}.Else{
-                                sale not found
-                            }
-                        }.Else{
-                            notification not found
-                        }
+                    Div(h4){
+                        #role_param# not setted
                     }
+                    Div(h4){
+                        LinkPage(Body:$@1ts_settings$, Page:ts_settings)
+                    }
+                }
+
+                If(#note_id_page_params_sale_id#>0){
+                    If(#sale_id#>0){}.Else{
+                        Sale not found
+                    }
+                }.Else{
+                    Notification not found
                 }
             }
         }

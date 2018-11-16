@@ -1,6 +1,6 @@
 Div(content-wrapper){
     DBFind(@1tables).Columns("id,name,columns,conditions,permissions->insert,permissions->update,permissions->new_column,permissions->read").Vars(pre).Where({id:#tabl_id#,ecosystem:#ecosystem_id#})
-    
+
     SetTitle($@1tables$)
     Div(breadcrumb){
         Div(){
@@ -25,11 +25,12 @@ Div(content-wrapper){
                     Div(col-xs-5 col-md-5 h4){
                         Label($@1conditions$)
                     }
-                    Div(col-xs-2 col-md-2 h4 text-right){
+                    Div(col-xs-2 col-md-2 text-right){
                     }
                 }
                 JsonToSource(src_columns, #pre_columns#)
                 ForList(src_columns){
+                    SetVar(name_column,#key#)
                     Div(list-group-item){
                         Div(row){
                             Div(col-xs-3 col-md-3 h5){
@@ -39,40 +40,56 @@ Div(content-wrapper){
                                 SetVar(col_type,GetColumnType(#pre_name#, #key#))
                                 If(#col_type# == text){
                                     Span("Text")
-                                }
-                                If(#col_type# == number){
+                                }.ElseIf(#col_type# == number){
                                     Span("Number")
-                                }
-                                If(#col_type# == money){
+                                }.ElseIf(#col_type# == money){
                                     Span("Money")
-                                }
-                                If(#col_type# == varchar){
+                                }.ElseIf(#col_type# == varchar){
                                     Span("Varchar")
-                                }
-                                If(#col_type# == datetime){
+                                }.ElseIf(#col_type# == datetime){
                                     Span("Date/Time")
-                                }
-                                If(#col_type# == double){
+                                }.ElseIf(#col_type# == double){
                                     Span("Double")
-                                }
-                                If(#col_type# == character){
+                                }.ElseIf(#col_type# == character){
                                     Span("Character")
-                                }
-                                If(#col_type# == json){
+                                }.ElseIf(#col_type# == json){
                                     Span("JSON")
-                                }
-                                If(#col_type# == bytea){
+                                }.ElseIf(#col_type# == bytea){
                                     Span("Binary Data")
-                                }
-                                If(#col_type# == uuid){
+                                }.ElseIf(#col_type# == uuid){
                                     Span("UUID")
                                 }
                             }
-                            Div(col-xs-5 col-md-5 h5){
-                                Span(`#value#`)
+                            Div(col-xs-5 col-md-5){
+                                SetVar(isObject,0)
+                                JsonToSource(condition,#value#)
+                                ForList(condition){
+                                    SetVar(isObject,1)
+                                    If(#key#==read){
+                                        Div(){
+                                            Span($@1reading$:,text-muted)
+                                            Span(#value#,ml-sm)
+                                        }
+                                    }.ElseIf(#key#==update){
+                                        Div(){
+                                            Span($@1updating$:,text-muted)
+                                            Span(#value#,ml-sm)
+                                        }
+                                    }
+                                }
+                                If(#isObject#==0){
+                                    Div(){
+                                        Span($@1reading$:,text-muted)
+                                        Span(true,ml-sm)
+                                    }
+                                    Div(){
+                                        Span($@1updating$:,text-muted)
+                                        Span(#value#,ml-sm)
+                                    }
+                                }
                             }
                             Div(col-xs-2 col-md-2 text-right){
-                                Button(Body: $@1edit$, Class: btn btn-primary, Page: @1column_edit, PageParams: "name_column=#key#,tabl_id=#tabl_id#")
+                                Button(Body: $@1edit$, Class: btn btn-primary, Page: @1column_edit, PageParams: "name_column=#name_column#,tabl_id=#tabl_id#")
                             }
                         }
                     }

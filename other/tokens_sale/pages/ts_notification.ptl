@@ -1,6 +1,6 @@
 DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Tokens sale"}).Columns("id").Vars(application)
 If(#notific_id#>0){
-    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("notification->header,notification->body,id").Vars(note)
+    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("notification->type,notification->header,notification->body,id,processing_info->member_id,closed").Vars(note)
 }
 
 Div(content-wrapper){
@@ -9,20 +9,22 @@ Div(content-wrapper){
             Form(panel panel-primary){
                 DBFind(@1ts_wallets).Where({key_id_signer:{$neq:0}, rejected_at:0}).Vars(wallet)
                 If(#note_id#>0){
-                    Div(panel-body){
-                        Div(){
+                    Div(panel-body text-center){
+                        Div(h4 text-bold m0){
                             #note_notification_header#
                         }
-                        Div(){
+                        Div(m0){
                             #note_notification_body#
                         }
                     }
-                    Div(panel-footer text-center){
-                        Button(Body: $@1readed$, Class: btn btn-primary, Page: @1default_page, Contract: NotificationsClose, Params: "notific_id=#notific_id#")
-                    }
-                }.Else{
-                    Div(panel-body){
-                        Оповещение не найдено
+                    If(#note_closed# == 0){
+                        Div(panel-footer text-right){
+                            If(Or(#note_notification_type#==1,#note_processing_info_member_id# == #key_id#)){
+                                Button(Body: $@1readed$, Class: btn btn-primary, Page: @1default_page, Contract: NotificationsClose, Params: "notific_id=#notific_id#")
+                            }.ElseIf(#note_notification_type#==2){
+                                Button(Body: $@1processing$, Class: btn btn-primary, Page: @1ts_notification, PageParams: "notific_id=#notific_id#", Contract: NotificationsProcess, Params: "notific_id=#notific_id#")
+                            }
+                        }
                     }
                 }
             }

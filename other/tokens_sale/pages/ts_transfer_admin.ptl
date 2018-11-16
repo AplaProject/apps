@@ -1,45 +1,58 @@
-DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Tokens sale"}).Columns("id").Vars(application)
 SetVar(this_page, @1ts_transfer_admin).(back_page, @1ts_sales)
-AppParam(App:#application_id#, Name:ts_currency_type, Ecosystem: #ecosystem_id#, Source:currency_type)
 
-DBFind(@1ts_wallets, wallets).Where({key_id_buyer:{$neq:0}, key_id_signer:{$neq:0}, rejected_at:0}).Count(wallets_count).Custom(_name){
-    Address(#key_id_buyer#) (#key_id_buyer#)
+If(GetVar(type_currency)==""){
+    SetVar(type_currency,1)
 }
+
 Form(){
-    Div(row){
-        Div(col-sm-4 mt-sm text-right){
-            $@1wallet$
+    Div(row mb-sm){
+        Div(col-md-4 mt-sm text-right text-bold){
+            LangRes(@1type)
         }
-        Div(col-sm-8 text-left){
-            Input(Name: WalletStr, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx")
-        }
-    }
-    Div(row mt-sm){
-        Div(col-sm-4 mt-sm text-right){
-            $@1investment_amount$
-        }
-        Div(col-sm-8 text-left){
-            Div(row){
-                Div(col-sm-8){
-                    Input(Name:Amount, Type:number)
-                }
-                Div(col-sm-4){
-                    Select(Name:CurrencyType, Source:currency_type, NameColumn: name, ValueColumn: id)
-                }
+        Div(col-md-8 text-left){
+            If(GetVar(type_currency)==1){
+                Input(Name: CurrencyType, Type: hidden, Value: 1)
+                Button(Body: BTC, Page: #this_page#, PageParams: "type_currency=1", Class: btn btn-primary disabled mr-lg).Popup(Header: $@1ts_add_transfer$, Width: "50")
+                Button(Body: ETH, Page: #this_page#, PageParams: "type_currency=2", Class: btn btn-primary mr-lg).Popup(Header: $@1ts_add_transfer$, Width: "50")
+                Button(Body: EUR, Page: #this_page#, PageParams: "type_currency=3", Class: btn btn-primary).Popup(Header: $@1ts_add_transfer$, Width: "50")
+            }.ElseIf(GetVar(type_currency)==2){
+                Input(Name: CurrencyType, Type: hidden, Value: 2)
+                Button(Body: BTC, Page: #this_page#, PageParams: "type_currency=1", Class: btn btn-primary mr-lg).Popup(Header: $@1ts_add_transfer$, Width: "50")
+                Button(Body: ETH, Page: #this_page#, PageParams: "type_currency=2", Class: btn btn-primary disabled mr-lg).Popup(Header: $@1ts_add_transfer$, Width: "50")
+                Button(Body: EUR, Page: #this_page#, PageParams: "type_currency=3", Class: btn btn-primary).Popup(Header: $@1ts_add_transfer$, Width: "50")
+            }.ElseIf(GetVar(type_currency)==3){
+                Input(Name: CurrencyType, Type: hidden, Value: 3)
+                Button(Body: BTC, Page: #this_page#, PageParams: "type_currency=1", Class: btn btn-primary mr-lg).Popup(Header: $@1ts_add_transfer$, Width: "50")
+                Button(Body: ETH, Page: #this_page#, PageParams: "type_currency=2", Class: btn btn-primary mr-lg).Popup(Header: $@1ts_add_transfer$, Width: "50")
+                Button(Body: EUR, Page: #this_page#, PageParams: "type_currency=3", Class: btn btn-primary disabled).Popup(Header: $@1ts_add_transfer$, Width: "50")
             }
         }
     }
+    Div(row){
+        Div(col-sm-4 mt text-bold text-right){
+            If(GetVar(type_currency)==1){
+                LangRes(@1ts_wallet_btc)
+            }.ElseIf(GetVar(type_currency)==2){
+                LangRes(@1ts_wallet_eth)
+            }.ElseIf(GetVar(type_currency)==3){
+                LangRes(@1pub_key)
+            }
+        }
+        Div(col-sm-8 text-left){
+            Input(Name: WalletStr, Type: textarea)
+        }
+    }
     Div(row mt-sm){
-        Div(col-sm-4 mt-sm text-right){
-            $@1amount_apl$
+        Div(col-sm-4 mt-sm text-right text-bold){
+            LangRes(@1amount_apl)
         }
         Div(col-sm-8 text-left){
             Input(Name:AmountApl, Type:number)
         }
     }
     Div(row mt-sm){
-        Div(col-sm-4 mt-sm text-right){
-            $@1investor_funds_transfer_date$
+        Div(col-sm-4 mt-sm text-right text-bold){
+            LangRes(@1investor_funds_transfer_date)
         }
         Div(col-sm-8 text-left){
             Div(row){
@@ -47,7 +60,7 @@ Form(){
                     Input(Name:TransferredDate, Type:date)
                 }
                 Div(col-sm-6){
-                    Input(Name:TransferredTime, Type:time)
+                    Input(Name:TransferredTime, Type:time, Value: "00:00")
                 }
             }
         }

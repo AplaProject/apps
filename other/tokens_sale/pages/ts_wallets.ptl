@@ -8,19 +8,21 @@ If(And(#snapswap_role_id#>0,#role_id#==#snapswap_role_id#)){
 }
 
 If(GetVar(search)!=""){
-    SetVar(where, {$or:[{"key_id_buyer":#search#},{"key_id_signer":#search#}]})
+    SetVar(where, {$and: [{"key_id_buyer":{$neq:0}}, {$or:[{"pub_buyer": {$like: #search#}},{"wallet_btc": {$like: #search#}},{"wallet_eth": {$like: #search#}}]}]})
 }.Else{
-    SetVar(where, {id:{$gt:0}}).(search,)
+    SetVar(where, {"key_id_buyer":{$neq:0}}).(search,)
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
-    SetVar(search_name, LangRes(@1key_id))
+    SetVar(search_name, LangRes(@1pub_key) \ LangRes(@1wallet))
     Include(@1search)
 }
 
 DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_rat){
     If(#rejected_at#>0){
         DateTime(#rejected_at#, Format: YYYY-MM-DD HH:MI:SS)
+    }.Else{
+        Span(Class: text-muted, Body: --)
     }
 }.Custom(_sat){
     If(#signed_at#>0){
@@ -34,10 +36,22 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
     LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#key_id_buyer#"){
         Address(#key_id_buyer#)
     }
-    Div(Class:text-muted m0 h6, Body:#key_id_buyer#)
+    Div(){
+        Span(Class: h6 text-muted, Body: PUB:)
+        Span(Class: h6 text-muted ml-sm, Body: #pub_short_buyer#)
+    }
 }.Custom(_signer){
     If(#key_id_signer#!=0){
         Span(Class:text-success, Body: Address(#key_id_signer#))
+    }
+}.Custom(_wlts){
+    Div(){
+        Span(Class: h6 text-muted, Body: BTC:)
+        Span(Class: h6 ml-sm, Body: #wallet_btc#)
+    }
+    Div(){
+        Span(Class: h6 text-muted, Body: ETH:)
+        Span(Class: h6 ml-sm, Body: #wallet_eth#)
     }
 }.Count(count)
 
@@ -45,7 +59,7 @@ Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){
-                Table(src, "$@1id$=id,$@1key_id_investor$=_buyer,$@1created_at$=_cat,$@1rejected_at$=_rat,$@1signed_at$=_sat,$@1key_id_consensus$=_signer")
+                Table(src, "$@1id$=id,$@1key_id_investor$=_buyer,$@1wallets$=_wlts,$@1created_at$=_cat,$@1signed_at$=_sat,$@1rejected_at$=_rat,$@1key_id_consensus$=_signer")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1wallets$ $@1not_founded$")
             }                       

@@ -6,7 +6,7 @@ SetVar(role_admin, EcosysParam(Ecosystem:1, Name: role_admin))
 If(And(#role_id#==#role_admin#,#ecosystem_id#==1)){
     DBFind(@1ecosystems).Count(ecos_count)
     If(#ecos_count#>1){
-        AddToolButton(Title: $@1broadcast_send$, Page: @1notifications_broadcast, Icon: icon-plus)
+        AddToolButton(Title: $@1broadcast_send$, Page: @1notifications_broadcast, Icon: icon-plus).Popup(Header: $@1notifications_broadcast$, Width: "50")
     }
 }
 AddToolButton(Title: $@1send$, Page: @1notifications_single_send, Icon: icon-plus).Popup(Header: $@1send$, Width: "50")
@@ -22,7 +22,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,recipient->member_id,recipient->member_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,closed").Custom(custom_id){
+DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,recipient->member_id,recipient->member_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,notification->popup,page_name,page_params,date_created,date_closed,closed").Custom(custom_id){
     If(#closed# == 0){
         SetVar(Name: style_text, Value: "text-normal")
         SetVar(Name: style_link, Value: "text-primary")
@@ -59,8 +59,14 @@ DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(
 }.Custom(custom_icon){
     Em(Class: fa #notification.icon# fa-2x #style_text#)
 }.Custom(custom_page){
-    LinkPage(Class: #style_link# h5 text-bold, Page: #page_name#, PageParams: "notific_id=#id#"){
-        Span(Body: #page_name#)
+    If(#notification.popup#==1){
+        Button(Class: btn-link h5 text-bold m0, Page: #page_name#, PageParams: "notific_id=#id#"){
+            Span(Class: #style_link#, Body: #page_name#)
+        }.Popup(Header: $@1notifications_view$, Width: "40")
+    }.Else{
+        Button(Class: btn-link h5 text-bold m0, Page: #page_name#, PageParams: "notific_id=#id#"){
+            Span(Class: #style_link#, Body: #page_name#)
+        }
     }
 }.Custom(custom_date){
     Div(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI"))

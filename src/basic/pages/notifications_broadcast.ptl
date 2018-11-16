@@ -1,63 +1,60 @@
 SetVar(role_admin, EcosysParam(Ecosystem:1, Name: role_admin))
-SetTitle($@1notifications_broadcast$)
 DBFind(@1ecosystems).Count(ecos_count)
-SetVar(left_col,"col-sm-3 mt text-right").(right_col,"col-sm-9")
-Div(content-wrapper){
-    Div(breadcrumb){
-        LinkPage($@1notifications$, @1notifications_list)
-        Span(/,mh)
-        Span($@1broadcast_send$,text-muted)
-    }
-
-    Div(row){
-        Div(col-sm-6 col-sm-offset-3){
-            If(And(#role_id#==#role_admin#,#ecosystem_id#==1,#ecos_count#>1)){
-                DBFind(@1roles,src_roles).Where({role_type:3, ecosystem:2}).Columns("id,role_name")
-                Form(panel panel-primary){
-                    Div(panel-body){
-                        Div(row mt){
-                            Div(#left_col#){
-                                LangRes(@1header)
-                            }
-                            Div(#right_col#){
-                                Input(Name: Header, Type: textarea)
-                            }
-                        }
-                        Div(row mt){
-                            Div(#left_col#){
-                                LangRes(@1body_text)
-                            }
-                            Div(#right_col#){
-                                Input(Name: Body, Type: textarea)
-                            }
-                        }
-                        Div(row mt){
-                            Div(#left_col#){
-                                LangRes(@1recipient)
-                            }
-                            Div(#right_col# mt){
-                                LangRes(@1ecosystems_administrators)
-                            }
-                        }
-                    }
-                    Div(panel-footer text-left){
-                        Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1notifications_list)
-                        Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Contract: @1NotificationsBroadcast, Params: "RoleId=#role_id#", Page: @1notifications_list)
-                    }
+Form(){
+    If(And(#role_id#==#role_admin#,#ecosystem_id#==1,#ecos_count#>1)){
+        Div(row){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    Span(Body: LangRes(@1recipient)).(Class: text-danger, Body:*)
                 }
-            }.Else{
-                Div(col-sm-12 alert alert-warning text-center){
-                    If(#role_id#!=#role_admin#){
-                        LangRes(@1only_admin_action)
-                    }
-                    If(#ecosystem_id#!=1){
-                        LangRes(@1only_first_ecosystem_action)
-                    }
-                    If(#ecos_count#==1){
-                        LangRes(@1other_ecosystems_not_found)
-                    }
+            }
+            Div(col-md-9 text-left){
+                Input(Value: $@1ecosystems_administrators$, Disabled: true)
+            }
+        }
+        Div(row mt-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    Span(Body: LangRes(@1header)).(Class: text-danger, Body:*)
                 }
+            }
+            Div(col-md-9 text-left){
+                Input(Name: Header)
+            }
+        }
+        Div(row mt-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    Span(Body: LangRes(@1body_text)).(Class: text-danger, Body:*)
+                }
+            }
+            Div(col-md-9 text-left){
+                Input(Name: Body, Type: textarea).Style(resize: vertical;)
+            }
+        }
+        Div(row){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    Span(Body: LangRes(@1popup))
+                }
+            }.Style(line-height: 18px;)
+            Div(col-md-9 text-left){
+                Input(Name: Popup, Type: checkbox, Value: false, Class: mt-sm)
+            }
+        }
+    }.Else{
+        Div(col-sm-12 alert alert-warning text-center){
+            If(#role_id#!=#role_admin#){
+                LangRes(@1only_admin_action)
+            }
+            If(#ecosystem_id#!=1){
+                LangRes(@1only_first_ecosystem_action)
+            }
+            If(#ecos_count#==1){
+                LangRes(@1other_ecosystems_not_found)
             }
         }
     }
+    Button(Body: LangRes(@1send), Class: btn btn-primary pull-right mt, Page: @1notifications_list, Contract: @1NotificationsBroadcast, Params: "RoleId=#role_id#")
+    Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1notifications_list)
 }

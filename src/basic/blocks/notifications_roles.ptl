@@ -11,7 +11,7 @@ SetVar(role_admin, EcosysParam(Ecosystem:1, Name: role_admin))
 If(And(#role_id#==#role_admin#,#ecosystem_id#==1)){
     DBFind(@1ecosystems).Count(ecos_count)
     If(#ecos_count#>1){
-        AddToolButton(Title: $@1broadcast_send$, Page: @1notifications_broadcast, Icon: icon-plus)
+        AddToolButton(Title: $@1broadcast_send$, Page: @1notifications_broadcast, Icon: icon-plus).Popup(Header: $@1notifications_broadcast$, Width: "50")
     }
 }
 AddToolButton(Title: $@1send$, Page: @1notifications_roles_send, Icon: icon-plus).Popup(Header: $@1send$, Width: "50")
@@ -27,7 +27,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"},{id:"-1"}]).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,recipient->role_id,recipient->role_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,page_name,page_params,date_created,date_closed,date_start_processing,processing_info->member_name,closed").Custom(_id){
+DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"},{id:"-1"}]).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,recipient->role_id,recipient->role_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,notification->popup,page_name,page_params,date_created,date_closed,date_start_processing,processing_info->member_name,closed").Custom(_id){
     If(#closed# == 0){
         SetVar(style_text,"text-normal").(style_link,"text-primary")
     }.Else{
@@ -35,7 +35,7 @@ DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"},{id:"-1"}]).Limit(#
     }
     Span(Class: #style_text#, Body: #id#)
 }.Custom(_recipient){
-    LinkPage(Class: #style_link# t5 text-bold, Page: @1roles_view, PageParams: "v_role_id=#recipient.role_id#"){
+    LinkPage(Class: #style_link# h5 text-bold, Page: @1roles_view, PageParams: "v_role_id=#recipient.role_id#"){
         If(#recipient.image_id#>0){
             Image(Src: Binary().ById(#recipient.image_id#) "#img_data#", Class: mr-sm).Style(width: 30px; border: 1px solid #5A5D63;)
             #recipient.role_name#
@@ -58,20 +58,25 @@ DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"},{id:"-1"}]).Limit(#
 }.Custom(_icon){
     Span(Class: fa #notification.icon# fa-2x #style_text#)
 }.Custom(_page){
-    LinkPage(Class: #style_link# t5 text-bold, Page: #page_name#, PageParams: "notific_id=#id#"){
-        #page_name#
+    If(#notification.popup#==1){
+        Button(Class: btn-link h5 text-bold m0, Page: #page_name#, PageParams: "notific_id=#id#"){
+            Span(Class: #style_link#, Body: #page_name#)
+        }.Popup(Header: $@1notifications_view$, Width: "40")
+    }.Else{
+        Button(Class: btn-link h5 text-bold m0, Page: #page_name#, PageParams: "notific_id=#id#"){
+            Span(Class: #style_link#, Body: #page_name#)
+        }
     }
 }.Custom(_date){
-    Div(#style_text# t6){DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI")}
-    Div(#style_text# t6){DateTime(DateTime: #date_closed#, Format: "DD.MM.YYYY HH:MI")}
+    Div(#style_text# h6 m0){DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI")}
+    Div(#style_text# h6 m0){DateTime(DateTime: #date_closed#, Format: "DD.MM.YYYY HH:MI")}
 }.Custom(_processing){
-    Div(Class: #style_text# t6){
+    Div(Class: #style_text# h6 m0){
         If(#date_start_processing# == NULL){
            $@1not_started$
         }.Else{
-            Span(LangRes(@1started), mr-sm) #processing_info.member_name#
-            Span(LangRes(@1at), mr-sm)
-            DateTime(DateTime: #date_start_processing#, Format: "DD.MM.YYYY HH:MI")
+            Span(LangRes(@1started_by) #processing_info.member_name#)
+            Div(){DateTime(DateTime: #date_start_processing#, Format: "DD.MM.YYYY HH:MI")}
         }
     }
 }.Custom(_status){

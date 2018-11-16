@@ -1,0 +1,76 @@
+Form(){
+    Div(row){
+        Div(col-md-3 mt text-right){
+            Label(){
+                Span(Body: LangRes(@1broadcast))
+            }
+        }
+        Div(col-md-9 text-left){
+            Input(Name: "broadcast", Type: "checkbox", Value: "false")
+        }
+    }
+    Div(row){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1recipient)).(Class: text-danger, Body:*)
+            }
+        }
+        Div(col-md-9 text-left){
+            DBFind(@1keys,src_keys).Where({ecosystem:#ecosystem_id#}).Columns("id").Custom(_name){
+                SetVar(m_member_name, "")
+                DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#id#}).Columns("id,member_name").Vars(m)
+                Address(#id#)
+                If(GetVar(m_member_name)!=""){
+                    " (#m_member_name#)"
+                }
+            }
+            Select(Name: member_id, Source: src_keys, NameColumn: _name, ValueColumn: id)
+        }.Show("broadcast=false")
+        Div(col-md-9 text-left){
+            DBFind(@1roles,source_roles).Where({ecosystem:#ecosystem_id#, deleted:0}).Columns("id,role_name").Count(roles_count)
+            If(#roles_count#>0){
+                Select(Name: rid, Source: source_roles, NameColumn: role_name, ValueColumn: id)
+            }.Else{
+                Div(mt-sm){
+                    $@1roles$ $@1not_founded$
+                }
+            }
+        }.Show("broadcast=true")
+    }
+    Div(row mt){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1message_subject)).(Class: text-danger, Body:*)
+            }
+        }
+        Div(col-md-9 text-left){
+            Input(Name: text_header, Value: "", Placeholder: $@1message_subject_type_here$)
+        }
+    }
+    Div(row mt){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1message_text)).(Class: text-danger, Body:*)
+            }
+        }
+        Div(col-md-9 text-left){
+            Input(Type: Hidden, Name: eco_id, Value: "#ecosystem_id#")
+            Input(Type: Hidden, Name: sender, Value: "1")
+            Input(Type: Hidden, Name: icon_name, Value: "icon-speech")
+            Input(Type: Hidden, Name: params_map, Value: `{"type": "message"}`)
+            Input(Type: Hidden, Name: page_name, Value: "@1message_view")
+            Input(Type: textarea, Name: text_body, Value: "", Placeholder: $@1message_type_here$).Style(resize: vertical; min-height: 6em;)
+        }
+    }
+    Div(row mt){
+        Div(col-md-12){
+            Div(){
+                Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1messages_list, Contract: @1NotificationsSend, Params: "rid=0,current_role_id=#role_id#")
+            }.Show("broadcast=false")
+            Div(){
+                Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1messages_list, Contract: @1NotificationsSend, Params: "member_id=0,current_role_id=#role_id#,closure_type=2")
+            }.Show("broadcast=true")
+            Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: @1messages_list)
+        }
+    }
+}
