@@ -1,9 +1,10 @@
 SetVar(this_page,@1notifications_roles_send).(back_page,@1notifications_list)
-If(GetVar(SelectedId)==""){
-    SetVar(SelectedId,#ecosystem_id#)
-}
 DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Basic"}).Vars(application)
-DBFind(@1ecosystems).Columns("id,name").WhereId(#SelectedId#).Vars(eco)
+
+If(GetVar(EcosystemId) == ""){
+    SetVar(EcosystemId, #ecosystem_id#)
+}
+
 Form(){
     Div(row){
         Div(col-md-3 mt-sm text-right){
@@ -12,12 +13,15 @@ Form(){
             }
         }
         Div(col-md-9 text-left){
-            Input(Name: eco_id, Type:hidden, Value: #eco_id#)
+            Input(Name: eco_id, Type:hidden, Value: #EcosystemId#)
             Div(input-group){
-                Input(Name: eco_id_v, Disabled: 1, Value: #eco_name#)
+                DBFind(@1ecosystems).Columns("id,name").WhereId(#EcosystemId#).Vars(e)
+                Input(Name: e_name, Disabled: 1, Value: #e_name#)
                 Div(input-group-btn){
-                    Button(Body: LangRes(@1select), Page: @1select_page, PageParams: "Type=ecosystem,back_page=#this_page#,Header=$@1send$", Class:btn btn-primary).Popup(Header: $@1ecosystem$, Width: "50")
-                }
+                    Button(Class: btn bg-gray-lighter fa fa-caret-down mtl buttons, Page: @1select_ecosystem, PageParams:"back_page=#this_page#,back_header=$@1send$,EcosystemId=#EcosystemId#,Type=ALL_LIST").Popup(Header: $@1ecosystem$, Width: "50")
+                }.Style(
+                    .buttons{border: 1px solid #dde6e9;}
+                )
             }  
         }
     }
@@ -28,7 +32,7 @@ Form(){
             }
         }
         Div(col-md-9 text-left){
-            DBFind(@1roles,source_roles).Where({ecosystem:#SelectedId#, deleted:0}).Columns("id,role_name").Count(roles_count)
+            DBFind(@1roles,source_roles).Where({ecosystem:#EcosystemId#, deleted:0}).Columns("id,role_name").Count(roles_count)
             If(#roles_count#>0){
                 Select(Name: rid, Source: source_roles, NameColumn: role_name, ValueColumn: id)
             }.Else{

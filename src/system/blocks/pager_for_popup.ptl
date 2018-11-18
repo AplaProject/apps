@@ -1,0 +1,88 @@
+DBFind(#this_table#).Where(#where#).Order({"id": 1}).Count(records_count)
+
+If(#pager_limit# < #records_count#){
+    If(GetVar(page_par)==""){
+        SetVar(page_par,)
+    }
+    SetVar(previous_page, Calculate(Exp: #current_page# - 1, Type: int))
+    SetVar(next_page, Calculate(Exp: #current_page# + 1, Type: int))
+
+    SetVar(count_div_limit_int, Calculate(Exp: (#records_count# / #pager_limit#), Type: int))
+    SetVar(remainder, Calculate(Exp: (#records_count# / #pager_limit#) - #count_div_limit_int#, Type: float))
+    If(#remainder# != 0){
+        SetVar(last_page, Calculate(Exp: #count_div_limit_int# + 1, Type: int))
+    }.Else{
+        SetVar(last_page, #count_div_limit_int#)
+    }
+
+    SetVar(last_page_plus_one, Calculate(Exp: #last_page# + 1, Type: int))
+    SetVar(delta_last_page, Calculate(Exp: #last_page# - #current_page#))
+    SetVar(range_l, Calculate(Exp: #current_page# - 4, Type: int))
+    SetVar(range_r, Calculate(Exp: #current_page# + 6, Type: int))
+    SetVar(range_l_max, Calculate(Exp: #last_page# - #pager_limit#, Type: int))
+    SetVar(last_page_min_set, Calculate(Exp: #last_page_plus_one# - 10, Type: int))
+
+    If(#current_page# < 5){
+        If(#last_page# >= 10){
+            Range(src_pages, 1, 11)
+        }.Else{
+            Range(src_pages, 1, #last_page_plus_one#) 
+        }
+    }.ElseIf(#delta_last_page# < 6){
+        If(#range_l_max# > 0){
+            Range(src_pages, #last_page_min_set#, #last_page_plus_one#)
+        }.Else{
+            Range(src_pages, 1, #last_page_plus_one#)
+        }
+    }.Else{
+        Range(src_pages, #range_l#, #range_r#)
+    }
+
+    Div(){
+        Span(Class: pull-left){
+            If(#current_page# == 1){
+                Button(Body: Em(Class: fa fa-angle-double-left), Class: btn bg-gray-lighter disabled)
+            }.Else{
+                Button(Body: Em(Class: fa fa-angle-double-left), Class: btn bg-gray-lighter, Page: #this_page#, PageParams: "current_page=1,current_header=#current_header#,back_page=#back_page#,back_header=#back_header#,page_par=#page_par#,search=#search#").Popup(Header: #current_header#, Width: "50")
+            }
+        }
+        Span(Class: pull-left){
+            If(#current_page# == 1){
+                Button(Body: Em(Class: fa fa-angle-left), Class: btn bg-gray-lighter disabled)
+            }.Else{
+                Button(Body: Em(Class: fa fa-angle-left), Class: btn bg-gray-lighter, Page: #this_page#, PageParams: "current_page=#previous_page#,current_header=#current_header#,back_page=#back_page#,back_header=#back_header#,page_par=#page_par#,search=#search#").Popup(Header: #current_header#, Width: "50")
+            }
+        }
+        Span(Class: pull-left){
+            ForList(src_pages){
+                Span(){
+                    If(#id# == #current_page#){
+                        Button(Body: #id#, Class: btn bg-primary-light, Page: #this_page#, PageParams: "current_page=#id#,current_header=#current_header#,back_page=#back_page#,back_header=#back_header#,page_par=#page_par#,search=#search#").Popup(Header: #current_header#, Width: "50")
+                    }.Else{
+                        Button(Body: #id#, Class: btn bg-gray-lighter, Page: #this_page#, PageParams: "current_page=#id#,current_header=#current_header#,back_page=#back_page#,back_header=#back_header#,page_par=#page_par#,search=#search#").Popup(Header: #current_header#, Width: "50")
+                    }
+                }
+            }
+        }
+        Span(Class: pull-left){
+            If(#current_page# == #last_page#){
+                Button(Body: Em(Class: fa fa-angle-right), Class: btn bg-gray-lighter disabled)
+            }.Else{
+                Button(Body: Em(Class: fa fa-angle-right), Class: btn bg-gray-lighter, Page: #this_page#, PageParams: "current_page=#next_page#,current_header=#current_header#,back_page=#back_page#,back_header=#back_header#,page_par=#page_par#,search=#search#").Popup(Header: #current_header#, Width: "50")
+            }
+        }
+        Span(Class: pull-left){
+            If(#current_page# == #last_page#){
+                Button(Body: Em(Class: fa fa-angle-double-right), Class: btn bg-gray-lighter disabled)
+            }.Else{
+                Button(Body: Em(Class: fa fa-angle-double-right), Class: btn bg-gray-lighter, Page: #this_page#, PageParams: "current_page=#last_page#,current_header=#current_header#,back_page=#back_page#,back_header=#back_header#,page_par=#page_par#,search=#search#").Popup(Header: #current_header#, Width: "50")
+            }
+        }
+    }.Style(
+        .btn {
+            font-size: 10px;
+            text-align:left;
+            width:50px;
+        }
+    )
+}
