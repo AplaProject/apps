@@ -44,12 +44,12 @@ contract TsTransferAdmin {
         if $transferredAt == 0 {
             warning "invalid transfer datetime"
         }
-        
+
         $appId = Int(DBFind("@1applications").Where({ecosystem:$ecosystem_id, name:"Tokens sale"}).One("id"))
         if $appId == 0 {
             warning LangRes("@1app_not_found", "en")
         }
-        
+
         $currentRole = getRoleId("role_sale_admin")
         if !RoleAccess($currentRole) {
             warning "this action allowed only for role id #" + $currentRole
@@ -71,12 +71,18 @@ contract TsTransferAdmin {
             }
 
             $WalletStr = Replace($WalletStr, " ", "")
+            if Size($WalletStr) < 128 {
+                error LangRes("@1key_too_short", "en")
+            }
+            if Size($WalletStr) > 130 {
+                error LangRes("@1key_too_long", "en")
+            }
             var key_id_buyer int
             key_id_buyer = PubToID($WalletStr)
-            if key_id_buyer == 0 || Size($WalletStr) != 128 {
+            if key_id_buyer == 0 {
                 warning LangRes("@1public_key_invalid", "en")
             }
-            
+
             $wallet = DBFind("ts_wallets").Where({key_id_buyer: key_id_buyer}).Row()
         }
 

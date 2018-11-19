@@ -8,7 +8,7 @@ contract TsKeyApprove {
     func getFreeWallet() int {
         var count_wallets int wallet_map map wallet_arr array
         wallet_arr = DBFind("ts_wallets").Where({"key_id_buyer": 0, "deleted":0}).Order({"id": 1})
-        
+
         count_wallets = Len(wallet_arr)
         if count_wallets == 0 {
             warning LangRes("@1ts_free_wallet_not_found", "en")
@@ -22,11 +22,11 @@ contract TsKeyApprove {
                 title = LangRes("@1ts_free_wallets_emptied", "en")
                 body = LangRes("@1ts_free_wallets_need", "en")
                 page = "@1ts_notification"
-                @1NotificationsSend("rid,sender,text_header,text_body,page_name,params_map,closure_type,current_role_id", managerRoleId, 2, title, body, page, params, 1, $current_role_id)   
+                @1NotificationsSend("rid,sender,text_header,text_body,page_name,params_map,closure_type,current_role_id", managerRoleId, 2, title, body, page, params, 1, $current_role_id)
             }
         }
 
-        wallet_map = wallet_arr[0] 
+        wallet_map = wallet_arr[0]
         return Int(wallet_map["id"])
     }
 
@@ -36,9 +36,15 @@ contract TsKeyApprove {
         }
 
         $public_key = Replace($public_key, " ", "")
-        $userKey = PubToID($public_key)
+        if Size($public_key) < 128 {
+            error LangRes("@1key_too_short", "en")
+        }
+        if Size($public_key) > 130 {
+            error LangRes("@1key_too_long", "en")
+        }
 
-        if $userKey == 0 || Size($public_key) != 128 {
+        $userKey = PubToID($public_key)
+        if $userKey == 0 {
             warning LangRes("@1public_key_invalid", "en")
         }
 
@@ -64,14 +70,16 @@ contract TsKeyApprove {
     }
 
     action {
-        DBInsert("@1keys", {"id": $userKey, "pub": $public_key, "ecosystem": 1})
+        var pub_bytes bytes
+        pub_bytes = HexToPub($public_key)
+        DBInsert("@1keys", {"id": $userKey, "pub": pub_bytes, "ecosystem": 1})
         var start_balance money
         start_balance = Money(1000000000000000)
         @1TokensSend("Recipient,Amount", IdToAddress($userKey), start_balance)
 
         if $key_type == "investor" {
             $wallet_id = getFreeWallet()
-            $pub_short_buyer = Substr($public_key, 0, 12) + "..." + Substr($public_key, Size($public_key)-12, 12)
+            $pub_short_buyer = Substr($public_key, 0, 12) + "..." + Substr($public_key, Size($public_key) - 12, 12)
             DBUpdate("ts_wallets", $wallet_id, {"key_id_buyer": $userKey, "created_at": $block_time, "pub_buyer": $public_key, "pub_short_buyer": $pub_short_buyer})
 
             // new user notification
@@ -79,7 +87,7 @@ contract TsKeyApprove {
             title = LangRes("@1ts_hello_user_description", "en")
             body = LangRes("@1ts_read_contract", "en")
             page = "@1ts_buyer_contract"
-            @1NotificationsSend("member_id,sender,text_header,text_body,page_name,params_map,closure_type,current_role_id", $userKey, 2, title, body, page, params, 1, $current_role_id)          
+            @1NotificationsSend("member_id,sender,text_header,text_body,page_name,params_map,closure_type,current_role_id", $userKey, 2, title, body, page, params, 1, $current_role_id)
         }
     }
 }

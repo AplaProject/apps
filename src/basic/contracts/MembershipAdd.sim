@@ -3,16 +3,18 @@ contract MembershipAdd {
         memberskeys string
     }
 
-    func addPub(pub_key string) {
-        if Size(pub_key) < 128 {
+    func addPub(pub string) {
+        pub = Replace(pub, " ", "")
+        info Size(pub)
+        if Size(pub) < 128 {
             error LangRes("@1key_too_short", "en")
         }
-        if Size(pub_key) > 128 {
+        if Size(pub) > 130 {
             error LangRes("@1key_too_long", "en")
         }
 
         var k_id int
-        k_id = PubToID(pub_key)
+        k_id = PubToID(pub)
         if k_id == 0 {
             warning LangRes("@1public_key_invalid", "en")
         }
@@ -20,8 +22,9 @@ contract MembershipAdd {
         if $check_user {
             error LangRes("@1key_already_exists", "en")
         }
-
-        DBInsert("@1keys",{id:k_id, pub:pub_key, ecosystem:$ecosystem_id})
+        var pub_bytes bytes
+        pub_bytes = HexToPub(pub)
+        DBInsert("@1keys",{id:k_id, pub:pub_bytes, ecosystem:$ecosystem_id})
     }
 
     conditions {
