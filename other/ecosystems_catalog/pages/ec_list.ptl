@@ -1,0 +1,115 @@
+SetVar(this_page, @1ec_list).(this_table, @1ecosystems)
+Include(@1pager_header)
+
+SetTitle("$@1catalog_ecosystems$")
+Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1catalog_ecosystems_desc$"))
+If(GetVar(EcosystemId) == ""){
+    SetVar(EcosystemId, #ecosystem_id#)
+}
+AddToolButton(Title: $@1catalog_ecosystems_manage_button$, Page: @1select_ecosystem, Icon: "icon-settings", PageParams: "back_page=@1ec_manage,back_header=$@1catalog_ecosystems_editing$,EcosystemId=#EcosystemId#,Type=ONLY_MY").Popup(Header: $@1ecosystem_select$, Width: "30")
+AddToolButton(Title: $@1create$, Page: @1ecosystem_new, Icon: icon-plus).Popup(Header: $@1create$, Width: "30")
+
+If(GetVar(sort)){
+    If(#sort#==1){
+        SetVar(payment_filter, {"info->payment":1})
+    }.ElseIf(#sort#==2){
+        SetVar(payment_filter, {"info->payment":2})
+    }
+}.Else{
+    SetVar(sort, "0")
+}
+
+If(GetVar(page_par)){
+    If(#page_par#==1){
+        SetVar(type_filter, {"info->type":1})
+    }.ElseIf(#page_par#==2){
+        SetVar(type_filter, {"info->type":2})
+    }.ElseIf(#page_par#==3){
+        SetVar(type_filter, {"info->type":3})
+    }
+}.Else{
+    SetVar(page_par, "0")
+}
+
+If(GetVar(search)!=""){
+    SetVar(where, {$and: [{"info->visibility": 2}, GetVar(payment_filter), GetVar(type_filter), {"name": {$like:#search#}}]})
+}.Else{
+    SetVar(where, {$and: [{"info->visibility": 2}, GetVar(payment_filter), GetVar(type_filter)]}).(search,)
+}
+
+Div(mr-lg text-right){
+    Button(Page: @1ec_filter, Class: btn bg-gray-lighter mr-sm, PageParams: "sort=#sort#,page_par=#page_par#,search=#search#,current_page=#current_page#", Body: Em(Class: fa fa-filter) $@1filter$).Popup(Header: $@1filter$, Width: "30")
+    If(Or(#page_par#>0,#sort#>0)){
+        Button(Page: #this_page#, PageParams: "sort=0,page_par=0,search=#search#", Class: btn bg-gray-lighter mr-sm, Body: Em(Class: fa fa-close))
+    }
+}.Style(margin-top: -28px; z-index: 1001;)
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, LangRes(@1ecosystem))
+    Include(@1search)
+}
+
+DBFind(@1applications).Where({ecosystem:1, name:"Ecosystems catalog"}).Columns("name,id").Vars(application)
+
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,name,info->type,info->payment,info->logo").Custom(name_link){
+
+    Button(Class: btn-xs btn-link, Page: @1ec_preview, PageParams: "view_page_id=#id#,sort=#sort#,page_par=#page_par#,search=#search#,current_page=#current_page#"){
+        If(#info.logo#>0){
+            Image(Src: Binary().ById(#info.logo#)).Style(height: 30px; margin-right: 10px;)
+            Span(Class: h5, Body: #name#)
+        }.Else{
+            Div(){
+                Span(Class: fa icon-layers fa-2x text-default).Style(margin-right:10px;)
+                Span(Class: h5, Body: #name#)
+            }.Style(display:flex; align-items:center;)
+        }
+    }.Popup(Header: $@1catalog_ecosystems_preview$, Width: "40")
+}.Custom(type){
+    If(#info.type#==1){
+        Em(Class: fa fa-lg fa-users fa-fw mr-sm)
+    }.ElseIf(#info.type#==2){
+        Em(Class: fa fa-lg fa-handshake-o fa-fw mr-sm)
+    }.ElseIf(#info.type#==3){
+        Em(Class: fa fa-lg fa-bank fa-fw mr-sm)
+    }
+    AppParam(Ecosystem: 1, App: #application_id#, Name: ec_type, Index: #info.type#)
+}.Custom(payment){
+    If(#info.payment#==1){
+        Em(Class: fa fa-lg fa-gift fa-fw)
+    }.ElseIf(#info.payment#==2){
+        Em(Class: fa fa-lg fa-usd fa-fw)
+    }
+    AppParam(Ecosystem: 1, App: #application_id#, Name: ec_payment, Index: #info.payment#)
+}.Custom(actions){
+    SetVar(ecosystem_member_id,)
+    DBFind(@1notifications).Where({"ecosystem": #id#, "sender->member_id": #key_id#, "page_params->ecosystem_id": #id#, closed:0}).Count(notific_count)
+    DBFind(@1keys).Where({"ecosystem": #id#, "id": #key_id#}).Vars(ecosystem_member)
+    DBFind(@1parameters).Where({"$and": [{"ecosystem": #id#}, {"$or": [{"$and": [{"name": "founder_account"},{"value": #key_id#}]},{"$and": [{"name": "delegate_account"},{"value": #key_id#}]}]}]}).Count(access)
+    Div(text-right button-group text-nowrap){
+        If(GetVar(access)){
+            Button(Class: icon-settings btn btn-default mh-sm, Page: @1ec_manage, PageParams: "edit_page_id=#id#").Popup(Header: $@1catalog_ecosystems_editing$, Width: "50")
+        }.ElseIf(And(#notific_count#==0,#ecosystem_member_id#=="")){
+            Button(Class: btn btn-link, Body: $@1send_request$, Contract: @1MembershipRequest, Page: #this_page#, Params: "ecosystem_num=#id#")
+        }
+    }
+}.Count(count)
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src, "$@1id$=id,$@1ecosystem$=name_link,$@1catalog_ecosystems_type$=type,$@1catalog_ecosystems_payment$=payment,=actions")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1ecosystems$ $@1not_founded$")
+            }                       
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
+}

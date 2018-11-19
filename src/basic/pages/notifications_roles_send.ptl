@@ -1,9 +1,10 @@
 SetVar(this_page,@1notifications_roles_send).(back_page,@1notifications_list)
-If(GetVar(SelectedId)==""){
-    SetVar(SelectedId,#ecosystem_id#)
-}
 DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Basic"}).Vars(application)
-DBFind(@1ecosystems).Columns("id,name").WhereId(#SelectedId#).Vars(eco)
+
+If(GetVar(EcosystemId) == ""){
+    SetVar(EcosystemId, #ecosystem_id#)
+}
+
 Form(){
     Div(row){
         Div(col-md-3 mt-sm text-right){
@@ -12,12 +13,15 @@ Form(){
             }
         }
         Div(col-md-9 text-left){
-            Input(Name: eco_id, Type:hidden, Value: #eco_id#)
+            Input(Name: eco_id, Type:hidden, Value: #EcosystemId#)
             Div(input-group){
-                Input(Name: eco_id_v, Disabled: 1, Value: #eco_name#)
+                DBFind(@1ecosystems).Columns("id,name").WhereId(#EcosystemId#).Vars(e)
+                Input(Name: e_name, Disabled: 1, Value: #e_name#)
                 Div(input-group-btn){
-                    Button(Body: LangRes(@1select), Page: @1select_page, PageParams: "Type=ecosystem,back_page=#this_page#,Header=$@1send$", Class:btn btn-primary).Popup(Header: $@1ecosystem$, Width: "50")
-                }
+                    Button(Class: btn bg-gray-lighter fa fa-caret-down mtl buttons, Page: @1select_ecosystem, PageParams:"back_page=#this_page#,back_header=$@1send$,EcosystemId=#EcosystemId#,Type=ALL_LIST").Popup(Header: $@1ecosystem$, Width: "50")
+                }.Style(
+                    .buttons{border: 1px solid #dde6e9;}
+                )
             }  
         }
     }
@@ -28,7 +32,7 @@ Form(){
             }
         }
         Div(col-md-9 text-left){
-            DBFind(@1roles,source_roles).Where({ecosystem:#SelectedId#, deleted:0}).Columns("id,role_name").Count(roles_count)
+            DBFind(@1roles,source_roles).Where({ecosystem:#EcosystemId#, deleted:0}).Columns("id,role_name").Count(roles_count)
             If(#roles_count#>0){
                 Select(Name: rid, Source: source_roles, NameColumn: role_name, ValueColumn: id)
             }.Else{
@@ -89,7 +93,7 @@ Form(){
             }
         }
         Div(col-md-9 text-left){
-            Input(Name: text_body, Value: "Body text")
+            Input(Name: text_body, Type: textarea, Value: "Body text").Style(resize: vertical;)
         }
     }
     Div(row mt-lg){
@@ -101,7 +105,11 @@ Form(){
         Div(col-md-9 text-left){
             Input(Name: page_name, Value: "@1notifications_testpage").Validate(minLength:3, maxLength:255)
             InputErr(Name: page_name, minLength: $@1validate_name$, maxLength: $@1validate_role_name$)
-        }
+        }.Show("popup=false")
+        Div(col-md-9 text-left){
+            Input(Name: page_name_popup, Value: "@1notifications_testpage_popup").Validate(minLength:3, maxLength:255)
+            InputErr(Name: page_name_popup, minLength: $@1validate_name$, maxLength: $@1validate_role_name$)
+        }.Show("popup=true")
     }
     Div(row mt-sm){
         Div(col-md-3 mt-sm text-right){
@@ -113,6 +121,21 @@ Form(){
             Input(Name: params_map, Value: `{"param_int":"10","param_str":"my_string"}`)
         }
     }
-    Button(Body: LangRes(@1send), Class: btn btn-primary pull-right mt, Page: #back_page#, PageParams: "type=1", Contract: @1NotificationsSend, Params: "current_role_id=#role_id#")
+    Div(row){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1popup))
+            }
+        }.Style(line-height: 18px;)
+        Div(col-md-9 text-left){
+            Input(Name: popup, Type: checkbox, Value: false, Class: mt-sm)
+        }
+    }
+    Div(){
+        Button(Body: LangRes(@1send), Class: btn btn-primary pull-right mt, Page: #back_page#, PageParams: "type=1", Contract: @1NotificationsSend, Params: "current_role_id=#role_id#,page_name=Val(page_name)")
+    }.Show("popup=false")
+    Div(){
+        Button(Body: LangRes(@1send), Class: btn btn-primary pull-right mt, Page: #back_page#, PageParams: "type=1", Contract: @1NotificationsSend, Params: "current_role_id=#role_id#,page_name=Val(page_name_popup)")
+    }.Show("popup=true")
     Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: #back_page#, PageParams: "type=1")
 }

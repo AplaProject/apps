@@ -1,0 +1,28 @@
+If(#Type#==ALL_LIST){
+    DBFind(@1ecosystems,items).Limit(250).Columns("name,id")
+    SetVar(name_column,"name")
+    SetVar(value_column,"id")
+}
+If(#Type#==ONLY_MY){
+    DBFind(@1parameters,items).Where({"$and": [{ecosystem: {"$neq": 1}}, {"$or": [{"$and": [{"name": "founder_account"},{"value": #key_id#}]},{"$and": [{"name": "delegate_account"},{"value": #key_id#}]}]}]}).Columns("ecosystem").Custom("custom_name"){
+        DBFind(@1ecosystems).Where({id: #ecosystem#}).Vars(eco)
+        Span(#eco_name#)
+    }
+    SetVar(name_column,"custom_name")
+    SetVar(value_column,"ecosystem")
+}
+
+Form(){
+    Div(row){
+        Div(col-md-12 text-left){
+            Select(Name: EcosystemId, Source: items, NameColumn: #name_column#, ValueColumn: #value_column#, Value: #EcosystemId#)  
+        }
+    }
+    If(GetVar(back_header)!=""){
+        Button(Body: LangRes(@1select), Class: btn btn-primary pull-right mt, Page: #back_page#, PageParams: "EcosystemId=Val(EcosystemId)").Popup(Header: #back_header#, Width: 50)
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: #back_page#, PageParams: "EcosystemId=#EcosystemId#").Popup(Header: #back_header#, Width: 50)
+    }.Else{
+        Button(Body: LangRes(@1select), Class: btn btn-primary pull-right mt, Page: #back_page#, PageParams: "EcosystemId=Val(EcosystemId)")
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: #back_page#, PageParams: "EcosystemId=#EcosystemId#")
+    }
+}

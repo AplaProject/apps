@@ -1,0 +1,308 @@
+DBFind(@1applications).Where({ecosystem:1, name:"Ecosystems catalog"}).Columns("name,id").Vars(application)
+If(GetVar(EcosystemId) == ""){
+    SetVar(EcosystemId, #ecosystem_id#)
+}
+DBFind(@1buffer_data).Columns("value->id,value->visibility,value->type,value->payment,value->description,value->logo,value->switch,value->conditions,value->hardware,value->email,value->phone,value->vde_page,value->vde_form,value->web_page,value->web_form").Where({"ecosystem": #ecosystem_id#, "key": "ecosystem_catalog_manage_form", "member_id": #key_id#}).Vars(buffer)
+If(And(#buffered#==1,#buffer_value_id#>1)){
+    SetVar(edit_page_id,#buffer_value_id#)
+}
+If(GetVar(edit_page_id)){
+    DBFind(@1ecosystems).Where({"id": #edit_page_id#}).Columns("id,name,info->visibility,info->type,info->payment,info->logo,info->description,info->conditions,info->email,info->phone,info->hardware,info->vde_page,info->vde_form,info->web_page,info->web_form").Vars(edit)
+}.Else{
+    DBFind(@1ecosystems).Where({"id": #EcosystemId#}).Columns("id,name,info->visibility,info->type,info->payment,info->logo,info->description,info->conditions,info->email,info->phone,info->hardware,info->vde_page,info->vde_form,info->web_page,info->web_form").Vars(edit)
+}
+If(#buffered#==1){
+    SetVar(edit_info_visibility,#buffer_value_visibility#)
+    SetVar(edit_info_type,#buffer_value_type#)
+    SetVar(edit_info_payment,#buffer_value_payment#)
+    SetVar(edit_info_description,#buffer_value_description#)
+}
+If(#uploaded#==1){
+    DBFind(@1buffer_data).Columns("value->binary_id").Where({"ecosystem": #ecosystem_id#, "key": "ecosystem_logo", "member_id": #key_id#}).Vars(logo)
+    SetVar(edit_info_logo,#logo_value_binary_id#)
+}.ElseIf(#buffered#==1){
+    SetVar(edit_info_logo,#buffer_value_logo#)
+}
+If(And(#buffered#==1,#buffer_value_switch#=="true")){
+    SetVar(edit_info_conditions,#buffer_value_conditions#)
+    SetVar(edit_info_hardware,#buffer_value_hardware#)
+    SetVar(edit_info_email,#buffer_value_email#)
+    SetVar(edit_info_phone,#buffer_value_phone#)
+    SetVar(edit_info_vde_page,#buffer_value_vde_page#)
+    SetVar(edit_info_vde_form,#buffer_value_vde_form#)
+    SetVar(edit_info_web_page,#buffer_value_web_page#)
+    SetVar(edit_info_web_form,#buffer_value_web_form#)
+}
+AppParam(Ecosystem: 1, App: #application_id#, Name: ec_visibility, Source: src_visibility)
+AppParam(Ecosystem: 1, App: #application_id#, Name: ec_type, Source: src_type)
+AppParam(Ecosystem: 1, App: #application_id#, Name: ec_payment, Source: src_payment)
+
+Form(){
+    Div(row){
+        Div(col-sm-4 mt-sm text-right){
+            Label(){
+                LangRes(@1ecosystem)
+            }
+            Span(Class: text-danger, Body:*)
+        }
+        Div(col-sm-8){
+            Input(Name: Id, Type: hidden, Value: #edit_id#)
+            If(GetVar(edit_page_id)){
+                Input(Name: Name, Value: #edit_name#, Disabled: true)
+            }.Else{
+                Div(input-group){
+                    If(#edit_id#==1){
+                        Input(Name: Name, Value: $@1ecosystem_select$, Disabled: true)
+                    }.Else{
+                        Input(Name: Name, Value: #edit_name#, Disabled: true)
+                    }
+                    Div(input-group-btn){
+                        Button(Body: LangRes(@1select), Page: @1select_ecosystem, PageParams: "back_page=@1ec_manage,back_header=$@1catalog_ecosystems_editing$,EcosystemId=#EcosystemId#,Type=ONLY_MY", Class:btn btn-primary).Popup(Header: $@1ecosystem_select$, Width: "30")
+                    }
+                }
+            }
+        }
+    }
+    Div(row mt-sm){
+        Div(col-sm-4 mt-sm text-right){
+            Label(){
+                LangRes(@1catalog_ecosystems_visibility)
+            }
+            Span(Class: text-danger, Body:*)
+        }
+        Div(col-sm-8){
+            If(GetVar(edit_info_visibility)){
+                Select(Name: Visibility, Source: src_visibility, NameColumn: name, ValueColumn: id, Value: #edit_info_visibility#)
+            }.Else{
+                Select(Name: Visibility, Source: src_visibility, NameColumn: name, ValueColumn: id, Value: 2)
+            }
+        }
+    }
+    Div(row mt-sm){
+        Div(col-sm-4 mt-sm text-right){
+            Label(){
+                LangRes(@1catalog_ecosystems_type)
+            }
+            Span(Class: text-danger, Body:*)
+        }
+        Div(col-sm-8){
+            If(GetVar(edit_info_type)){
+                Select(Name: Type, Source: src_type, NameColumn: name, ValueColumn: id, Value: #edit_info_type#)
+            }.Else{
+                Select(Name: Type, Source: src_type, NameColumn: name, ValueColumn: id)
+            }
+        }
+    }
+    Div(row mt-sm){
+        Div(col-sm-4 mt-sm text-right){
+            Label(){
+                LangRes(@1catalog_ecosystems_payment)
+            }
+            Span(Class: text-danger, Body:*)
+        }
+        Div(col-sm-8){
+            If(GetVar(edit_info_payment)){
+                Select(Name: Payment, Source: src_payment, NameColumn: name, ValueColumn: id, Value: #edit_info_payment#)
+            }.Else{
+                Select(Name: Payment, Source: src_payment, NameColumn: name, ValueColumn: id)
+            }
+        }
+    }
+    Div(row mt-sm){
+        Div(col-sm-4 mt-sm text-right){
+            Label(){
+                LangRes(@1catalog_ecosystems_description)
+            }
+        }
+        Div(col-sm-8){
+            If(GetVar(edit_info_description)){
+                Input(Name: Description, Type: textarea, Class: rv, Value: #edit_info_description#)
+            }.Else{
+                Input(Name: Description, Type: textarea, Class: rv)
+            }
+        }
+    }
+    Div(row mt-sm){
+        Div(col-sm-4 text-right){
+            Span(Class: text-bold vc){
+                LangRes(@1catalog_ecosystems_logo)
+            }
+        }
+        Div(ml-lg pull-left){
+            If(#edit_id#!=1){
+                If(#edit_info_logo#>0){
+                    Input(Name: Logo, Type: hidden, Value: #edit_info_logo#)
+                    Image(Src: Binary().ById(#edit_info_logo#)).Style(height: 36px;)
+                }.Else{
+                    Input(Name: Logo, Type: hidden, Value: 0)
+                    Span(Class: fa icon-layers fa-2x vc)
+                }
+            }.Else{
+                Span(Class: fa icon-layers fa-2x vc)
+            }
+        }
+        Div(ml pull-left){
+            If(#edit_id#!=1){
+                SetVar(ParamNames, "id;visibility;type;payment;description;logo;switch;conditions;hardware;email;phone;vde_page;vde_form;web_page;web_form")
+                Div(vc){
+                    Button(Class: btn btn-default btn-upload, Page: @1upload_page, PageParams: "back_page=@1ec_manage,back_page_popup=50,back_page_popup_header=$@1catalog_ecosystems_editing$,app_id=#application_id#,buffer_key=ecosystem_logo", Contract: @1FormStateSave, Params: "AppId=#application_id#,FormName=ecosystem_catalog_manage_form,ParamNames=#ParamNames#,Param1=Val(Id),Param2=Val(Visibility),Param3=Val(Type),Param4=Val(Payment),Param5=Val(Description),Param6=Val(Logo),Param7=Val(Switch),Param8=Val(Conditions),Param9=Val(Hardware),Param10=Val(Email),Param11=Val(Phone),Param12=Val(Vde_page),Param13=Val(Vde_form),Param14=Val(Web_page),Param15=Val(Web_form)"){
+                        Span(Class: h6, Body: $@1button_upload$)
+                    }.Popup(Header: $@1catalog_ecosystems_logo$, Width: 30)
+                }
+            }
+        }
+        Div(mt mr pull-right){
+            If(And(#buffered#==1,#buffer_value_switch#=="true")){
+                Div(input-group){
+                    Span(Class: mr text-muted, Body: $@1additional_info_edit$)
+                    Div(input-group-btn){
+                        Input(Name: Switch, Type: "checkbox", Value: "true", Class: m0)
+                    }
+                }
+            }.Else{
+                Div(input-group){
+                    Span(Class: mr text-muted, Body: $@1additional_info_edit$)
+                    Div(input-group-btn){
+                        Input(Name: Switch, Type: "checkbox", Value: "false", Class: m0)
+                    }
+                }
+            }
+        }
+    }.Style(
+        .vc {line-height: 36px;}
+        .btn-upload {
+            padding: 1px 6px;
+            border-radius: 3px;
+        }
+    )
+    Div(){
+        Div(row mt-sm){
+            Div(col-sm-4 mt-sm text-right){
+                Label(){
+                    LangRes(@1catalog_ecosystems_conditions)
+                }
+            }
+            Div(col-sm-8){
+                If(GetVar(edit_info_conditions)){
+                    Input(Name: Conditions, Type: textarea, Class: rv, Value: #edit_info_conditions#)
+                }.Else{
+                    Input(Name: Conditions, Type: textarea, Class: rv)
+                }
+            }
+        }
+        Div(row mt-sm){
+            Div(col-sm-4 mt-sm text-right){
+                Label(){
+                    LangRes(@1catalog_ecosystems_hardware)
+                }
+            }
+            Div(col-sm-8){
+                If(GetVar(edit_info_hardware)){
+                    Input(Name: Hardware, Type: textarea, Class: rv, Value: #edit_info_hardware#)
+                }.Else{
+                    Input(Name: Hardware, Type: textarea, Class: rv)
+                }
+            }
+        }
+        Div(row mt-sm){
+            Div(col-sm-4 mt-sm text-right){
+                Label(){
+                    LangRes(@1catalog_ecosystems_email)
+                }
+            }
+            Div(col-sm-8){
+                If(GetVar(edit_info_email)){
+                    Input(Name: Email, Value: #edit_info_email#)
+                }.Else{
+                    Input(Name: Email)
+                }
+            }
+        }
+        Div(row mt-sm){
+            Div(col-sm-4 mt-sm text-right){
+                Label(){
+                    LangRes(@1catalog_ecosystems_phone)
+                }
+            }
+            Div(col-sm-8){
+                If(GetVar(edit_info_phone)){
+                    Input(Name: Phone, Value: #edit_info_phone#)
+                }.Else{
+                    Input(Name: Phone)
+                }
+            }
+        }
+        Div(row mt-sm){
+            Div(col-sm-4 mt-sm text-right){
+                Label(){
+                    LangRes(@1vde_page_address)
+                }
+            }
+            Div(col-sm-8){
+                If(GetVar(edit_info_vde_page)){
+                    Input(Name: Vde_page, Value: #edit_info_vde_page#)
+                }.Else{
+                    Input(Name: Vde_page)
+                }
+            }
+        }
+        Div(row mt-sm){
+            Div(col-sm-4 mt-sm text-right){
+                Label(){
+                    LangRes(@1vde_form_address)
+                }
+            }
+            Div(col-sm-8){
+                If(GetVar(edit_info_vde_form)){
+                    Input(Name: Vde_form, Value: #edit_info_vde_form#)
+                }.Else{
+                    Input(Name: Vde_form)
+                }
+                Div(Class: m0 h6 text-muted, Body: $@1vde_form_desc$)
+            }
+        }
+        Div(row mt-sm){
+            Div(col-sm-4 mt-sm text-right){
+                Label(){
+                    LangRes(@1web_page_address)
+                }
+            }
+            Div(col-sm-8){
+                If(GetVar(edit_info_web_page)){
+                    Input(Name: Web_page, Value: #edit_info_web_page#)
+                }.Else{
+                    Input(Name: Web_page)
+                }
+            }
+        }
+        Div(row mt-sm){
+            Div(col-sm-4 mt-sm text-right){
+                Label(){
+                    LangRes(@1web_form_address)
+                }
+            }
+            Div(col-sm-8){
+                If(GetVar(edit_info_web_form)){
+                    Input(Name: Web_form, Value: #edit_info_web_form#)
+                }.Else{
+                    Input(Name: Web_form)
+                }
+                Div(Class: m0 h6 text-muted, Body: $@1web_form_desc$)
+            }
+        }
+    }.Show("Switch=true")
+    
+    If(#edit_id#==1){
+        Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt-lg disabled)
+    }.Else{
+        Div(){
+            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt-lg, Contract: @1EcManageInfo, Page: @1ec_list)
+        }.Show("Switch=true")
+        Div(){
+            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt-lg, Contract: @1EcManageInfo, Params:"Conditions=#edit_info_conditions#,Email=#edit_info_email#,Phone=#edit_info_phone#,Hardware=#edit_info_hardware#,Vde_page=#edit_info_vde_page#,Vde_form=#edit_info_vde_form#,Web_page=#edit_info_web_page#,Web_form=#edit_info_web_form#", Page: @1ec_list)
+        }.Show("Switch=false")
+    }
+    Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt-lg, Page: @1ec_list)
+}.Style(
+    .rv {resize: vertical;}
+)

@@ -4,7 +4,6 @@ Include(@1pager_header)
 SetTitle("$@1ecosystems$")
 Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1ecosystems_list_desc$"))
 AddToolButton(Title: $@1update_metrics$, Page: @1ecosystems_metrics_update, Icon: icon-refresh).Popup(Header: $@1update_metrics$, Width: "30")
-AddToolButton(Title: $@1create$, Page: @1ecosystem_new, Icon: icon-plus).Popup(Header: $@1create$, Width: "30")
 
 If(GetVar(search)!=""){
     SetVar(where, "{name:{$like:#search#}}")
@@ -17,10 +16,11 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
-SetVar(template_id, AppParam(Ecosystem:1, App:#application_id#, Name: voting_ves_template_id))
 DBFind(@1buffer_data).Where({ecosystem:#ecosystem_id#, member_id:#key_id#, key:"metrics"}).Vars(m)
 JsonToSource(src_metrics,#m_value#)
+
+DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(basic_application)
+SetVar(template_id, AppParam(Ecosystem:1, App:#basic_application_id#, Name: voting_ves_template_id))
 
 DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_id){
     Span(#id#)
@@ -35,22 +35,13 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
             }
         }
     }
-}.Custom(_valued){
+}.Custom(valued){
     If(#template_id#>0){
         If(#is_valued#==0){
-            Input(Name: RowId, Type: hidden, Value: #id#)
-            Button(Body: $@1start_voting_ves$, Class: btn-xs btn-link, Page: @1voting_list, Contract: @1VotingVesCreate)
+            Button(Body: $@1start_voting_ves$, Class: btn-xs btn-link, Page: @1voting_list, Contract: @1VotingVesCreate, Params: "RowId=#id#")
         }
-    }
-    If(#is_valued#==1){
+    }.ElseIf(#is_valued#==1){
         $@1is_valued$
-    }
-}.Custom(_actions){
-    SetVar(k_id,)
-    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, "sender->member_id":#key_id#, "page_params->ecosystem_id":#id#, closed:0}).Count(notific_count)
-    DBFind(@1keys).Where({id:#key_id#, ecosystem:#id#}).Vars("k")
-    If(And(#notific_count#==0,#k_id#=="",#ecosystem_id#==1)){
-        Button(Class: btn btn-link pull-right, Body: $@1send_request$, Contract: @1MembershipRequest, Page: @1ecosystems_list, Params: "ecosystem_num=#id#")
     }
 }.Count(count)
 
@@ -58,7 +49,7 @@ Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){
-                Table(src, "$@1id$=_id,$@1ecosystem_name$=_name,$@1valued$=_valued,$@1metrics$=_metrics,=_actions")
+                Table(src, "$@1id$=_id,$@1ecosystem_name$=_name,$@1metrics$=_metrics,$@1valued$=valued")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1ecosystems$ $@1not_founded$")
             }                       
