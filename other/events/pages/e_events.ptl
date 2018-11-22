@@ -5,7 +5,7 @@ Include(@1pager_header)
 SetTitle("$e_events$")
 SetVar(i_can_create_event, 1)
 If(#i_can_create_event#==1){
-    AddToolButton(Title:$@1create$, Page: e_event_form, Icon: icon-calendar).Popup(Header: $create_event$, Width: "50")
+    AddToolButton(Title:$@1create$, Page: e_event_form, Icon: icon-calendar).Popup(Header: $e_create_event$, Width: "50")
 }
 
 If(And(GetVar(Type)!="",GetVar(Region)!="")){
@@ -17,46 +17,60 @@ If(And(GetVar(Type)!="",GetVar(Region)!="")){
 }.Else{
     SetVar(where, {id:{$neq:0}}).(Type,0).(Region,0)
 }
+
 AppParam(App: #application_id#, Name:e_regions, Source:regions, Ecosystem:#ecosystem_id#)
 AppParam(App: #application_id#, Name:e_types, Source:types, Ecosystem:#ecosystem_id#)
-DBFind(#this_table#, src).Where(#where#).Order({"starting_date": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_address){
-    Address(#event_address#)
+DBFind(#this_table#, src).Where(#where#).Order({"starting_date": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_responsible){
+    Address(#responsible#)
+}.Custom(_type){
+    AppParam(App: #application_id#, Name:e_types, Index:#type#, Ecosystem:#ecosystem_id#)
+}.Custom(_region){
+    AppParam(App: #application_id#, Name:e_regions, Index:#region#, Ecosystem:#ecosystem_id#)
 }.Custom(_date){
     If(#starting_date#>0){
         Span(Class:text-muted, Body:DateTime(#starting_date#, Format: YYYY-MM-DD HH:MI:SS))
     }
 }.Count(count)
-Div(fullscreen){
-    Form(input-group){
-        Div(row){
-            Div(col-sm-4){
-                $e_type$
+Div(fullscreen mh-lg){
+    SetVar(Filter,1)
+    If(#Filter#==1){
+        Form(input-group){
+            Div(row){
+                Div(col-sm-2){
+                    Button(Class: btn btn-default fa fa-filter, Page: #this_page#)
+                }
+                Div(col-sm-4 text-muted){
+                    $e_type$
+                }
+                Div(col-sm-4 text-muted){
+                    $e_region$
+                }
             }
-            Div(col-sm-8){
-                Select(Name: Type, Source: types, NameColumn: name, ValueColumn: id, Value: #Type#)
+            Div(row){
+                Div(col-sm-4 col-sm-offset-2){
+                    Select(Name: Type, Source: types, NameColumn: name, ValueColumn: id, Value: #Type#)
+                }
+                Div(col-sm-4){
+                    Select(Name: Region, Source: regions, NameColumn: name, ValueColumn: id, Value: #Type#)
 
+                }
+                Div(col-sm-2){
+                    Button(Class: btn bg-gray-lighter fa fa-play, Page: #this_page#, PageParams: "Type=Val(Type),Region=Val(Region)")
+                }
             }
         }
-        Div(row){
-            Div(col-sm-4){
-                $e_region$
-            }
-            Div(col-sm-8){
-                Select(Name: Region, Source: regions, NameColumn: name, ValueColumn: id, Value: #Type#)
-
-            }
-        }
-        Button(Class: btn bg-gray-lighter fa fa-play, Page: #this_page#, PageParams: "Type=Val(Type),Region=Val(Region)")
+    }.Else{
+        Button(Class: btn btn-default fa fa-filter, Page: #this_page#, PageParams: "Filter=1")
     }
-    Div(table-responsive ml-lg mr-lg){
-        Div(list-group-item){
+    Div(table-responsive){
+        Div(list-group-item mt-lg){
             If(#count# > 0){
-                Table(src, "$@1id$=id,$@1name$=name,$@1description$=description,$e_date$=_date,$@1type$=type,$e_region$=region,$@1address$=event_address,$e_responsible$=responsible")
+                Table(src, "$@1id$=id,$@1name$=name,$@1description$=description,$e_starting_date$=_date,$@1type$=_type,$e_region$=_region,$@1address$=event_address,$e_responsible$=_responsible")
+                Table(src)
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$e_events$ $@1not_founded$")
             }
         }.Style(
-            margin-top:-15px;
             tbody > tr:nth-of-type(odd) {
                 background-color: #f8f9fc;
             }
