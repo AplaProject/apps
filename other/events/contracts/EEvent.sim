@@ -23,8 +23,13 @@ contract EEvent {
     }
     conditions{
         if $Id > 0 {
-            if !DBFind("e_events").WhereId($Id).Row(){
+            var event map
+            event = DBFind("e_events").WhereId($Id).Row()
+            if !event{
                 error "Event not founded"
+            }
+            if event["starting_date"] < $block_time {
+                error "Event not editable"
             }
         }
         $date = UnixDateTime(dateAddTime($StartingDate, $StartingTime))
@@ -33,13 +38,14 @@ contract EEvent {
         }
 
         if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Responsible}).Row(){
-            error "Responsible key id not founded"
+            error "Responsible not founded"
         }
     }
 
     action {
         var m map
-        m = {description:$Description, type:$Type, starting_date:$date, region:$Region, event_address:$EventAddress, responsible:$Responsible}
+        m = {name:$Name, description:$Description, type:$Type, starting_date:$date, region:$Region, event_address:$EventAddress, responsible:$Responsible}
+        
         if $Id > 0 {
             DBUpdate("e_events", $Id, m)
         }else{
