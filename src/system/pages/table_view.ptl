@@ -1,52 +1,37 @@
-Div(content-wrapper){
-    DBFind(@1tables).Where({id:#tabl_id#,ecosystem:#ecosystem_id#}).Columns("id,name").Vars(pre)
+If(GetVar(page_par)!=""){
+    SetVar(Name: tabl_id, Value: #page_par#)
+}.Else{
+    SetVar(Name: page_par, Value: #tabl_id#)
+}
+DBFind(@1tables).Where({id:#tabl_id#,ecosystem:#ecosystem_id#}).Columns("id,name").Vars(pre)
 
-    SetTitle($@1tables$)
-    Div(breadcrumb){
-        LinkPage($@1tables$, @1app_tables)
-        Span(/,mh)
-        Span(#pre_name#, text-muted)
-        Span(/,mh)
-        LinkPage(Body:$@1edit$, Page: @1table_edit, PageParams: "tabl_id=#tabl_id#")
-    }
+SetTitle($@1tables$)
+Div(breadcrumb){
+    LinkPage($@1tables$, @1app_tables)
+    Span(/,mh)
+    Span(#pre_name#, text-muted)
+    Span(/,mh)
+    LinkPage(Body:$@1edit$, Page: @1table_edit, PageParams: "tabl_id=#tabl_id#")
+}
 
-    DBFind(#pre_name#).Count(count)
-    If(#page#>0){
-        SetVar(prev_page,Calculate(#page#-1)
-    }.Else{
-        SetVar(page,0).(prev_page,0)
-    }
-    SetVar(per_page,25).(off,Calculate(#page#*#per_page#)).(last_page,Calculate(#count#/#per_page#)).(next_page,#last_page#)
-    If(#count#>Calculate(#off#+#per_page#)){
-        SetVar(next_page,Calculate(#page#+1)
-    }
-    Div(button-group){
-        If(#page#>0){
-            Button(Body:"1", Class:btn btn-default, Page: @1table_view, PageParams: "tabl_id=#tabl_id#,page=0")
-        }.Else{
-            Button(Body:"1", Class:btn btn-default disabled)
-        }
-        If(#page#>1){
-            Button(Body:Calculate(#prev_page#+1), Class:btn btn-default, Page: @1table_view, PageParams: "tabl_id=#tabl_id#,page=#prev_page#")
-        }
-        If(And(#page#>0,#page#<#last_page#)){
-            Button(Body:Calculate(#page#+1), Class:btn btn-default disabled)
-        }
-        If(#next_page#<#last_page#){
-            Button(Body:Calculate(#next_page#+1), Class:btn btn-default, Page: @1table_view, PageParams: "tabl_id=#tabl_id#,page=#next_page#")
-        }
-        If(#page#<#last_page#){
-            Button(Body:Calculate(#last_page#+1), Class:btn btn-default, Page: @1table_view, PageParams: "tabl_id=#tabl_id#,page=#last_page#")
-        }.ElseIf(#last_page#>0){
-            Button(Body:Calculate(#last_page#+1), Class:btn btn-default disabled)
-        }
-    }
-    Div(panel panel-default){
-        Div(panel-body){
-            Div(table-responsive){
-                DBFind(#pre_name#, src_mem).Offset(#off#).Order(id)
-                Table(src_mem)
+SetVar(this_table, #pre_name#).(this_page, @1table_view).(pager_limit, 50)
+SetVar(where, {id:{"$neq":0}})
+Include(@1pager_header)
+
+DBFind(#this_table#, src).Limit(#pager_limit#).Offset(#pager_offset#).Where(#where#)
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            Table(src)                      
+        }.Style(
+            margin-top:-10px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
             }
-        }
+        )
     }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
 }
