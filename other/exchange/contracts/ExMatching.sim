@@ -1,0 +1,98 @@
+contract ExMatching {
+    data {
+        id int "optional"
+        client int "optional"
+        counterparty int "optional"
+        flag string
+        symbol string
+        venue string
+        quantity int
+        price int
+        status string
+        comment string "optional"
+    }
+    //warning Sprintf ("%d",$client)
+    //price money and quantity num, but value is calculated via price money x and quantity lot
+    func calcValue (quantity int, price int) money {
+        var value money
+        value = Money(quantity * price)
+        return value
+    }
+    conditions {
+        var ecosystem_hub int
+        ecosystem_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("ecosystem_hub").One("ecosystem_hub"))
+        //check price via pricetick by divide zero to string
+        //check balance > value
+        if $flag == "B" {
+            if $status == "A" {
+                var check_price int
+                check_price = Int(DBFind("@1order_log").Where({"symbol":$symbol, "status":"A","flag":"S", "price":{"$gte":$price}}).One("price"))
+                if check_price > 0 {
+                    warning Sprintf ("%d",check_price) //market orders don't allow for this symbol
+                }
+            }
+        }
+        if $flag == "S" {
+            if $status == "A" {
+                var check_price int
+                check_price = Int(DBFind("@1order_log").Where({"symbol":$symbol, "status":"A","flag":"B", "price":{"$lte":$price}}).One("price"))
+                if check_price > 0 {
+                    warning Sprintf ("%d",check_price) //market orders don't allow for this symbol
+                }
+            }
+        }
+        var check_eco_id int
+        check_eco_id = Int(DBFind("@1keys").Where({"id":$client, "ecosystem":ecosystem_hub}).One("id"))
+        if check_eco_id != $client {
+            warning Sprintf ("%d",$ecosystem_hub) //you must login in the ecosystem to trade this symbol first
+        }
+        if $status == "F" {
+            var counterparty check_cross int
+            counterparty = Int(DBFind("@1order_log").Where({"id":$id}).Columns("client").One("client"))
+            check_cross = Int(DBFind("@1symbol").Where({"name":$symbol}).One("cross"))
+            if check_cross = 0 {
+                if $client == counterparty {
+                    warning Sprintf ("%d",check_cross) //cross trade are not allowed for this trade symbol
+                }
+            }
+        }
+    }
+    action {
+        var value money
+        value = calcValue($quantity, $price)
+        var ecosystem_hub int
+        ecosystem_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("ecosystem_hub").One("ecosystem_hub"))
+        if $flag == "B" {
+            if $status == "C" {
+                DBUpdate("@1order_log", $id, {status:"C"})
+            }
+            if $status == "A" {
+                DBInsert("@1order_log", {flag: $flag, client: $client, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, value: value, status: $status})
+            }
+            if $status == "F" {
+                DBUpdate("@1order_log", $id, {status:"F", counterparty: $client})
+                var counterparty int
+                counterparty = Int(DBFind("@1order_log").Where({"id":$id}).Columns("client").One("client"))
+                DBInsert("@1order_log", {flag: $flag, client: $client, counterparty: counterparty, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, value: value, status: $status})
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", value, $client, counterparty, $comment, $ecosystem_id)
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", value, counterparty, $client, $comment, ecosystem_hub)
+            }
+        }
+        if $flag == "S" {
+            if $status == "C" {
+                DBUpdate("@1order_log", $id, {status:"C"})
+            } 
+            if $status == "A" {
+                DBInsert("@1order_log", {flag: $flag, client: $client, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, value: value, status: $status})
+            } 
+            if $status == "F" {
+                DBUpdate("@1order_log", $id, {status:"F", counterparty: $client})
+                var counterparty int
+                counterparty = Int(DBFind("@1order_log").Where({"id":$id}).Columns("client").One("client"))
+                DBInsert("@1order_log", {flag: $flag, client: $client, counterparty: counterparty, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, value: value, status: $status})
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", value, $client, counterparty, $comment, $ecosystem_id)
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", value, counterparty, $client, $comment, ecosystem_hub)
+            }
+        }
+    }
+}

@@ -1,0 +1,46 @@
+SetVar(founder,EcosysParam(founder_account))
+Div(content-wrapper){
+    SetTitle("Exchange")
+    If(#founder#==#key_id#){
+        AddToolButton(Title: "Add trading symbol", Page: @1ex_symbol_new, Icon: icon-plus).Popup(Header: "Trading symbol", Width: "30")
+    }
+    DBFind(@1symbol).Count(symbols)
+    If(#symbols# > 0){
+        DBFind(@1symbol,src_symbol).Custom(custom_name){
+            LinkPage(Class: #style_link# h5 text-bold, Page: @1ex_tradedesk, PageParams: "ticker_id=#id#"){
+                    Span(#name#)
+                }
+            }.Custom(range_money){
+                 Money(#range#)
+            }.Custom(tradeable_status){
+                If(#tradeable#==1){
+                    Button(Body: Em(Class: fa fa-check), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: "operation=U,status=TR,isTradeable=0,id=#id#")
+                }.Else{
+                    Button(Body: Em(Class: fa fa-times), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: "operation=U,status=TR,isTradeable=1,id=#id#")
+                }
+            }.Custom(cross_status){
+                If(#cross#==1){
+                    Button(Body: Em(Class: fa fa-check), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: "operation=U,status=CR,isCross=0,id=#id#")
+                }.Else{
+                    Button(Body: Em(Class: fa fa-times), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: "operation=U,status=CR,isCross=1,id=#id#")
+                }
+            }.Custom(cancel_orders){
+                Button(Body: Em(Class: fa fa-window-close), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExCancel, Params: "symbol=#name#")
+            }.Custom(edit){
+                Span(Class: pull-right){
+                    LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: @1ex_edit, PageParams: "id=#id#")
+                }
+            }
+        Form(panel panel-primary){
+            Div(panel-body){
+                Div(row){
+                    Div(col-md-12){
+                        Table(Source: src_symbol, Columns: "Name=custom_name,Pricetick=pricetick,Range=range_money,Tradeable=tradeable_status,Cross=cross_status,Cancell All=cancel_orders,=edit")
+                    }
+                }
+            }
+        }
+    }.Else{
+        Span("Add smth")
+    }
+}
