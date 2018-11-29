@@ -1,0 +1,41 @@
+contract MultiwalletUnits {
+    data {
+        Action string
+        Units array
+        Vals array
+        Type int
+    }
+    conditions {
+        var buf map
+        buf["key"] = "multiaccount_units"
+        buf["member_id"] = $key_id
+        $buf = DBFind("@1buffer_data").Where(buf).Row()
+        buf["value"] = `{}`
+        if !$buf {
+            buf["id"] = DBInsert("@1buffer_data", buf)
+            $buf = buf
+        }else{
+            DBUpdate("@1buffer_data", Int($buf["id"]), buf)
+        }
+        var units array i lenVals int
+        lenVals = Len($Vals)
+        while i < lenVals{
+            if $Vals[i] == "true"{
+                units = Append(units, $Units[i])
+            }
+            i = i + 1
+        }
+        $units = units
+    }
+
+    action {
+
+        var id int m map
+        id = Int($buf["id"])
+        if $Action == "set" {
+            m["value->type"] = $Type
+            m["value->units"] = JSONEncode($units)
+            DBUpdate("@1buffer_data", id, m)
+        }
+    }
+}

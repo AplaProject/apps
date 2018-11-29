@@ -1,0 +1,123 @@
+DBFind(applications).Columns("id").Where({name:"Basic application"}).Vars(application)
+AppParam(App: #application_id#, Name:multiaccount_types, Source:types)
+DBFind(keys).WhereId(#key_id#).Columns("id,multi").Vars(key)
+
+SetVar(this_page,multiwallet).(back_page,profile_view).(cols,2)
+DBFind(buffer_data).Where({member_id:#key_id#, key:multiaccount_units}).Columns("id,value->type,value->units").Vars(buf)
+DBFind(roles,src_roles).Columns("id,role_name")
+Div(content-wrapper){
+    If(#Action#=="select"){
+        Form(){
+            ArrayToSource(buf_units, [])
+            If(#buf_value_type#==#Type#){
+                ArrayToSource(buf_units, #buf_value_units#)
+            }
+            If(Or(#Type#==1,#Type#==2)){
+                DBFind(keys,units).Columns("id")
+            }.ElseIf(Or(#Type#==3,#Type#==4)){
+                DBFind(roles,units).Columns("id,role_name")
+            }
+            Div(row){
+                ForList(units){
+                    SetVar(checked,false)
+                    ForList(buf_units){
+                        If(#id#==#value#){
+                            SetVar(checked,true)
+                        }
+                    }
+                    Div(col-sm-6 text-nowrap){
+                        Label(Class: form-inline){
+                            Input(Name: Vals, Type: checkbox, Value: #checked#)
+                            Input(Name: Units, Type: hidden, Value: #id#)
+                            If(GetVar(role_name)){
+                                #role_name#
+                            }.Else{
+                                Address(#id#)
+                            }
+                        }
+                    }
+                }
+            }
+            Div(text-left){
+                Button(Body: $back$, Class: btn btn-default, Page: #this_page#, PageParams: "Type=#Type#")
+                Button(Body: $confirm$, Class: btn btn-primary pull-right, Page: #this_page#, Contract: MultiwalletUnits, PageParams: "Type=#Type#", Params:"Action=set,Type=#Type#,Vals=Val(Vals),Units=Val(Units)")
+            }
+        }
+    }.Else{
+        If(#key_multi#==0){
+            If(GetVar(Type)){
+                SetTitle($profile_convert$)
+                Div(breadcrumb){
+                    LinkPage(Body: $profile$, Page: profile_view)
+                    Span(/,mh)
+                    Span($profile_convert$,text-muted)
+                }
+                Div(text-right form-group){
+                    Button(Body: $assign_group$, Page: #this_page#, Class: btn btn-default, PageParams: "Type=#Type#,Action=select").Popup(50, $assign_group$)
+                }
+                Div(row){
+                    Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
+                        Form(panel panel-primary){
+                            Div(panel-body){
+                                Div(list-group-item){
+                                    TODO: ввод лимитов на доверенность (без срока)
+                                }
+                                Div(list-group-item){
+                                    TODO:
+                                    Создание шаблона голосования или
+                                    выбор из имеющихся шаблонов или
+                                    "перевод одной подписью"
+                                }
+                                Div(list-group-item){
+                                    Div(h4){
+                                        Structure of group
+                                    }
+                                    Div(){
+                                        If(#buf_value_type#==#Type#){
+                                            ArrayToSource(buf_units, #buf_value_units#)
+                                            If(Or(#Type#==1,#Type#==2)){
+                                                ForList(buf_units){
+                                                    Span(#value#, mr)
+                                                }
+                                            }.ElseIf(Or(#Type#==3,#Type#==4)){
+                                                ForList(buf_units){
+                                                    ForList(src_roles){
+                                                        If(#id#==#value#){
+                                                            Span(#role_name#, mr)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }.Else{
+                                            Div(text-center text-muted){
+                                                $not_assigned$
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Div(panel-footer text-left){
+                                Button(Body: LangRes(back), Class: btn btn-default, Page: #this_page#).Popup(50, $multi_types$)
+                                Button(Body: LangRes(convert), Class: btn btn-primary pull-right, Page: #back_page#, Contract: MultiwalletSet, Params: "BufferId=#buf_id#").Alert(Text: $want_profile_convert$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                            }
+                        }
+                    }
+                }
+            }.Else{
+                Form(){
+                    Div(form-group){
+                        Select(Name: Type, Source: types, NameColumn: name, ValueColumn: id)
+                    }
+                    Div(){
+                        Button(Body: LangRes(back), Class: btn btn-default, Page: #back_page#)
+                        Button(Body: LangRes(next), Class: btn btn-primary pull-right, Page: #this_page#, PageParams: "Type=Val(Type)")
+                    }
+                }
+            }
+        }.Else{
+            Div(mt-lg alert alert-warning text-center){
+                LangRes(attention_already_multi)
+            }
+        }
+    }
+}
