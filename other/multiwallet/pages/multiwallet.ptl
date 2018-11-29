@@ -1,10 +1,10 @@
-DBFind(applications).Columns("id").Where({name:"Basic application"}).Vars(application)
-AppParam(App: #application_id#, Name:multiaccount_types, Source:types)
-DBFind(keys).WhereId(#key_id#).Columns("id,multi").Vars(key)
+DBFind(@1applications).Columns("id").Where({name:"Multiwallet", ecosystem:1}).Vars(application)
+AppParam(App: #application_id#, Name:multiwallet_types, Source:types)
+DBFind(@1keys).WhereId(#key_id#).Columns("id,multi").Vars(key)
 
-SetVar(this_page,multiwallet).(back_page,profile_view).(cols,2)
-DBFind(buffer_data).Where({member_id:#key_id#, key:multiaccount_units}).Columns("id,value->type,value->units").Vars(buf)
-DBFind(roles,src_roles).Columns("id,role_name")
+SetVar(this_page,@1multiwallet).(back_page,@1profile_edit).(cols,2)
+DBFind(@1buffer_data).Where({member_id:#key_id#, key:multiaccount_units, ecosystem:#ecosystem_id#}).Columns("id,value->type,value->units").Vars(buf)
+DBFind(@1roles,src_roles).Where({ecosystem:#ecosystem_id#}).Columns("id,role_name")
 Div(content-wrapper){
     If(#Action#=="select"){
         Form(){
@@ -13,9 +13,9 @@ Div(content-wrapper){
                 ArrayToSource(buf_units, #buf_value_units#)
             }
             If(Or(#Type#==1,#Type#==2)){
-                DBFind(keys,units).Columns("id")
+                DBFind(@1keys,units).Where({ecosystem:#ecosystem_id#}).Columns("id")
             }.ElseIf(Or(#Type#==3,#Type#==4)){
-                DBFind(roles,units).Columns("id,role_name")
+                DBFind(@1roles,units).Where({ecosystem:#ecosystem_id#}).Columns("id,role_name")
             }
             Div(row){
                 ForList(units){
@@ -39,34 +39,59 @@ Div(content-wrapper){
                 }
             }
             Div(text-left){
-                Button(Body: $back$, Class: btn btn-default, Page: #this_page#, PageParams: "Type=#Type#")
-                Button(Body: $confirm$, Class: btn btn-primary pull-right, Page: #this_page#, Contract: MultiwalletUnits, PageParams: "Type=#Type#", Params:"Action=set,Type=#Type#,Vals=Val(Vals),Units=Val(Units)")
+                Button(Body: $@1back$, Class: btn btn-default, Page: #this_page#, PageParams: "Type=#Type#")
+                Button(Body: $@1confirm$, Class: btn btn-primary pull-right, Page: #this_page#, Contract: MultiwalletUnits, PageParams: "Type=#Type#", Params:"Action=set,Type=#Type#,Vals=Val(Vals),Units=Val(Units)")
             }
         }
     }.Else{
         If(#key_multi#==0){
-            If(GetVar(Type)){
-                SetTitle($profile_convert$)
+            If(GetVar(Type)!=""){
+                SetTitle($@1multiwallet_create$)
                 Div(breadcrumb){
-                    LinkPage(Body: $profile$, Page: profile_view)
+                    LinkPage(Body: $@1profile$, Page: profile_view)
                     Span(/,mh)
-                    Span($profile_convert$,text-muted)
+                    Span($@1multiwallet_create$,text-muted)
                 }
-                Div(text-right form-group){
-                    Button(Body: $assign_group$, Page: #this_page#, Class: btn btn-default, PageParams: "Type=#Type#,Action=select").Popup(50, $assign_group$)
-                }
+
                 Div(row){
                     Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
                         Form(panel panel-primary){
+                            Div(panel-heading){
+                                AppParam(App: #application_id#, Name:multiwallet_types, Index:#Type#)
+                            }
                             Div(panel-body){
                                 Div(list-group-item){
                                     TODO: ввод лимитов на доверенность (без срока)
+                                    Label($@1multiwallet_limit$)
+                                    Data(limits, "id,name"){
+                                        1,$@1no_limit$
+                                        2,$@1set_date$
+                                    }
+                                    RadioGroup(Name:Limit, Source:limits, NameColumn: name, ValueColumn: id)
+                                    Div(row){
+                                        Div(col-md-6){
+                                            Input(Name: LimitDate, Type: date)
+                                        }
+                                        Div(col-md-6){
+                                            Input(Name: LimitTime, Type: time, Value: "00:00")
+                                        }
+                                    }.Show(Limit=2)
                                 }
                                 Div(list-group-item){
                                     TODO:
                                     Создание шаблона голосования или
                                     выбор из имеющихся шаблонов или
                                     "перевод одной подписью"
+                                    Label($@1multiwallet_signing$)
+                                    Data(limits, "id,name"){
+                                        1,$@1one_sign_transfer$
+                                        2,$@1select_voting_template$
+                                    }
+                                    RadioGroup(Name:Sign, Source:limits, NameColumn: name, ValueColumn: id)
+                                    Div(){
+                                        Input(Name: TemplateId)
+                                        TODO: button for popup select template
+                                    }.Show(Sign=2)
                                 }
                                 Div(list-group-item){
                                     Div(h4){
@@ -88,17 +113,23 @@ Div(content-wrapper){
                                                     }
                                                 }
                                             }
+                                            Div(text-center){
+                                                Button(Body: $@1edit_group$, Page: #this_page#, Class: btn btn-default, PageParams: "Type=#Type#,Action=select").Popup(50, $@1edit_group$)
+                                            }
                                         }.Else{
                                             Div(text-center text-muted){
                                                 $not_assigned$
+                                            }
+                                            Div(text-center){
+                                                Button(Body: $@1assign_group$, Page: #this_page#, Class: btn btn-default, PageParams: "Type=#Type#,Action=select").Popup(50, $@1assign_group$)
                                             }
                                         }
                                     }
                                 }
                             }
                             Div(panel-footer text-left){
-                                Button(Body: LangRes(back), Class: btn btn-default, Page: #this_page#).Popup(50, $multi_types$)
-                                Button(Body: LangRes(convert), Class: btn btn-primary pull-right, Page: #back_page#, Contract: MultiwalletSet, Params: "BufferId=#buf_id#").Alert(Text: $want_profile_convert$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                                Button(Body: $@1back$, Class: btn btn-default, Page: #this_page#).Popup(50, $@1multi_types$)
+                                Button(Body: $@1convert$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: MultiwalletCreate, Params: "BufferId=#buf_id#").Alert(Text: $@1want_profile_convert$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
                             }
                         }
                     }
@@ -109,14 +140,14 @@ Div(content-wrapper){
                         Select(Name: Type, Source: types, NameColumn: name, ValueColumn: id)
                     }
                     Div(){
-                        Button(Body: LangRes(back), Class: btn btn-default, Page: #back_page#)
-                        Button(Body: LangRes(next), Class: btn btn-primary pull-right, Page: #this_page#, PageParams: "Type=Val(Type)")
+                        Button(Body: $@1back$, Class: btn btn-default, Page: #back_page#)
+                        Button(Body: $@1next$, Class: btn btn-primary pull-right, Page: #this_page#, PageParams: "Type=Val(Type)")
                     }
                 }
             }
         }.Else{
             Div(mt-lg alert alert-warning text-center){
-                LangRes(attention_already_multi)
+                $@1attention_already_multi$
             }
         }
     }

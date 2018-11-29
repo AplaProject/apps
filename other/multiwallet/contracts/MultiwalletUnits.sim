@@ -6,17 +6,6 @@ contract MultiwalletUnits {
         Type int
     }
     conditions {
-        var buf map
-        buf["key"] = "multiaccount_units"
-        buf["member_id"] = $key_id
-        $buf = DBFind("@1buffer_data").Where(buf).Row()
-        buf["value"] = `{}`
-        if !$buf {
-            buf["id"] = DBInsert("@1buffer_data", buf)
-            $buf = buf
-        }else{
-            DBUpdate("@1buffer_data", Int($buf["id"]), buf)
-        }
         var units array i lenVals int
         lenVals = Len($Vals)
         while i < lenVals{
@@ -29,13 +18,21 @@ contract MultiwalletUnits {
     }
 
     action {
-
-        var id int m map
-        id = Int($buf["id"])
+        var id int m buf map
+        buf["key"] = "multiaccount_units"
+        buf["member_id"] = $key_id
+        buf["ecosystem"] = $ecosystem_id
+        if !DBFind("@1buffer_data").Where(buf).Row() {
+            buf["value"] = `{}`
+            buf["id"] = DBInsert("@1buffer_data", buf)
+        }else{
+            buf["value"] = `{}`
+            DBUpdate("@1buffer_data", Int($buf["id"]), buf)
+        }
         if $Action == "set" {
             m["value->type"] = $Type
             m["value->units"] = JSONEncode($units)
-            DBUpdate("@1buffer_data", id, m)
+            DBUpdate("@1buffer_data", Int($buf["id"]), m)
         }
     }
 }
