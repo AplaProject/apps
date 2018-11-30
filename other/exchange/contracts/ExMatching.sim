@@ -6,36 +6,31 @@ contract ExMatching {
         flag string
         symbol string
         venue string
-        quantity int
-        price int
+        quantity money
+        price money
         status string
         comment string "optional"
     }
-    //warning Sprintf ("%d",$client)
-    //price money and quantity num, but value is calculated via price money x and quantity lot
-    func calcValue (quantity int, price int) money {
-        var value money
-        value = Money(quantity * price)
+    func calcValue (quantity money, price money) money {
+        var lot_size value money
+        lot_size = Money(DBFind("@1symbol").Where({"name":$symbol}).Columns("range").One("range"))
+        value = Money(($quantity * lot_size) * $price)
         return value
     }
     conditions {
+        //check price via pricetick by divide zero to string
         var ecosystem_hub int
         ecosystem_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("ecosystem_hub").One("ecosystem_hub"))
-        //check price via pricetick by divide zero to string
-        //check balance > value
-        if $flag == "B" {
+        var balance value money
+        balance = Money(DBFind("@1keys").Where({"id":$client, "ecosystem":ecosystem_hub}).Columns("amount").One("amount"))
+        value = calcValue($quantity, $price)
+        if (value > balance) {
+            warning Sprintf ("%s",value) //value of your transaction is more then your current balance
+        }
+        if $flag == "B" || "S" {
             if $status == "A" {
                 var check_price int
                 check_price = Int(DBFind("@1order_log").Where({"symbol":$symbol, "status":"A","flag":"S", "price":{"$gte":$price}}).One("price"))
-                if check_price > 0 {
-                    warning Sprintf ("%d",check_price) //market orders don't allow for this symbol
-                }
-            }
-        }
-        if $flag == "S" {
-            if $status == "A" {
-                var check_price int
-                check_price = Int(DBFind("@1order_log").Where({"symbol":$symbol, "status":"A","flag":"B", "price":{"$lte":$price}}).One("price"))
                 if check_price > 0 {
                     warning Sprintf ("%d",check_price) //market orders don't allow for this symbol
                 }
