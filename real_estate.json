@@ -1,0 +1,45 @@
+{
+    "name": "Real estate",
+    "conditions": "ContractConditions(\"@1DeveloperCondition\")",
+    "data": [
+        {
+            "Name": "default_menu",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "MenuItem(Title: \"Real estate\", Page: properties_list, Icon:\"icon-home\")\r\n",
+            "Type": "menu"
+        },
+        {
+            "Name": "properties",
+            "Columns": "[{\"name\":\"coords\",\"conditions\":\"true\",\"type\":\"json\"},{\"name\":\"description\",\"conditions\":\"true\",\"type\":\"text\"},{\"name\":\"name\",\"conditions\":\"{\\\"update\\\":\\\"true\\\",\\\"read\\\":\\\"true\\\"}\",\"type\":\"text\"},{\"name\":\"price\",\"conditions\":\"{\\\"update\\\":\\\"true\\\",\\\"read\\\":\\\"true\\\"}\",\"type\":\"number\"},{\"name\":\"sold\",\"conditions\":\"true\",\"type\":\"number\"}]",
+            "Permissions": "{\"read\": \"true\", \"insert\": \"ContractConditions(\\\"MainCondition\\\")\", \"update\": \"ContractConditions(\\\"MainCondition\\\")\", \"new_column\": \"ContractConditions(\\\"MainCondition\\\")\"}",
+            "Type": "tables"
+        },
+        {
+            "Name": "properties_list",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "SetVar(this_page, properties_list).(this_table, properties)\r\nInclude(@1pager_header)\r\n\r\nSetTitle(\"Real estate\")\r\nSpan(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: \"Real estate demo application\"))\r\n\r\nAddToolButton(Title: \"Add a property\", Page: property_new, Icon: icon-plus)\r\n\r\nIf(GetVar(search)!=\"\"){\r\n    SetVar(where, {\"name\": {$like:#search#}})\r\n}.Else{\r\n    SetVar(where,).(search,)\r\n}\r\n\r\nDiv(list-group-item ml-lg mr-lg pt-lg){\r\n    SetVar(search_name, \"Name\")\r\n    Include(@1search)\r\n}\r\n\r\nDBFind(#this_table#, src).Where(#where#).Order({\"id\": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(view){\r\n    Button(Class: icon-map btn btn-default mh-sm pull-right, Page: property_view, PageParams: \"property_id=#id#\").Popup(Header: \"Property view\", Width: \"50\")\r\n}.Custom(custom_price){\r\n    $ #price#\r\n}.Count(count)\r\n\r\nDiv(fullscreen){\r\n    Div(table-responsive ml-lg mr-lg){\r\n        Div(list-group-item){\r\n            If(#count# > 0){\r\n                Table(src, \"$@1id$=id,$@1name$=name,Price=custom_price,Description=description,=view\")\r\n            }.Else{\r\n                Div(Class: text-center h4 text-muted, Body: \"Properties were not found\")\r\n            }                       \r\n        }.Style(\r\n            margin-top:-15px;\r\n            tbody > tr:nth-of-type(odd) {\r\n                background-color: #f8f9fc;\r\n            }\r\n        )\r\n    }\r\n}\r\nDiv(mt-sm ml-lg mr-sm mb-sm){\r\n    Include(@1pager)\r\n}",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "property_new",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "SetTitle(\"New property\")\r\nDiv(content-wrapper){\r\n    Div(row mt-sm){\r\n        Div(col-lg-6 col-lg-offset-3 col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1){\r\n            Form(panel panel-primary){\r\n                Div(panel-body){\r\n                    Div(row){\r\n                        Div(col-sm-3 mt-sm text-right){\r\n                            Label(For: Interval){\r\n                                \"Location\"\r\n                            }\r\n                            Span(Class: text-danger, Body:*)\r\n                        }\r\n                        Div(col-sm-9){\r\n                            InputMap(Name: Coords, Type: polygon, MapType: streets, Value: `{\"zoom\":18, \"center\":{\"lng\":40.777045,\"lat\":-73.963719}}`)\r\n                        }\r\n                    }\r\n                    Div(row mt-sm){\r\n                        Div(col-sm-3 mt-sm text-right){\r\n                            Label(For: Interval){\r\n                                \"Name\"\r\n                            }\r\n                            Span(Class: text-danger, Body:*)\r\n                        }\r\n                        Div(col-sm-9){\r\n                            Input(Name: Name, Placeholder: \"Property name or address\")\r\n                        }\r\n                    }\r\n                    Div(row mt-sm){\r\n                        Div(col-sm-3 mt-sm text-right){\r\n                            Label(For: Interval){\r\n                                \"Description\"\r\n                            }\r\n                            Span(Class: text-danger, Body:*)\r\n                        }\r\n                        Div(col-sm-9){\r\n                            Input(Name: Description, Type: textarea, , Placeholder: \"Short description\").Style(resize: vertical;)\r\n                        }\r\n                    }\r\n                    Div(row mt-sm){\r\n                        Div(col-sm-3 mt-sm text-right){\r\n                            Label(For: Interval){\r\n                                \"Price\"\r\n                            }\r\n                            Span(Class: text-danger, Body:*)\r\n                        }\r\n                        Div(col-sm-9){\r\n                            Input(Name: Price, Placeholder: \"Property price (USD)\")\r\n                        }\r\n                    }\r\n                }\r\n                Div(panel-footer text-right){\r\n                    Button(Body: LangRes(@1back), Class: btn btn-default, Page: properties_list)\r\n                    Button(Body: \"Add property\", Class: btn btn-primary, Page: properties_list, Contract: PropertyEdit)\r\n                }\r\n            }\r\n        }\r\n    }\r\n}",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "property_view",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "DBFind(properties).Where({\"id\": #property_id#}).Vars(property)\r\nMap(MapType: streets, Hmap:400, Value: #property_coords#)\r\nButton(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: properties_list)",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "PropertyEdit",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "contract PropertyEdit {\n    data {\n        Id int\n        Name string\n        Description string\n        Coords string\n        Price int\n        Sold int\n    }\n\n    action {\n        var property_info map\n        property_info[\"name\"] = $Name\n        property_info[\"description\"] = $Description\n        property_info[\"coords\"] = $Coords\n        property_info[\"price\"] = $Price\n        property_info[\"sold\"] = $Sold\n\n        if $Id > 0 {\n            DBUpdate(\"properties\", $Id, property_info)\n        } else {\n            DBInsert(\"properties\", property_info)\n        }\n    }\n}",
+            "Type": "contracts"
+        }
+    ]
+}
