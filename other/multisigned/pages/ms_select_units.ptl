@@ -1,0 +1,48 @@
+DBFind(@1applications).Columns("id").Where({name:"Multisigned", ecosystem:1}).Vars(application)
+AppParam(App: #application_id#, Name:ms_types, Source:types)
+DBFind(@1keys).WhereId(#key_id#).Columns("multi").Vars(k)
+
+SetVar(this_page,@1ms_select_units).(back_page,@1ms_multisigned)
+DBFind(@1buffer_data).Where({member_id:#key_id#, key:multisigned_units, ecosystem:#ecosystem_id#}).Columns("id,value->type,value->units").Vars(buf)
+DBFind(@1roles,src_roles).Where({ecosystem:#ecosystem_id#}).Columns("id,role_name")
+If(GetVar(TemplateId)==""){
+    SetVar(TemplateId,0)
+}
+Div(content-wrapper){
+    Form(){
+        ArrayToSource(buf_units, [])
+        If(#buf_value_type#==#Type#){
+            ArrayToSource(buf_units, #buf_value_units#)
+        }
+        If(Or(#Type#==1,#Type#==2)){
+            DBFind(@1keys,units).Where({ecosystem:#ecosystem_id#}).Columns("id")
+        }.ElseIf(Or(#Type#==3,#Type#==4)){
+            DBFind(@1roles,units).Where({ecosystem:#ecosystem_id#}).Columns("id,role_name")
+        }
+        Div(row){
+            ForList(units){
+                SetVar(checked,false)
+                ForList(buf_units){
+                    If(#id#==#value#){
+                        SetVar(checked,true)
+                    }
+                }
+                Div(col-sm-6 text-nowrap){
+                    Label(Class: form-inline){
+                        Input(Name: Vals, Type: checkbox, Value: #checked#)
+                        Input(Name: Units, Type: hidden, Value: #id#)
+                        If(GetVar(role_name)){
+                            #role_name#
+                        }.Else{
+                            Address(#id#)
+                        }
+                    }
+                }
+            }
+        }
+        Div(text-left){
+            Button(Body: $@1back$, Class: btn btn-default, Page: #back_page#, PageParams: "Type=#Type#")
+            Button(Body: $@1confirm$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: MSUnits, PageParams: "Type=#Type#", Params:"Action=set,Type=#Type#,Vals=Val(Vals),Units=Val(Units)")
+        }
+    }
+}
