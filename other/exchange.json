@@ -1,0 +1,235 @@
+{
+    "name": "Exchange",
+    "conditions": "ContractConditions(\"@1DeveloperCondition\")",
+    "data": [
+        {
+            "Type": "tables",
+            "Name": "symbol",
+            "Columns": "[{\"name\":\"cross\",\"conditions\":\"true\",\"type\":\"number\"},{\"name\":\"ecosystem_hub\",\"conditions\":\"true\",\"type\":\"number\"},{\"name\":\"lotsize\",\"conditions\":\"true\",\"type\":\"money\"},{\"name\":\"name\",\"conditions\":\"true\",\"type\":\"text\"},{\"name\":\"pricetick\",\"conditions\":\"true\",\"type\":\"money\"},{\"name\":\"range\",\"conditions\":\"true\",\"type\":\"money\"},{\"name\":\"tradeable\",\"conditions\":\"true\",\"type\":\"number\"}]",
+            "Permissions": "{\"read\": \"true\", \"insert\": \"ContractConditions(\\\"MainCondition\\\")\", \"update\": \"ContractConditions(\\\"MainCondition\\\")\", \"new_column\": \"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Type": "tables",
+            "Name": "order_log",
+            "Columns": "[{\"name\":\"client\",\"conditions\":\"true\",\"type\":\"number\"},{\"name\":\"client_value\",\"conditions\":\"true\",\"type\":\"money\"},{\"name\":\"counterparty\",\"conditions\":\"true\",\"type\":\"number\"},{\"name\":\"counterparty_value\",\"conditions\":\"true\",\"type\":\"money\"},{\"name\":\"flag\",\"conditions\":\"true\",\"type\":\"text\"},{\"name\":\"price\",\"conditions\":\"true\",\"type\":\"money\"},{\"name\":\"quantity\",\"conditions\":\"true\",\"type\":\"number\"},{\"name\":\"status\",\"conditions\":\"true\",\"type\":\"text\"},{\"name\":\"symbol\",\"conditions\":\"true\",\"type\":\"text\"},{\"name\":\"venue\",\"conditions\":\"true\",\"type\":\"text\"}]",
+            "Permissions": "{\"read\": \"true\", \"insert\": \"ContractConditions(\\\"MainCondition\\\")\", \"update\": \"ContractConditions(\\\"MainCondition\\\")\", \"new_column\": \"ContractConditions(\\\"MainCondition\\\")\"}"
+        },
+        {
+            "Name": "ex_edit",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "DBFind(@1symbol).WhereId(#id#).Vars(symbol)\nDBFind(@1ecosystems,src_eco).Where({\"id\":{\"$gt\":1}}).Columns(\"id,name\").Order(id)\nSetVar(s_pricetick,Money(#symbol_pricetick#))\nSetVar(s_range,Money(#symbol_range#))\nSetVar(s_lotsize,Money(#symbol_lotsize#))\nDiv(content-wrapper){\n    SetTitle($@1ex_symbol_param$)\n    Div(Class: breadcrumb){\n        LinkPage($@1ex_exchange$, @1ex_listing)\n        Span(/).Style(margin-right: 10px; margin-left: 10px;)\n        Span(Class: text-muted, Body: $@1ex_symbol_param$)\n    }\n    \n    Form(){\n        Div(form-group){\n            Label($@1title$)\n            Input(Name: name, Value: #symbol_name#, Disabled: true)\n        }\n        Div(form-group){\n            Label($@1ex_pricetick$)\n            Input(Name: pricetick,  Type: Number, Value: #s_pricetick#)\n        }\n        Div(form-group){\n            Label($@1ex_range$)\n            Input(Name: range,  Type: Number, Value: #s_range#)\n        }\n        Div(form-group){\n            Label($@1ex_lotsize$)\n            Input(Name: lotsize,  Type: Number, Value: #s_lotsize#)\n        }\n        Div(form-group){\n            Label($@1ex_ecosystem_hub$)\n            Select(Name: ecosystem, Source: src_eco, NameColumn: name, ValueColumn: id)\n        }\n        Div(form-group){\n            Button(Class: btn btn-primary, Body: $@1save$, Contract: @1ExSymbol, Page: @1ex_edit, PageParams: \"id=#symbol_id#\", Params: \"id=#symbol_id#, name=#symbol_name#, operation=E\").Alert(Text: $@1ex_confirmation_kill$, ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)\n        }\n    }\n}",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "ex_listing",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "Include(@1pager_header)\nSetTitle($@1ex_exchange$)\nSpan(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: $@1ex_exchange_desc$))\nIf(#role_id#==1){\n    SetVar(permission,1)\n}\nIf(#permission#==1){\n    AddToolButton(Title: $@1ex_symbol_new$, Page: @1ex_symbol_new, Icon: icon-plus).Popup(Header: $@1ex_symbol_new$, Width: \"45\")\n}\nDBFind(@1ecosystems).Count(eco_hubs)\nDBFind(@1symbol).Count(symbols)\n    DBFind(@1symbol,src_symbol).Custom(custom_name){\n        LinkPage(Class: #style_link# h5 text-bold, Page: @1ex_tradedesk, PageParams: \"ticker_id=#id#\"){\n                Div(Class: text-primary){\n                    Span(#name#).Style({padding-left: 30px;})\n                }\n            }\n        }.Custom(lotsize_money){\n                Money(#lotsize#)\n        }.Custom(pricetick_money){\n                Money(#pricetick#)\n        }.Custom(range_money){\n                Money(#range#)\n        }.Custom(tradeable_status){\n            If(#tradeable#==1){\n                If(#permission#==1){\n                    Button(Body: Em(Class: fa fa-check), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: \"operation=U,status=TR,isTradeable=0,id=#id#,name=#name#\").Style({margin-left: 30px;})\n                }.Else{\n                    Hint(fa fa-check, $@1ex_hint_tradestatus$).Style({margin-left: 30px;})\n                }\n            }.Else{\n                If(#permission#==1){\n                    Button(Body: Em(Class: fa fa-times), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: \"operation=U,status=TR,isTradeable=1,id=#id#,name=#name#\").Style({margin-left: 30px;})\n                }.Else{\n                    Hint(fa fa-times, $@1ex_error_tradestatus$).Style({margin-left: 30px;})\n                }\n            }\n        }.Custom(cross_status){\n            If(#cross#==1){\n                If(#permission#==1){\n                    Button(Body: Em(Class: fa fa-check), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: \"operation=U,status=CR,isCross=0,id=#id#\").Style({margin-left: 30px;})\n                }.Else{\n                    Hint(fa fa-check, $@1ex_hint_cross_trades$).Style({margin-left: 30px;})\n                }\n            }.Else{\n                If(#permission#==1){\n                    Button(Body: Em(Class: fa fa-times), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: \"operation=U,status=CR,isCross=1,id=#id#\").Style({margin-left: 30px;})\n                }.Else{\n                    Hint(fa fa-times, $@ex_error_cross_trades$).Style({margin-left: 30px;}).Style({margin-left: 30px;})\n                }\n            }\n        }.Custom(cancel_orders){\n            Button(Body: Em(Class: fa fa-window-close), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExCancel, Params: \"symbol=#name#\").Style({margin-left: 30px;})\n        }.Custom(edit){\n            Span(Class: pull-right){\n                LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: @1ex_edit, PageParams: \"id=#id#\")\n            }\n        }\nDiv(fullscreen){\n    Div(table-responsive ml-lg mr-lg){\n        Div(list-group-item){\n            If(#symbols# > 0){\n                If(#permission#==1){\n                    Table(Source: src_symbol, Columns: \"$@1ex_symbol$=custom_name,$@1ex_pricetick$=pricetick_money,$@1ex_range$=range_money,$@1ex_lotsize$=lotsize_money,$@1ex_trade_status$=tradeable_status,$@1ex_cross_trades$=cross_status,$@1ex_cancel_all$=cancel_orders,=edit\").Style(\n                        tbody > tr > td {\n                            padding-left: 30px;\n                        }\n                    )\n                }.Else{\n                    Table(Source: src_symbol, Columns: \"$@1ex_symbol$=custom_name,$@1ex_pricetick$=pricetick_money,$@1ex_range$=range_money,$@1ex_lotsize$=lotsize_money,$@1ex_trade_status$=tradeable_status,$@1ex_cross_trades$=cross_status\").Style(\n                        tbody > tr > td {\n                            padding-left: 30px;\n                        }\n                    )\n                }\n            }.Else{\n                If(#eco_hubs# > 0){\n                    Div(Class: text-center h4 text-muted, Body: $@1ex_error_no_symbols$)\n                }.Else{\n                    Div(Class: text-center h4 text-muted, Body: $@1ex_error_ecosystems$)\n                }\n            }                       \n        }.Style(\n            margin-top:-15px;\n            tbody > tr:nth-of-type(odd) {\n                background-color: #f8f9fc;\n            }\n        )\n    }\n}\nDiv(mt-sm ml-lg mr-sm mb-sm){\n    Include(@1pager)\n}\n",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "ex_symbol_new",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "Form(){\n    DBFind(@1ecosystems,src_eco).Where({\"id\":{\"$gt\":1}}).Columns(\"id,name\").Order(id)\n    Data(bool,\"value,name\"){\n        0,\"N\"\n        1,\"Y\"\n    }\n    Div(row form-group){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: Name){\n                Span(Body: LangRes(@1ex_symbol)\n            }\n            Span(Class: text-danger, Body:*)\n        }\n        Div(col-sm-9){\n            Input(Name: name, Type: text)\n        }\n    }\n    Div(row form-group){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: Pricetick){\n                Span(Body: LangRes(@1ex_pricetick)\n            }\n            Span(Class: text-danger, Body:*)\n        }\n        Div(col-sm-9){\n            Input(Name: pricetick, Type: number)\n        }\n    }\n    Div(row form-group){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: Range){\n                Span(Body: LangRes(@1ex_range)\n            }\n            Span(Class: text-danger, Body:*)\n        }\n        Div(col-sm-9){\n            Input(Name: range, Type: number)\n        }\n    }\n    Div(row form-group){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: LotSize){\n                Span(Body: LangRes($@1ex_lotsize)\n            }\n            Span(Class: text-danger, Body:*)\n        }\n        Div(col-sm-9){\n            Input(Name: lotsize, Type: number)\n        }\n    }\n    Div(row form-group){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: isTradeable){\n                Span(Body: LangRes(@1ex_trade_status)\n            }\n            Span(Class: text-danger, Body:*)\n        }\n        Div(col-sm-9){\n            RadioGroup(Name: isTradeable, Value: 1, Source: bool, ValueColumn: value, NameColumn: name)\n        }\n    }\n    Div(row form-group){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: isCross){\n                Span(Body: LangRes(@1ex_cross_trades)\n            }\n            Span(Class: text-danger, Body:*)\n        }\n        Div(col-sm-9){\n            RadioGroup(Name: isCross, Value: 1, Source: bool, ValueColumn: value, NameColumn: name)\n        }\n    }\n    Div(row form-group){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: ecosystem_hub){\n                Span(Body: LangRes(@1ex_ecosystem_hub)\n            }\n            Span(Class: text-danger, Body:*)\n        }\n        Div(col-sm-9){\n            Select(Name: ecosystem, Source: src_eco, NameColumn: name, ValueColumn: id)\n        }\n    }\n    Div(row mt){\n        Div(col-md-12){\n            Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1ex_listing)\n            Button(Body: LangRes(@1create), Page: @1ex_listing, Class: btn pull-right btn-primary, Contract: @1ExSymbol, Params: \"operation=C\")\n        }\n    }\n}",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "ex_tradedesk",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "DBFind(@1symbol).Where({id:1}).Columns(\"id,name\").Vars(ticker)\n\nDiv(content-wrapper){\n     Div(col-lg-12){\n        Div(panel-body){\n            Div(row){\n                Span(Class: h3 text-primary, Body: #ticker_name#)\n                Div(col-md-12){\n                    DBFind(@1order_log,src_L1).Where({\"status\":\"F\",\"symbol\":\"#ticker_name#\",\"venue\":\"EX\"}).Order({\"id\":\"1\"}).Limit(1)\n                    Table(Source: src_L1, Columns: \"Flag=flag,Price=price,Quantity=quantity,Value=value\")\n                }\n            }\n        }\n    }\n    Div(col-lg-6){\n        Form(panel panel-primary){\n            Div(panel-body){\n                Div(row){\n                    Div(col-md-10){\n                        Form(){\n                            Div(row form-group){\n                                Div(col-sm-3 mt-sm text-right){\n                                    Label(For: Quantity){\n                                        \"Quantity\"\n                                    }\n                                    Span(Class: text-danger, Body:*)\n                                }\n                                Div(col-sm-9){\n                                    Input(Name: quantity, Type: number)\n                                }\n                            }\n                            Div(row form-group){\n                                Div(col-sm-3 mt-sm text-right){\n                                    Label(For: Price){\n                                        \"Price\"\n                                    }\n                                    Span(Class: text-danger, Body:*)\n                                }\n                                Div(col-sm-9){\n                                    Input(Name: price, Type: number)\n                                }\n                            }\n                            Div(row mt){\n                                Div(col-md-12){\n                                    Button(Body: \"Sell\", Page: @1ex_tradedesk, Class: btn pull-left btn-danger, Contract: @1ExMatching, Params: \"flag=S, symbol=#ticker_name#, venue=EX, client=#key_id#, status=A\", PageParams: \"ticker_id=#ticker_id#\")\n                                    Button(Body: \"Buy\", Page: @1ex_tradedesk, Class: btn pull-right btn-success, Contract: @1ExMatching, Params: \"flag=B, symbol=#ticker_name#, venue=EX, client=#key_id#, status=A\", PageParams: \"ticker_id=#ticker_id#\")\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n    Div(col-lg-6){\n        Form(panel panel-primary){\n            Div(panel-body){\n                Div(row){\n                    Div(col-md-12 text-left){\n                        DBFind(@1order_log,src_S).Where({\"flag\":\"S\",\"symbol\":\"#ticker_name#\",\"status\":\"A\",\"venue\":\"EX\"}).Order({\"price\":\"-1\"}).Limit(20).Custom(price_money){\n                                Money(#price#)\n                        }.Custom(value_money){\n                                Money(#client_value#) for Money(#counterparty_value#)\n                        }.Custom(_button){\n                            Button(Body: \"Buy\", Class: btn btn-success, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: \"flag=B,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F\", PageParams: \"ticker_id=#ticker_id#\")\n                        }.Custom(_cancel){\n                            If(#client#==#key_id#){\n                                Button(Body: \"Cancel\", Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: \"flag=#flag#,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=C\", PageParams: \"ticker_id=#ticker_id#\")\n                            }\n                        }.Count(sell_orders)\n                        If(#sell_orders# > 0){\n                            Table(Source: src_S, Columns: \"=_cancel,Flag=flag,Symbol=symbol,Quantity=quantity,Price=price_money,Value=value_money,=_button\").Style(\n                                tbody > tr > td {\n                                    width: 10%;\n                                    word-break: break-all;\n                                    font-weight: 400;\n                                    font-size: 13px;\n                                    color: #666;\n                                    border-top: 1px solid #eee;\n                                    vertical-align: middle;\n                                }\n                            )\n                        }.Else{\n                            Div(Class: h4 text-bold m0 text-center, Body: $@1ex_hint_no_orders$ #ticker_name#)\n                        }\n                        DBFind(@1order_log,src_B).Where({\"flag\":\"B\",\"symbol\":\"#ticker_name#\",\"status\":\"A\",\"venue\":\"EX\"}).Order({\"price\":\"-1\"}).Limit(20).Custom(price_money){\n                                Money(#price#)\n                        }.Custom(value_money){\n                                Money(#client_value#) for Money(#counterparty_value#)\n                        }.Custom(_button){\n                            Button(Body: \"Sell\", Class: btn btn-danger, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: \"flag=S,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F\", PageParams: \"ticker_id=#ticker_id#\")\n                        }.Custom(_cancel){\n                            If(#client#==#key_id#){\n                                Button(Body: \"Cancel\", Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: \"flag=#flag#,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=C\", PageParams: \"ticker_id=#ticker_id#\")\n                            }\n                        }.Count(buy_orders)\n                        If(#buy_orders# > 0){\n                            Table(Source: src_B, Columns: \"=_cancel,Flag=flag,Symbol=symbol,Quantity=quantity,Price=price_money,Value=value_money,=_button\").Style(\n                                tbody > tr > td {\n                                    width: 10%;\n                                    word-break: break-all;\n                                    font-weight: 400;\n                                    font-size: 13px;\n                                    color: #666;\n                                    border-top: 1px solid #eee;\n                                    vertical-align: middle;\n                                }\n                            )\n                        }\n                    }\n                }\n            }\n        }\n    }\n    Div(col-lg-6){\n        Form(panel panel-primary){\n            Div(panel-body){\n                Div(row){\n                    Div(col-md-10){\n                        DBFind(@1order_log,src_L2).Where({\"status\":\"F\",\"symbol\":\"#ticker_name#\",\"venue\":\"EX\"}).Columns(\"id,price\")\n                        Chart(Type: \"line\", Source: src_L2, FieldLabel: \"id\", FieldValue: \"price\", Colors: \"#e74c3c, #2ecc71, #8e44ad, #34495e, #ecf0f1, #F79F1F, #1B1464, #6F1E51\") \n                    }\n                }\n            }\n        }\n    }\n}\n\n",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "ExCancel",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract ExCancel {\n    data {\n        symbol string\n    }\n    conditions {\n        //only founder\n    }\n    action {\n        var ids array\n        var i int\n        i = 0\n        ids = DBFind(\"@1order_log\").Where({\"symbol\":$symbol, \"status\":\"A\"}).Columns(\"id\")\n        while i < Len(ids) {\n            var id int\n            id = ids[i]\n            var cancel int \n            cancel = Int(id[\"id\"])\n            DBUpdate(\"@1order_log\", cancel, {status:\"C\"})\n            i = i + 1\n        }  \n    }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "ExMatching",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract ExMatching {\n    data {\n        id int \"optional\"\n        client int \"optional\"\n        counterparty int \"optional\"\n        flag string\n        symbol string\n        venue string\n        quantity int\n        price money\n        status string\n        comment string \"optional\"\n    }\n    //double value with special field\n    func calcCounterpartyValue (quantity int) money {\n        var lot_size counterparty_value money\n        lot_size = Money(DBFind(\"@1symbol\").Where({\"name\":$symbol}).Columns(\"lotsize\").One(\"lotsize\"))\n        var i int\n        i = 1\n        counterparty_value = Money(0)\n        while i < $quantity+1 {\n            counterparty_value = counterparty_value + lot_size\n            if i == $quantity {\n                return counterparty_value\n            }\n            i = i + 1\n        }  \n    }\n    func calcClientValue (price money, quantity int) money {\n        var client_value money\n        var j int\n        j = 1\n        client_value = Money(0)\n        while j < $quantity+1 {\n            client_value = client_value + price\n            if j == $quantity {\n                return client_value\n            }\n            j = j + 1\n        }  \n    }\n    conditions {\n        //check for price for range probably via func\n        //check price via pricetick by divide zero to string\n        var tradestatus int\n        tradestatus = Int(DBFind(\"@1symbol\").Where({\"name\":$symbol}).Columns(\"tradeable\").One(\"tradeable\"))\n        if (tradestatus != 1) {\n           warning LangRes(\"@1ex_error_tradestatus\", \"en\")\n        }\n        var check_eco_id ecosystem_hub int\n        ecosystem_hub = Int(DBFind(\"@1symbol\").Where({\"name\":$symbol}).Columns(\"ecosystem_hub\").One(\"ecosystem_hub\"))\n        check_eco_id = Int(DBFind(\"@1keys\").Where({\"id\":$client, \"ecosystem\":ecosystem_hub}).One(\"id\"))\n        if check_eco_id != $client {\n            warning LangRes(\"@1ex_error_account\", \"en\")\n        }\n        if $status != \"C\" {\n            var balance client_value money\n            balance = Money(DBFind(\"@1keys\").Where({\"id\":$client, \"ecosystem\":$ecosystem_id}).Columns(\"amount\").One(\"amount\"))\n            client_value = calcClientValue($price, $quantity)\n            if (client_value > balance) {\n                warning LangRes(\"@1ex_error_balance_check\", \"en\")\n            }\n        }\n        if $flag == \"B\" && $status == \"A\" {\n            var check_price int\n            check_price = Int(DBFind(\"@1order_log\").Where({\"symbol\":$symbol, \"status\":\"A\",\"flag\":\"S\", \"price\":{\"$lt\":$price}}).One(\"price\"))\n            if check_price > 0 {\n                warning LangRes(\"@1ex_error_market_orders\", \"en\")\n            }\n        }\n        if $flag == \"S\" && $status == \"A\" {\n            var check_price int\n            check_price = Int(DBFind(\"@1order_log\").Where({\"symbol\":$symbol, \"status\":\"A\",\"flag\":\"S\", \"price\":{\"$gt\":$price}}).One(\"price\"))\n            if check_price > 0 {\n                warning LangRes(\"@1ex_error_market_orders\", \"en\")\n            }\n        }\n        if $status == \"F\" {\n            var counterparty check_cross int\n            counterparty = Int(DBFind(\"@1order_log\").Where({\"id\":$id}).Columns(\"client\").One(\"client\"))\n            check_cross = Int(DBFind(\"@1symbol\").Where({\"name\":$symbol}).One(\"cross\"))\n            if check_cross = 0 {\n                if $client == counterparty {\n                    warning LangRes(\"@1ex_error_cross_trades\", \"en\")\n                }\n            }\n        }\n    }\n    action {\n        var counterparty_value client_value money\n        counterparty_value = calcCounterpartyValue($quantity)\n        client_value = calcClientValue($price, $quantity)\n        var ecosystem_hub int\n        ecosystem_hub = Int(DBFind(\"@1symbol\").Where({\"name\":$symbol}).Columns(\"ecosystem_hub\").One(\"ecosystem_hub\"))\n        if $flag == \"B\" {\n            if $status == \"C\" {\n                DBUpdate(\"@1order_log\", $id, {status:\"C\"})\n            }\n            if $status == \"A\" {\n                DBInsert(\"@1order_log\", {flag: $flag, client: $client, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, client_value: client_value, counterparty_value: counterparty_value, status: $status})\n            }\n            if $status == \"F\" {\n                DBUpdate(\"@1order_log\", $id, {status:\"F\", counterparty: $client})\n                var counterparty int\n                counterparty = Int(DBFind(\"@1order_log\").Where({\"id\":$id}).Columns(\"client\").One(\"client\"))\n                DBInsert(\"@1order_log\", {flag: $flag, client: $client, counterparty: counterparty, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price,client_value: client_value, counterparty_value: counterparty_value, status: $status})\n                @1TokensTransfer(\"Amount,SenderId,RecipientId,Comment,Ecosystem\", client_value, $client, counterparty, $comment, $ecosystem_id)\n                @1TokensTransfer(\"Amount,SenderId,RecipientId,Comment,Ecosystem\", counterparty_value, counterparty, $client, $comment, ecosystem_hub)\n            }\n        }\n        if $flag == \"S\" {\n            if $status == \"C\" {\n                DBUpdate(\"@1order_log\", $id, {status:\"C\"})\n            } \n            if $status == \"A\" {\n                DBInsert(\"@1order_log\", {flag: $flag, client: $client, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, client_value: client_value, counterparty_value: counterparty_value, status: $status})\n            } \n            if $status == \"F\" {\n                DBUpdate(\"@1order_log\", $id, {status:\"F\", counterparty: $client})\n                var counterparty int\n                counterparty = Int(DBFind(\"@1order_log\").Where({\"id\":$id}).Columns(\"client\").One(\"client\"))\n                DBInsert(\"@1order_log\", {flag: $flag, client: $client, counterparty: counterparty, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, client_value: client_value, counterparty_value: counterparty_value, status: $status})\n                @1TokensTransfer(\"Amount,SenderId,RecipientId,Comment,Ecosystem\", client_value, $client, counterparty, $comment, $ecosystem_id)\n                @1TokensTransfer(\"Amount,SenderId,RecipientId,Comment,Ecosystem\", counterparty_value, counterparty, $client, $comment, ecosystem_hub)\n            }\n        }\n    }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "ExSymbol",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract ExSymbol {\n    data {\n        id int \"optional\"\n        status string \"optional\"\n        operation string\n        name string\n        pricetick money\n        range money\n        lotsize money\n        ecosystem int\n        isTradeable int \"optional\"\n        isCross int \"optional\"\n    }\n    conditions {\n        if $operation == \"C\" {\n            var check_symbol string\n            check_symbol = DBFind(\"@1symbol\").Where({\"name\":$name}).Columns(\"name\").One(\"name\")\n            if (check_symbol == $name) {\n                warning LangRes(\"@1ex_error_symbol_name\", \"en\")\n            }\n        }\n        if ($ecosystem == 1) {\n            warning LangRes(\"@1ex_error_mirror_trading\", \"en\")\n        }\n        //only founder\n    }\n    action {\n        if $operation == \"C\" {\n            var m map\n            m[\"name\"] = $name\n            m[\"pricetick\"] = $pricetick\n            m[\"range\"] = $range\n            m[\"lotsize\"] = $lotsize\n            m[\"ecosystem_hub\"] = $ecosystem\n            m[\"tradeable\"] = $isTradeable\n            m[\"cross\"] = $isCross\n            DBInsert(\"@1symbol\", m)\n        }\n        if $operation == \"E\" {\n            @1ExCancel(\"symbol\", $name)\n            var m map\n            m[\"pricetick\"] = $pricetick\n            m[\"range\"] = $range\n            m[\"lotsize\"] = $lotsize\n            m[\"ecosystem_hub\"] = $ecosystem\n            DBUpdate(\"@1symbol\", $id, m)\n        }\n        if $operation == \"U\" {\n            var m map\n            if $status == \"TR\" {\n                @1ExCancel(\"symbol\", $name)\n                m[\"tradeable\"] = $isTradeable\n            } \n            if $status == \"CR\" {\n                m[\"cross\"] = $isCross\n            }\n            DBUpdate(\"@1symbol\", $id, m)\n        }\n    }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "default_menu",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "If(#ecosystem_id# == 1){\n    MenuItem(Title:$@1ex_exchange$, Page:@1ex_listing, Icon:\"fa fa-money\")\n}",
+            "Type": "menu"
+        },
+        {
+            "Name": "ex_add_trade_symbol",
+            "Trans": "{\"en\": \"New trade symbol\", \"ru\": \"Добавить торговый инструмент\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_buy",
+            "Trans": "{\"en\": \"Buy\", \"ru\": \"Купить\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_cancel",
+            "Trans": "{\"en\": \"Cancel\", \"ru\": \"Отмена\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_cancel_all",
+            "Trans": "{\"en\": \"Cancel all orders\", \"ru\": \"Снять все заявки\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_confirmation_kill",
+            "Trans": "{\"en\": \"Warning! Make sure that changing any of trading params and pressing this button you will cancel all active orders at this symbol. Please confirm your action\", \"ru\": \"ВНИМАНИЕ! Изменяя один из торговых парамтеров и для сохранения изменений, вам придется отменить все активные заявки по данному торговому инструменту. Если вы действительно желаете изменить параметры, подтвердите ваше действие.\" }",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_cross_trades",
+            "Trans": "{\"en\": \"Cross trades\", \"ru\": \"Кросс-заявки\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_ecosystem_hub",
+            "Trans": "{\"en\": \"Ecosystem Trade Hub\", \"ru\": \"Сопряженная для торговли экосистема\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_error_account",
+            "Trans": "{\"en\": \"Wallen not found in the ecosystem! You must enter first in the ecosystem to trade this symbol\", \"ru\": \"Ваш кошелек не найден в соответствующей экосистеме. Пожалуйста, зайдите в экосистему что бы начать торговать этим инструментом\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_error_balance_check",
+            "Trans": "{\"en\": \"Order cancelled. Value of your transaction is more then your current balance\", \"ru\": \"Заявка отменена. Сумма вашей транзакции превышает ваш баланс.\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_error_cross_trades",
+            "Trans": "{\"en\": \"Cross trade are not allowed for this trade symbol\", \"ru\": \"Кросс-заявки отключены для этого торгового инстумента\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_error_ecosystems",
+            "Trans": "{\"en\": \"You should have more then one ecosystem created, to make Token Exchange avaliable.\", \"ru\": \"Вам необходимо создать более чем одну экосистему, что бы Биржа Токен стала доступна.\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_error_market_orders",
+            "Trans": "{\"en\": \"Market orders are not allowed on this type of exchange\", \"ru\": \"Исполнение заявки по ценам выше рыночных недопустимы на этой бирже\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_error_mirror_trading",
+            "Trans": "{\"en\": \"You can't trade any symbol inside primary ecosystem.\", \"ru\": \"Невозможно создать торговый инструмент внутри основной экосистемы\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_error_no_symbols",
+            "Trans": "{\"en\": \"There are no symbols created and avaliable for trading yet! Please contract administrator to create one.\", \"ru\": \"В данный момент ещё не создан ни один торговый инструмент. Если вы хотите создать его, пожалуйста сообщите об этом администратору.\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_error_symbol_name",
+            "Trans": "{\"en\": \"Symbol name must be unique!\", \"ru\": \"Имя торгового инструмента должно быть уникально!\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_error_tradestatus",
+            "Trans": "{\"en\": \"At the moment this trade symbol doesn't avaliable for trading\", \"ru\": \"На данный момент торговля по данному инструменту остановлена\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_exchange",
+            "Trans": "{\"en\": \"Token Exchange\", \"ru\": \"Биржа Токенов\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_exchange_desc",
+            "Trans": "{\"en\": \"Welcome to Token Exchange! Please select symbol below or create one to start trading.\", \"ru\": \"Добро пожаловать на Биржу Токенов! Пожалуйста выберите торговый инструмент ниже или создайте его что бы начать торговлю.\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_hint_cross_trades",
+            "Trans": "{\"en\": \"Cross trade are allowed for this trade symbol. Yoo can place orders and fill it by yourself\", \"ru\": \"Кросс-заявки допускаются для этого торгового инстумента. Вы можете выставлять заявки и сами же исполнять их.\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_hint_no_orders",
+            "Trans": "{\"en\": \"There are no orders yet! Be the first who conquer market on \", \"ru\": \"Никто пока не выставил ни одной заявки! Будь первым кто захватит рынок по \"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_hint_tradestatus",
+            "Trans": "{\"en\": \"At the moment this trade symbol avaliable for trading\", \"ru\": \"На данный момент производятся торги по данному инструменту\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_lotsize",
+            "Trans": "{\"en\": \"Lot size\", \"ru\": \"Размер лота\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_price",
+            "Trans": "{\"en\": \"Price\", \"ru\": \"Цена\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_pricetick",
+            "Trans": "{\"en\": \"Pricetick\", \"ru\": \"Шаг цены\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_quantity",
+            "Trans": "{\"en\": \"Quantity\", \"ru\": \"Количество\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_range",
+            "Trans": "{\"en\": \"Trade range\", \"ru\": \"Допустимый диапазон\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_sell",
+            "Trans": "{\"en\": \"Sell\", \"ru\": \"Продать\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_symbol",
+            "Trans": "{\"en\": \"Symbol\", \"ru\": \"Торговый инстумент\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_symbol_new",
+            "Trans": "{\"en\": \"Create new trading symbol\", \"ru\": \"Добавить новый торговый инструмент\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_symbol_param",
+            "Trans": "{\"en\": \"Edit symbol parameters\", \"ru\": \"Редактирование параметров торгового инструмента\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_trade_status",
+            "Trans": "{\"en\": \"Trade status\", \"ru\": \"Статус торгов\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_value",
+            "Trans": "{\"en\": \"Value\", \"ru\": \"Объём\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "ex_welcome_screen",
+            "Trans": "{\"en\": \"Welcome to Token Exchange. Currently there are no trade symbols allowed to trade.\", \"ru\": \"Добро пожаловать на Биржу Токенов! К сожалению в текущий момент нет ни одного инструмента доступного для торгов.\"}",
+            "Type": "languages"
+        }
+    ]
+}
