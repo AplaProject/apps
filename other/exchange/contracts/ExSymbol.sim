@@ -12,7 +12,16 @@ contract ExSymbol {
         isCross int "optional"
     }
     conditions {
-        //unqiue name && find by id
+        if $operation == "C" {
+            var check_symbol string
+            check_symbol = DBFind("@1symbol").Where({"name":$name}).Columns("name").One("name")
+            if (check_symbol == $name) {
+                warning LangRes("@1ex_error_symbol_name", "en")
+            }
+        }
+        if ($ecosystem == 1) {
+            warning LangRes("@1ex_error_mirror_trading", "en")
+        }
         //only founder
     }
     action {
@@ -28,16 +37,18 @@ contract ExSymbol {
             DBInsert("@1symbol", m)
         }
         if $operation == "E" {
+            @1ExCancel("symbol", $name)
             var m map
-            m["name"] = $name
             m["pricetick"] = $pricetick
             m["range"] = $range
             m["lotsize"] = $lotsize
+            m["ecosystem_hub"] = $ecosystem
             DBUpdate("@1symbol", $id, m)
         }
         if $operation == "U" {
             var m map
             if $status == "TR" {
+                @1ExCancel("symbol", $name)
                 m["tradeable"] = $isTradeable
             } 
             if $status == "CR" {

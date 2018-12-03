@@ -6,41 +6,74 @@ contract ExMatching {
         flag string
         symbol string
         venue string
-        quantity money
+        quantity int
         price money
         status string
         comment string "optional"
     }
-    func calcValue (quantity money, price money) money {
-        var lot_size value money
-        lot_size = Money(DBFind("@1symbol").Where({"name":$symbol}).Columns("range").One("range"))
-        value = Money(($quantity * lot_size) * $price)
-        return value
+    //double value with special field
+    func calcCounterpartyValue (quantity int) money {
+        var lot_size counterparty_value money
+        lot_size = Money(DBFind("@1symbol").Where({"name":$symbol}).Columns("lotsize").One("lotsize"))
+        var i int
+        i = 1
+        counterparty_value = Money(0)
+        while i < $quantity+1 {
+            counterparty_value = counterparty_value + lot_size
+            if i == $quantity {
+                return counterparty_value
+            }
+            i = i + 1
+        }  
+    }
+    func calcClientValue (price money, quantity int) money {
+        var client_value money
+        var j int
+        j = 1
+        client_value = Money(0)
+        while j < $quantity+1 {
+            client_value = client_value + price
+            if j == $quantity {
+                return client_value
+            }
+            j = j + 1
+        }  
     }
     conditions {
         //check for price for range probably via func
         //check price via pricetick by divide zero to string
-        var ecosystem_hub int
+        var tradestatus int
+        tradestatus = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("tradeable").One("tradeable"))
+        if (tradestatus != 1) {
+           warning LangRes("@1ex_error_tradestatus", "en")
+        }
+        var check_eco_id ecosystem_hub int
         ecosystem_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("ecosystem_hub").One("ecosystem_hub"))
-        var balance value money
-        balance = Money(DBFind("@1keys").Where({"id":$client, "ecosystem":ecosystem_hub}).Columns("amount").One("amount"))
-        value = calcValue($quantity, $price)
-        if (value > balance) {
-            warning LangRes("@1ex_error_balance_check", "en")
-        }
-        if $flag == "B" || "S" {
-            if $status == "A" {
-                var check_price int
-                check_price = Int(DBFind("@1order_log").Where({"symbol":$symbol, "status":"A","flag":"S", "price":{"$gte":$price}}).One("price"))
-                if check_price > 0 {
-                    warning LangRes("@1ex_error_market_orders", "en")
-                }
-            }
-        }
-        var check_eco_id int
         check_eco_id = Int(DBFind("@1keys").Where({"id":$client, "ecosystem":ecosystem_hub}).One("id"))
         if check_eco_id != $client {
             warning LangRes("@1ex_error_account", "en")
+        }
+        if $status != "C" {
+            var balance client_value money
+            balance = Money(DBFind("@1keys").Where({"id":$client, "ecosystem":$ecosystem_id}).Columns("amount").One("amount"))
+            client_value = calcClientValue($price, $quantity)
+            if (client_value > balance) {
+                warning LangRes("@1ex_error_balance_check", "en")
+            }
+        }
+        if $flag == "B" && $status == "A" {
+            var check_price int
+            check_price = Int(DBFind("@1order_log").Where({"symbol":$symbol, "status":"A","flag":"S", "price":{"$lt":$price}}).One("price"))
+            if check_price > 0 {
+                warning LangRes("@1ex_error_market_orders", "en")
+            }
+        }
+        if $flag == "S" && $status == "A" {
+            var check_price int
+            check_price = Int(DBFind("@1order_log").Where({"symbol":$symbol, "status":"A","flag":"S", "price":{"$gt":$price}}).One("price"))
+            if check_price > 0 {
+                warning LangRes("@1ex_error_market_orders", "en")
+            }
         }
         if $status == "F" {
             var counterparty check_cross int
@@ -54,8 +87,9 @@ contract ExMatching {
         }
     }
     action {
-        var value money
-        value = calcValue($quantity, $price)
+        var counterparty_value client_value money
+        counterparty_value = calcCounterpartyValue($quantity)
+        client_value = calcClientValue($price, $quantity)
         var ecosystem_hub int
         ecosystem_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("ecosystem_hub").One("ecosystem_hub"))
         if $flag == "B" {
@@ -63,15 +97,15 @@ contract ExMatching {
                 DBUpdate("@1order_log", $id, {status:"C"})
             }
             if $status == "A" {
-                DBInsert("@1order_log", {flag: $flag, client: $client, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, value: value, status: $status})
+                DBInsert("@1order_log", {flag: $flag, client: $client, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, client_value: client_value, counterparty_value: counterparty_value, status: $status})
             }
             if $status == "F" {
                 DBUpdate("@1order_log", $id, {status:"F", counterparty: $client})
                 var counterparty int
                 counterparty = Int(DBFind("@1order_log").Where({"id":$id}).Columns("client").One("client"))
-                DBInsert("@1order_log", {flag: $flag, client: $client, counterparty: counterparty, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, value: value, status: $status})
-                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", value, $client, counterparty, $comment, $ecosystem_id)
-                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", value, counterparty, $client, $comment, ecosystem_hub)
+                DBInsert("@1order_log", {flag: $flag, client: $client, counterparty: counterparty, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price,client_value: client_value, counterparty_value: counterparty_value, status: $status})
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", client_value, $client, counterparty, $comment, $ecosystem_id)
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", counterparty_value, counterparty, $client, $comment, ecosystem_hub)
             }
         }
         if $flag == "S" {
@@ -79,15 +113,15 @@ contract ExMatching {
                 DBUpdate("@1order_log", $id, {status:"C"})
             } 
             if $status == "A" {
-                DBInsert("@1order_log", {flag: $flag, client: $client, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, value: value, status: $status})
+                DBInsert("@1order_log", {flag: $flag, client: $client, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, client_value: client_value, counterparty_value: counterparty_value, status: $status})
             } 
             if $status == "F" {
                 DBUpdate("@1order_log", $id, {status:"F", counterparty: $client})
                 var counterparty int
                 counterparty = Int(DBFind("@1order_log").Where({"id":$id}).Columns("client").One("client"))
-                DBInsert("@1order_log", {flag: $flag, client: $client, counterparty: counterparty, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, value: value, status: $status})
-                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", value, $client, counterparty, $comment, $ecosystem_id)
-                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", value, counterparty, $client, $comment, ecosystem_hub)
+                DBInsert("@1order_log", {flag: $flag, client: $client, counterparty: counterparty, venue: $venue, symbol: $symbol, quantity: $quantity, price: $price, client_value: client_value, counterparty_value: counterparty_value, status: $status})
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", client_value, $client, counterparty, $comment, $ecosystem_id)
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", counterparty_value, counterparty, $client, $comment, ecosystem_hub)
             }
         }
     }
