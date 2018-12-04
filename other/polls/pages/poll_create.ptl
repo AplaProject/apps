@@ -1,0 +1,121 @@
+DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
+
+SetVar(template_id, 0)
+SetVar(title,$@1create_poll$).(typevoting,0).(volume,50).(quorum,51).(subj,).(voters,).(candidates,).(vacancies,1).(contract_init,).(contract_accept,).(accept_params,).(contract_reject,).(reject_params,)
+
+If(#TemplateId#>0){
+    DBFind(@1voting_templates).WhereId(#TemplateId#).Vars(template)
+    DBFind(@1votings_subject, src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->text").Vars(prefix)
+    SetVar(title, #template_title#)
+    SetVar(typevoting, #template_type_voting#)
+    SetVar(volume, #template_volume#)
+    SetVar(subj, #template_subject#)
+    SetVar(quorum, #template_quorum#)
+    SetVar(voters, #template_voters#)
+    SetVar(candidates, #template_candidates#)
+    SetVar(vacancies, #template_vacancies#)
+    SetVar(contract_init, #template_init_contract#)
+    SetVar(contract_accept, #template_contract_accept#)
+    SetVar(accept_params, #template_accept_params#)
+    SetVar(contract_reject, #template_contract_reject#)
+    SetVar(reject_params, #template_reject_params#)
+    If(GetVar(CountTypeVoters)==""){
+        SetVar(CountTypeVoters, #template_count_type_voters#)
+    }
+}
+
+If(#TypeDecision#>0){
+    SetVar(typedec,#TypeDecision#)
+}.Else{
+    SetVar(typedec,0)
+}
+If(#TypeParticipants#>0){
+    SetVar(typepart,#TypeParticipants#)
+}.Else{
+    SetVar(typepart,0)
+}
+
+SetVar(col_right,"col-sm-8 mb-sm text-left")
+SetVar(col_right_nob,"col-sm-8 text-left")
+SetVar(col_left,"col-sm-4 mt-sm text-right")
+
+SetVar(this_page, @1poll_create)
+If(GetVar(CountTypeVoters)==""){
+    SetVar(CountTypeVoters,0)
+}
+
+Form(){ 
+    Div(row){
+        Div(#col_left#){
+            Label(For: #name#){
+                LangRes(@1participants)
+                Span(*,text-danger)
+            }
+        }
+        Div(#col_right#){
+            Data(poll_type_participants,"id,name"){
+                1, $@1everybody$
+                4, $@1roles_list2$
+            }
+            Select(Name: TypeParticipants, Source: poll_type_participants, NameColumn: name, ValueColumn: id)
+        }
+    }
+    Div(row){
+        Div(#col_left#){
+            Label(For: Title){
+                Span(Body: $@1title$)
+                Span(*,text-danger)
+            }
+        }
+        Div(#col_right#){
+            Input(Name: Title, Placeholder: $@1enter_poll_template_name$)
+        }
+    }
+    Div(row){
+        Div(col-md-12 text-center mt){
+            Span(Body: $@1poll_start$, Class: text-danger)
+        }
+    }
+    Div(row){
+        Div(#col_right#){
+            Input(Name: TypeVoting, Value: 3, Class: hidden)
+        }
+    }
+    Div(row){
+        Div(#col_right#){
+            Input(Name: Volume, Type: number, Value: 100, Class: hidden)
+        }
+    }
+    Div(row){
+        Div(#col_right#){
+            Input(Name: Quorum, Type: number, Value: 5, Class: hidden)
+        }
+    }
+    Div(row){
+        Div(#col_right#){
+            If(GetVar(CountTypeVoters)==0){
+                Button(Body: $@1percent_votes$, Page: #this_page#, PageParams: "CountTypeVoters=0,TemplateId=#TemplateId#,TypeParticipants=Val(TypeParticipants)", Class: hidden btn btn-primary disabled mr-lg)
+            }
+        }
+    }
+    Div(row){
+        Div(#col_right#){
+            If(GetVar(CountTypeVoters)==0){
+                Data(numbers_type_decisions,"value,name"){
+                    3,$@1document$
+                }
+                RadioGroup(Name: TypeDecision, Value: 3, Source: numbers_type_decisions, ValueColumn: value, NameColumn: name, Class: hidden)
+            }
+        }
+    }
+    Div(row mt){
+        Div(col-md-12){
+            If(#TemplateId#>0){
+                Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1poll, PageParams: "TemplateId=#TemplateId#,type=0")
+            }.Else{
+                Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1poll, PageParams: "TemplateId=#TemplateId#,type=0")
+            }
+            Button(Body: LangRes(@1create), Class: btn btn-primary pull-right, Page: @1poll, Contract: @1VotingTemplateCreate, PageParams: "type=0", Params: "Poll=1")
+        }
+    }
+}
