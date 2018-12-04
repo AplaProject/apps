@@ -1,4 +1,4 @@
-DBFind(@1symbol).Where({id:1}).Columns("id,name").Vars(ticker)
+DBFind(@1symbol).Where({id:#ticker_id#}).Vars(ticker)
 
 Div(content-wrapper){
      Div(col-lg-12){
@@ -8,6 +8,87 @@ Div(content-wrapper){
                 Div(col-md-12){
                     DBFind(@1order_log,src_L1).Where({"status":"F","symbol":"#ticker_name#","venue":"EX"}).Order({"id":"1"}).Limit(1)
                     Table(Source: src_L1, Columns: "Flag=flag,Price=price,Quantity=quantity,Value=value")
+                }
+            }
+        }
+    }
+    Div(col-lg-6){
+        Form(panel panel-primary){
+            Div(panel-body){
+                Div(row){
+                    Div(col-md-10){
+                        DBFind(@1order_log,src_L2).Where({"status":"F","symbol":"#ticker_name#","venue":"EX"}).Columns("id,price")
+                        Chart(Type: "line", Source: src_L2, FieldLabel: "id", FieldValue: "price", Colors: "#e74c3c, #2ecc71, #8e44ad, #34495e, #ecf0f1, #F79F1F, #1B1464, #6F1E51") 
+                    }
+                }
+            }
+        }
+    }
+    Div(col-lg-6){
+        Form(panel panel-primary){
+            Div(panel-body){
+                Div(row){
+                    Div(col-md-12 text-left){
+                        DBFind(@1order_log).Where({"symbol":"#ticker_name#","status":"A","venue":"EX"}).Count(orders)
+                        If(#orders# > 0){
+                            DBFind(@1order_log,src_S).Where({"flag":"S","symbol":"#ticker_name#","status":"A","venue":"EX"}).Order({"price":"-1"}).Limit(20).Custom(price_money){
+                                    Money(#price#)
+                            }.Custom(value_money){
+                                    Money(#client_value#) for Money(#counterparty_value#)
+                            }.Custom(_button){
+                                If(And(#client#==#key_id#,#ticker_cross#==0)){
+                                    Button(Body: "Cancel", Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=#flag#,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=C", PageParams: "ticker_id=#ticker_id#")
+                                }.Else{
+                                    Button(Body: "Buy", Class: btn btn-success, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=B,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F", PageParams: "ticker_id=#ticker_id#")
+                                }
+                            }.Custom(_cancel){
+                                If(#client#==#key_id#){
+                                    Button(Body: "Cancel", Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=#flag#,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=C", PageParams: "ticker_id=#ticker_id#")
+                                }
+                            }.Count(sell_orders)
+                            If(#sell_orders# > 0){
+                                Table(Source: src_S, Columns: "=_cancel,Flag=flag,Symbol=symbol,Quantity=quantity,Price=price_money,Value=value_money,=_button").Style(
+                                    tbody > tr > td {
+                                        width: 10%;
+                                        word-break: break-all;
+                                        font-weight: 400;
+                                        font-size: 13px;
+                                        color: #666;
+                                        border-top: 1px solid #eee;
+                                        vertical-align: middle;
+                                    }
+                                )
+                            }
+                            DBFind(@1order_log,src_B).Where({"flag":"B","symbol":"#ticker_name#","status":"A","venue":"EX"}).Order({"price":"-1"}).Limit(20).Custom(price_money){
+                                    Money(#price#)
+                            }.Custom(value_money){
+                                    Money(#client_value#) for Money(#counterparty_value#)
+                            }.Custom(_button){
+                                If(And(#client#==#key_id#,#ticker_cross#=0)){
+                                    Button(Body: "Sell", Class: btn btn-danger, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=S,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F", PageParams: "ticker_id=#ticker_id#")
+                                }
+                            }.Custom(_cancel){
+                                If(#client#==#key_id#){
+                                    Button(Body: "Cancel", Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=#flag#,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=C", PageParams: "ticker_id=#ticker_id#")
+                                }
+                            }.Count(buy_orders)
+                            If(#buy_orders# > 0){
+                                Table(Source: src_B, Columns: "=_cancel,Flag=flag,Symbol=symbol,Quantity=quantity,Price=price_money,Value=value_money,=_button").Style(
+                                    tbody > tr > td {
+                                        width: 10%;
+                                        word-break: break-all;
+                                        font-weight: 400;
+                                        font-size: 13px;
+                                        color: #666;
+                                        border-top: 1px solid #eee;
+                                        vertical-align: middle;
+                                    }
+                                )
+                            }
+                        }.Else{
+                            Div(Class: h4 text-bold m0 text-center, Body: $@1ex_hint_no_orders$ #ticker_name#)
+                        }
+                    }
                 }
             }
         }
@@ -47,78 +128,6 @@ Div(content-wrapper){
                                 }
                             }
                         }
-                    }
-                }
-            }
-        }
-    }
-    Div(col-lg-6){
-        Form(panel panel-primary){
-            Div(panel-body){
-                Div(row){
-                    Div(col-md-12 text-left){
-                        DBFind(@1order_log,src_S).Where({"flag":"S","symbol":"#ticker_name#","status":"A","venue":"EX"}).Order({"price":"-1"}).Limit(20).Custom(price_money){
-                                Money(#price#)
-                        }.Custom(value_money){
-                                Money(#client_value#) for Money(#counterparty_value#)
-                        }.Custom(_button){
-                            Button(Body: "Buy", Class: btn btn-success, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=B,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F", PageParams: "ticker_id=#ticker_id#")
-                        }.Custom(_cancel){
-                            If(#client#==#key_id#){
-                                Button(Body: "Cancel", Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=#flag#,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=C", PageParams: "ticker_id=#ticker_id#")
-                            }
-                        }.Count(sell_orders)
-                        If(#sell_orders# > 0){
-                            Table(Source: src_S, Columns: "=_cancel,Flag=flag,Symbol=symbol,Quantity=quantity,Price=price_money,Value=value_money,=_button").Style(
-                                tbody > tr > td {
-                                    width: 10%;
-                                    word-break: break-all;
-                                    font-weight: 400;
-                                    font-size: 13px;
-                                    color: #666;
-                                    border-top: 1px solid #eee;
-                                    vertical-align: middle;
-                                }
-                            )
-                        }.Else{
-                            Div(Class: h4 text-bold m0 text-center, Body: $@1ex_hint_no_orders$ #ticker_name#)
-                        }
-                        DBFind(@1order_log,src_B).Where({"flag":"B","symbol":"#ticker_name#","status":"A","venue":"EX"}).Order({"price":"-1"}).Limit(20).Custom(price_money){
-                                Money(#price#)
-                        }.Custom(value_money){
-                                Money(#client_value#) for Money(#counterparty_value#)
-                        }.Custom(_button){
-                            Button(Body: "Sell", Class: btn btn-danger, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=S,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F", PageParams: "ticker_id=#ticker_id#")
-                        }.Custom(_cancel){
-                            If(#client#==#key_id#){
-                                Button(Body: "Cancel", Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=#flag#,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=C", PageParams: "ticker_id=#ticker_id#")
-                            }
-                        }.Count(buy_orders)
-                        If(#buy_orders# > 0){
-                            Table(Source: src_B, Columns: "=_cancel,Flag=flag,Symbol=symbol,Quantity=quantity,Price=price_money,Value=value_money,=_button").Style(
-                                tbody > tr > td {
-                                    width: 10%;
-                                    word-break: break-all;
-                                    font-weight: 400;
-                                    font-size: 13px;
-                                    color: #666;
-                                    border-top: 1px solid #eee;
-                                    vertical-align: middle;
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-    Div(col-lg-6){
-        Form(panel panel-primary){
-            Div(panel-body){
-                Div(row){
-                    Div(col-md-10){
-                        DBFind(@1order_log,src_L2).Where({"status":"F","symbol":"#ticker_name#","venue":"EX"}).Columns("id,price")
-                        Chart(Type: "line", Source: src_L2, FieldLabel: "id", FieldValue: "price", Colors: "#e74c3c, #2ecc71, #8e44ad, #34495e, #ecf0f1, #F79F1F, #1B1464, #6F1E51") 
                     }
                 }
             }
