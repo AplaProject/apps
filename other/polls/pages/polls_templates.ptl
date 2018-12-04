@@ -1,9 +1,12 @@
-SetVar(this_page, @1poll_template).(this_table, @1voting_templates)
+SetVar(this_page, @1polls_templates).(this_table, @1voting_templates)
 Include(@1pager_header)
 
 SetTitle($@1polls_templates$)
+If(EcosysParam(Ecosystem:1, Name: role_admin) == #role_id#){
+    AddToolButton(Title: $@1template_add$, Page: @1polls_template_add, Icon: icon-plus).Popup(40, $@1template_add$)
+}
 Span(Class: h5 m0 mb ml-lg){
-    LinkPage(Class: ml-sm, Body: $@1polls$, Page: @1poll, PageParams: "type=0" )
+    LinkPage(Class: ml-sm, Body: $@1polls$, Page: @1polls_list, PageParams: "type=0" )
     Span(Class: text-muted mh, Body: /)
     Span(Class: text-muted, Body: $@1polls_templates$)
 }.Style(
@@ -11,9 +14,9 @@ Span(Class: h5 m0 mb ml-lg){
 )
 
 If(GetVar(search)){
-    SetVar(where,{ecosystem:#ecosystem_id#, "title":{"$like":#search#}})
+    SetVar(where, {"ecosystem": #ecosystem_id#, "type_voting": 3, "title": {"$like":#search#}})
 }.Else{
-    SetVar(where,{ecosystem:#ecosystem_id#, "id":{"$gt":0}, type_voting:3}).(Search,)
+    SetVar(where, {"ecosystem": #ecosystem_id#, "type_voting": 3}).(search,)
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
@@ -22,12 +25,12 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 }
 
 DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
-DBFind(#this_table#).Where({ecosystem:#ecosystem_id#}).Count(all_templates_count)
+
 DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_participants){
     AppParam(Ecosystem:1, App:#application_id#, Name:type_voting_participants, Index: #type_participants#)
 }.Custom(_actions){
     Div(text-right){
-        Button(Class: btn btn-default fa fa-eye, Page: @1poll_create_start, PageParams: "TemplateId=#id#")
+        Button(Class: btn btn-default fa fa-play, Page: @1polls_create, PageParams: "TemplateId=#id#")
     }
 }.Count(count)
 
@@ -36,8 +39,8 @@ Div(fullscreen){
         Div(list-group-item){
             If(#count# > 0){
                 Table(src, "$@1template$=title,$@1participants$=_participants,$@1decision$=_decision,=_actions")
-            }.ElseIf(#all_templates_count# == 0){
-                Div(Class: text-center h4 text-muted, Body: "$@1voting_templates_not_found$")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1polls_templates$ $@1not_founded$")
             }
         }.Style(
             margin-top:-15px;
