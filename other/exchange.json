@@ -55,21 +55,6 @@
             "Type": "contracts"
         },
         {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 2343451e358ecd73de931a7c8045df39ecab6241
-            "Name": "ExSandbox",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract ExSandbox {\n    data {\n        symbol string\n        price money\n        quote_price money\n    }\n    conditions {\n        var min max test money\n        min = Money(0)\n        max = 1000000000000000001\n        //====100000000000000000\n        //if $range > max || $range < min {\n            //warning Sprintf (\"%s\",\"no\")\n        //}\n    }\n    action {\n        var check_range range money\n        range = Money(DBFind(\"@1symbol\").Where({\"name\":$symbol}).Columns(\"range\").One(\"range\"))\n        //test = range/Money(1000000000000000000)\n        //var check_range money\n        //check_range_max = $quote_price + ($quote_price * $range)\n        //check_range_min = ($quote_price * $range)\n        check_range = $price * $quote_price\n        //if check_range > $range {\n            warning Sprintf (\"%s\",range, check_range)\n        //}\n    }\n}\n\ncontract ExSandbox {\n    data {\n        symbol string\n        price money\n    }\n    func check_pricetick (price money) money {\n        var pricetick check money\n        pricetick = Money(DBFind(\"@1symbol\").Where({\"name\":$symbol}).Columns(\"range\").One(\"range\"))\n        //test = Int($price/pricetick)\n        var i int\n        i = 0\n        var check money\n        while i < 10 {\n            check = $price - pricetick\n            return i\n            i = i + 1\n        }  \n    }\n    conditions {\n\n    }\n    action {\n        var check int\n        check = check_pricetick($price)\n        warning Sprintf (\"%s\", check)\n    }\n}\n\n\ncontract ExSandbox {\n    data {\n        symbol string\n        price money\n    }\n    \n    conditions {\n\n    }\n    action {\n        var pricetick test money\n        pricetick = Money(DBFind(\"@1symbol\").Where({\"name\":$symbol}).Columns(\"range\").One(\"range\"))\n        test = $price/pricetick\n\n        warning Sprintf (\"%s\", Len(test))\n        //var check int\n        //check = check_pricetick($price)\n        //warning Sprintf (\"%s\", check)\n    }\n}\n\n\ncontract ExSandbox {\n    data {\n        quantity int\n    }\n    //func calcValue (quantity int, price money) money {\n        var lot_size value money\n        lot_size = Money(DBFind(\"@1symbol\").Where({\"name\":$symbol}).Columns(\"lotsize\").One(\"lotsize\"))\n        var i int\n        i = 0\n        while i < $quantity+1 {\n            value = value + $lot_size\n            if i > $quantity-1 {\n                warning Sprintf (\"%s\", value)\n            }\n            i = i + 1\n        } \n        //value = Money(($quantity * lot_size) * $price)\n    //}\n    conditions {\n\n    }\n    action {\n        var lot_size value money\n        lot_size = Money(DBFind(\"@1symbol\").Where({\"name\":$symbol}).Columns(\"lotsize\").One(\"lotsize\"))\n        var i int\n        i = 0\n        value = Money(0)\n        while i < $quantity+1 {\n            value = value + $lot_size\n            if i > $quantity-1 {\n                warning Sprintf (\"%s\", value)\n            }\n            i = i + 1\n        } \n    }\n}\n\n\ncontract ExSandbox {\n    data {\n        symbol string\n        quantity int\n    }\n    func calcValue (quantity int) money {\n        var lot_size value money\n        lot_size = Money(DBFind(\"@1symbol\").Where({\"name\":$symbol}).Columns(\"lotsize\").One(\"lotsize\"))\n        var i int\n        i = 1\n        value = Money(0)\n        while i < $quantity+1 {\n            value = value + lot_size\n            if i == $quantity {\n                return value\n            }\n            i = i + 1\n        }  \n    }\n    conditions {\n\n    }\n    action {\n        var value money\n        value = calcValue($quantity)\n        warning Sprintf (\"%s\", value)\n        //value = Money(($quantity * lot_size) * $price)\n    }\n}\n",
-            "Type": "contracts"
-        },
-        {
-<<<<<<< HEAD
->>>>>>> 2343451e358ecd73de931a7c8045df39ecab6241
-=======
->>>>>>> 2343451e358ecd73de931a7c8045df39ecab6241
             "Name": "ExSymbol",
             "Conditions": "ContractConditions(\"MainCondition\")",
             "Value": "contract ExSymbol {\n    data {\n        id int \"optional\"\n        status string \"optional\"\n        operation string\n        name string\n        pricetick money\n        range money\n        lotsize money\n        ecosystem int\n        isTradeable int \"optional\"\n        isCross int \"optional\"\n    }\n    conditions {\n        if $operation == \"C\" {\n            var check_symbol string\n            check_symbol = DBFind(\"@1symbol\").Where({\"name\":$name}).Columns(\"name\").One(\"name\")\n            if (check_symbol == $name) {\n                warning LangRes(\"@1ex_error_symbol_name\", \"en\")\n            }\n        }\n        if ($ecosystem == 1) {\n            warning LangRes(\"@1ex_error_mirror_trading\", \"en\")\n        }\n        //only founder\n    }\n    action {\n        if $operation == \"C\" {\n            var m map\n            m[\"name\"] = $name\n            m[\"pricetick\"] = $pricetick\n            m[\"range\"] = $range\n            m[\"lotsize\"] = $lotsize\n            m[\"ecosystem_hub\"] = $ecosystem\n            m[\"tradeable\"] = $isTradeable\n            m[\"cross\"] = $isCross\n            DBInsert(\"@1symbol\", m)\n        }\n        if $operation == \"E\" {\n            @1ExCancel(\"symbol\", $name)\n            var m map\n            m[\"pricetick\"] = $pricetick\n            m[\"range\"] = $range\n            m[\"lotsize\"] = $lotsize\n            m[\"ecosystem_hub\"] = $ecosystem\n            DBUpdate(\"@1symbol\", $id, m)\n        }\n        if $operation == \"U\" {\n            var m map\n            if $status == \"TR\" {\n                @1ExCancel(\"symbol\", $name)\n                m[\"tradeable\"] = $isTradeable\n            } \n            if $status == \"CR\" {\n                m[\"cross\"] = $isCross\n            }\n            DBUpdate(\"@1symbol\", $id, m)\n        }\n    }\n}",
@@ -168,28 +153,12 @@
         },
         {
             "Name": "ex_exchange_desc",
-<<<<<<< HEAD
-<<<<<<< HEAD
             "Trans": "{\"en\": \"Welcome to Token Exchange! Please select symbol below or create one to start trading.\", \"ru\": \"Добро пожаловать на Биржу Токенов! Пожалуйста выберите торговый инструмент ниже или создайте его что бы начать торговлю.\"}",
-=======
-            "Trans": "{\"en\": \"Welcome to Token Exchange! Please select symbol below or create one to start trading.\", \"ru\": \"добро пожаловать на Биржу Токенов! Пожалуйста выберите торговый инструмент ниже или создайте его что бы начать торговлю.\"}",
->>>>>>> 2343451e358ecd73de931a7c8045df39ecab6241
-=======
-            "Trans": "{\"en\": \"Welcome to Token Exchange! Please select symbol below or create one to start trading.\", \"ru\": \"добро пожаловать на Биржу Токенов! Пожалуйста выберите торговый инструмент ниже или создайте его что бы начать торговлю.\"}",
->>>>>>> 2343451e358ecd73de931a7c8045df39ecab6241
             "Type": "languages"
         },
         {
             "Name": "ex_hint_cross_trades",
-<<<<<<< HEAD
-<<<<<<< HEAD
             "Trans": "{\"en\": \"Cross trade are allowed for this trade symbol. Yoo can place orders and fill it by yourself\", \"ru\": \"Кросс-заявки допускаются для этого торгового инстумента. Вы можете выставлять заявки и сами же исполнять их.\"}",
-=======
-            "Trans": "{\"en\": \"Cross trade are allowed for this trade symbol. Yoo can place orders and fill it by yourself\", \"ru\": \"Кросс заявки допускаются для этого торгового инстумента. Вы можете выставлять заявки и сами же исполнять их.\"}",
->>>>>>> 2343451e358ecd73de931a7c8045df39ecab6241
-=======
-            "Trans": "{\"en\": \"Cross trade are allowed for this trade symbol. Yoo can place orders and fill it by yourself\", \"ru\": \"Кросс заявки допускаются для этого торгового инстумента. Вы можете выставлять заявки и сами же исполнять их.\"}",
->>>>>>> 2343451e358ecd73de931a7c8045df39ecab6241
             "Type": "languages"
         },
         {
