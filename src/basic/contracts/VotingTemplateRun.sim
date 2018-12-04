@@ -51,7 +51,7 @@ contract VotingTemplateRun {
         $countTypeVoters = Int($template["count_type_voters"])
 
         $desc = Sprintf(LangRes("@1template", "en") + " #%v", $TemplateId)
-        if $type_voting < 1 || $type_voting > 2 {
+        if $type_voting < 1 || $type_voting > 3 {
             warning LangRes("@1voting_type_invalid", "en")
         }
         if $type_voting == 2 {
@@ -114,7 +114,7 @@ contract VotingTemplateRun {
         }
         // check duplicated
         if DBFind("@1votings").Where({ecosystem:$ecosystem_id, "voting->name":$votingName, "flags->decision":{"$nin":["1", "-1"]}, deleted:0}).Row(){
-            error LangRes("@1same_voting_created", "en")
+            warning LangRes("@1same_voting_created", "en")
         }
 
 
@@ -192,6 +192,9 @@ contract VotingTemplateRun {
         }
         if $participants == 1 {
             // if the participants are "all", the invite has already occurred in "@1VotingCreate"
+        }
+        if $type_voting == 3 {
+            @1VotingStatusUpdate()
         }
     }
 }

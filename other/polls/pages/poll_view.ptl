@@ -1,0 +1,149 @@
+DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Basic"}).Vars(application)
+If(#notific_id#>0){
+    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("page_params->voting_id").Vars(notific)
+    SetVar(vID,#notific_page_params_voting_id#)
+}
+
+SetVar(WAITING,1).(VALID,2).(STARTED,3).(FINISHED,4).(INVALID,5)
+SetVar(date_format,"DD.MM.YYYY HH:MI")
+SetVar(this_page,"@1poll_view")
+SetVar(col_right,"col-md-6 text-left h3")
+SetVar(col_left,"col-md-6 text-right h3")
+
+Div(content-wrapper){
+    If(#vID# > 0){
+        DBFind(@1votings, Source: charts).WhereId(#vID#).Columns("id,voting->name,voting->volume,voting->quorum,voting->type_participants,voting->type,voting->count_type_voters,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended,status").Vars(instance)
+        SetVar(type_decision,#instance_voting_type_decision#)
+        SetVar(type_participants,#instance_voting_type_participants#)
+
+        SetVar(isVotingAllowed,0)
+        SetVar(isStartProcessing,0)
+        If(Or(#type_participants#==1,#type_participants#==2,#type_participants#==3,#type_participants#==4)){
+            DBFind(@1votings_participants).Where({voting_id:#vID#,"member->member_id":#key_id#, decision:0, ecosystem: #ecosystem_id#}).Columns("id").Vars(flag_participant)
+            If(And(#instance_status#==#STARTED#,#flag_participant_id#>0)){
+                DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, "recipient->member_id":#key_id#, page_name:#this_page#, "page_params->voting_id": #vID#, closed:0}).Columns("id,notification->type,date_start_processing").Vars(notificcc)
+                If(#notificcc_id#>0){
+                    SetVar(isVotingAllowed,1)
+                    SetVar(notific_id,#notificcc_id#)
+                    If(And(#notificcc_notification_type#==2,#notificcc_date_start_processing#=="")){
+                        SetVar(isStartProcessing,1)
+                    }
+                }
+            }
+        }
+        If(#type_participants#==5){
+            DBFind(@1votings_participants).Where({voting_id:#vID#,"member->role_id":#role_id#, decision:0, ecosystem: #ecosystem_id#}).Columns("id").Vars(flag_participant)
+            If(And(#instance_status#==#STARTED#,#flag_participant_id#>0)){
+                DBFind(@1notifications).Where({{"$or":[{"date_start_processing": "$isnull"}, {"processing_info->member_id": #key_id#}]}, "ecosystem":#ecosystem_id#, "recipient->role_id":#role_id#, "page_name":#this_page#, "page_params->voting_id": #vID#, "closed":0}).Columns("id,notification->type,date_start_processing").Vars(notificcc)
+                If(#notificcc_id#>0){
+                    SetVar(isVotingAllowed,1)
+                    SetVar(notific_id,#notificcc_id#)
+                    If(And(#notificcc_notification_type#==2,#notificcc_date_start_processing#=="")){
+                        SetVar(isStartProcessing,1)
+                    }
+                }
+            }
+        }
+        SetTitle(#instance_voting_name#)
+        Div(breadcrumb){
+            LinkPage(Body: $@1polls$, Page: @1poll, PageParams: "type=0")
+            Span(/,mh)
+            Span(Class: text-muted, Body: ##instance_id#)
+        }
+
+        Div(row mt-sm){
+            Div(col-lg-6 col-lg-offset-3){
+                Form(panel panel-primary){
+                    Input(Type: hidden, Name: votingID, Value: #vID#)
+
+                    Div(list-group-item text-center){
+                        P(Class: h3 text-bold m0, Body: #instance_voting_name#)
+                    }
+                    Div(list-group-item text-center){
+                        If(#type_decision#==3){
+                            DBFind(@1votings_subject, src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->text,subject->hash").Vars(subject)
+                            Div(row){
+                                Div(#col_left#){
+                                    Label(For: TypeParticipants){
+                                        Span(Body: $@1question$:)
+                                    }
+                                }
+                                Div(#col_right#){
+                                    #subject_subject_text#
+                                }
+                            }
+                            Div(row mt-sm t5){
+                                Div(col-md-12){
+                                    If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==3)){
+                                        Button(Class: btn btn-link, Page: @1poll_decision, PageParams: "vID=#vID#"){
+                                            Strong(LangRes(@1subject_voting_edit))
+                                        }.Popup(50, $@1subject_voting$)
+                                    }
+                                }
+                            }
+                            Div(row mt-sm){
+                                Div(col-sm-6 col-sm-offset-2 col-lg-8 col-lg-offset-2){
+                                    If(#isStartProcessing#==1){
+                                        Button(Body: LangRes(@1process), Class: btn btn-info text-capitalize, Contract: @1NotificationsProcess, Params: "notific_id=#notific_id#", Page: #this_page#, PageParams: "notific_id=#notific_id#")
+                                    }.Else{
+                                        If(#isVotingAllowed#==1){
+                                            Button(Body: $@1no$, Class: btn btn-danger pull-left, Contract: @1VotingDecisionReject, PageParams: "vID=#vID#", Page: #this_page#, Params: "RoleId=#role_id#")
+                                            Button(Body: $@1yes$, Class: btn btn-success pull-right, Contract: @1VotingDecisionAccept, PageParams: "vID=#vID#", Page: #this_page#, Params: "RoleId=#role_id#")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Div(list-group-item text-center){
+                        Div(row t4){
+                            Div(col-md-5 col-md-offset-1){
+                                LangRes(@1voted)
+                            }
+                            Div(col-md-5){
+                                LangRes(@1progress)
+                            }
+                        }
+                        If(graph_work=="good"){
+                            Div(row text-muted t6 text-center){
+                                Div(col-md-5 col-md-offset-1){
+                                    LangRes(@1voting_graph_voted)
+                                }
+                                Div(col-md-5){
+                                    LangRes(@1voting_graph_progress)
+                                }
+                            }
+                        }
+                        Div(row text-center t3){
+                            If(#instance_voting_count_type_voters# == 1){
+                                Div(col-md-5 col-md-offset-1){
+                                    #instance_progress_number_voters# LangRes(@1voters) / #instance_voting_volume# LangRes(@1voters)
+                                }
+                                Div(col-md-5){
+                                    #instance_progress_percent_success#% LangRes(@1success) / 100% LangRes(@1total)
+                                }
+                            }.Else{
+                                Div(col-md-5 col-md-offset-1){
+                                    #instance_progress_number_voters# LangRes(@1voters) / #instance_progress_percent_voters#% LangRes(@1voters)
+                                }
+                                Div(col-md-5){
+                                    #instance_progress_percent_success#% LangRes(@1success) / 100% LangRes(@1total)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }.Else{
+        Div(md-12 alert alert-danger text-center){
+            Span(Body: LangRes(@1attention))
+        }
+    }
+}.Style(
+    .t3 {font-size:24px;}
+    .t4 {font-size:18px;}
+    .t5 {font-size:14px;}
+    .t6 {font-size:12px;}
+    .break {word-break: break-all;}
+)

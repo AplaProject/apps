@@ -1,0 +1,40 @@
+If(#vID# > 0){
+    If(GetVar(back_page)){}.Else{
+        SetVar(back_page,@1poll)
+    }
+
+    DBFind(@1votings, src_voting).WhereId(#vID#).Columns("id,voting->name,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params").Vars(instance)
+    DBFind(@1votings_subject, src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->text").Vars(prefix)
+
+    If(#prefix_id#>0){
+    }.Else{
+        SetVar(Name: prefix_subject_text, Value: "")
+    }
+
+    Form(){
+        Div(form-group){
+            Div(row){
+                Div(col-md-12 mt-sm){
+                    Label(){
+                        Span(Body: LangRes(@1text_document))
+                        Span(Class: text-danger, Body:*)
+                    }
+                    Input(Name: text_document, Type: textarea, Value: #prefix_subject_text#)
+                }
+            }
+        }
+        Div(row mt){
+            Div(col-md-12){
+                Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1poll_view, PageParams: "vID=#vID#")
+                Input(Name: votingID, Type: hidden, Value: #vID#)
+                Div(pull-right){
+                    Button(Body: LangRes(@1save), Class: btn btn-primary, Page: @1poll_view, PageParams: "vID=#vID#", Contract: @1VotingSubjectDocument)
+                }
+            }
+        }
+    }
+}.Else{
+    Div(md-12 alert alert-danger text-center){
+        Span(Body: LangRes(@1attention))
+    }
+}

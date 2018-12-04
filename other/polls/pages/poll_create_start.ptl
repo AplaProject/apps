@@ -1,0 +1,74 @@
+DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
+SetTitle($@1start_poll$)
+
+SetVar(col_left,"col-md-4 text-right")
+SetVar(col_left_for_input,"col-md-4 mt-sm text-right")
+SetVar(col_right,"col-md-8 text-left")
+SetVar(col_right_for_input,"col-md-8 mb-sm text-left")
+
+If(#TemplateId#>0){
+    DBFind(@1voting_templates).WhereId(#TemplateId#).Vars(template)
+
+    SetVar(v_role,).(c_role,)
+    If(#template_voters#>0){
+        DBFind(@1roles).Where({ecosystem:#ecosystem_id#, id:#template_voters#}).Columns("role_name").Vars(vid)
+        SetVar(v_role, "#vid_role_name#")
+    }
+    If(#template_candidates#>0){
+        DBFind(@1roles).Where({ecosystem:#ecosystem_id#, id:#template_candidates#}).Columns("role_name").Vars(cid)
+        SetVar(c_role, "#cid_role_name#")
+    }
+}
+Div(content-wrapper){
+    Div(breadcrumb){
+        LinkPage(Body: $@1polls$, Page: @1poll)
+        Span(/, mh)
+        LinkPage(Body: $@1polls_templates$, Page: @1poll_template)
+        Span(/,mh)
+        Span($@1start_poll$, text-muted)
+    }
+
+    If(#TemplateId#>0){
+        Div(row){
+            Div(col-md-8 col-md-offset-2 col-lg-8 col-lg-offset-2){
+                Form(panel panel-primary){
+                    Div(panel-heading){$@1enter_data_for_poll_template$}
+                    Div(list-group-item){
+                        If(#template_type_decision#==3){
+                            Div(row){
+                                Div(#col_left_for_input#){
+                                    Label(For: TextDocument){
+                                        Span(Body: $@1enter_your_questions$)
+                                    }
+                                }
+                                Div(#col_right_for_input#){
+                                    Input(Name: TextDocument, Type: textarea)
+                                }
+                            }
+                            Div(row){
+                                Div(#col_left_for_input#){
+                                    Label(For: Duration){
+                                        LangRes(@1duration)
+                                    }
+                                }
+                                Div(#col_right_for_input#){
+                                    Input(Name: Duration, Type: number, Value: 3)
+                                }
+                            }
+                        }
+                    }
+                    Div(list-group-item){
+                        Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1poll)
+                        Div(pull-right){
+                            Button(Body: $@1start_poll$, Class: btn btn-primary, Page: @1poll, Contract: @1VotingTemplateRun, Params: "TemplateId=#TemplateId#,type=0")
+                        }
+                    }
+                }
+            }
+        }
+    }.Else{
+        Div(col-md-12 alert alert-danger text-center){
+            LangRes(@1attention)
+        }
+    }
+}

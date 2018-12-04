@@ -1,0 +1,52 @@
+SetVar(this_page, @1poll_template).(this_table, @1voting_templates)
+Include(@1pager_header)
+
+SetTitle($@1polls_templates$)
+Span(Class: h5 m0 mb ml-lg){
+    LinkPage(Class: ml-sm, Body: $@1polls$, Page: @1poll, PageParams: "type=0" )
+    Span(Class: text-muted mh, Body: /)
+    Span(Class: text-muted, Body: $@1polls_templates$)
+}.Style(
+    display: inline-block;
+)
+
+If(GetVar(search)){
+    SetVar(where,{ecosystem:#ecosystem_id#, "title":{"$like":#search#}})
+}.Else{
+    SetVar(where,{ecosystem:#ecosystem_id#, "id":{"$gt":0}, type_voting:3}).(Search,)
+}
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, LangRes(@1template))
+    Include(@1search)
+}
+
+DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
+DBFind(#this_table#).Where({ecosystem:#ecosystem_id#}).Count(all_templates_count)
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_participants){
+    AppParam(Ecosystem:1, App:#application_id#, Name:type_voting_participants, Index: #type_participants#)
+}.Custom(_actions){
+    Div(text-right){
+        Button(Class: btn btn-default fa fa-eye, Page: @1poll_create_start, PageParams: "TemplateId=#id#")
+    }
+}.Count(count)
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src, "$@1template$=title,$@1participants$=_participants,$@1decision$=_decision,=_actions")
+            }.ElseIf(#all_templates_count# == 0){
+                Div(Class: text-center h4 text-muted, Body: "$@1voting_templates_not_found$")
+            }
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
+}

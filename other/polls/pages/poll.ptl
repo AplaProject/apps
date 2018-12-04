@@ -1,0 +1,106 @@
+SetVar(this_page, @1poll).(this_table, @1votings)
+SetVar(allPools,0)
+Include(@1pager_header)
+SetTitle($@1polls$)
+
+If(EcosysParam(Ecosystem:1, Name: role_admin) == #role_id#){
+    AddToolButton(Title: $@1polls_templates$, Page: @1poll_template, Icon: fa icon-pin)
+    AddToolButton(Title: $@1create_poll$, Page: @1poll_create, Icon: icon-plus).Popup(40, $@1create_poll$)
+}
+
+If(GetVar(search)){
+    SetVar(Where,{ecosystem:#ecosystem_id#, "title":{"$like":#Search#}})
+}.ElseIf(#allPools#==#type#){
+    SetVar(where, {ecosystem:#ecosystem_id#, deleted:0, voting->type:3}).(search,)
+}.ElseIf(#type#==3){
+    SetVar(where, {ecosystem:#ecosystem_id#, deleted:0, status:3, voting->type:3}).(search,)
+}.ElseIf(#type#==4){
+    SetVar(where, {ecosystem:#ecosystem_id#, creator->member_id:#key_id#, deleted:0, voting->type:3}).(search,)
+}.ElseIf(#type#==5){
+    SetVar(where, {ecosystem:#ecosystem_id#, voting->type_participants:4, deleted:0, voting->type:3}).(search,)
+}.Else{
+    SetVar(where,{ecosystem:#ecosystem_id#, "id":{"$gt":0}, voting->type:3}).(Search,)
+}
+
+Div(mr-lg text-right){
+    Button(Body: Em(Class: fa fa-filter pr-sm) $@1filters$, Class: btn bg-gray-lighter mr-sm, Page: poll_filters).Popup(35, $@1poll_filters_list$)
+}
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, $@1polls$)
+    Include(@1search)
+}
+
+SetVar(WAITING,1).(VALID,2).(STARTED,3).(FINISHED,4).(INVALID,5)
+DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
+        
+
+DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->success,flags->decision,flags->full_data,progress->percent_success,progress->number_participants,creator->member_id,creator->member_name,date_started,date_ended,deleted,status,voting->count_type_voters,voting->volume,progress->number_voters").Count(count_votings).Custom(_id){
+    Span(Class: h5, Body: #id#)
+}.Custom(_name){
+    LinkPage(Page: @1poll_view, PageParams: "vID=#id#"){
+        Span(Class: h5 text-bold m0, Body: #voting.name#)
+    }
+}.Custom(_participants){
+    SetVar(participants, AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_participants, Index: #voting.type_participants#))
+    Div(h6 m0){
+        If(Or(#status#==#STARTED#,#status#==#FINISHED#,#voting.type#==2)){
+            #participants#
+        }.Else{
+            Button(Page: @1poll_invite, PageParams: "vID=#id#,back_page=#this_page#", Class: btn btn-link p0 text-bold, Body: #participants#).Popup(45, $@1participants_add$)
+        }
+    }
+}.Custom(_date){
+    SetVar(started_class, text-bold h5 m0).(finished_class,text-bold h5 m0)
+    If(Or(#status#==#STARTED#,#status#==#FINISHED#)){
+        SetVar(started_class, text-muted h5 m0)
+    }
+    If(#status#==#FINISHED#){
+        SetVar(finished_class, text-muted h5 m0)
+    }
+    Div(Class: text-left){
+        P(Class: #started_class#, Body: DateTime(DateTime: #date_started#, Format: "DD.MM.YYYY HH:MI"))
+        P(Class: #finished_class#, Body: DateTime(DateTime: #date_ended#, Format: "DD.MM.YYYY HH:MI"))
+    }
+}.Custom(_status){
+    SetVar(status_class, AppParam(Ecosystem:1, App:#application_id#, Name:voting_statuses_classes, Index:#status#))
+    Div(#status_class#){
+        If(#status#==#STARTED#){
+            Button(Class: btn btn-link pl0, Body: $@1vote_now$, Page: @1poll_vote, PageParams: "vID=#id#").Popup(30, $@1vote_now$)
+        }.Else{
+            AppParam(Ecosystem:1, App:#application_id#, Name:voting_statuses, Index:#status#)
+        }
+    }
+}.Custom(_result){
+    If(#flags.decision#==0){
+        Span(Body: $@1not_voted$, Class: text-info)
+    }.ElseIf(#flags.decision#==-1){
+        Span(Body: $@1no$, Class: text-danger)
+    }.ElseIf(#flags.decision#==1){
+        Span(Body: $@1yes$, Class: text-success)
+    }
+}.Custom(_actions){
+    If(And(#creator.member_id#==#key_id#,#status#==#INVALID#)){
+        Button(Class: fa fa-trash btn btn-default, Contract: @1VotingDelete, Params: "votingID=#id#", Page: #this_page#).Alert(Text: "$@1want_delete_voting$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+    }
+}.Count(count)
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src, "Polls=_name,$@1result$=_result,$@1type$=_type,$@1subject_voting$=_subject,$@1participants$=_participants,$@1date_start$ / $@1date_end$=_date,$@1creator$=_creator,$@1progress$=_progress,$@1decision$=_decision,$@1status$=_status,=_actions,btn=_btn")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1votings$ $@1not_founded$")
+            }
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}           
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
+}
