@@ -1,29 +1,64 @@
 contract MSCreate {
     data {
         BufferId int
+        Limit int
+        LimitDate string
+        LimitTime string
+        Sign int
+        TemplateId int
     }
-    conditions {
-        var buf map
-        buf["key"] = "multisigned_units"
-        buf["member_id"] = $key_id
-        $buf = DBFind("@1buffer_data").WhereId($BufferId).Row()
-        if !$buf {
-            warning "not assigned group"
+
+    func dateAddTime(d, t string) string {
+        var dt string
+        if Contains(d, "T00:00:00Z") {
+            d = Replace(d, "T00:00:00Z", "")
         }
+        if Size(t) == 5 {
+            dt = Sprintf("%v %v:00", d, t)
+        }
+        return dt
+    }
+
+    conditions {
+        Println("BufferId:", $BufferId,"Limit:", $Limit,"LimitDate", $LimitDate,"LimitTime",$LimitTime,"Sign",$Sign,"TemplateId",$TemplateId)
         $GROUP_SINGLE = 1
         $GROUP_VOTING = 2
         $ROLE_SINGLE = 3
         $ROLE_VOTING = 4
+        $NO_LIMIT = 1
+        $ONE_SIGN = 1
+        $buf = DBFind("@1buffer_data").Where({id:$BufferId, ecosystem:$ecosystem_id}).Row()
+        if !$buf {
+            warning "not assigned group"
+        }
+        if $Limit != $NO_LIMIT{
+            $limit = UnixDateTime(dateAddTime($LimitDate, $LimitTime))
+            if $limit == 0 {
+                warning "invalid datetime"
+            }
+            Println("limit:", $limit)
+        }
+
+        if $Sign != $ONE_SIGN{
+            var templateId int
+            templateId = Int(DBFind("@1voting_templates").Where({id:$TemplateId, ecosystem:$ecosystem_id}))
+            if templateId == 0{
+                warning "Voting template not founded"
+            }
+            Println("templateId:", templateId)
+            // в таблице 1_keys в колонку multi записывается id шаблона голосования
+            $multi = templateId
+        }else{
+            // -1, если выбрано "перевод одной подписью"
+            $multi = -1
+        }
     }
 
     action {
-        // При клике на кнопке Create
-        // в таблице 1_keys в колонку multi записывается
-        // id шаблона голосования
-        // -1, если выбрано "перевод одной подписью"
-        // пользователи и роли КМП заносятся в таблицу доверенностей с указанными лимитами
         var table string
         table = Sprintf("@%vkeys", $ecosystem_id)
-        // DBUpdate(table, $key_id, multi
+        // DBUpdate(table, $key_id, {multi:$multi})
+
+        // пользователи и роли КМП заносятся в таблицу доверенностей с указанными лимитами
     }
 }

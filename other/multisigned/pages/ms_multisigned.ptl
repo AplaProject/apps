@@ -1,12 +1,19 @@
 DBFind(@1applications).Columns("id").Where({name:"Multisigned", ecosystem:1}).Vars(application)
 AppParam(App: #application_id#, Name:ms_types, Source:types)
+AppParam(App: #application_id#, Name:ms_limits_date, Source:limits_date)
+AppParam(App: #application_id#, Name:ms_limits_sign, Source:limits_sign)
 DBFind(@1keys).WhereId(#key_id#).Columns("multi").Vars(k)
 
-SetVar(this_page,@1ms_multisigned).(back_page,@1profile_edit).(cols,2)
+SetVar(this_page,@1ms_multisigned).(back_page,@1profile_edit)
 DBFind(@1buffer_data).Where({member_id:#key_id#, key:multisigned_units, ecosystem:#ecosystem_id#}).Columns("id,value->type,value->units").Vars(buf)
 DBFind(@1roles,src_roles).Where({ecosystem:#ecosystem_id#}).Columns("id,role_name")
 If(GetVar(TemplateId)==""){
     SetVar(TemplateId,0)
+}
+If(Or(#Type#==1,#Type#==2)){
+    SetVar(button_title,$@1ms_assign_group$)
+}.Else{
+    SetVar(button_title,$@1ms_assign_roles$)
 }
 Div(content-wrapper){
     If(#k_multi#==0){
@@ -22,17 +29,13 @@ Div(content-wrapper){
                 Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
                     Form(panel panel-primary){
                         Div(panel-heading){
-                            AppParam(App: #application_id#, Name:ms_types, Index:#Type#)
+                            $@1ms_settings$
                         }
                         Div(panel-body){
                             Label($@1ms_limits$)
                             Div(list-group-item){
                                 Label($@1ms_limits_date$)
-                                Data(limits, "id,name"){
-                                    1,$@1no_limit$
-                                    2,$@1set_date$
-                                }
-                                RadioGroup(Name:Limit, Source:limits, NameColumn: name, ValueColumn: id)
+                                RadioGroup(Name:Limit, Source:limits_date, NameColumn: name, ValueColumn: id)
                                 Div(row){
                                     Div(col-md-6){
                                         Input(Name: LimitDate, Type: date)
@@ -44,11 +47,7 @@ Div(content-wrapper){
                             }
                             Div(list-group-item){
                                 Label($@1ms_limits_sign$)
-                                Data(limits, "id,name"){
-                                    1,$@1ms_one_sign_transfer$
-                                    2,$@1ms_voting_template$
-                                }
-                                RadioGroup(Name:Sign, Source:limits, NameColumn: name, ValueColumn: id)
+                                RadioGroup(Name:Sign, Source:limits_sign, NameColumn: name, ValueColumn: id)
                                 Div(input-group){
                                     If(#TemplateId#>0){
                                         #TemplateId#
@@ -67,21 +66,15 @@ Div(content-wrapper){
                                 }.Show(Sign=2)
                             }
                             Div(list-group-item){
-                                Div(h4){
-                                    If(Or(#Type#==1,#Type#==2)){
-                                        The group
-                                        SetVar(button_title,$@1ms_assign_group$)
-                                    }.Else{
-                                        The roles
-                                        SetVar(button_title,$@1ms_assign_roles$)
-                                    }
+                                Div(h4 mb){
+                                    AppParam(App: #application_id#, Name:ms_types, Index:#Type#)
                                 }
-                                Div(){
+                                Div(mb){
                                     If(#buf_value_type#==#Type#){
                                         ArrayToSource(buf_units, #buf_value_units#)
                                         If(Or(#Type#==1,#Type#==2)){
                                             ForList(buf_units){
-                                                Span(#value#, mr)
+                                                Span(Address(#value#), mr)
                                             }
                                         }.ElseIf(Or(#Type#==3,#Type#==4)){
                                             ForList(buf_units){
@@ -108,7 +101,7 @@ Div(content-wrapper){
                         }
                         Div(panel-footer text-left){
                             Button(Body: $@1back$, Class: btn btn-default, Page: #this_page#).Popup(50, $@1multi_types$)
-                            Button(Body: $@1convert$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: MSCreate, Params: "BufferId=#buf_id#").Alert(Text: $@1want_profile_convert$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                            Button(Body: $@1send$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: MSCreate, Params: "BufferId=#buf_id#").Alert(Text: $@1ms_want_multisigned_this$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
                         }
                     }
                 }

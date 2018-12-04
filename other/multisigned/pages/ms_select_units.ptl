@@ -15,34 +15,46 @@ Div(content-wrapper){
             ArrayToSource(buf_units, #buf_value_units#)
         }
         If(Or(#Type#==1,#Type#==2)){
-            DBFind(@1keys,units).Where({ecosystem:#ecosystem_id#, id:{$neq:#guest_key#}}).Columns("id")
+            DBFind(@1keys,units).Where({ecosystem:#ecosystem_id#, id:{$neq:#guest_key#}}).Columns("id").Count(units_count)
         }.ElseIf(Or(#Type#==3,#Type#==4)){
-            DBFind(@1roles,units).Where({ecosystem:#ecosystem_id#}).Columns("id,role_name")
+            DBFind(@1roles,units).Where({ecosystem:#ecosystem_id#}).Columns("id,role_name").Count(units_count)
         }
         Div(row){
-            ForList(units){
-                SetVar(checked,false)
-                ForList(buf_units){
-                    If(#id#==#value#){
-                        SetVar(checked,true)
+            If(#units_count#>0){
+                ForList(units){
+                    SetVar(checked,false)
+                    ForList(buf_units){
+                        If(#id#==#value#){
+                            SetVar(checked,true)
+                        }
+                    }
+                    Div(col-sm-6 text-nowrap){
+                        Label(Class: form-inline){
+                            Input(Name: Vals, Type: checkbox, Value: #checked#)
+                            Input(Name: Units, Type: hidden, Value: #id#)
+                            If(GetVar(role_name)){
+                                #role_name#
+                            }.Else{
+                                Address(#id#)
+                            }
+                        }
                     }
                 }
-                Div(col-sm-6 text-nowrap){
-                    Label(Class: form-inline){
-                        Input(Name: Vals, Type: checkbox, Value: #checked#)
-                        Input(Name: Units, Type: hidden, Value: #id#)
-                        If(GetVar(role_name)){
-                            #role_name#
-                        }.Else{
-                            Address(#id#)
-                        }
+            }.Else{
+                Div(h4 text-center text-muted){
+                    If(Or(#Type#==1,#Type#==2)){
+                        $@1members$ $@1not_founded$
+                    }.ElseIf(Or(#Type#==3,#Type#==4)){
+                        $@1roles$ $@1not_founded$
                     }
                 }
             }
         }
         Div(text-left){
             Button(Body: $@1back$, Class: btn btn-default, Page: #back_page#, PageParams: "Type=#Type#")
-            Button(Body: $@1confirm$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: MSUnits, PageParams: "Type=#Type#", Params:"Action=set,Type=#Type#,Vals=Val(Vals),Units=Val(Units)")
+            If(#units_count#>0){
+                Button(Body: $@1send$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: MSUnits, PageParams: "Type=#Type#", Params:"Action=set,Type=#Type#,Vals=Val(Vals),Units=Val(Units)")
+            }
         }
     }
 }
