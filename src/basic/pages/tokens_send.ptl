@@ -1,46 +1,85 @@
-If(GetVar(back_page)==""){
-    SetVar(Name: back_page, Value: "@1members_list")
+SetVar(this_page, "@1tokens_send")
+
+If(GetVar(back_page) == ""){
+    If(GetVar(parent_back_page) != ""){
+        SetVar(back_page, #parent_back_page#)
+    }.Else{
+        SetVar(back_page, "@1members_list")
+    }
+}
+If(GetVar(MemberId) != ""){
+    SetVar(v_key_id, #MemberId#)
+}
+If(Or(#v_key_id#>0,#v_key_id#<0)){
+    SetVar(Name: v_address, Value: Address(#v_key_id#))
+}.Else{
+    SetVar(Name: v_address, Value: "")
+}
+If(GetVar(v_amount)==""){
+    SetVar(Name: v_amount, Value: "")
 }
 
-Form(){
-    If(Or(#v_key_id#>0,#v_key_id#<0)){
-        SetVar(Name: v_address, Value: Address(#v_key_id#))
-    }.Else{
-        SetVar(Name: v_address, Value: "")
-    }
-    If(GetVar(v_amount)==""){
-        SetVar(Name: v_amount, Value: "")
-    }
+DBFind("@1keys").Where({"ecosystem": #ecosystem_id#, "id": #key_id#}).Vars("tokens")
+DBFind("@1ecosystems").Where({"id": #ecosystem_id#}).Vars("custom")
+If(#ecosystem_id# == 1){
+    SetVar(token_title, "APLA")
+}.Else{
+    SetVar(token_title, #custom_token_title#)
+}
 
-    Div(row){
-        Div(col-sm-3 mt-sm text-right){
-            Label($@1sender$)
-            Span(Class: text-danger, Body:*)
+If(Or(#ecosystem_id# == 1, GetVar(custom_token_title) != "")){
+    Form(){
+        Div(row){
+            Div(col-sm-3 mt-sm text-right){
+                Label($@1sender$)
+                Span(Class: text-danger, Body:*)
+            }
+            Div(col-sm-9){
+                SetVar(m_a, Address(#key_id#) (Money(#tokens_amount#) #token_title#))
+                Input(Name: Sender, Disabled: 1, Value: #m_a#)
+                Div(Class: m0 h6 text-muted, Body: $@1send_tokens_my_balance$)
+            }
         }
-        Div(col-sm-9){
-            SetVar(m_a, Address(#key_id#))
-            Input(Name: Sender, Disabled: 1, Value: #m_a#)
-            Div(Class: m0 h6 text-muted, Body: $@1send_tokens_my_balance$)
+        Div(row mt){
+            Div(col-sm-3 mt-sm text-right){
+                Label($@1recipient$)
+                Span(Class: text-danger, Body:*)
+            }
+            Div(col-sm-9){
+                Div(input-group){
+                    Input(Name: Recipient, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #v_address#)
+                    Div(input-group-btn){
+                        Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=#this_page#,back_header=$@1tokens_send$,parent_back_page=#back_page#,EcosystemId=#ecosystem_id#").Popup(Header: $@1member$, Width: "50")
+                    }.Style(
+                        .buttons {
+                            border: 1px solid #dde6e9;
+                            padding: 6px 16px;
+                        }
+                    )
+                }
+            }
         }
+        Div(row mt-sm){
+            Div(col-sm-3 mt-sm text-right){
+                Label(){
+                    Span(Body: $@1amount$ (#token_title#))
+                    Span(Class: text-danger, Body:*)
+                }
+            }
+            Div(col-sm-9){
+                Input(Name: Amount, Type: Number, Value: #v_amount#)
+            }
+        }
+        Button(Body: LangRes(@1send), Class: btn btn-primary pull-right mt, Page: #back_page#, Contract: @1TokensSend).Alert(Text: "$@1want_send_tokens$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: #back_page#)
     }
-    Div(row mt){
-        Div(col-sm-3 mt-sm text-right){
-            Label($@1recipient$)
-            Span(Class: text-danger, Body:*)
+}.Else{
+    Form(){
+        Div(row){
+            Div(col-sm-12){
+                Span(Body: $@1ecosystem_no_tokens$)
+            }
         }
-        Div(col-sm-9){
-            Input(Name: Recipient, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #v_address#)
-        }
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: #back_page#)
     }
-    Div(row mt-sm){
-        Div(col-sm-3 mt-sm text-right){
-            Label($@1amount$)
-            Span(Class: text-danger, Body:*)
-        }
-        Div(col-sm-9){
-            Input(Name: Amount, Type: Number, Value: #v_amount#)
-        }
-    }
-    Button(Body: LangRes(@1send), Class: btn btn-primary pull-right mt, Page: #back_page#, Contract: @1TokensSend).Alert(Text: "$@1want_send_tokens$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
-    Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: #back_page#)
 }
