@@ -4,8 +4,12 @@ contract MSCreate {
         Limit int
         LimitDate string
         LimitTime string
+        AmountMax money
+        AmountMaxDay money
+        AmountMaxMonth money
         Sign int
         TemplateId int
+        PoaTemplateId int
     }
 
     func dateAddTime(d, t string) string {
@@ -20,23 +24,28 @@ contract MSCreate {
     }
 
     conditions {
-        Println("BufferId:", $BufferId,"Limit:", $Limit,"LimitDate", $LimitDate,"LimitTime",$LimitTime,"Sign",$Sign,"TemplateId",$TemplateId)
         $GROUP_SINGLE = 1
         $GROUP_VOTING = 2
         $ROLE_SINGLE = 3
         $ROLE_VOTING = 4
         $NO_LIMIT = 1
         $ONE_SIGN = 1
-        $buf = DBFind("@1buffer_data").Where({id:$BufferId, ecosystem:$ecosystem_id}).Row()
+        $CONTRACT = "@1PoaTokensSend"
+
+        $buf = DBFind("@1buffer_data").Where({id:$BufferId, ecosystem:$ecosystem_id}).Columns("value->type,value->units").Row()
         if !$buf {
             warning "not assigned group"
         }
+        if Int($buf["value.type"]) == 0 {
+            warning "not assigned group"
+        }
+        $units = JSONDecode($buf["value.units"])
+
         if $Limit != $NO_LIMIT{
             $limit = UnixDateTime(dateAddTime($LimitDate, $LimitTime))
             if $limit == 0 {
                 warning "invalid datetime"
             }
-            Println("limit:", $limit)
         }
 
         if $Sign != $ONE_SIGN{
@@ -45,13 +54,41 @@ contract MSCreate {
             if templateId == 0{
                 warning "Voting template not founded"
             }
-            Println("templateId:", templateId)
             // в таблице 1_keys в колонку multi записывается id шаблона голосования
             $multi = templateId
         }else{
             // -1, если выбрано "перевод одной подписью"
             $multi = -1
         }
+        var amount_day amount_month date_day date_month int role_ids array
+        if $buf["value.type"] == $ROLE_SINGLE || $buf["value.type"] == $ROLE_VOTING{
+            role_ids = $units
+        }
+        $PARAMS = ["amount_max", "amount_max_day", "amount_max_month", "amount_day", "amount_month", "date_day", "date_month", "voting_template_id", "sign", "role_ids"]
+        $VALUES = [$AmountMax, $AmountMaxDay, $AmountMaxMonth, amount_day, amount_month, date_day, date_month, $TemplateId, $Sign, role_ids]
+    }
+    func getPoaTemplateId() int{
+        var where map poaTemplateId int
+        where["contract"] = $CONTRACT
+        where["deleted"] = 0
+        where["ecosystem"] = $ecosystem_id
+        where["creator->member_id"] = $key_id
+        where["params"] = $PARAMS
+        poaTemplateId = Int(DBFind("@1poa_templates").Where(where).One("id"))
+        if poaTemplateId == 0{
+            poaTemplateId = @1PoaTemplateAdd("ContractName,ParamArr", $CONTRACT, $PARAMS)
+        }
+        return poaTemplateId
+    }
+    func createMembersPoa(poaTemplateId int){
+        var params map
+        params["Recipient"] = $key_id
+        params["DateExpiration"] = $LimitDate
+        params["TimeExpiration"] = $LimitTime
+        params["TemplateId"] = poaTemplateId
+        params["ParamArr"] = $PARAMS
+        params["ValueArr"] = $VALUES
+        CallContract("@1PoaAdd", params)
     }
 
     action {
@@ -60,5 +97,5 @@ contract MSCreate {
         // DBUpdate(table, $key_id, {multi:$multi})
 
         // пользователи и роли КМП заносятся в таблицу доверенностей с указанными лимитами
-    }
-}
+        createMembersPoa(getPoaTemplateId())
+    }}
