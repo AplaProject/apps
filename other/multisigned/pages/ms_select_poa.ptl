@@ -1,0 +1,57 @@
+DBFind(@1applications).Columns("id").Where({name:"Multisigned", ecosystem:1}).Vars(application)
+
+SetVar(this_page,@1ms_select_template).(back_page,@1ms_multisigned).(this_table, @1voting_templates).(current_header, $@1ms_select_template$).(pager_limit, 10)
+Include(@1pager_header)
+
+If(GetVar(Id)==""){
+    SetVar(Id,)
+}
+
+If(GetVar(search)!=""){
+    SetVar(where, {ecosystem: #ecosystem_id#, $or:[{title:{$like:#search#}}, {subject:{$like:#search#}}]})
+}.Else{
+    SetVar(where, {ecosystem: #ecosystem_id#}).(search,)
+}
+
+Div(){
+    Form(input-group){
+        Div(input-group-addon){
+            LangRes(@1template)
+        }
+        Input(Name: search, Value: #search#, Placeholder: $@1text_to_search$)
+        Div(input-group-btn){
+            If(GetVar(search)!=""){
+                Button(Class: btn bg-gray-lighter fa fa-close mtl buttons, Page: #this_page#, PageParams: "back_page=#back_page#,back_header=#back_header#,Id=#Id#,Type=#Type#").Popup(Header: #current_header#, Width: "50")
+            }
+            Button(Class: btn bg-gray-lighter mtl buttons, Page: #this_page#, PageParams: "back_page=#back_page#,back_header=#back_header#,Type=#Type#,search=Val(search),Id=#Id#", Body: Em(Class: fa fa-search) $@1search$).Popup(Header: #current_header#, Width: "50")
+        }
+    }
+}.Style(
+    .buttons {
+        border: 1px solid #dde6e9;
+    }
+)
+
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Count(count).Custom(_actions){
+    Button(Class: btn btn-default fa fa-check, Page: #back_page#, PageParams: "Type=#Type#,Id=#Id#,TemplateId=#id#")
+}
+
+Div(fullscreen){
+    Div(table-responsive){
+        Div(){
+            If(#count# > 0){
+                Table(src, "id=id,subject=subject,title=title,=_actions")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1templates$ $@1not_founded$")
+            }
+        }.Style(
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(){
+    Include(@1pager_for_popup)
+    Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: #back_page#, PageParams: "Type=#Type#,Id=#Id#")
+}
