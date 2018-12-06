@@ -1,0 +1,108 @@
+Form(){
+    DBFind(@1symbol).Where({id:#ticker_id#}).Vars(ticker).Custom(custom_lotsize){
+        SetVar(lotsize_money,Money(#ticker_lotsize#))
+    }
+    If(#flag#=="S"){
+        SetVar(order_ecosystem,1)
+    }
+    If(#flag#=="B"){
+        SetVar(order_ecosystem,#ticker_ecosystem_hub#)
+    }
+    DBFind(@1ecosystems).Where({"id":#order_ecosystem#}).Columns("id,name").Vars(eco)
+    DBFind(@1keys,src).Where({"ecosystem":#order_ecosystem#}).Columns("id").Order(id).Custom(custom_id){
+        DBFind(@1members).Where({"ecosystem":#order_ecosystem#, "id":#id#}).Vars(m)
+        If(Or(#m_id#>0,#m_id#<0)){
+            #m_member_name# Address(#id#) @ #eco_name#
+        }.Else{
+            Address(#id#) @ #eco_name#
+        }
+    }
+    DBFind(@1keys).Where({"id":#key_id#, "ecosystem":1}).Custom(amount_money){
+        SetVar(balance_primary,Money(#amount#))
+    }
+    DBFind(@1keys).Where({"id":#key_id#, "ecosystem":#ticker_ecosystem_hub#}).Custom(hub_money){
+        SetVar(balance_hub,Money(#amount#))
+    }
+
+
+
+    Div(row form-group){
+        Div(col-sm-3 mt-sm text-right){
+            Label(For: Name){
+                Span(Body: LangRes(@1ex_symbol)
+            }
+        }
+        Div(col-sm-9){
+            Input(Name: name, Value: #ticker_name#, Disabled: true)
+        }
+    }
+    Div(row form-group){
+        Div(col-sm-3 mt-sm text-right){
+            Label(For: price){
+                Span(Body: LangRes(@1ex_price)
+            }
+            Span(Class: text-danger, Body:*)
+        }
+        Div(col-sm-9){
+            Input(Name: price, Type: number)
+        }
+    }
+    Div(row form-group){
+        Div(col-sm-3 mt-sm text-right){
+            Label(For: lotsize){
+                Span(Body: LangRes(@1ex_lotsize)
+            }
+        }
+        Div(col-sm-9){
+            Input(Name: lotsize, Value:#lotsize_money# , Disabled: true)
+        }
+    }
+    Div(row form-group){
+        Div(col-sm-3 mt-sm text-right){
+            Label(For: quantity){
+                Span(Body: LangRes(@1ex_quantity)
+            }
+            Span(Class: text-danger, Body:*)
+        }
+        Div(col-sm-9){
+            Input(Name: quantity, Type: number)
+        }
+    }
+    Div(row form-group){
+        Div(col-sm-3 mt-sm text-right){
+            Label(For: ecosystem_hub){
+                Span(Body: LangRes(@1ex_ecosystem_hub)
+            }
+            Span(Class: text-danger, Body:*)
+        }
+        Div(col-sm-9){
+            Select(Name: ecosystem, Source: src, NameColumn: custom_id, ValueColumn: id)
+        }
+    }
+    Div(row form-group){
+        Div(col-sm-3 mt-sm text-right){
+            Label(For: Balance){
+                Span(Body: "Balance")
+            }
+        }
+        Div(col-sm-9){
+            Input(Name: name, Value: #balance_primary#, Disabled: true)
+        }
+    }
+    Div(row form-group){
+        Div(col-sm-3 mt-sm text-right){
+            Label(For: Ecosystem Hub Balance){
+                Span(Body: "Ecosystem Hub Balance")
+            }
+        }
+        Div(col-sm-9){
+            Input(Name: name, Value: #balance_hub#, Disabled: true)
+        }
+    }
+    Div(row mt){
+        Div(col-md-12){
+            Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1ex_tradedesk, PageParams: "ticker_id=#ticker_id#")
+            Button(Body: LangRes(@1create), Page: @1ex_listing, Class: btn pull-right btn-primary, Contract: @1X, Params: "operation=C")
+        }
+    }
+}

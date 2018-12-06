@@ -1,9 +1,11 @@
 DBFind(@1symbol).Where({id:#ticker_id#}).Vars(ticker)
 DBFind(@1order_log).Where({"symbol":#ticker_name#,"status":"A","venue":"EX"}).Order({"price":"-1"}).Count(orders)
 DBFind(@1keys).Where({"id":#key_id#, "ecosystem":1}).Custom(amount_money){
-    Money(#amount#)
-}.Vars(balance)
-DBFind(@1keys).Where({"id":#key_id#, "ecosystem":#ticker_ecosystem_hub#}).Vars(hub_balance)
+    SetVar(balance_primary,Money(#amount#))
+}
+DBFind(@1keys).Where({"id":#key_id#, "ecosystem":#ticker_ecosystem_hub#}).Custom(hub_money){
+    SetVar(balance_hub,Money(#amount#))
+}
 
 Div(content-wrapper){
      Div(col-lg-12){
@@ -125,9 +127,7 @@ Div(col-lg-6){
                                 }
                             }
                             Div(col-sm-9){
-                                Span(Body: Money(#balance_amount#))
-                                Input(Name: name, Value: #balance_amount_money#, Disabled: true)
-                                Input(Name: name, Value: Money(#balance_amount#), Disabled: true)
+                                Input(Name: name, Value: #balance_primary#, Disabled: true)
                             }
                         }
                         Div(row form-group){
@@ -137,7 +137,7 @@ Div(col-lg-6){
                                 }
                             }
                             Div(col-sm-9){
-                                Input(Name: name, Value: #hub_balance_amount#, Disabled: true)
+                                Input(Name: name, Value: #balance_hub#, Disabled: true)
                             }
                         }
                         Div(row form-group){
@@ -162,8 +162,18 @@ Div(col-lg-6){
                         }
                         Div(row mt){
                             Div(col-md-12){
-                                Button(Body: LangRes(@1ex_sell), Page: @1ex_tradedesk, Class: btn pull-left btn-danger, Contract: @1ExOrder, Params: "flag=S, symbol=#ticker_name#, client=#key_id#", PageParams: "ticker_id=#ticker_id#")
-                                Button(Body: LangRes(@1ex_buy), Page: @1ex_tradedesk, Class: btn pull-right btn-success, Contract: @1ExOrder, Params: "flag=B, symbol=#ticker_name#, client=#key_id#", PageParams: "ticker_id=#ticker_id#")
+                                Div(){
+                                    Button(Body: LangRes(@1ex_sell), Page: @1ex_tradedesk, Class: btn pull-left btn-danger, Contract: @1ExOrder, Params: "flag=S, symbol=#ticker_name#, client=#key_id#", PageParams: "ticker_id=#ticker_id#")
+                                }
+                                Div(){
+                                    Button(Body: LangRes(@1ex_sell_otc), Page: @1ex_otc, Class: btn pull-left btn-danger, PageParams: "ticker_id=#ticker_id#, flag=S").Popup(Header: $@1ex_otc$, Width: "45")
+                                }.Style(Button {margin-left:25px;})
+                                Div(){
+                                    Button(Body: LangRes(@1ex_buy), Page: @1ex_tradedesk, Class: btn pull-right btn-success, Contract: @1ExOrder, Params: "flag=B, symbol=#ticker_name#, client=#key_id#", PageParams: "ticker_id=#ticker_id#")
+                                }.Style(Button {margin-left:25px;})
+                                Div(){
+                                    Button(Body: LangRes(@1ex_buy_otc), Page: @1ex_otc, Class: btn pull-right btn-success, PageParams: "ticker_id=#ticker_id#, flag=B").Popup(Header: $@1ex_otc$, Width: "45")
+                                }
                             }
                         }
                     }
