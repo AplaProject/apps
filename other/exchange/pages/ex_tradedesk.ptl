@@ -1,6 +1,8 @@
 DBFind(@1symbol).Where({id:#ticker_id#}).Vars(ticker)
 DBFind(@1order_log).Where({"symbol":#ticker_name#,"status":"A","venue":"EX"}).Order({"price":"-1"}).Count(orders)
-DBFind(@1keys).Where({"id":#key_id#, "ecosystem":1}).Vars(balance)
+DBFind(@1keys).Where({"id":#key_id#, "ecosystem":1}).Custom(amount_money){
+    Money(#amount#)
+}.Vars(balance)
 DBFind(@1keys).Where({"id":#key_id#, "ecosystem":#ticker_ecosystem_hub#}).Vars(hub_balance)
 
 Div(content-wrapper){
@@ -10,7 +12,7 @@ Div(content-wrapper){
                 Span(Class: h3 text-primary, Body: #ticker_name#)
                 Div(col-md-12){
                     DBFind(@1order_log,src_L1).Where({"status":"F","symbol":"#ticker_name#","venue":"EX"}).Order({"id":"1"}).Limit(1)
-                    Table(Source: src_L1, Columns: "Flag=flag,Price=price,Quantity=quantity,Value=value")
+                    Table(Source: src_L1, Columns: "Flag=flag,Price=price,Quantity=quantity")
                 }
             }
         }
@@ -32,8 +34,8 @@ Div(content-wrapper){
                     Div(col-md-10){
                         DBFind(@1order_log,filled).Where({"symbol":"#ticker_name#","status":"F","venue":"EX", $or:[{"client": #key_id#},{"counterparty": #key_id#}]).Limit(5).Custom(price_money){
                             Money(#price#)
-                        }
-                        Table(Source: filled, Columns: "Flag=flag,Price=price,Quantity=quantity")
+                        }.Count(tns)
+                        Table(Source: filled, Columns: "Flag=flag,Price=price,Quantity=quantity") 
                     }
                 }
             }
@@ -59,7 +61,7 @@ Div(col-lg-6){
                             }
                         }.Custom(_cancel){
                             If(#client#==#key_id#){
-                                Button(Body: LangRes(@1ex_cancel), Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=#flag#,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=C", PageParams: "ticker_id=#ticker_id#")
+                                Button(Body: LangRes(@1ex_cancel), Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExCancelOrder, Params: "id=#id#,flag=#flag#,symbol=#symbol#", PageParams: "ticker_id=#ticker_id#")
                             }
                         }.Count(sell_orders)
                         If(#sell_orders# > 0){
@@ -88,7 +90,7 @@ Div(col-lg-6){
                             }
                         }.Custom(_cancel){
                             If(#client#==#key_id#){
-                                Button(Body: LangRes(@1ex_cancel), Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=#flag#,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=C", PageParams: "ticker_id=#ticker_id#")
+                                Button(Body: LangRes(@1ex_cancel), Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExCancelOrder, Params: "id=#id#,flag=#flag#,symbol=#symbol#", PageParams: "ticker_id=#ticker_id#")
                             }
                         }.Count(buy_orders)
                         If(#buy_orders# > 0){
@@ -119,17 +121,19 @@ Div(col-lg-6){
                         Div(row form-group){
                             Div(col-sm-3 mt-sm text-right){
                                 Label(For: Balance){
-                                    Span(Body: "Balance"
+                                    Span(Body: "Balance")
                                 }
                             }
                             Div(col-sm-9){
-                                Input(Name: name, Value: #balance_amount#, Disabled: true)
+                                Span(Body: Money(#balance_amount#))
+                                Input(Name: name, Value: #balance_amount_money#, Disabled: true)
+                                Input(Name: name, Value: Money(#balance_amount#), Disabled: true)
                             }
                         }
                         Div(row form-group){
                             Div(col-sm-3 mt-sm text-right){
                                 Label(For: Ecosystem Hub Balance){
-                                    Span(Body: "Ecosystem Hub Balance"
+                                    Span(Body: "Ecosystem Hub Balance")
                                 }
                             }
                             Div(col-sm-9){
@@ -158,8 +162,8 @@ Div(col-lg-6){
                         }
                         Div(row mt){
                             Div(col-md-12){
-                                Button(Body: LangRes(@1ex_sell), Page: @1ex_tradedesk, Class: btn pull-left btn-danger, Contract: @1ExMatching, Params: "flag=S, symbol=#ticker_name#, venue=EX, client=#key_id#, status=A", PageParams: "ticker_id=#ticker_id#")
-                                Button(Body: LangRes(@1ex_buy), Page: @1ex_tradedesk, Class: btn pull-right btn-success, Contract: @1ExMatching, Params: "flag=B, symbol=#ticker_name#, venue=EX, client=#key_id#, status=A", PageParams: "ticker_id=#ticker_id#")
+                                Button(Body: LangRes(@1ex_sell), Page: @1ex_tradedesk, Class: btn pull-left btn-danger, Contract: @1ExOrder, Params: "flag=S, symbol=#ticker_name#, client=#key_id#", PageParams: "ticker_id=#ticker_id#")
+                                Button(Body: LangRes(@1ex_buy), Page: @1ex_tradedesk, Class: btn pull-right btn-success, Contract: @1ExOrder, Params: "flag=B, symbol=#ticker_name#, client=#key_id#", PageParams: "ticker_id=#ticker_id#")
                             }
                         }
                     }
