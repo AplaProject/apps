@@ -7,13 +7,17 @@ DBFind(@1keys).WhereId(#key_id#).Columns("multi").Vars(k)
 SetVar(this_page,@1ms_multisigned).(back_page,@1profile_edit)
 DBFind(@1buffer_data).Where({member_id:#key_id#, key:multisigned_units, ecosystem:#ecosystem_id#}).Columns("id,value->type,value->units").Vars(buf)
 DBFind(@1roles,src_roles).Where({ecosystem:#ecosystem_id#}).Columns("id,role_name")
-If(GetVar(TemplateId)==""){
-    SetVar(TemplateId,0)
-}
+
 If(Or(#Type#==1,#Type#==2)){
     SetVar(button_title,$@1ms_assign_group$)
 }.Else{
     SetVar(button_title,$@1ms_assign_roles$)
+}
+If(GetVar(TemplateId)==""){
+    SetVar(TemplateId,)
+}
+If(GetVar(PoaTemplateId)==""){
+    SetVar(PoaTemplateId,)
 }
 Div(content-wrapper){
     If(#k_multi#==0){
@@ -34,27 +38,51 @@ Div(content-wrapper){
                         Div(panel-body){
                             Label($@1ms_limits$)
                             Div(list-group-item){
-                                Label($@1ms_limits_date$)
-                                Input(Name:Limit, Value: 2, Type: hidden)
-                                Div(row mb){
-                                    Div(col-md-6){
-                                        Input(Name: LimitDate, Type: date)
+                                Label($@1poa$)
+                                Div(mb input-group){
+                                    If(GetVar(PoaTemplateId)==""){
+                                        $@1ms_not_assigned$
+                                    }.Else{
+                                        DBFind("@1poa_templates").WhereId(#PoaTemplateId#).Vars(poa)
+                                        Div(){
+                                            Span("$@1id$:",mr).(#PoaTemplateId#,text-muted)
+                                        }
+                                        Div(){
+                                            Span("$@1contract$:",mr).(#poa_contract#,text-muted)
+                                        }
+                                        Div(){
+                                            Span("$@1params$:",mr).(#poa_params#,text-muted)
+                                        }
                                     }
-                                    Div(col-md-6){
-                                        Input(Name: LimitTime, Type: time, Value: "00:00")
+                                    Div(input-group-btn){
+                                        Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1ms_select_poa, PageParams:"back_page=#this_page#,back_header=$@1ms_poa_template$,Type=#Type#,TemplateId=#TemplateId#").Popup(50, $@1ms_poa_template$)
                                     }
                                 }
-                                Div(mb){
-                                    Label($@1ms_amount_max$)
-                                    Input(Name:AmountMax, Type: number)
-                                }
-                                Div(mb){
-                                    Label($@1ms_amount_max_day$)
-                                    Input(Name:AmountMaxDay, Type: number)
-                                }
-                                Div(mb){
-                                    Label($@1ms_amount_max_month$)
-                                    Input(Name:AmountMaxMonth, Type: number)
+                                If(GetVar(PoaTemplateId)!=""){
+                                    Div(mb){
+                                        Label($@1ms_limits_date$)
+                                        Input(Name:Limit, Value: 2, Type: hidden)
+                                    }
+                                    Div(row mb){
+                                        Div(col-md-6){
+                                            Input(Name: LimitDate, Type: date)
+                                        }
+                                        Div(col-md-6){
+                                            Input(Name: LimitTime, Type: time, Value: "00:00")
+                                        }
+                                    }
+                                    Div(mb){
+                                        Label($@1ms_amount_max$) (amount_max)
+                                        Input(Name:AmountMax, Type: number)
+                                    }
+                                    Div(mb){
+                                        Label($@1ms_amount_max_day$) (amount_max_day)
+                                        Input(Name:AmountMaxDay, Type: number)
+                                    }
+                                    Div(mb){
+                                        Label($@1ms_amount_max_month$) (amount_max_month)
+                                        Input(Name:AmountMaxMonth, Type: number)
+                                    }
                                 }
                             }
                             Div(list-group-item){
@@ -62,17 +90,19 @@ Div(content-wrapper){
                                 RadioGroup(Name:Sign, Source:limits_sign, NameColumn: name, ValueColumn: id)
                                 Div(input-group){
                                     If(GetVar(TemplateId)==""){
-                                        SetVar(TemplateId,$@1ms_not_assigned$)
-                                    }
-                                    Input(Name: TemplateId, Disabled: 1, Value: #TemplateId#)
-                                    Div(input-group-btn){
-                                        Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1ms_select_template, PageParams:"back_page=#this_page#,back_header=$@1select_voting_template$,Type=#Type#").Popup(50, $@1ms_voting_template$)
-                                    }.Style(
-                                        .buttons {
-                                            border: 1px solid #dde6e9;
-                                            padding: 6px 16px;
+                                        $@1ms_not_assigned$
+                                    }.Else{
+                                        DBFind("@1voting_templates").WhereId(#TemplateId#).Vars(template)
+                                        Div(){
+                                            Span("$@1id$:",mr).(#TemplateId#,text-muted)
                                         }
-                                    )
+                                        Div(){
+                                            Span("$@1title$:",mr).(#template_title#,text-muted)
+                                        }
+                                    }
+                                    Div(input-group-btn){
+                                        Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1ms_select_template, PageParams:"back_page=#this_page#,back_header=$@1select_voting_template$,Type=#Type#,PoaTemplateId=#PoaTemplateId#").Popup(50, $@1ms_voting_template$)
+                                    }
                                 }.Show(Sign=2)
                             }
                             Div(list-group-item){
@@ -96,22 +126,24 @@ Div(content-wrapper){
                                             }
                                         }
                                         Div(text-center){
-                                            Button(Body: #button_title#, Page: @1ms_select_units, Class: btn btn-default, PageParams: "Type=#Type#").Popup(50, $@1edit_group$)
+                                            Button(Body: #button_title#, Page: @1ms_select_units, Class: btn btn-default, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#,TemplateId=#TemplateId#").Popup(50, $@1ms_edit_group$)
                                         }
                                     }.Else{
                                         Div(text-center text-muted){
                                             $@1ms_not_assigned$
                                         }
                                         Div(text-center){
-                                            Button(Body: #button_title#, Page: @1ms_select_units, Class: btn btn-default, PageParams: "Type=#Type#").Popup(50, $@1assign_group$)
+                                            Button(Body: #button_title#, Page: @1ms_select_units, Class: btn btn-default, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#,TemplateId=#TemplateId#").Popup(50, $@1ms_assign_group$)
                                         }
                                     }
                                 }
                             }
                         }
                         Div(panel-footer text-left){
-                            Button(Body: $@1back$, Class: btn btn-default, Page: #this_page#).Popup(50, $@1multi_types$)
-                            Button(Body: $@1send$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: MSCreate, Params: "BufferId=#buf_id#").Alert(Text: $@1ms_want_multisigned_this$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                            Button(Body: $@1back$, Class: btn btn-default, Page: #this_page#).Popup(50, $@1ms_select_type$)
+                            If(#PoaTemplateId#>0){
+                                Button(Body: $@1send$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: MSCreate, Params: "BufferId=#buf_id#,TemplateId=#TemplateId#,PoaTemplateId=#PoaTemplateId#").Alert(Text: $@1ms_want_multisigned_this$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                            }
                         }
                     }
                 }
@@ -135,4 +167,9 @@ Div(content-wrapper){
             $@1attention_already_multi$
         }
     }
-}
+}.Style(
+    .buttons {
+        border: 1px solid #dde6e9;
+        padding: 6px 16px;
+    }
+)

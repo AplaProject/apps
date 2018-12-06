@@ -30,7 +30,6 @@ contract MSCreate {
         $ROLE_VOTING = 4
         $NO_LIMIT = 1
         $ONE_SIGN = 1
-        $CONTRACT = "@1PoaTokensSend"
 
         $buf = DBFind("@1buffer_data").Where({id:$BufferId, ecosystem:$ecosystem_id}).Columns("value->type,value->units").Row()
         if !$buf {
@@ -67,29 +66,6 @@ contract MSCreate {
         $PARAMS = ["amount_max", "amount_max_day", "amount_max_month", "amount_day", "amount_month", "date_day", "date_month", "voting_template_id", "sign", "role_ids"]
         $VALUES = [$AmountMax, $AmountMaxDay, $AmountMaxMonth, amount_day, amount_month, date_day, date_month, $TemplateId, $Sign, role_ids]
     }
-    func getPoaTemplateId() int{
-        var where map poaTemplateId int
-        where["contract"] = $CONTRACT
-        where["deleted"] = 0
-        where["ecosystem"] = $ecosystem_id
-        where["creator->member_id"] = $key_id
-        where["params"] = $PARAMS
-        poaTemplateId = Int(DBFind("@1poa_templates").Where(where).One("id"))
-        if poaTemplateId == 0{
-            poaTemplateId = @1PoaTemplateAdd("ContractName,ParamArr", $CONTRACT, $PARAMS)
-        }
-        return poaTemplateId
-    }
-    func createMembersPoa(poaTemplateId int){
-        var params map
-        params["Recipient"] = $key_id
-        params["DateExpiration"] = $LimitDate
-        params["TimeExpiration"] = $LimitTime
-        params["TemplateId"] = poaTemplateId
-        params["ParamArr"] = $PARAMS
-        params["ValueArr"] = $VALUES
-        CallContract("@1PoaAdd", params)
-    }
 
     action {
         var table string
@@ -97,5 +73,13 @@ contract MSCreate {
         // DBUpdate(table, $key_id, {multi:$multi})
 
         // пользователи и роли КМП заносятся в таблицу доверенностей с указанными лимитами
-        createMembersPoa(getPoaTemplateId())
-    }}
+        var params map
+        params["Recipient"] = IdToAddress($key_id)
+        params["DateExpiration"] = $LimitDate
+        params["TimeExpiration"] = $LimitTime
+        params["TemplateId"] = $PoaTemplateId
+        params["ParamArr"] = $PARAMS
+        params["ValueArr"] = $VALUES
+        CallContract("@1PoaAdd", params)
+    }
+}
