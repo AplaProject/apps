@@ -10,7 +10,7 @@ contract land_registry_AdminEdit{
         LandLocalBody int
     }
     func conditions {
-        $landRegistryRecord = DBFind("land_registry").Where("id=?", $LandId).Row()
+        $landRegistryRecord = DBFind("land_registry").Where({"id": $LandId}).Row()
         if !$landRegistryRecord{
             warning "Land Registry record not found"
         }
@@ -18,10 +18,10 @@ contract land_registry_AdminEdit{
     
     func log(field, value string){
         if value != $landRegistryRecord[field] {
-            var name string
-            name = DBFind("members").Where("id=?", $key_id).One("member_name")
-            
-            DBInsert("land_registry_editing", "editing_attribute,lend_object_id,new_attr_value,old_attr_value,person_id,person_name,timestamp date", field, $LandId, value, $landRegistryRecord[field],$key_id, name, $block_time)
+            var name old_field string
+            name = DBFind("@1members").Where({"id": $key_id, "ecosystem": $ecosystem_id}).One("member_name")
+            old_field = $landRegistryRecord[field]
+            DBInsert("land_registry_editing", {"editing_attribute": field, "lend_object_id": $LandId, "new_attr_value": value, "old_attr_value": old_field, "person_id": $key_id, "person_name": name, "date": $block_time})
         }
     }
     func action {
@@ -31,12 +31,12 @@ contract land_registry_AdminEdit{
         coordsAddress = coords["address"]
         area = Sprintf("%.0f", coords["area"])
 
-        log("land_use", $LandUse)
-        log("buildings_use_class", $BuildingsUseClass)
-        log("address", coordsAddress)
+        log("land_use", Str($LandUse))
+        log("buildings_use_class", Str($BuildingsUseClass))
         log("map_coords", $Coords)
-        log("area", area)
-
-        DBUpdate("land_registry", $LandId, "address,area,buildings_use_class,map_coords,land_use,land_nature,land_local_body", coordsAddress,area,$BuildingsUseClass,$Coords,$LandUse,$LandNature,$LandLocalBody)
+        // log("address", coordsAddress)
+        // log("area", area)
+        
+        DBUpdate("land_registry", $LandId, {"address": coordsAddress, "area": area, "buildings_use_class": $BuildingsUseClass, "map_coords": $Coords, "land_use": $LandUse, "land_nature": $LandNature, "land_local_body": $LandLocalBody})
     }
 }

@@ -33,20 +33,22 @@ contract land_registry_Install{
         //     i=i+1
         // }
         
-        members = DBFind("members")
+        members = DBFind("@1members").Where({"ecosystem": $ecosystem_id})
         i=0
+        var m_id r_id int m_avatar, m_name string
         while i< Len(members){
             m = members[i]
-            isAssigned = DBFind("land_registry_accounts").Where("member_id=?", m["id"]).Row()
+            m_id = m["id"]
+            m_avatar = m["image_id"]
+            m_name = m["member_name"]
+            isAssigned = DBFind("land_registry_accounts").Where({"member_id": m_id}).Row()
             if isAssigned {
-                DBUpdate("land_registry_accounts", Int(isAssigned["id"]), "member_id,member_avatar,member_name,amount_money,amount,onhold", m["id"],m["avatar"],m["member_name"], amount, amount,0)
+                DBUpdate("land_registry_accounts", Int(isAssigned["id"]), {"member_id": m_id, "member_avatar": m_avatar, "member_name": m_name, "amount_money": amount, "amount": amount, "onhold": 0})
             }else{
-                DBInsert("land_registry_accounts", "member_id,member_avatar,member_name,amount_money,amount", m["id"],m["avatar"],m["member_name"], amount, amount)
+                DBInsert("land_registry_accounts", {"member_id": m_id, "member_avatar": m_avatar, "member_name": m_name, "amount_money": amount, "amount": amount})
             }
             i=i+1
         }
-        var where string
-        where = "role_name=? and role_type=1 and company_id=0 and delete=0"
         i = 0
         while i < 4{
             if i==3{
@@ -54,25 +56,27 @@ contract land_registry_Install{
             }else{
                 roleName = Sprintf("land_depart%v", i+1)
             }
-            role = DBFind("roles_list").Where(where, roleName).Row()
+            role = DBFind("@1roles").Where({"role_name": roleName, "role_type": 1, "company_id": 0, "deleted": 0, "ecosystem": $ecosystem_id}).Row()
             if !role {
                 // create required roles
                 // role_type==1 must be assigned_role
-                Roles_Create("role_name,role_type,company_id", roleName, 1, 0)
-                role = DBFind("roles_list").Where(where, roleName).Row()
+                @1RolesCreate("role_name,role_type", roleName, 1)
+                role = DBFind("@1roles").Where({"role_name": roleName, "role_type": 1, "company_id": 0, "deleted": 0, "ecosystem": $ecosystem_id}).Row()
             }
-            isAssigned = DBFind("roles_assign").Where("role_id=? and delete=0", role["id"]).Row()
+            r_id = Int(role["id"])
+            isAssigned = DBFind("@1roles_participants").Where({"id": r_id, "deleted": 0, "ecosystem": $ecosystem_id}).Row()
             if isAssigned{
                 var roleCreatorId int
-                $key_id = Int(DBFind("roles_list").Where("id=?", role["id"]).One("creator_id"))
-                Roles_Unassign("row_id", Int(isAssigned["id"]))
+                //$key_id = Int(DBFind("@1roles").Where({"id": r_id, "ecosystem": $ecosystem_id}).One("creator->member_id"))
+                @1RolesUnassign("row_id", Int(isAssigned["id"]))
             }
             var j int
             if i < Len(members){
                 j = i
             }
             m = members[j]
-            Roles_Assign("role_id,member_id", Int(role["id"]), Int(m["id"]))
+            m_id = Int(m["id"])
+            @1RolesAssign("rid,member_id", r_id, m_id)
             i=i+1
         }
     }

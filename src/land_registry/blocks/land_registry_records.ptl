@@ -1,31 +1,37 @@
-If(#isOrder#==1){
-    SetVar(Name:v_Order, Value: "price")
-}.ElseIf(#isOrder#==2){
-    SetVar(Name:v_Order, Value: "area")
-}.ElseIf(#isOrder#==3){
-    SetVar(Name:v_Order, Value: "price desc")
-}.ElseIf(#isOrder#==4){
-    SetVar(Name:v_Order, Value: "area desc")
-}.Else{
-    SetVar(Name:v_Order, Value: "id desc")
-}
-SetVar(debug, EcosysParam(debug))
+DBFind(@1applications).Where({ecosystem:1, name:"Land Registry"}).Columns("name,id").Vars(app)
 
-DBFind(Name: land_registry, Source: src_land_registry).Where(#v_Where#).Order(#v_Order#).Custom(_id){
+If(#isOrder#==1){
+    SetVar(Name:v_Order, Value: {"price"})
+}.ElseIf(#isOrder#==2){
+    SetVar(Name:v_Order, Value: {"area"})
+}.ElseIf(#isOrder#==3){
+    SetVar(Name:v_Order, Value: {"price": "-1"})
+}.ElseIf(#isOrder#==4){
+    SetVar(Name:v_Order, Value: {"area": "-1"})
+}.Else{
+    SetVar(Name:v_Order, Value: {"id": "-1"})
+}
+SetVar(debug, AppParam(App: #app_id#, Name: debug))
+
+DBFind(Name: "land_registry", Source: src_land_registry).Where(#v_Where#).Order(#v_Order#).Custom(_id){
     Div(text-center h5){#id#}.Style(align:center; width:50px;)
 }.Custom(_owner){
-    DBFind(Name: members, Source: src_members).Where("id=#owner_id#").Vars(row)
-    Div(text-bold text-center){
-        Image(Class: img-thumbnail img-circle, Alt: ava, Src: #row_avatar#).Style(width:30px;height:30px;)
-        
-        Div(){
-            LinkPage(Page: profile_view, PageParams: "v_member_id=#row_id#", Body: #row_member_name#).Style(cursor:pointer;)
+    DBFind("@1members").Where({"id": #owner_id#, "ecosystem": #ecosystem_id#}).Vars(row)
+    LinkPage(Page: profile_view, PageParams: "v_member_id=#row_id#"){
+        If(#row_image_id#>0){
+            Image(Src: Binary().ById(#row_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)
+            Span(Class: ml-sm text-bold, Body: #row_member_name#)
+        }.Else{
+            Div(){
+                Span(Em(Class: fa icon-user fa-2x))
+                Span(Class: ml-sm text-bold, Body: #row_member_name#)
+            }.Style(display:flex; align-items:center;)
         }
-    }.Style(max-width:150px;overflow:hidden;)
+    }
 }.Custom(_land){
-    Span(EcosysParam(Name: land_use, Index: #land_use#))
+    Span(AppParam(App: #app_id#, Name: land_use, Index: #land_use#))
 }.Custom(_buildings){
-    Span(EcosysParam(Name: buildings_use_class, Index: #buildings_use_class#))
+    Span(AppParam(App: #app_id#, Name: buildings_use_class, Index: #buildings_use_class#))
 }.Custom(_area){
     Span(#area#)
 }.Custom(_address){
@@ -81,24 +87,22 @@ DBFind(Name: land_registry, Source: src_land_registry).Where(#v_Where#).Order(#v
     
 }.Custom(_common){
     Form(){
-        Button(Page: land_registry_view, PageParams: "LandId=#id#", Class: btn btn-default fa fa-2x fa-eye)
+        Button(Page: land_registry_view, PageParams: "LandId=#id#", Class: btn btn-default pull-right, Body: Em(Class: fa fa-eye))
     }
     
 }.Custom(_admin){
-    Form(btn-group){
-        Button(Page: land_registry_view, PageParams: "LandId=#id#,admin=#admin#", Class: btn btn-default fa fa-2x fa-eye)
-        Button(Page: land_registry_edit, PageParams: "LandId=#id#,admin=#admin#", Class: btn btn-primary fa fa-2x fa-pencil-square-o)
-        Button(Page: #this#, Contract: land_registry_Delete, Params: "LandId=#id#", PageParams: "admin=#admin#", Class: btn btn-danger,Body: Em(Class: fa fa-2x fa-trash))
-    }.Style(width:180px;display:flex;)
-    
-}.Custom(_depart3){
-    Form(btn-group){
-        Button(Page: land_registry_view, PageParams: "LandId=#id#", Class: btn btn-default fa fa-2x fa-eye)
+    Form(){
+        Button(Page: #this#, Contract: land_registry_Delete, Params: "LandId=#id#", PageParams: "admin=#admin#", Class: btn btn-danger pull-right ml-sm, Body: Em(Class: fa fa-trash))
+        Button(Page: land_registry_edit, PageParams: "LandId=#id#,admin=#admin#", Class: btn btn-primary pull-right ml-sm, Body: Em(Class: fa fa-pencil-square-o))
+        Button(Page: land_registry_view, PageParams: "LandId=#id#,admin=#admin#", Class: btn btn-default pull-right, Body: Em(Class: fa fa-eye))
     }
-    
+}.Custom(_depart3){
+    Form(){
+        Button(Page: land_registry_view, PageParams: "LandId=#id#", Class: btn btn-default pull-right, Body: Em(Class: fa fa-eye))
+    }
 }.Custom(_depart2){
-    Form(btn-group){
-        Button(Page: land_registry_view, PageParams: "LandId=#id#", Class: btn btn-default fa fa-2x fa-eye)
+    Form(){
+        Button(Page: land_registry_view, PageParams: "LandId=#id#", Class: btn btn-default pull-right, Body: Em(Class: fa fa-eye))
     }
 }
 
@@ -111,33 +115,32 @@ Div(content-wrapper){
                 Div(col-md-2 mt-sm text-center text-bold){$land_use$}
                 Div(col-md-7 mt-sm text-left){
                     Form(Class: input-group){
-                        EcosysParam(Name: land_use, Source: src_land_use)
+                        AppParam(App: #app_id#, Name: land_use, Source: src_land_use)
                         Select(Name: LandUseSelect, Source: src_land_use, Class: form-control, NameColumn: name, ValueColumn: id, Value: #str_search#)
                         
                         
                         Div(input-group-btn){
-                            Button(Page: #this#, PageParams: "str_search=Val(LandUseSelect),isSearch=1,isOrder=#isOrder#,admin=#admin#,sales=#sales#", Class: btn btn-default fa fa-search)
+                            Button(Page: #this#, PageParams: "str_search=Val(LandUseSelect),isSearch=1,isOrder=#isOrder#,admin=#admin#,sales=#sales#", Class: btn btn-default, Body: Em(Class: fa fa-search))
                         }
                     }
                 }
                 Div(col-md-3 mt-sm btn-group){
-                    SetVar(params_sort, "admin=#admin#,sales=#sales#,isOrder")
-                    SetVar(Name: b_ask, Value: fa fa-sort-numeric-asc)
-                    SetVar(Name: b_desk, Value: fa fa-sort-numeric-desc)
+                    SetVar(Name: b_ask, Value: fa fa-long-arrow-up)
+                    SetVar(Name: b_desc, Value: fa fa-long-arrow-down)
                     If(#isOrder#==1){
-                        Button(Page: #this#, Class: btn btn-default, Body: Span(Class:#b_ask# active) LangRes(price),PageParams: "#params_sort#=3")
+                        Button(Page: #this#, Class: btn btn-default mr-sm, Body: Em(Class:#b_ask# mr-sm) LangRes(price),PageParams: "isOrder=3")
                     }.ElseIf(#isOrder#==3){
-                        Button(Page: #this#, Class: btn btn-default, Body: Span(Class:#b_desk# active) LangRes(price),PageParams: "#params_sort#=1")
+                        Button(Page: #this#, Class: btn btn-default mr-sm, Body: Em(Class:#b_desc# mr-sm) LangRes(price),PageParams: "isOrder=1")
                     }.Else{
-                        Button(Page: #this#, Class: btn btn-default, Body: LangRes(price),PageParams: "#params_sort#=1")
+                        Button(Page: #this#, Class: btn btn-default mr-sm, Body: LangRes(price),PageParams: "isOrder=1")
                     }
                     
                     If(#isOrder#==2){
-                        Button(Page: #this#, Class: btn btn-default, Body: Span(Class:#b_ask# active) LangRes(area_size), PageParams: "#params_sort#=4")
+                        Button(Page: #this#, Class: btn btn-default, Body: Em(Class:#b_ask# mr-sm) LangRes(area_size), PageParams: "isOrder=4")
                     }.ElseIf(#isOrder#==4){
-                        Button(Page: #this#, Class: btn btn-default, Body: Span(Class:#b_desk# active) LangRes(area_size), PageParams: "#params_sort#=2")
+                        Button(Page: #this#, Class: btn btn-default, Body: Em(Class:#b_desc# mr-sm) LangRes(area_size), PageParams: "isOrder=2")
                     }.Else{
-                        Button(Page: #this#, Class: btn btn-default, Body: LangRes(area_size), PageParams: "#params_sort#=4")
+                        Button(Page: #this#, Class: btn btn-default, Body: LangRes(area_size), PageParams: "isOrder=4")
                     }
                 }.Style(display:flex;)
             }
@@ -172,8 +175,8 @@ Div(content-wrapper){
             
             If(#isSearch#==1){
                 Form(text-center){
-                    Button(Page: #this#, PageParams:"isSearch=0,admin=#admin#,sales=#sales#", Class: btn btn-primary btn-oval){
-                        LangRes(view_all)
+                    Button(Page: #this#, PageParams:"isSearch=0,admin=#admin#,sales=#sales#", Class: btn btn-primary btn-oval mt){
+                        LangRes(@1view_all)
                     }
                 }
             }.Else{}
@@ -186,7 +189,7 @@ Div(content-wrapper){
                     Div(clearfix){
                         Form(Class: pull-right){
                             Button(Page: land_registry_add, Class: btn btn-primary){
-                                LangRes(add)
+                                LangRes(@1add)
                             }
                         }
                     }

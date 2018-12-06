@@ -6,7 +6,7 @@ contract land_registry_Depart3Request{
     conditions{}
     
     func action{
-        var icon, header, body, page, notifyParams, params string
+        var icon, header, body, page, notifyParams string params map
         var roleId, closureType int
         
         icon = "fa-bell"
@@ -14,10 +14,15 @@ contract land_registry_Depart3Request{
         body = "$need_your_processing$"
         closureType = 2
         page = "land_registry_depart3_edit"
-        params = Sprintf("LandId=%v,request=second,depart=1,depart3=1", $LandId)
-        roleId = DBFind("roles_list").Where("role_name='land_depart3' and delete=0").One("id")
         
-        notifyParams = "role_id,closure_type,icon_name,text_header,text_body,page_name,params_val"
-        Notifications_Roles_Send(notifyParams,roleId,closureType,icon,header,body,page,params)
+		params["land_id"] = $LandId
+		params["request"] = "second"
+		params["depart"] = 1
+		params["depart3"] = 1
+		
+        roleId = DBFind("@1roles").Where({"role_name": "land_depart3", "deleted": 0, "ecosystem": $ecosystem_id}).One("id")
+        
+        notifyParams = "sender,rid,closure_type,icon_name,text_header,text_body,page_name,params_map"
+        @1NotificationsSend(notifyParams,1,roleId,closureType,icon,header,body,page,params)
     }
 }

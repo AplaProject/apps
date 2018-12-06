@@ -1,3 +1,12 @@
+DBFind(@1applications).Where({ecosystem:1, name:"Land Registry"}).Columns("name,id").Vars(app)
+
+If(#notific_id#>0){
+    DBFind("@1notifications").Where({"id": #notific_id#, "ecosystem": #ecosystem_id#}).Columns("page_params->land_id").Vars(notific)
+    SetVar(LandId, #notific_page_params_land_id#)
+}.Else{
+    SetVar(notific_id, 0)
+}
+
 If(#LandId#>0){
 }.Else{
     SetVar(notific_id, 0)
@@ -9,21 +18,17 @@ If(Or(#depart1#==1,#depart2#==1,#depart3#==1)){
 }.Else{
     SetVar(depart, 0)
 }
-EcosysParam(Name: land_yes_no, Source: src_yes_no)
+AppParam(App: #app_id#, Name: land_yes_no, Source: src_yes_no)
 
-DBFind(Name: land_registry, Source: _entry).WhereId(#LandId#).Vars(entry)
-DBFind(Name: members, Source: _members).Where(id=#entry_owner_id#).Vars(owner)
+DBFind("land_registry").WhereId(#LandId#).Vars(entry)
+DBFind("@1members").Where({"id": #entry_owner_id#, "ecosystem": #ecosystem_id#}).Vars(owner)
 
 Div(content-wrapper red){
     Div(breadcrumb){
         Div(){
             LinkPage(LangRes(land_records), land_registry_records, PageParams: "admin=#admin#").Style(margin-right: 10px;)
             Span(/).Style(margin-right: 10px;)
-            Span(LangRes(land_records_edit) ##LandId#, text-muted).Style(margin-right: 10px;)
-            If(GetVar(owner_avatar)){
-                Image(Alt: ava, Class: img-thumbnail img-circle, Src: "#owner_avatar#").Style(width:30px;margin-right: 10px;)
-            }.Else{}
-            Span(#owner_member_name#, text-muted)
+            Span(LangRes(land_records_edit) ##LandId# (#owner_member_name#), text-muted)
         }
     }
     Div(row df f-valign){
@@ -38,9 +43,9 @@ Div(content-wrapper red){
                         Div(row df f-valign){
                             Div(col-md-12 mt-sm text-left){
                                 If(#admin#==1){
-                                    InputMap(Name: Coords, Type:polygon, MapType:hybrid, Value:#entry_map_coords#)
+                                    InputMap(Name: Coords, Type:polygon, MapType:streets, Value:#entry_map_coords#)
                                 }.Else{
-                                    Map(MapType:hybrid,Hmap:300, Value:`#entry_map_coords#`)
+                                    Map(MapType:streets,Hmap:300, Value:`#entry_map_coords#`)
                                 }
                             }
                         }
@@ -66,8 +71,15 @@ Div(content-wrapper red){
                             Div(row df f-valign){
                                 Div(col-md-4 mt-sm text-right h5){Strong(LangRes(owner))}
                                 Div(col-md-8 mt-sm text-left h5){
-                                    Image(Alt: ava, Class: img-thumbnail img-circle, Src: "#owner_avatar#").Style(width:40px;margin-right: 10px;)
-                                    Span(#owner_member_name#, text-muted)
+                                    If(#owner_image_id#>0){
+                                        Image(Src: Binary().ById(#owner_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)
+                                        Span(Class: ml-sm text-bold, Body: #owner_member_name#)
+                                    }.Else{
+                                        Div(){
+                                            Span(Em(Class: fa icon-user fa-2x))
+                                            Span(Class: ml-sm text-bold, Body: #owner_member_name#)
+                                        }.Style(display:flex; align-items:center;)
+                                    }
                                 }
                             }
                         }
@@ -94,11 +106,11 @@ Div(content-wrapper red){
                             Div(col-md-4 mt-sm text-right){Strong(LangRes(land_use))}
                             Div(col-md-8 mt-sm text-left){
                                 If(#admin#==1){
-                                    EcosysParam(Name: land_use, Source: src_use)
+                                    AppParam(App: #app_id#, Name: land_use, Source: src_use)
                                     Select(Name: LandUse,Source: src_use,Class: form-control, Value: #entry_land_use#, NameColumn: name, ValueColumn: id)
                                 }.Else{
                                     If(GetVar(entry_land_use)){
-                                        EcosysParam(Name: land_use, Index: #entry_land_use#)
+                                        AppParam(App: #app_id#, Name: land_use, Index: #entry_land_use#)
                                     }.Else{
                                         LangRes(undefined)
                                     }
@@ -111,11 +123,11 @@ Div(content-wrapper red){
                             Div(col-md-4 mt-sm text-right){Strong(LangRes(buildings_use_class))}
                             Div(col-md-8 mt-sm text-left){
                                 If(#admin#==1){
-                                    EcosysParam(Name: land_buildings_use_class, Source: src_buildings_use_class)
+                                    AppParam(App: #app_id#, Name: land_buildings_use_class, Source: src_buildings_use_class)
                                     Select(Name: BuildingsUseClass, Source: src_buildings_use_class, Class: form-control, Value: #entry_buildings_use_class#, NameColumn: name, ValueColumn: id)
                                 }.Else{
                                     If(GetVar(entry_buildings_use_class)){
-                                        EcosysParam(Name: buildings_use_class, Index: #entry_buildings_use_class#)
+                                        AppParam(App: #app_id#, Name: buildings_use_class, Index: #entry_buildings_use_class#)
                                     }.Else{
                                         LangRes(undefined)
                                     }
@@ -129,11 +141,11 @@ Div(content-wrapper red){
                             Div(col-md-4 mt-sm text-right){Strong(LangRes(local_body))}
                             Div(col-md-8 mt-sm text-left){
                                 If(#admin#==1){
-                                    EcosysParam(Name: land_local_body, Source: src_local_body)
+                                    AppParam(App: #app_id#, Name: land_local_body, Source: src_local_body)
                                     Select(Name: LandLocalBody, Source: src_local_body,Class: form-control, Value: #entry_land_local_body#, NameColumn: name, ValueColumn: id)
                                 }.Else{
                                     If(GetVar(entry_land_local_body)){
-                                        EcosysParam(Name: land_local_body, Index: #entry_land_local_body#)
+                                        AppParam(App: #app_id#, Name: land_local_body, Index: #entry_land_local_body#)
                                     }.Else{
                                         LangRes(undefined)
                                     }
@@ -146,11 +158,11 @@ Div(content-wrapper red){
                             Div(col-md-4 mt-sm text-right){Strong(LangRes(land_nature))}
                             Div(col-md-8 mt-sm text-left){
                                 If(#admin#==1){
-                                    EcosysParam(Name: land_nature, Source: src_nature)
+                                    AppParam(App: #app_id#, Name: land_nature, Source: src_nature)
                                     Select(Name: LandNature,Source: src_nature, Class: form-control,Value: #entry_land_nature#, NameColumn: name, ValueColumn: id)
                                 }.Else{
                                     If(GetVar(entry_land_nature)){
-                                        EcosysParam(Name: land_nature, Index: #entry_land_nature#)
+                                        AppParam(App: #app_id#, Name: land_nature, Index: #entry_land_nature#)
                                     }.Else{
                                         LangRes(undefined)
                                     }
@@ -171,7 +183,7 @@ Div(content-wrapper red){
                                         }
                                     }.Else{
                                         If(GetVar(entry_tax_receipt_and_bills)){
-                                            EcosysParam(Name: land_yes_no, Index: #entry_tax_receipt_and_bills#)
+                                            AppParam(App: #app_id#, Name: land_yes_no, Index: #entry_tax_receipt_and_bills#)
                                         }.Else{
                                             LangRes(undefined)
                                         }
@@ -232,7 +244,7 @@ Div(content-wrapper red){
                                         }
                                     }.Else{
                                         If(GetVar(entry_encumbrance_certificate)){
-                                            Span(EcosysParam(Name: land_yes_no, Index: #entry_encumbrance_certificate#))
+                                            Span(AppParam(App: #app_id#, Name: land_yes_no, Index: #entry_encumbrance_certificate#))
                                         }.Else{
                                             LangRes(undefined)
                                         }
@@ -248,7 +260,7 @@ Div(content-wrapper red){
                                         }
                                     }.Else{
                                         If(GetVar(entry_legal_status)){
-                                            Span(EcosysParam(Name: land_yes_no, Index: #entry_legal_status#))
+                                            Span(AppParam(App: #app_id#, Name: land_yes_no, Index: #entry_legal_status#))
                                         }.Else{
                                             LangRes(undefined)
                                         }
@@ -264,26 +276,26 @@ Div(content-wrapper red){
                                 Input(Name: LandId, Type: hidden, Value: #LandId#)
                                 Input(Name: Depart, Type: hidden, Value: #depart#)
                                 Div(btn-group){
-                                    Button(Page: land_registry_records, Body: LangRes(back), Class: btn btn-default btn-pill-left, PageParams: "admin=#admin#")
+                                    Button(Page: land_registry_records, Body: LangRes(@1back), Class: btn btn-default btn-pill-left, PageParams: "admin=#admin#")
                                     
                                     If(GetVar(depart)){
                                         If(GetVar(depart1)){
-                                            Button(Body: LangRes(save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Depart1Edit, Params: "Price=Val(Price),LandId=#LandId#,NotificId=#notific_id#", Page: land_registry_records)
+                                            Button(Body: LangRes(@1save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Depart1Edit, Params: "Price=Val(Price),LandId=#LandId#,NotificId=#notific_id#", Page: land_registry_records)
                                             
                                         }.ElseIf(GetVar(depart2)){
-                                            Button(Body: LangRes(save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Depart2Edit, Params: "LandId=#LandId#,LegalStatus=Val(LegalStatus),EncumbranceCertificate=Val(EncumbranceCertificate),NotificId=#notific_id#", Page: land_registry_records)
+                                            Button(Body: LangRes(@1save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Depart2Edit, Params: "LandId=#LandId#,LegalStatus=Val(LegalStatus),EncumbranceCertificate=Val(EncumbranceCertificate),NotificId=#notific_id#", Page: land_registry_records)
                                             
                                         }.ElseIf(GetVar(depart3)){
-                                            Button(Body: LangRes(save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Depart3Edit, Params: "LandId=#LandId#,TaxReceiptAndBills=Val(TaxReceiptAndBills),PriceMarket=Val(PriceMarket),PriceGov=Val(PriceGov),NotificId=#notific_id#", Page: land_registry_records)
+                                            Button(Body: LangRes(@1save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Depart3Edit, Params: "LandId=#LandId#,TaxReceiptAndBills=Val(TaxReceiptAndBills),PriceMarket=Val(PriceMarket),PriceGov=Val(PriceGov),NotificId=#notific_id#", Page: land_registry_records)
                                         }.Else{}
                                         
                                     }.Else{
-                                        Button(Body: LangRes(save), Class: btn btn-primary btn-pill-right, Contract: land_registry_AdminEdit, Params: "LandId=#LandId#,Coords=Val(Coords),LandUse=Val(LandUse),BuildingsUseClass=Val(BuildingsUseClass),Area=Val(Area),CoordsAddress=Val(CoordsAddress),LandNature=Val(LandNature),LandLocalBody=Val(LandLocalBody)", Page: land_registry_records_admin)
+                                        Button(Body: LangRes(@1save), Class: btn btn-primary btn-pill-right, Contract: land_registry_AdminEdit, Params: "LandId=#LandId#,Coords=Val(Coords),LandUse=Val(LandUse),BuildingsUseClass=Val(BuildingsUseClass),Area=Val(Area),CoordsAddress=Val(CoordsAddress),LandNature=Val(LandNature),LandLocalBody=Val(LandLocalBody)", Page: land_registry_records_admin)
                                     }
                                 }
                             }
                         }
-                        If(EcosysParam(debug)==1){
+                        If(AppParam(App: #app_id#, Name: debug)==1){
                             Div(){admin: #admin#}
                             Div(){notific_id: #notific_id#}
                         }
