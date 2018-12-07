@@ -1,4 +1,4 @@
-DBFind(@1notifications,threads).Where({ecosystem:#ecosystem_id#, "page_params->type":"message",{"$or": [{"sender->member_id":#key_id#}, {"recipient->member_id":#key_id#}]}}).Order({"id":"-1"}).Limit(250).Count(threads_count).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_name,notification->body,notification->header,page_params->thread,date_created,closed")
+DBFind(@1notifications,threads).Where({ecosystem:#ecosystem_id#, "page_params->type":"message",{"$or": [{"sender->member_id":#key_id#}, {"recipient->member_id":#key_id#}]}}).Order({"id":"-1"}).Limit(250).Count(threads_count).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_id,recipient->member_name,notification->body,notification->header,page_params->thread,date_created,closed")
 
 Div(content-wrapper){
     Div(row){
@@ -22,10 +22,10 @@ Div(content-wrapper){
                         DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, "page_params->thread": #id#}).Count(thread_depth)
                     }
                     If(Or(#id#==#last_id#,#thread_depth#==0)){
-                        If(#closed#==1){
-                            SetVar(status, "read")
-                        }.Else{
+                        If(And(#closed#==0,Or(#sender.member_id#!=#key_id#,#recipient.member_id#==#key_id#))){
                             SetVar(status, "unread")
+                        }.Else{
+                            SetVar(status, "read")
                         }
                         Div(list-group-item col-sm-12 thread-block #status#){
                             Div(avatar-block text-center){

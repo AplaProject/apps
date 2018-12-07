@@ -1,5 +1,5 @@
 If(#notific_id#>0){
-    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_name,notification->body,notification->header,page_params->thread,date_created,closed").Vars(message)
+    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_id,recipient->member_name,notification->body,notification->header,page_params->thread,date_created,closed").Vars(message)
     DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#message_sender_member_id#}).Vars(highlighted)
     If(GetVar(highlighted_id)){
         SetVar(message_sender_member_name,#highlighted_member_name#)
@@ -96,7 +96,7 @@ If(#notific_id#>0){
                             }.Else{
                                 SetVar(send_button, $@1reply$)
                             }
-                            If(#message_closed#==0){
+                            If(And(#message_closed#==0,Or(#message_sender_member_id#!=#key_id#,#message_recipient_member_id#==#key_id#))){
                                 Div(mt text-right){
                                     Button(Body: LangRes(@1mark_read), Class: btn btn-default, Contract: @1NotificationsClose, Params: "notific_id=#notific_id#", Page: @1messages_list)
                                     Button(Body: #send_button#, Class: btn btn-primary, Contract: @1NotificationsSend, Params: "current_role_id=#role_id#", Page: @1message_view, PageParams: "notific_id=#message_id#").CompositeContract(@1NotificationsClose, [{"notific_id": #notific_id#}])
