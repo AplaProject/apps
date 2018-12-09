@@ -1,0 +1,106 @@
+Div(content-wrapper){
+    If(#notific_id#>0){
+        DBFind(@1notifications).Where({id:#notific_id#}).Columns("id,sender->type,notification->type,notification->header,notification->body,page_params->flag,page_params->price,page_params->quantity,page_params->venue,page_params->client,page_params->counterparty,page_params->client_value,page_params->counterparty_value,page_params->status,page_params->symbol,date_start_processing,closed").Vars(prefix)
+        SetVar(sender_type,#prefix_sender_type#).(notification_type,#prefix_notification_type#).(notific_header,#prefix_notification_header#).(notific_body,#prefix_notification_body#).(notific_flag,#prefix_page_params_flag#).(notific_price,Money(#prefix_page_params_price#)).(notific_quantity,#prefix_page_params_quantity#).(notific_venue,#prefix_page_params_venue#).(notific_client,Address(#prefix_page_params_client#)).(notific_counterparty,Address(#prefix_page_params_counterparty#)).(notific_client_value,Money(#prefix_page_params_client_value#)).(notific_counterparty_value,Money(#prefix_page_params_counterparty_value#)).(notific_status,#prefix_page_params_status#).(notific_symbol,#prefix_page_params_symbol#).(notific_lotsize,Money(#prefix_page_params_lotsize#))
+    }.Else{
+        Div(md-12 alert alert-danger text-center){
+            Span(Body: LangRes(@1attention))
+        }
+        SetVar(notific_id,"0").SetVar(sender_type,"0").(notification_type,"0").(notific_header,"null").(notific_body,"null").(notific_val_int,"null").(notific_val_str,"null")
+    }
+    Div(row){
+        Div(col-lg-8 col-lg-offset-2){
+            Form(){
+                Div(list-group-item text-center){
+                    Span(Class: h3, Body: #notific_header#)
+                }
+                Div(list-group-item text-center){
+                    Span(Class: h3, Body: #notific_body#)
+                }
+                Div(panel-body){
+                    Div(col col-lg-5){
+                        Div(row){
+                            Div(col-md-4 mt-sm text-left){
+                                Span(Class: h4, Body: LangRes(@1ex_price))
+                            }
+                            Div(col-md-8 mt-sm text-left){
+                                Input(Name: price, Value: #notific_price#, Disabled: true)
+                            }
+                        }
+                        Div(row){
+                            Div(col-md-4 mt-sm text-left){
+                                Span(Class: h4, Body: LangRes(@1ex_pay))
+                            }
+                            Div(col-md-8 mt-sm text-left){
+                                Input(Name: client_value, Value: #notific_client_value#, Disabled: true)
+                            }
+                        }
+                        Div(row){
+                            Div(col-md-4 mt-sm text-left){
+                                Span(Class: h4, Body: LangRes(@1ex_client))
+                            }
+                            Div(col-md-8 mt-sm text-left){
+                                Input(Name: client, Value: #notific_client#, Disabled: true)
+                                Div(Class: m0 h6 text-muted, Body: LangRes(@1ex_client))
+                            }
+                        }
+                    }
+                    Div(col col-lg-2){
+                        Div(row form-group){
+                            Div(col-md-6 mt-sm text-right){
+                                Span(Class: h4, Body: LangRes(@1ex_quantity))
+                            }
+                            Div(col-md-6 mt-sm text-left){
+                                Input(Name: name, Value: #notific_quantity#, Disabled: true)
+                            }
+                        }
+                        Div(row form-group){
+                            Div(col-sm-12 mt-sm text-center){
+                                Label(For: lotsize){
+                                    Span(Class: h1, Body: Em(Class: fa fa-exchange))
+                                }
+                            }
+                        }
+                    }
+                    Div(col col-lg-5){
+                        Div(row){
+                            Div(col-md-4 mt-sm text-left){
+                                Span(Class: h4, Body: LangRes(@1ex_lotsize))
+                            }
+                            Div(col-md-8 mt-sm text-left){
+                                Input(Name: lotsize, Value: #notific_lotsize#, Disabled: true)
+                            }
+                        }
+                        Div(row){
+                            Div(col-md-4 mt-sm text-left){
+                                Span(Class: h4, Body: LangRes(@1ex_receive))
+                            }
+                            Div(col-md-8 mt-sm text-left){
+                                Input(Name: counterparty_value, Value: #notific_counterparty_value#, Disabled: true)
+                            }
+                        }
+                        Div(row){
+                            Div(col-md-4 mt-sm text-left){
+                                Span(Class: h4, Body: LangRes(@1ex_counterparty))
+                            }
+                            Div(col-md-8 mt-sm text-left){
+                                Input(Name: counterparty, Value: #notific_counterparty#, Disabled: true)
+                            }
+                        }
+                    }
+                    Div(col-lg-12){
+                        Div(row mt){
+                            If(#prefix_closed# == 0){
+                                Button(Body: LangRes(@1reject), Class: btn pull-left btn btn-danger, Contract: @1NotificationsClose, Params: "notific_id=#notific_id#", Page: @1notifications_list).Alert(Text: "$@1want_close_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                                Button(Body: LangRes(@1accept), Class: btn pull-right btn btn-primary, Contract: @1ExSandbox, Params: "notific_id=#notific_id#", Page: @1notifications_list).Alert(Text: "$@1want_close_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                            }.Else{
+                                Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1notifications_list, PageParams: "type=0")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

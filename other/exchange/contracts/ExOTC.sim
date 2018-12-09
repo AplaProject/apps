@@ -1,4 +1,4 @@
-contract ExSandbox {
+contract ExOTC {
     data {
         ticker_id int
         flag string
@@ -39,7 +39,6 @@ contract ExSandbox {
     conditions {
         //check balance
         if $cp != "" {
-            //warning Sprintf("%s", "ok")
             $recipient_id = AddressToId($cp)
             if $recipient_id == 0 {
                 error Sprintf(LangRes("@1recipient_x_invalid", "en"), $cp)
@@ -56,23 +55,21 @@ contract ExSandbox {
         apla_value = calcAplaValue($price, $quantity)
         var symbol string
         symbol = DBFind("@1symbol").Where({"id":$ticker_id}).Columns("name").One("name")
+        var lotsize money
+        lotsize = Money(DBFind("@1symbol").Where({"id":$ticker_id}).Columns("lotsize").One("lotsize"))
         var m map
         m["flag"] = $flag
         m["client"] = $client
-        m["client"] = $recipient_id
-        m["venue"] = "OTC"
+        m["counterparty"] = $recipient_id
+        m["venue"] = "EXOTC"
         m["symbol"] = symbol
         m["quantity"] = $quantity
         m["price"] = $price
         m["client_value"] = apla_value
         m["counterparty_value"] = face_value
         m["status"] = "A"
-        DBInsert("@1order_log", m)
-        warning Sprintf("%s", m)
-        //@1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,eco_id", $recipient_id, 1, "fa fa-exchange", "test_header", "test_body", "@1ex_otc_new", {"param_int":"10","param_str":"my_string"}, $ecosystem)
-        //send notification
-        //warning Sprintf("%s", $counterparty, $cp, $ecosystem)
-        //@1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", apla_value, -1659695194409527086, counterparty, "EXMatching", 1)
-        //@1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", face_value, -1659695194409527086, 2, "EXMatching", ecosystem_hub)
+        m["lotsize"] = lotsize
+        m["eco"] = $ecosystem
+        @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,eco_id", $recipient_id, 1, "fa fa-exchange", "test_header", "test_body", "@1ex_otc_new", m, $ecosystem)
     }
 }
