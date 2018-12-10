@@ -11,22 +11,37 @@ If(#role_id#>0){
     }
 }
 If(#isManager#==1){
-    AddToolButton(Title:$@1create$, Page: e_event_form, Icon: icon-calendar).Popup(Header: $e_create_event$, Width: "50")
+    AddToolButton(Title:$@1create$, Page: e_event_form, Icon: icon-calendar)
 }
 
-If(And(GetVar(Type)!="",GetVar(Region)!="")){
-    SetVar(where, {type:#Type#, region:#Region#})
-}.ElseIf(GetVar(Type)!=""){
-    SetVar(where, {type:#Type#})
-}.ElseIf(GetVar(Region)!=""){
-    SetVar(where, {region:#Region#})
-}.Else{
-    SetVar(where, {id:{$neq:0}}).(Type,0).(Region,0)
-}
 
 AppParam(App: #application_id#, Name:e_regions, Source:regions, Ecosystem:#ecosystem_id#)
 AppParam(App: #application_id#, Name:e_types, Source:types, Ecosystem:#ecosystem_id#)
-DBFind(#this_table#, src).Where(#where#).Order({starting_date: -1, id:1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_responsible){
+SetVar(where_type,).(where_region,)
+If(GetVar(search)!=""){
+    SetVar(where, {"name": {"$like": #search#}})
+}.ElseIf(Or(GetVar(Type)>0,GetVar(Region)>0)){
+    If(#Type#>0){
+        SetVar(where_type, {type:#Type#})
+    }
+    If(#Region#>0){
+        SetVar(where_region, {region:#Region#})
+    }
+    SetVar(where, {$or:[#where_type#, #where_region#]})
+}.Else{
+    SetVar(where, {id:{$neq:0}}).(Type,0).(Region,0).(search,)
+}
+
+
+Div(){
+    Button(Class: btn bg-gray fa fa-filter pull-right, Page: e_events_filter).Popup(50, $e_events_filter$)
+}
+Div(list-group-item pt-lg pull-left){
+    SetVar(search_name, $@1name$)
+    Include(@1search)
+}
+
+DBFind(#this_table#, src).Where(#where#).Order({starting_date: -1, id:1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,name,description,starting_date,type,region,event_address,event_address->address,responsible").Custom(_responsible){
     Address(#responsible#)
 }.Custom(_type){
     AppParam(App: #application_id#, Name:e_types, Index:#type#, Ecosystem:#ecosystem_id#)
@@ -36,56 +51,25 @@ DBFind(#this_table#, src).Where(#where#).Order({starting_date: -1, id:1}).Limit(
     If(#starting_date#>0){
         Span(Class:text-muted, Body:DateTime(#starting_date#, Format: YYYY-MM-DD HH:MI))
     }
+}.Custom(_address){
+    Button(Body:#event_address.address#, Page:e_map, Class: btn btn-link p0 m0, PageParams: "Coords=#event_address#").Popup(50, $e_map$)
 }.Custom(_actions){
-    Button(Page: e_event_form, Class: btn btn-default fa fa-pencil, PageParams: "Id=#id#").Popup(Header: $e_edit_event$, Width: "50")
+    Button(Page: e_event_form, Class: btn btn-default fa fa-pencil, PageParams: "Id=#id#")
 }.Count(count)
 
-Div(fullscreen mh-lg){
-    Form(input-group){
-        If(#Filter#==1){
-            Div(list-group-item){
-                Button(Class: btn bg-gray-lighter fa fa-close pull-right, Page: #this_page#)
-                Div(row){
-                    Div(col-sm-4 text-muted){
-                        $e_type$
-                    }
-                    Div(col-sm-4 text-muted){
-                        $e_region$
-                    }
-                }
-                Div(row){
-                    Div(col-sm-4){
-                        Select(Name: Type, Source: types, NameColumn: name, ValueColumn: id, Value: #Type#)
-                    }
-                    Div(col-sm-4){
-                        Select(Name: Region, Source: regions, NameColumn: name, ValueColumn: id, Value: #Type#)
-
-                    }
-                    Div(col-sm-2){
-                        Button(Class: btn btn-default fa fa-play, Page: #this_page#, PageParams: "Type=Val(Type),Region=Val(Region),Filter=1")
-                    }
-                }
-            }
+Div(fullscreen){
+    Div(table-responsive list-group-item){
+        If(#count# > 0){
+            Table(src, "$@1id$=id,$@1name$=name,$@1description$=description,$e_starting_date$=_date,$@1type$=_type,$e_region$=_region,$@1address$=_address,$e_responsible$=_responsible,=_actions")
         }.Else{
-            Div(mt-lg mr-lg){
-                Button(Class: btn bg-gray fa fa-filter pull-right, Page: #this_page#, PageParams: "Filter=1")
-            }
+            Div(Class: text-center h4 text-muted, Body: "$e_events$ $@1not_founded$")
         }
     }
-    Div(table-responsive){
-        Div(list-group-item mt-lg){
-            If(#count# > 0){
-                Table(src, "$@1id$=id,$@1name$=name,$@1description$=description,$e_starting_date$=_date,$@1type$=_type,$e_region$=_region,$@1address$=event_address,$e_responsible$=_responsible,=_actions")
-            }.Else{
-                Div(Class: text-center h4 text-muted, Body: "$e_events$ $@1not_founded$")
-            }
-        }.Style(
-            tbody > tr:nth-of-type(odd) {
-                background-color: #f8f9fc;
-            }
-        )
+}.Style(
+    tbody > tr:nth-of-type(odd) {
+        background-color: #f8f9fc;
     }
-}
-Div(mt-sm ml-lg mr-sm mb-sm){
+)
+Div(mt-sm mb-sm){
     Include(@1pager)
 }
