@@ -1,0 +1,36 @@
+contract ExMatchingOTC {
+    data {
+        notific_id int
+        status string
+    }
+    conditions {
+        //check balance
+    }
+    action {
+        var m order map
+        m = DBFind("@1notifications").Where({"id":$notific_id}).Columns("page_params->flag,page_params->client,page_params->counterparty,page_params->client_value,page_params->counterparty_value,page_params->price,page_params->quantity,page_params->symbol,page_params->ecosystem_hub").Row()
+        order["flag"] = Str(m["page_params.flag"])
+        order["symbol"] = Str(m["page_params.symbol"])
+        order["client"] = Int(m["page_params.client"])
+        order["counterparty"] = Int(m["page_params.counterparty"])
+        order["client_value"] = Money(m["page_params.client_value"])
+        order["counterparty_value"] = Money(m["page_params.counterparty_value"])
+        order["quantity"] = Int(m["page_params.quantity"])
+        order["price"] = Money(m["page_params.price"])
+        order["venue"] = "EXOTC"
+        order["status"] = $status
+        order["lastmodified"] = $time
+        if $status == "F" {
+            if order["flag"] == "B" {
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", order["counterparty_value"], order["counterparty"], order["client"], "ExCancelOrder", m["page_params.ecosystem_hub"])
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", order["client_value"], order["client"], order["counterparty"], "ExCancelOrder", 1)
+            }
+            if order["flag"] == "S" {
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", order["counterparty_value"], order["client"], order["counterparty"], "ExCancelOrder", m["page_params.ecosystem_hub"])
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", order["client_value"], order["counterparty"], order["client"], "ExCancelOrder", 1)
+            }
+        }
+        DBInsert("@1order_log", order)
+        @1NotificationsClose("notific_id", $notific_id)
+    }
+}
