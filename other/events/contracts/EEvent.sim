@@ -1,0 +1,62 @@
+contract EEvent {
+    data {
+        Id int "optional"
+        Name string
+        Description string
+        Type int
+        StartingDate string
+        StartingTime string
+        Region int
+        EventAddress string
+        Responsible int
+    }
+
+    func dateAddTime(d, t string) string {
+        var dt string
+        if Contains(d, "T00:00:00Z") {
+            d = Replace(d, "T00:00:00Z", "")
+        }
+        if Size(t) == 5 {
+            dt = Sprintf("%v %v:00", d, t)
+        }
+        return dt
+    }
+    conditions{
+        var adminId int
+        adminId = Int(EcosysParam("role_admin"))
+        if !RoleAccess(adminId){
+            error LangRes("@1access_denied", "en")
+        }
+        
+        if $Id > 0 {
+            var event map
+            event = DBFind("e_events").WhereId($Id).Row()
+            if !event{
+                error "Event not founded"
+            }
+            if event["starting_date"] < $block_time {
+                error "Event not editable"
+            }
+        }
+        $date = UnixDateTime(dateAddTime($StartingDate, $StartingTime))
+        if $date == 0 {
+            error "Invalid date"
+        }
+
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Responsible}).Row(){
+            error "Responsible not founded"
+        }
+    }
+
+    action {
+        var m map
+        m = {name:$Name, description:$Description, type:$Type, starting_date:$date, region:$Region, event_address:$EventAddress, responsible:$Responsible}
+        
+        if $Id > 0 {
+            DBUpdate("e_events", $Id, m)
+        }else{
+            m["created_at"] = $block_time
+            DBInsert("e_events", m)
+        }
+    }
+}
