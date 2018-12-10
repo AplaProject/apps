@@ -1,0 +1,51 @@
+SetVar(this_page, company_list).(this_table, companies)
+Include(@1pager_header)
+
+SetTitle(Football Club list)
+Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: List of clubs))
+
+If(GetVar(search)){
+    SetVar(where, {deleted:0,type:"Club",{$or:[{name:{$like:#search#}}]}})
+}.Else{
+    SetVar(where, {deleted:0,type:"Club"}).(search,)
+}
+
+If(EcosysParam(role_admin) == #role_id#){
+    AddToolButton(Title: $@1create$, Page: create_company, PageParams: "type_create = Club", Icon: icon-plus).Popup(50, "New company")
+}
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, Search company)
+    Include(@1search)
+}
+
+DBFind(#this_table#,Source: src_comp).Columns("id,name,type,info,info->city,info->logo,info->country,info->description,deleted").Where(#where#).Limit(#pager_limit#).Custom(_name){
+    LinkPage(Body: #name#, Class: text-primary, Page: company_profile, PageParams: "cid=#id#")
+}.Custom(_city){
+    Span(#info.city#)
+}.Custom(_logo){
+    Image(Src: Binary().ById(#info.logo#),Class: img-circle).Style(width: 30px; height: 30px; border: 1px solid #e1e2e3;)
+}.Custom(_country){
+    Span(#info.country#)
+}.Count(check_comp)
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#check_comp# > 0){
+                Table(Source: src_comp,Columns: "Name=_name,=_logo,Country=_country,City=_city,Type=type")
+
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "Not have companies")
+            }
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
+}

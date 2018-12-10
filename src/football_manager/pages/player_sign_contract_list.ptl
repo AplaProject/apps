@@ -1,0 +1,69 @@
+SetVar(this_page, player_sign_contract_list).(this_table, player_contracts)
+SetTitle(List of signed contracts)
+Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: In order to conclude a contract go to LinkPage(Body: link, Page: player_contracts_list)))
+
+Include(@1pager_header)
+
+If(GetVar(search)){
+    SetVar(where, {closed:1, id_player:#search#})
+}.Else{
+    SetVar(where, {closed:1}).(search,)
+}
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+
+}
+
+DBFind("player_contracts",Source: src_players).Columns("id,id_player,general_information,general_information->start_date,general_information->end_date").Where(#where#).Custom(_address){
+    Span(Body:Address(#id_player#))
+}.Custom(_name){
+    DBFind("@1members").Where({id:#id_player#,ecosystem:1}).Vars(m)
+    Button(Class: btn-link h5 text-bold, Page: profile, PageParams: "v_key_id=#m_id#"){
+        If(#m_image_id#>0){
+            Image(Src: Binary().ById(#m_image_id#), Class: img-circle).Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
+            Span(#m_member_name#)
+        }.Else{
+            Div(){
+                Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                Span(#m_member_name#)
+            }.Style(display:flex; align-items:center;)
+        }
+    }
+}.Custom(_agency){
+    DBFind("@1members").Columns("id,manager_info,manager_info->agency,ecosystem").Where({id:#id_player#,ecosystem:1}).Vars(s)
+    DBFind("companies").WhereId(#s_manager_info_agency#).Columns("id,name,info->logo").Vars(ag)
+    LinkPage(Class: text-primary, Page: company_profile, PageParams: "cid=#ag_id#,back=sign"){
+        Image(Src: Binary().ById(#ag_info_logo#), Class: img-circle).Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
+        Span(#ag_name#)
+    }
+}.Custom(_contr){
+    LinkPage(Body:Contract,Page:player_contract_view,PageParams: "id_contract=#id#")
+}.Custom(_start_date){
+    #general_information.start_date#
+}.Custom(_end_date){
+    #general_information.end_date#
+}.Custom(_club){
+    DBFind("@1members").Columns("id,manager_info,manager_info->club,ecosystem").Where({id:#id_player#,ecosystem:1}).Vars(s)
+    DBFind("companies").WhereId(#s_manager_info_club#).Columns("id,name,info->logo").Vars(ag)
+    LinkPage(Class: text-primary, Page: company_profile, PageParams: "cid=#ag_id#,back=sign"){
+        Image(Src: Binary().ById(#ag_info_logo#), Class: img-circle).Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
+        Span(#ag_name#)
+    }
+}.Count(check_players)
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#check_players# > 0){
+                Table(Source: src_players,Columns: "Name=_name,Wallet=_address,Agency=_agency,Club=_club,Start Date=_start_date,End Date=_end_date,Contract=_contr")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "Not have players")
+            }
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}

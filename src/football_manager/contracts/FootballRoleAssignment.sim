@@ -1,0 +1,67 @@
+contract FootballRoleAssignment {
+    data {
+        role_name string
+        company_id int
+        notific_id int "optional"
+        accept int "optional"
+        info_update int "optional"
+    }
+    conditions {
+        $admin_id = EcosysParam("role_admin")
+        if $notific_id > 0 {
+            $request = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$notific_id}).Columns("id,closed,sender->member_id,page_params->role_name,page_params->company_id,ecosystem").Row()
+            if Int($request["closed"]) == 1 {
+                warning LangRes("@1request_processed_already", "en")
+            }
+            if !RoleAccess(Int($admin_id)) {
+                warning LangRes("@1access_denied", "en")
+            } 
+        } else{
+            $check_role = DBFind("@1roles_participants").Where({"role->name":$role_name,"member->member_id":$key_id,"deleted":0,"ecosystem":$ecosystem_id})
+            if $check_role {
+                info("You are already assigned to this role.")
+            }
+            $check_request = DBFind("@1notifications").Where({"sender->member_id":$key_id,"page_params->role":$role_name,"closed":0,"ecosystem":$ecosystem_id})
+            if $check_request {
+                info("Request has already been sent")
+            }
+            $check_other_request = DBFind("@1notifications").Where({"page_params->role":$role_name,"closed":0,"page_params->accepted":"-1","ecosystem":$ecosystem_id}).One("id")
+            if Int($check_other_request) > 0 {
+                info("A request has already been sent to this role by other contragent")
+            }
+            if $role_name == "Club Representative" {
+                $check_membership = DBFind("@1members").Where({"manager_info->club":$company_id,"manager_info->type":"Club","ecosystem":1}).One("id")
+                if Int($check_membership) != 0 {
+                    info("This club already has a contragent")
+                }
+            } elif $role_name == "Player Agency Representative" {
+                $check_membership = DBFind("@1members").Where({"manager_info->agency":$company_id,"manager_info->type":"Agency","ecosystem":1}).One("id")
+                if Int($check_membership) != 0 {
+                    info("This company already has a contragent")
+                }
+            }
+        }
+    }
+    action {   
+        var req_params map
+        req_params["role"] = $role_name
+        req_params["company_id"] = $company_id
+        if $notific_id > 0 {
+            if $accept == 1 {
+                req_params["accepted"] = 1
+                req_params["type"] = "decision"
+                $id_role_req = DBFind("@1roles").Where({"role_name":$role_name,"deleted":0,"ecosystem":$ecosystem_id}).One("id")
+                @1RolesAssign("rid,member_id",$id_role_req,Int($request["sender.member_id"]))
+            } else {
+                req_params["accepted"] = 0
+                req_params["type"] = "decision"
+            }
+            @1NotificationsSend("current_role_id,member_id,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id",Int($admin_id),Int($request["sender.member_id"]), 2,"icon icon-envelope-open","Request accepted",LangRes("@1details_view", "en"),"role_request_view",req_params,1,$ecosystem_id)
+            @1NotificationsProcess("notific_id", $notific_id)
+            @1NotificationsClose("notific_id", $notific_id)
+        } else {
+            req_params["accepted"] = -1
+            @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id",Int($admin_id), 1, "icon icon-envelope-open", "New role request", LangRes("@1details_view", "en"), "role_request_view",req_params,1,$ecosystem_id)
+        }
+    } 
+}

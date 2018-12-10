@@ -1,0 +1,40 @@
+contract UpdateManagerInfo {
+    data {
+        company_id int
+        notific_id int
+    }
+    conditions {
+        $check_type = DBFind("companies").Columns("id,type").Where({"id":$company_id}).Row()
+        $request = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$notific_id}).Columns("id,closed,sender->member_id,page_params->role,page_params->company_id,page_params->accepted,ecosystem").Row()
+       
+        if Int($request["closed"]) == 1 {
+            warning LangRes("@1request_processed_already", "en")
+        }
+        if Int($request["page_params.accepted"]) != 1{
+            warning LangRes("@1access_denied", "en")
+        }
+    }
+    action {
+        var m map
+        //if $check_type["type"] == "Player Agency" {
+        if $request["page_params.role"] == "Player Agency Representative" {
+            m["agency"] = $company_id
+            m["type"] = "Agency"
+            DBUpdate("@1members", $key_id, {"manager_info":m})
+        }
+        //if $check_type["type"] == "Player" {
+        if $request["page_params.role"] == "Player" {
+            m["club"] = "0"
+            m["agency"] = $company_id
+            m["type"] = "Player"
+            DBUpdate("@1members", $key_id, {"manager_info":m})
+        }
+        //if $check_type["type"] == "Club" {
+        if $request["page_params.role"] == "Club Representative" {
+            m["club"] = $company_id
+            m["type"] = "Club"
+            DBUpdate("@1members", $key_id, {"manager_info":m})
+        }
+        @1NotificationsClose("notific_id", $notific_id)
+    }
+}

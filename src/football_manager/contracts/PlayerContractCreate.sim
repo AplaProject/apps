@@ -1,0 +1,148 @@
+contract PlayerContractCreate {
+    data {
+        contract_block string
+        id_contract int "oprional"
+        //general
+        country string "optional" 
+        num_seasons int "optional"
+        start_date string "optional"
+        end_date string "optional"
+        contract_other_info string "optional"
+        id_player int "optional"
+        //salary
+        monthly_salary money "optional" 
+        month_cbox bool "optional"
+        increase_salary money "optional"
+        other_salary string "optional"
+        //bonus
+        bonus_win_match money "optional" 
+        bonus_draw_match money "optional"
+        bonus_selection money "optional"
+        bonus_appearance money "optional"
+        bonus_starting money "optional"
+        bonus_action money "optional"
+        bonus_other string "optional"
+        //other advantage
+        housing_rent money "optional"
+        housing_description string "optional"
+        car_leasing money "optional"
+        car_description string "optional"
+        gas_card_cbox bool "optional"
+        flight_ticket int "optional"
+        other_advantage string "optional"
+        //insurance
+        group_insurance string "optional"
+        other_insurance string "optional"
+    }
+
+    conditions {
+        if $contract_block == "general" {
+            if $country == "" {
+                info("Country empty")
+            }
+            if $num_seasons > 10 {
+                info("10 Seasons maximum")
+            }
+            if $start_date == "" {
+                info LangRes("@1starting_date_invalid", "en")
+            }
+            if $end_date == "" {
+                info LangRes("@1ending_date_invalid", "en")
+            }
+        }
+        if $contract_block == "salary" {
+            if $monthly_salary <= Money(0) {
+                info("Monthly Salary is empty")
+            }
+        } 
+    }
+    action {
+        var sign map
+        sign["player"] = ""
+        sign["time_player"] = ""
+        sign["contragent_agency"] = ""
+        sign["time_contragent_agency"] = ""
+        sign["contragent_club"] = ""
+        sign["time_contragent_club"] = ""
+        sign["accept"] = ""
+
+        if $contract_block == "general" {
+            var general_details map
+            general_details["country"] = $country
+            general_details["num_seasons"] = $num_seasons
+            general_details["start_date"] = $start_date
+            general_details["end_date"] = $end_date
+            general_details["information"] = $contract_other_info
+ 
+            if $id_contract {
+                DBUpdate("player_contracts",$id_contract,{general_information:general_details,general_sign:sign})
+            } else{ 
+                $search_agency = DBFind("@1members").Columns("id,manager_info->agency,ecosystem").Where({"id":$id_player,"ecosystem":1}).Row()
+                $agency_id = Int($search_agency["manager_info.agency"])
+                if $agency_id == 0 {
+                    info("Player has no agency")
+                }
+                $check_agent = DBFind("@1members").Columns("id,manager_info->agency,manager_info->type,ecosystem").Where({"manager_info->type":"Agency","manager_info->agency":$agency_id,"ecosystem":1}).Row()
+                $id_contragent_agency = Int($check_agent["id"])
+                if $id_contragent_agency == 0 {
+                    info("The players agency is missing representatives")
+                }
+                $search_club = DBFind("@1members").Columns("id,manager_info->club,ecosystem").Where({"id":$key_id,"ecosystem":1}).Row()
+                $club_id = Int($search_club["manager_info.club"])
+                if $club_id == 0 {
+                    info("You are not attached to any club. Update profile information.")
+                }
+                $not_id = DBInsert("player_contracts",{general_information:general_details,id_player:$id_player,id_agency:$agency_id,id_contragent_agency:$id_contragent_agency,id_contragent_club:$key_id,id_club:$club_id,general_sign:sign})
+                
+                //send start notific
+                var req_params map
+                req_params["id_contract"] = Int($not_id)
+                @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id",Int($id_player), 1,"icon icon-envelope-open","New contract",LangRes("@1details_view", "en"),"info_contract",req_params,1,$ecosystem_id)
+                @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id",Int($id_contragent_agency), 1,"icon icon-envelope-open","New contract",LangRes("@1details_view", "en"),"info_contract",req_params,1,$ecosystem_id)
+                @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id",Int($key_id), 1,"icon icon-envelope-open","New contract",LangRes("@1details_view", "en"),"info_contract",req_params,1,$ecosystem_id)
+            }
+        }
+        if $contract_block == "salary" {
+            var salary_details map
+            salary_details["monthly_salary"] = Money($monthly_salary)
+            salary_details["month_cbox"] = $month_cbox
+            salary_details["increase_salary"] = Money($increase_salary)
+            salary_details["other_salary"] = $other_salary
+            DBUpdate("player_contracts",$id_contract,{salary:salary_details,salary_sign:sign})
+        }
+        if $contract_block == "bonus" {
+            var bonus_details map
+            bonus_details["bonus_win_match"] = Money($bonus_win_match) 
+            bonus_details["bonus_draw_match"] = Money($bonus_draw_match) 
+            bonus_details["bonus_selection"] = Money($bonus_selection) 
+            bonus_details["bonus_appearance"] = Money($bonus_appearance) 
+            bonus_details["bonus_starting"] = Money($bonus_starting) 
+            bonus_details["bonus_action"] = Money($bonus_action) 
+            bonus_details["bonus_other"] = $bonus_other
+            bonus_details["check_filled"] = 1
+           
+            DBUpdate("player_contracts",$id_contract,{performance_bonus:bonus_details,performance_bonus_sign:sign})
+        }
+        if $contract_block == "other_advatages" {
+            var other_advatages_details map
+            other_advatages_details["housing_rent"] = Money($housing_rent)
+            other_advatages_details["housing_description"] = $housing_description
+            other_advatages_details["car_leasing"] = Money($car_leasing)
+            other_advatages_details["car_description"] = $car_description
+            other_advatages_details["gas_card_cbox"] = $gas_card_cbox
+            other_advatages_details["flight_ticket"] = $flight_ticket
+            other_advatages_details["other_advantage"] = $other_advantage
+            other_advatages_details["check_filled"] = 1
+         
+            DBUpdate("player_contracts",$id_contract,{other_advantages:other_advatages_details,other_advantages_sign:sign})
+        }
+        if $contract_block == "insurance" {
+            var insurance_details map
+            insurance_details["group_insurance"] = $group_insurance
+            insurance_details["other_insurance"] = $other_insurance
+            insurance_details["check_filled"] = 1
+           
+            DBUpdate("player_contracts",$id_contract,{insurance:insurance_details,insurance_sign:sign})
+        }
+    }
+}

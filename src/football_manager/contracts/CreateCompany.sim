@@ -1,0 +1,26 @@
+contract CreateCompany {
+    data {
+        company_name string 
+        description string
+        logo file
+        country string
+        city string
+        organization string
+    }
+    conditions {
+        $app_id = DBFind("@1applications").Where({ecosystem:$ecosystem_id, name:"FootballManager", deleted:0}).One("id")
+        if !$app_id {
+            warning LangRes("@1app_not_found", "en")
+        }
+    }
+    action {
+        $up_image = @1UploadFile("Name,Data,ApplicationId", $company_name, $logo, Int($app_id))
+        var company_info map
+        company_info["description"] = $description
+        company_info["logo"] = $up_image
+        company_info["city"] =  $city
+        company_info["country"] = $country
+        
+        DBInsert("companies",{"info":company_info,"name":$company_name,"type":$organization,"ecosystem_id":$ecosystem_id})
+    }
+}

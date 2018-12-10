@@ -1,0 +1,68 @@
+Div(content-wrapper){
+    SetTitle($@1editing_profile$)
+    Div(breadcrumb){
+        LinkPage($@1user_info$, @1profile)
+        Span(/,mh)
+        Span(Class: text-muted, Body: $@1editing_profile$)
+    }
+
+    SetVar(prefix_image_id, 0)
+    DBFind(@1members).Where({ecosystem:1, id:#key_id#}).Columns("id,member_name,image_id,member_info->information").Vars(prefix)
+
+    DBFind(@1buffer_data).Columns("value->image_id").Where({ecosystem:#ecosystem_id#, key:avatar, member_id:#key_id#}).Vars(avatar)
+    If(And(#avatar_value_image_id#>0,#avatar_uploaded#==1)){
+        SetVar(prefix_image_id, #avatar_value_image_id#)
+    }
+
+    Div(row){
+        Div(col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3){
+            Form(panel panel-primary){
+                Div(panel-heading, Body: LangRes(@1editing_profile))
+                Div(panel-body){
+                    Div(row){
+                        Div(col-md-5 mt-lg text-center){
+                            Button(Class: btn btn-link, Page: profile_avatar_update){
+                                If(#prefix_image_id#>0){
+                                    Image(Src: Binary().ById(#prefix_image_id#), Class: img-thumbnail).Style(width: 140px; border: 1px solid #5A5D63;)
+                                }.Else{
+                                    Span(Class: fa icon-user fa-5x).Style(margin-top:20px;)
+                                }
+                            }.Popup(Header: $@1editing_profile$, Width: 30)
+                        }
+                        Div(col-md-7 mc-sm text-left){
+                            Div(form-group){
+                                Label(){
+                                    Span(Body: LangRes(@1member_name))
+                                    Span(Class: text-danger, Body:*)
+                                }
+                                If(Or(#prefix_id#>0,#prefix_id#<0)){
+                                    Input(Name: member_name, Value: #prefix_member_name#, Disabled: true)
+                                }.Else{
+                                    Input(Name: member_name).Validate(minLength:5, maxLength:20)
+                                    InputErr(Name: member_name, minLength: $@1validate_member_name$, maxLength: $@1validate_member_name$)
+                                }
+                            }
+                            Div(form-group){
+                                If(GetVar(prefix_member_info_information)){
+                                    Label(){
+                                        Span(Body: LangRes(@1information))
+                                    }
+                                    Input(Name: information, Type: textarea, Value: #prefix_member_info_information#)
+                                }.Else{
+                                    Label(){
+                                        Span(Body: LangRes(@1information))
+                                    }
+                                    Input(Name: information, Type: textarea)
+                                }
+                            }
+                        }
+                    }
+                }
+                Div(panel-footer text-left){
+                    Button(Body: LangRes(@1back), Class: btn btn-default, Page: profile)
+                    Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: profile, Params:"image_id=#prefix_image_id#", Contract: @1ProfileEdit).Alert(Text: "$@1want_save_changes$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,112 @@
+DBFind(@1notifications).Where({id:#notific_id#}).Columns("id,page_params->role,page_params->company_id,page_params->type,page_params->accepted,sender->image_id,recipient->member_name,recipient->image_id,recipient->member_id,sender->member_id,sender->member_name,closed").Vars(notific)
+Div(Class: content-wrapper){
+    Div(Class: col-md-6 col-md-offset-3){
+        Div(Class: panel panel-default){
+            Div(Class: panel-heading){
+                Div(Class: col-md-12 bb){
+                    If(#notific_page_params_type# == decision){
+                        If(#notific_page_params_accepted# == 1){
+                            Span(Class: h3, Body: "Your request for #notific_page_params_role# role is accepted!")
+                        }.Else{
+                            Span(Class: h3, Body: "Your request for #notific_page_params_role# role rejected!")
+                        }
+                    }.Else{
+                        Span(Class: h3, Body: Request for Assigning #notific_page_params_role# Role)
+                    }
+                    P(Body: Information about role request, Class: ml-sm text-muted)
+                }.Style(height: 64px;)
+            }
+            Div(Class: panel-body){
+                Div(Class: col-md-12 p0 m0){
+                    Div(Class: row){
+                        Div(Class: col-md-6){
+                            Div(Class: pt-xl){
+                                Div(Class: col-md-5 ml-sm){
+                                    Div(Class: text-muted h4, Body: Sender)
+                                }
+                                Div(Class: col){
+                                    Div(Class: text-bold h4){
+                                        If(#notific_page_params_type# == decision){
+                                            #notific_recipient_member_name#
+                                        }.Else{
+                                            #notific_sender_member_name#
+                                        }
+                                    }
+                                }                    
+                            }
+                            Div(Class: pt-sm){
+                                Div(Class: col-md-5 ml-sm){
+                                    Div(Class: text-muted h4, Body: $@1address$)
+                                }
+                                Div(Class: col){
+                                    Div(Class: text-bold h4){
+                                        If(#notific_page_params_type# == decision){
+                                        Span(Class: text-bold, Body: Address(#notific_recipient_member_id#))
+                                        }.Else{
+                                            Span(Class: text-bold, Body: Address(#notific_sender_member_id#))
+                                        }
+                                    }
+                                }                    
+                            }
+                            Div(Class: pt-sm){
+                                DBFind("companies").WhereId(#notific_page_params_company_id#).Vars(comp)
+                                Div(Class: col-md-5 ml-sm){
+                                    Div(Class: text-muted h4, Body: #comp_type#)
+                                }
+                                Div(Class: col){
+                                    Div(Class: text-bold h4){
+                                        Span(Class: text-bold, Body: #comp_name#)
+                                    }
+                                }                    
+                            }
+                        }
+                        Div(Class: col-md-6){
+                            Div(Class: pt-xl text-center){
+                                If(#notific_page_params_type# == decision){
+                                    If(#notific_recipient_image_id#>0){
+                                        Image(Src: Binary().ById(#notific_recipient_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                    }.Else{
+                                        Span(Class: fa icon-user).Style(font-size: 9em!important;)
+                                    }
+                                }.Else{
+                                    If(#notific_sender_image_id#>0){
+                                        Image(Src: Binary().ById(#notific_sender_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                    }.Else{
+                                        Span(Class: fa icon-user).Style(font-size: 9em!important;)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Div(Class: panel-footer){
+                If(#notific_page_params_type# == decision){
+                    Div(row){
+                        Div(col-md-12 text-center){
+                            If(And(#notific_page_params_accepted# == 1,#notific_closed# == 0)){
+                                Button(Class: btn btn-primary btn-block mh-sm, Body: Update profile information, Contract: UpdateManagerInfo, Page: profile, Params: "notific_id=#notific_id#,role_name=#notific_page_params_role#,company_id=#notific_page_params_company_id#")
+                            }.Else{
+                                If(#notific_closed# == 0){
+                                    Button(Class: btn btn-default btn-block mt-sm, Body: $@1close$,Contract:@1NotificationsClose,Params: "notific_id=#notific_id#",Page: @1notifications_list)
+                                }
+                            }
+                        }
+                    }
+                }.Else{
+                    If(#notific_closed# == 0){
+                        Div(row  p0 m0){
+                            Div(col-md-12 p0 m0 text-center){
+                                Button(Class: btn btn-danger mh-sm pull-left, Body: $@1reject$, Contract: FootballRoleAssignment, Page: @1notifications_list, Params: "notific_id=#notific_id#,accept=0,role_name=#notific_page_params_role#,company_id=#notific_page_params_company_id#")
+                                Button(Class: btn btn-success mh-sm pull-right, Body: $@1accept$, Contract: FootballRoleAssignment, Page: @1notifications_list, Params: "notific_id=#notific_id#,accept=1,role_name=#notific_page_params_role#,company_id=#notific_page_params_company_id#")
+                            }
+                        }
+                    }
+                }
+            }
+        }.Style(
+            border-top: 5px solid transparent!important;
+            border-top-color: #5d9cec!important;
+        )
+    }
+}
