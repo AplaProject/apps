@@ -44,21 +44,23 @@ contract ExMatching {
     }
     action {
         DBUpdate("@1order_log", $id, {status:"F", counterparty: $client})
-        var ecosystem_hub counterparty int
+        var ecosystem_hub counterparty wallet_hub wallet_apla int
         ecosystem_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("ecosystem_hub").One("ecosystem_hub"))
         counterparty = Int(DBFind("@1order_log").Where({"id":$id}).Columns("client").One("client"))
+        wallet_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("wallet_hub").One("wallet_hub"))
+        wallet_apla = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("wallet_apla").One("wallet_apla"))
         var apla_value face_value price money
         price = Money(DBFind("@1order_log").Where({"id":$id}).Columns("price").One("price"))
         apla_value = Money(DBFind("@1order_log").Where({"id":$id}).Columns("client_value").One("client_value"))
-        face_value = Money(DBFind("@1order_log").Where({"id":$id}).Columns("counterparty_value").One("counterparty_value"))
-        DBInsert("@1order_log", {flag: $flag, client: $client, counterparty: counterparty, venue: "EX", symbol: $symbol, quantity: $quantity, price: price,client_value: apla_value, counterparty_value: face_value, status: "F"})
+        face_value = Money(DBFind("@1order_log").Where({"id":$id}).Columns("counterparty_value").One("counterparty_value")) 
         if $flag == "S" {
             @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", face_value, $client, counterparty, "EXMatching", ecosystem_hub)
-            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", apla_value, 1, $client, "EXMatching", 1)
+            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", apla_value, wallet_apla, $client, "EXMatching", 1)
         }
         if $flag == "B" {
             @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", apla_value, $client, counterparty, "EXMatching", 1)
-            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", face_value, 2, $client, "EXMatching", ecosystem_hub)          
+            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", face_value, wallet_hub, $client, "EXMatching", ecosystem_hub)          
         }
+        //DBInsert("@1order_log", {flag: $flag, client: $client, counterparty: counterparty, venue: "EX", symbol: $symbol, quantity: $quantity, price: price, client_value: apla_value, counterparty_value: face_value, status: "F", timestamp: $time})
     }
 }

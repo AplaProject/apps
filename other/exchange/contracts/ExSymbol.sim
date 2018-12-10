@@ -12,7 +12,30 @@ contract ExSymbol {
         isCross int "optional"
         isOTC int "optional"
     }
+    func exWallet (ecosystem int) int {
+        var check_ex_wallet is_ex_wallet new_ex_wallet int
+        check_ex_wallet = Int(DBFind("@1keys").Where({"id":$ecosystem}).Columns("id").One("id"))
+        if check_ex_wallet == $ecosystem {
+            is_ex_wallet = Int(DBFind("@1symbol").Where({"wallet_hub":check_ex_wallet}).Columns("wallet_hub").One("wallet_hub"))
+            if check_ex_wallet == is_ex_wallet {
+                return is_ex_wallet
+            } else {
+                new_ex_wallet = Int($ecosystem - ($ecosystem * 2))
+                DBInsert("@1keys", {"id":new_ex_wallet, "ecosystem":$ecosystem})
+                return new_ex_wallet
+            }
+        }
+        if check_ex_wallet == 0 {
+            DBInsert("@1keys", {"id":$ecosystem, "ecosystem":$ecosystem})
+            return $ecosystem
+        }
+    }
     conditions {
+        if $operation == "N" {
+            if DBFind("@1keys").Where({"id":1, "ecosystem": 1}).Columns("id").One("id") {
+                warning LangRes("@1ex_error_apla_wallet", "en")
+            }
+        }
         if $operation == "C" {
             var check_symbol string
             check_symbol = DBFind("@1symbol").Where({"name":$name}).Columns("name").One("name")
@@ -26,7 +49,9 @@ contract ExSymbol {
         //only founder
     }
     action {
-        //add $time
+        if $operation == "N" {
+            DBInsert("@1keys", {"id":1, "ecosystem":1})
+        }
         if $operation == "C" {
             var m map
             m["name"] = $name
@@ -37,6 +62,8 @@ contract ExSymbol {
             m["tradeable"] = $isTradeable
             m["cross"] = $isCross
             m["otc"] = $isOTC
+            m["wallet_hub"] = exWallet($ecosystem)
+            m["wallet_apla"] = 1
             DBInsert("@1symbol", m)
         }
         if $operation == "E" {

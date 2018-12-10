@@ -76,8 +76,10 @@ contract ExOrder {
         var face_value apla_value money
         face_value = calcFaceValue($quantity)
         apla_value = calcAplaValue($price, $quantity)
-        var ecosystem_hub int
+        var ecosystem_hub wallet_hub wallet_apla int
         ecosystem_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("ecosystem_hub").One("ecosystem_hub"))
+        wallet_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("wallet_hub").One("wallet_hub"))
+        wallet_apla = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("wallet_apla").One("wallet_apla"))
         var m map
         m["flag"] = $flag
         m["client"] = $client
@@ -88,12 +90,13 @@ contract ExOrder {
         m["client_value"] = apla_value
         m["counterparty_value"] = face_value
         m["status"] = "A"
+        m["timestamp"] = $time
         DBInsert("@1order_log", m)
         if $flag == "S" {
-            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", face_value, $client, 2, "EXOrder", ecosystem_hub)
+            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", face_value, $client, wallet_hub, "EXOrder", ecosystem_hub)
         }
         if $flag == "B" {
-            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", apla_value, $client, 1, "EXOrder", 1)
+            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", apla_value, $client, wallet_apla, "EXOrder", 1)
         }
     }
 }

@@ -11,21 +11,23 @@ contract ExCancelOrder {
         }
     }
     action {
-        var ecosystem_hub client int
+        var ecosystem_hub client wallet_apla wallet_hub int
         var flag string
         ecosystem_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("ecosystem_hub").One("ecosystem_hub"))
+        wallet_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("wallet_hub").One("wallet_hub"))
+        wallet_apla = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("wallet_apla").One("wallet_apla"))
         client = Int(DBFind("@1order_log").Where({"id":$id}).Columns("client").One("client"))  
         flag = DBFind("@1order_log").Where({"id":$id}).Columns("flag").One("flag")
-        DBUpdate("@1order_log", $id, {status:"C"})  
+        DBUpdate("@1order_log", $id, {status:"C", timestamp: $time})  
         if flag == "S" {
             var face_value money
             face_value = Money(DBFind("@1order_log").Where({"id":$id}).Columns("counterparty_value").One("counterparty_value"))
-            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", face_value, 2, client, "ExCancelOrder", ecosystem_hub)
+            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", face_value, wallet_hub, client, "ExCancelOrder", ecosystem_hub)
         }
         if flag == "B" {
             var apla_value money
             apla_value = Money(DBFind("@1order_log").Where({"id":$id}).Columns("client_value").One("client_value"))
-            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", apla_value, 1, client, "ExCancelOrder", 1)
+            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", apla_value, wallet_apla, client, "ExCancelOrder", 1)
         }
     }
 }
