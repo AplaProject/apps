@@ -43,7 +43,7 @@ contract MSCreate {
         if $Limit != $NO_LIMIT{
             $limit = UnixDateTime(dateAddTime($LimitDate, $LimitTime))
             if $limit == 0 {
-                warning "invalid datetime"
+                warning "Invalid Date or Time"
             }
         }
 
@@ -53,18 +53,21 @@ contract MSCreate {
             if templateId == 0{
                 warning "Voting template not founded"
             }
-            // в таблице 1_keys в колонку multi записывается id шаблона голосования
+            // in the table 1_keys in the multi column is written the id of a template vote
             $multi = templateId
         }else{
-            // -1, если выбрано "перевод одной подписью"
+            // -1 if the selected "one signature"
             $multi = -1
         }
         var amount_day amount_month date_day date_month int role_ids array
         if $buf["value.type"] == $ROLE_SINGLE || $buf["value.type"] == $ROLE_VOTING{
             role_ids = $units
+            $isGroup = false
+        }else{
+            $isGroup = true
         }
-        $PARAMS = ["amount_max", "amount_max_day", "amount_max_month", "amount_day", "amount_month", "date_day", "date_month", "voting_template_id", "sign", "role_ids"]
-        $VALUES = [$AmountMax, $AmountMaxDay, $AmountMaxMonth, amount_day, amount_month, date_day, date_month, $TemplateId, $Sign, role_ids]
+        $PARAMS = ["amount_max", "amount_max_day", "amount_max_month", "amount_day", "amount_month", "date_day", "date_month", "voting_template_id", "role_ids"]
+        $VALUES = [$AmountMax, $AmountMaxDay, $AmountMaxMonth, amount_day, amount_month, date_day, date_month, $TemplateId, role_ids]
     }
 
     action {
@@ -72,14 +75,24 @@ contract MSCreate {
         table = Sprintf("@%vkeys", $ecosystem_id)
         DBUpdate(table, $key_id, {multi:$multi})
 
-        // пользователи и роли КМП заносятся в таблицу доверенностей с указанными лимитами
-        var params map
-        params["Recipient"] = IdToAddress($key_id)
+        // users and roles recorded in the table of powers of attorney with these limits
+        var params map i lenUnits kid int
         params["DateExpiration"] = $LimitDate
         params["TimeExpiration"] = $LimitTime
         params["TemplateId"] = $PoaTemplateId
         params["ParamArr"] = $PARAMS
         params["ValueArr"] = $VALUES
-        CallContract("@1PoaAdd", params)
+        if $isGroup{
+            lenUnits = Len($units)
+            while i < lenUnits{
+                kid = Int($units[i])
+                params["Recipient"] = IdToAddress(kid)
+                CallContract("@1PoaAdd", params)
+                i = i + 1
+            }
+        }else{
+            params["Recipient"] = IdToAddress($key_id)
+            CallContract("@1PoaAdd", params)
+        }
     }
 }
