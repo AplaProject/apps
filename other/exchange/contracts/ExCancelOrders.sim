@@ -1,9 +1,10 @@
-contract ExCancel {
+contract ExCancelOrders {
     data {
         symbol string
+        client int
+        flag string
     }
     conditions {
-        ContractConditions("@1AdminCondition") 
     }
     action {
         var ids array
@@ -12,7 +13,7 @@ contract ExCancel {
         wallet_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("wallet_hub").One("wallet_hub"))
         wallet_apla = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("wallet_apla").One("wallet_apla"))
         i = 0
-        ids = DBFind("@1order_log").Where({"symbol":$symbol, "status":"A"}).Columns("id,client,client_value,counterparty_value,flag")
+        ids = DBFind("@1order_log").Where({"symbol":$symbol, "status":"A", "client":$client, "flag":$flag}).Columns("id,client_value,counterparty_value")
         while i < Len(ids) {
             var param map
             param = ids[i]
@@ -20,13 +21,13 @@ contract ExCancel {
             client = Int(param["client"])
             id = Int(param["id"])
             var amount money
-            if param["flag"] == "S" {
+            if $flag == "S" {
                 amount = Money(param["counterparty_value"])
-                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", amount, wallet_hub, client, "ExCancel", ecosystem_hub)
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", amount, wallet_hub, $client, "ExCancel", ecosystem_hub)
             }
-            if param["flag"] == "B" {
+            if $flag == "B" {
                 amount = Money(param["client_value"])
-                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", amount, wallet_apla, client, "ExCancel", 1)
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", amount, wallet_apla, $client, "ExCancel", 1)
             }
             DBUpdate("@1order_log", id, {status:"C", lastmodified:$time})
             i = i + 1

@@ -11,9 +11,9 @@ contract ExMatchingOTC {
         }
     }
     conditions {
-        var m order map
-        m = DBFind("@1notifications").Where({"id":$notific_id}).Columns("page_params->flag,page_params->client,page_params->counterparty,page_params->client_value,page_params->counterparty_value,page_params->price,page_params->quantity,page_params->symbol,page_params->ecosystem_hub").Row()
         if $status == "F" {
+            var m order map
+            m = DBFind("@1notifications").Where({"id":$notific_id}).Columns("page_params->flag,page_params->client,page_params->counterparty,page_params->client_value,page_params->counterparty_value,page_params->price,page_params->quantity,page_params->symbol,page_params->ecosystem_hub").Row()
             if m["page_params.flag"] == "B" {
                 checkBalance(Int(m["page_params.counterparty"]), Int(m["page_params.ecosystem_hub"]), Money(m["page_params.counterparty_value"]))
                 checkBalance(Int(m["page_params.client"]), 1, Money(m["page_params.client_value"]))
@@ -37,7 +37,6 @@ contract ExMatchingOTC {
         order["price"] = Money(m["page_params.price"])
         order["venue"] = "EXOTC"
         order["status"] = $status
-        order["lastmodified"] = $time
         if $status == "F" {
             if order["flag"] == "B" {
                 @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", order["counterparty_value"], order["counterparty"], order["client"], "ExMatchingOTC", m["page_params.ecosystem_hub"])
@@ -47,6 +46,7 @@ contract ExMatchingOTC {
                 @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", order["counterparty_value"], order["client"], order["counterparty"], "ExMatchingOTC", m["page_params.ecosystem_hub"])
                 @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", order["client_value"], order["counterparty"], order["client"], "ExMatchingOTC", 1)
             }
+            
         }
         DBInsert("@1order_log", order)
         @1NotificationsClose("notific_id", $notific_id)

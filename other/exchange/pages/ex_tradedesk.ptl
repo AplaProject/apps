@@ -1,4 +1,6 @@
-DBFind(@1symbol).Where({id:#ticker_id#}).Vars(ticker)
+DBFind(@1symbol).Where({id:#ticker_id#}).Custom(lotsize_money){
+    SetVar(lotsize_symbol,Money(#lotsize#))
+}.Vars(ticker)
 DBFind(@1order_log).Where({"symbol":#ticker_name#,"status":"A","venue":"EX"}).Order({"price":"-1"}).Count(orders)
 DBFind(@1keys).Where({"id":#key_id#, "ecosystem":1}).Custom(amount_money){
     SetVar(balance_primary,Money(#amount#))
@@ -6,16 +8,29 @@ DBFind(@1keys).Where({"id":#key_id#, "ecosystem":1}).Custom(amount_money){
 DBFind(@1keys).Where({"id":#key_id#, "ecosystem":#ticker_ecosystem_hub#}).Custom(hub_money){
     SetVar(balance_hub,Money(#amount#))
 }
+DBFind(@1order_log,filled).Where({"symbol":#ticker_name#,"status":"F", $or:[{"client": #key_id#},{"counterparty": #key_id#}]}).Limit(5).Custom(price_money){
+    Money(#price#) APLA
+}.Custom(value_money){
+    Money(#client_value#) APLA
+}.Custom(quantity_money){
+    #quantity# x Money(#ticker_lotsize#)
+}.Count(tns)
+
+DBFind(@1notifications,otc_A).Where({"closed":0, "page_params->symbol":#ticker_name#,"page_params->client":#key_id#}).Columns("page_params->flag, page_params->price, page_params->quantity, page_params->client_value, page_params->venue").Limit(5).Custom(price_money){
+    Money(#page_params.price#) APLA
+}.Custom(value_money){
+    Money(#page_params.client_value#) APLA
+}.Custom(quantity_money){
+    #page_params.quantity# x Money(#ticker_lotsize#)
+}.Custom(button){
+    Button(Body: LangRes(@1ex_cancel), Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExMatchingOTC, Params: "notific_id=#id#,status=C", PageParams: "ticker_id=#ticker_id#")
+}.Count(otc_log)
 
 Div(content-wrapper){
-     Div(col-lg-12){
+    Div(col-lg-12){
         Div(panel-body){
             Div(row){
                 Span(Class: h3 text-primary, Body: #ticker_name#)
-                Div(col-md-12){
-                    DBFind(@1order_log,src_L1).Where({"status":"F","symbol":"#ticker_name#","venue":"EX"}).Order({"id":"1"}).Limit(1)
-                    Table(Source: src_L1, Columns: "Flag=flag,Price=price,Quantity=quantity")
-                }
             }
         }
     }
@@ -24,156 +39,191 @@ Div(content-wrapper){
             Div(panel-body){
                 Div(row){
                     Div(col-md-10){
-                        DBFind(@1order_log,src_L2).Where({"status":"F","symbol":"#ticker_name#","venue":"EX"}).Columns("id,price")
-                        Chart(Type: "line", Source: src_L2, FieldLabel: "id", FieldValue: "price", Colors: "#e74c3c, #2ecc71, #8e44ad, #34495e, #ecf0f1, #F79F1F, #1B1464, #6F1E51") 
+                        DBFind(@1order_log,src_L2).Where({"status":"F","symbol":"#ticker_name#","venue":"EX"}).Columns("lastmodified,price").Custom(graph_price){
+                            Money(#price#)
+                        }.Custom(graph_lastmodified){
+                            DateTime(#lastmodified#, HH:MI DD.MM)
+                        }
+                        Chart(Type: "line", Source: src_L2, FieldLabel: "graph_lastmodified", FieldValue: "graph_price", Colors: "#e74c3c, #2ecc71, #8e44ad, #34495e, #ecf0f1, #F79F1F, #1B1464, #6F1E51") 
                     }
                 }
             }
         }
-        Div(panel panel-primary){
+        If(#tns#>1){
+            Div(panel panel-primary){
+                Div(panel-body){
+                    Div(row){
+                        Div(col-md-10){
+                            Table(Source: filled, Columns: "$@1ex_flag$=flag,$@1ex_price$=price_money,$@1ex_quantity$=quantity_money,$@1ex_value$=value_money,$@1ex_venue$=venue") 
+                        }
+                    }
+                }
+            }
+        }
+        If(#otc_log#>0){
+            Div(panel panel-primary){
+                Div(panel-body){
+                    Div(row){
+                        Div(col-md-10){
+                            Table(Source: otc_A, Columns: "$@1ex_flag$=page_params.flag,$@1ex_price$=price_money,$@1ex_quantity$=quantity_money,$@1ex_value$=value_money,$@1ex_venue$=page_params.venue,$@1ex_cancel$=button")  
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Div(col-lg-6){
+        Form(panel panel-primary){
+            Div(panel-body){
+                Div(row){
+                    Div(col-md-12 text-left){
+                        If(#orders# > 0){
+                            DBFind(@1order_log,src_S).Where({"flag":"S","symbol":"#ticker_name#","status":"A","venue":"EX"}).Order({"price":"-1"}).Limit(20).Custom(price_money){
+                                    Money(#price#)
+                            }.Custom(value_money){
+                                    Money(#client_value#) for Money(#counterparty_value#)
+                            }.Custom(_button){
+                                If(And(#ticker_cross#==1,#client#==#key_id#)){
+                                    Button(Body: LangRes(@1ex_buy), Class: btn btn-success, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=B,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F", PageParams: "ticker_id=#ticker_id#")
+                                }
+                                If(#client#!=#key_id#){
+                                    Button(Body: LangRes(@1ex_buy), Class: btn btn-success, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=B,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F", PageParams: "ticker_id=#ticker_id#")
+                                }
+                            }.Custom(_cancel){
+                                If(#client#==#key_id#){
+                                    Button(Body: LangRes(@1ex_cancel), Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExCancelOrder, Params: "id=#id#,flag=#flag#,symbol=#symbol#", PageParams: "ticker_id=#ticker_id#")
+                                }
+                            }.Count(sell_orders)
+                            If(#sell_orders# > 0){
+                                Table(Source: src_S, Columns: "=_cancel,$@1ex_flag$=flag,Symbol=symbol,$@1ex_quantity$=quantity,$@1ex_price$=price_money,$@1ex_value$=value_money,=_button").Style(
+                                    tbody > tr > td {
+                                        width: 10%;
+                                        word-break: break-all;
+                                        font-weight: 400;
+                                        font-size: 13px;
+                                        color: #666;
+                                        border-top: 1px solid #eee;
+                                        vertical-align: middle;
+                                    }
+                                )
+                            }
+                            DBFind(@1order_log,src_B).Where({"flag":"B","symbol":"#ticker_name#","status":"A","venue":"EX"}).Order({"price":"-1"}).Limit(20).Custom(price_money){
+                                    Money(#price#)
+                            }.Custom(value_money){
+                                    Money(#client_value#) for Money(#counterparty_value#)
+                            }.Custom(_button){
+                                If(And(#ticker_cross#==1,#client#==#key_id#)){
+                                    Button(Body: LangRes(@1ex_sell), Class: btn btn-danger, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=S,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F", PageParams: "ticker_id=#ticker_id#")
+                                }
+                                If(#client#!=#key_id#){
+                                    Button(Body: LangRes(@1ex_sell), Class: btn btn-danger, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=S,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F", PageParams: "ticker_id=#ticker_id#")
+                                }
+                            }.Custom(_cancel){
+                                If(#client#==#key_id#){
+                                    Button(Body: LangRes(@1ex_cancel), Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExCancelOrder, Params: "id=#id#,flag=#flag#,symbol=#symbol#", PageParams: "ticker_id=#ticker_id#")
+                                }
+                            }.Count(buy_orders)
+                            If(#buy_orders# > 0){
+                                Table(Source: src_B, Columns: "=_cancel,$@1ex_flag$=flag,Symbol=symbol,$@1ex_quantity$=quantity,$@1ex_price$=price_money,$@1ex_value$=value_money,=_button").Style(
+                                    tbody > tr > td {
+                                        width: 10%;
+                                        word-break: break-all;
+                                        font-weight: 400;
+                                        font-size: 13px;
+                                        color: #666;
+                                        border-top: 1px solid #eee;
+                                        vertical-align: middle;
+                                    }
+                                )
+                            }
+                        }.Else{
+                            Div(Class: h4 text-bold m0 text-center, Body: $@1ex_hint_no_orders$ #ticker_name#)
+                        }
+                    }
+                }
+            }
+        }
+        Form(panel panel-primary){
             Div(panel-body){
                 Div(row){
                     Div(col-md-10){
-                        DBFind(@1order_log,filled).Where({"symbol":"#ticker_name#","status":"F","venue":"EX", $or:[{"client": #key_id#},{"counterparty": #key_id#}]).Limit(5).Custom(price_money){
-                            Money(#price#)
-                        }.Count(tns)
-                        Table(Source: filled, Columns: "Flag=flag,Price=price,Quantity=quantity") 
+                        Form(){
+                            Div(row form-group){
+                                Div(col-sm-3 mt-sm text-right){
+                                    Label(For: Balance){
+                                        Span(Body: LangRes(@1ex_balance_apla))
+                                    }
+                                }
+                                Div(col-sm-9){
+                                    Input(Name: balance, Value: #balance_primary#, Disabled: true)
+                                    Div(Class: m0 h6 text-muted, Body: LangRes(@1ex_hint_apla_value))
+                                }
+                            }
+                            Div(row form-group){
+                                Div(col-sm-3 mt-sm text-right){
+                                    Label(For: Ecosystem Hub Balance){
+                                        Span(Body: LangRes(@1ex_balance_hub))
+                                    }
+                                }
+                                Div(col-sm-9){
+                                    Input(Name: balance_hub, Value: #balance_hub#, Disabled: true)
+                                    Div(Class: m0 h6 text-muted, Body: LangRes(@1ex_hint_hub_value))
+                                }
+                            }
+                            Div(row form-group){
+                                Div(col-sm-3 mt-sm text-right){
+                                    Label(For: Lot Size){
+                                        Span(Body: LangRes(@1ex_lotsize))
+                                    }
+                                }
+                                Div(col-sm-9){
+                                    Input(Name: lotsize, Value: #lotsize_symbol#, Disabled: true)
+                                    Div(Class: m0 h6 text-muted, Body: LangRes(@1ex_hint_hub_value))
+                                }
+                            }
+                            Div(row form-group){
+                                Div(col-sm-3 mt-sm text-right){
+                                    Label(For: Quantity){
+                                        Span(Body: LangRes(@1ex_quantity)
+                                    }
+                                }
+                                Div(col-sm-9){
+                                    Input(Name: quantity, Type: number)
+                                    Div(Class: m0 h6 text-muted, Body: LangRes(@1ex_hint_quantity))
+                                }
+                            }
+                            Div(row form-group){
+                                Div(col-sm-3 mt-sm text-right){
+                                    Label(For: Price){
+                                        Span(Body: LangRes(@1ex_price)
+                                    }
+                                }
+                                Div(col-sm-9){
+                                    Input(Name: price, Type: number)
+                                    Div(Class: m0 h6 text-muted, Body: LangRes(@1ex_hint_apla_value))
+                                }
+                            }
+                        }
                     }
-                }
-            }
-        }
-    }
-}
-Div(col-lg-6){
-    Form(panel panel-primary){
-        Div(panel-body){
-            Div(row){
-                Div(col-md-12 text-left){
-                    If(#orders# > 0){
-                        DBFind(@1order_log,src_S).Where({"flag":"S","symbol":"#ticker_name#","status":"A","venue":"EX"}).Order({"price":"-1"}).Limit(20).Custom(price_money){
-                                Money(#price#)
-                        }.Custom(value_money){
-                                Money(#client_value#) for Money(#counterparty_value#)
-                        }.Custom(_button){
-                            If(And(#ticker_cross#==1,#client#==#key_id#)){
-                                Button(Body: LangRes(@1ex_buy), Class: btn btn-success, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=B,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F", PageParams: "ticker_id=#ticker_id#")
+                    Div(row mt){
+                        Div(col-lg-12){
+                            Div(col-lg-2){
+                                Button(Body: LangRes(@1ex_sell), Page: @1ex_tradedesk, Class: btn pull-left btn-danger, Contract: @1ExOrder, Params: "flag=S, symbol=#ticker_name#, client=#key_id#", PageParams: "ticker_id=#ticker_id#")
                             }
-                            If(#client#!=#key_id#){
-                                Button(Body: LangRes(@1ex_buy), Class: btn btn-success, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=B,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F", PageParams: "ticker_id=#ticker_id#")
+                            Div(col-lg-2){
+                                Button(Body: LangRes(@1ex_sell_otc), Page: @1ex_otc, Class: btn pull-left btn-danger, PageParams: "ticker_id=#ticker_id#, flag=S").Popup(Header: $@1ex_otc$, Width: "45")
                             }
-                        }.Custom(_cancel){
-                            If(#client#==#key_id#){
-                                Button(Body: LangRes(@1ex_cancel), Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExCancelOrder, Params: "id=#id#,flag=#flag#,symbol=#symbol#", PageParams: "ticker_id=#ticker_id#")
+                            Div(col-lg-2){
+                                Button(Body: LangRes(@1ex_cancel_sell), Page: @1ex_tradedesk, Class: btn pull-left btn-danger, Contract: @1ExCancelOrders, Params: "flag=S, symbol=#ticker_name#, client=#key_id#", PageParams: "ticker_id=#ticker_id#")
                             }
-                        }.Count(sell_orders)
-                        If(#sell_orders# > 0){
-                            Table(Source: src_S, Columns: "=_cancel,Flag=flag,Symbol=symbol,Quantity=quantity,Price=price_money,Value=value_money,=_button").Style(
-                                tbody > tr > td {
-                                    width: 10%;
-                                    word-break: break-all;
-                                    font-weight: 400;
-                                    font-size: 13px;
-                                    color: #666;
-                                    border-top: 1px solid #eee;
-                                    vertical-align: middle;
-                                }
-                            )
-                        }
-                        DBFind(@1order_log,src_B).Where({"flag":"B","symbol":"#ticker_name#","status":"A","venue":"EX"}).Order({"price":"-1"}).Limit(20).Custom(price_money){
-                                Money(#price#)
-                        }.Custom(value_money){
-                                Money(#client_value#) for Money(#counterparty_value#)
-                        }.Custom(_button){
-                            If(And(#ticker_cross#==1,#client#==#key_id#)){
-                                Button(Body: LangRes(@1ex_sell), Class: btn btn-danger, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=S,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F", PageParams: "ticker_id=#ticker_id#")
+                            Div(col-lg-2){
+                                Button(Body: LangRes(@1ex_cancel_buy), Page: @1ex_tradedesk, Class: btn pull-right btn-success, Contract: @1ExCancelOrders, Params: "flag=B, symbol=#ticker_name#, client=#key_id#", PageParams: "ticker_id=#ticker_id#")
                             }
-                            If(#client#!=#key_id#){
-                                Button(Body: LangRes(@1ex_sell), Class: btn btn-danger, Page: @1ex_tradedesk, Contract: @1ExMatching, Params: "flag=S,venue=EX,client=#key_id#,id=#id#,quantity=#quantity#,price=#price#,symbol=#symbol#,status=F", PageParams: "ticker_id=#ticker_id#")
+                            Div(col-lg-2){
+                                Button(Body: LangRes(@1ex_buy_otc), Page: @1ex_otc, Class: btn pull-right btn-success, PageParams: "ticker_id=#ticker_id#, flag=B").Popup(Header: $@1ex_otc$, Width: "45")
                             }
-                        }.Custom(_cancel){
-                            If(#client#==#key_id#){
-                                Button(Body: LangRes(@1ex_cancel), Class: btn btn-warning, Page: @1ex_tradedesk, Contract: @1ExCancelOrder, Params: "id=#id#,flag=#flag#,symbol=#symbol#", PageParams: "ticker_id=#ticker_id#")
-                            }
-                        }.Count(buy_orders)
-                        If(#buy_orders# > 0){
-                            Table(Source: src_B, Columns: "=_cancel,Flag=flag,Symbol=symbol,Quantity=quantity,Price=price_money,Value=value_money,=_button").Style(
-                                tbody > tr > td {
-                                    width: 10%;
-                                    word-break: break-all;
-                                    font-weight: 400;
-                                    font-size: 13px;
-                                    color: #666;
-                                    border-top: 1px solid #eee;
-                                    vertical-align: middle;
-                                }
-                            )
-                        }
-                    }.Else{
-                        Div(Class: h4 text-bold m0 text-center, Body: $@1ex_hint_no_orders$ #ticker_name#)
-                    }
-                }
-            }
-        }
-    }
-    Form(panel panel-primary){
-        Div(panel-body){
-            Div(row){
-                Div(col-md-10){
-                    Form(){
-                        Div(row form-group){
-                            Div(col-sm-3 mt-sm text-right){
-                                Label(For: Balance){
-                                    Span(Body: "Balance")
-                                }
-                            }
-                            Div(col-sm-9){
-                                Input(Name: name, Value: #balance_primary#, Disabled: true)
-                            }
-                        }
-                        Div(row form-group){
-                            Div(col-sm-3 mt-sm text-right){
-                                Label(For: Ecosystem Hub Balance){
-                                    Span(Body: "Ecosystem Hub Balance")
-                                }
-                            }
-                            Div(col-sm-9){
-                                Input(Name: name, Value: #balance_hub#, Disabled: true)
-                            }
-                        }
-                        Div(row form-group){
-                            Div(col-sm-3 mt-sm text-right){
-                                Label(For: Quantity){
-                                    Span(Body: LangRes(@1ex_quantity)
-                                }
-                            }
-                            Div(col-sm-9){
-                                Input(Name: quantity, Type: number)
-                            }
-                        }
-                        Div(row form-group){
-                            Div(col-sm-3 mt-sm text-right){
-                                Label(For: Price){
-                                    Span(Body: LangRes(@1ex_price)
-                                }
-                            }
-                            Div(col-sm-9){
-                                Input(Name: price, Type: number)
-                            }
-                        }
-                        Div(row mt){
-                            Div(col-md-12){
-                                Div(){
-                                    Button(Body: LangRes(@1ex_sell), Page: @1ex_tradedesk, Class: btn pull-left btn-danger, Contract: @1ExOrder, Params: "flag=S, symbol=#ticker_name#, client=#key_id#", PageParams: "ticker_id=#ticker_id#")
-                                }
-                                Div(){
-                                    Button(Body: LangRes(@1ex_sell_otc), Page: @1ex_otc, Class: btn pull-left btn-danger, PageParams: "ticker_id=#ticker_id#, flag=S").Popup(Header: $@1ex_otc$, Width: "45")
-                                }.Style(Button {margin-left:25px;})
-                                Div(){
-                                    Button(Body: LangRes(@1ex_buy), Page: @1ex_tradedesk, Class: btn pull-right btn-success, Contract: @1ExOrder, Params: "flag=B, symbol=#ticker_name#, client=#key_id#", PageParams: "ticker_id=#ticker_id#")
-                                }.Style(Button {margin-left:25px;})
-                                Div(){
-                                    Button(Body: LangRes(@1ex_buy_otc), Page: @1ex_otc, Class: btn pull-right btn-success, PageParams: "ticker_id=#ticker_id#, flag=B").Popup(Header: $@1ex_otc$, Width: "45")
-                                }
+                            Div(col-lg-2){
+                                Button(Body: LangRes(@1ex_buy), Page: @1ex_tradedesk, Class: btn pull-right btn-success, Contract: @1ExOrder, Params: "flag=B, symbol=#ticker_name#, client=#key_id#", PageParams: "ticker_id=#ticker_id#")
                             }
                         }
                     }
@@ -182,6 +232,7 @@ Div(col-lg-6){
         }
     }
 }
+
 
 
 
