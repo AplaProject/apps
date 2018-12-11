@@ -1,78 +1,91 @@
 DBFind(@1applications).Columns("id").Where({name:"Tokens emission", deleted:0, ecosystem:1}).Vars(application)
-AppParam(App:#application_id#, Name:type_emission, Source:type_emission, Ecosystem:1)
-AppParam(App:#application_id#, Name:type_withdraw, Source:type_withdraw, Ecosystem:1)
-DBFind(@1ecosystems).WhereId(#ecosystem_id#).Vars(e)
 
-If(#e_type_emission#>0){
-    SetVar(button_title, $@1add$)
-}.Else{
-    SetVar(button_title, $@1create$)
+SetVar(type,0)
+DBFind(@1ecosystems).WhereId(#ecosystem_id#).Vars(item)
+If(#item_type_emission#>0){
+    SetVar(type,#item_type_emission#)
 }
+SetVar(title,$@1emission_view$ ##Id#)
+SetTitle(#title#)
+Div(content-wrapper){
+    Div(breadcrumb){
+        LinkPage(Body: $@1tokens$, Page: @1te_list)
+        Span(/, mh)
+        Span(#title#, text-muted)
+    }
+    If(#type#>0){
+        Div(row){
+            Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
+                Div(panel panel-default){
+                    Div(panel-body){
+                        Div(row mt-sm){
+                            Div(col-sm-4 text-right text-bold){
+                                LangRes(@1ecosystem)
+                            }
+                            Div(col-sm-8 text-left){
+                                #item_ecosystem#
+                            }
+                        }
 
-SetTitle($@1emission_tokens$)
-AddToolButton(Page: @1te_create, Icon: icon-plus, Title: #button_title#).Popup(50, $@1emission_new$)
+                        Div(row mt-sm){
+                            Div(col-sm-4 text-right text-bold){
+                                LangRes(@1type_withdraw)
+                            }
+                            Div(col-sm-8 text-left){
+                                AppParam(App:#application_id#, Name:type_withdraw, Index:#item_type_withdraw#, Ecosystem:1)
+                                If(#item_withdraw#==1){
+                                    Div(){
+                                        $@1withdrawn$
+                                    }
+                                }
+                            }
+                        }
 
-Form(content-wrapper){
-    Div(row){
-        Div(col-sm-8 col-sm-offset-2){
-            If(#e_type_emission#>0){
-                Div(list-group-item){
-                    Div(text-center text-bold h4 m0){
-                        LangRes(@1tokens)
-                    }
-                    Div(row mt){
-                        Div(col-sm-6 text-right){
-                            LangRes(@1token_title)
+                        Div(row mt-sm){
+                            Div(col-sm-4 text-right text-bold){
+                                LangRes(@1type_emission)
+                            }
+                            Div(col-sm-8 text-left){
+                                AppParam(App:#application_id#, Name:type_emission, Index:#item_type_emission#, Ecosystem:1)
+                            }
                         }
-                        Div(col-sm-6 text-left){
-                            Span(Class: ml-sm, Body: #e_token_title#)
+
+                        Div(row mt-sm){
+                            Div(col-sm-4 text-right text-bold){
+                                LangRes(@1token_title)
+                            }
+                            Div(col-sm-8 text-left){
+                                #item_token_title#
+                            }
                         }
-                    }
-                    Div(row){
-                        Div(col-sm-6 text-right){
-                            LangRes(@1type_emission)
-                        }
-                        Div(col-sm-6){
-                            Button(Page:@1te_edit, PageParams: "TypeChange=emission", Class: btn-xs btn-link){
-                                Span(Class: h5, Body: AppParam(App:#application_id#, Name:type_emission, Index:#e_type_emission#, Ecosystem:1))
-                            }.Popup(50, $@1change$)
-                        }
-                    }
-                    Div(row){
-                        Div(col-sm-6 text-right){
-                            LangRes(@1type_withdraw)
-                        }
-                        Div(col-sm-6){
-                            Button(Page:@1te_edit, PageParams: "TypeChange=withdraw", Class: btn-xs btn-link){
-                                Span(Class: h5, Body: AppParam(App:#application_id#, Name:type_withdraw, Index:#e_type_withdraw#, Ecosystem:1))
-                            }.Popup(50, $@1change$)
-                        }
-                    }
-                    JsonToSource(amounts, #e_emission_amount#)
-                    Div(list-group-item mt){
-                        Div(text-center text-bold h5 m0){
-                            LangRes(@1completed_stages)
-                        }
-                        ForList(Source: amounts, Index:ind){
-                            Div(row mt-sm){
-                                Div(col-sm-2){
-                                    #ind#
-                                }
-                                Div(col-sm-6){
-                                    DateTime(#key#, Format: YYYY-MM-DD HH:MI:SS)
-                                }
-                                Div(col-sm-4 text-right){
-                                    Money(#value#) #e_token_title#
+                        Div(row mt-sm){
+                            Div(col-sm-4 text-right text-bold){
+                                LangRes(@1emission_amount)
+                            }
+                            Div(col-sm-8 text-left){
+                                JsonToSource(amounts, #item_emission_amount#)
+                                ForList(amounts){
+                                    Div(row md-sm){
+                                        Div(col-sm-6){
+                                            Money(#value#) #item_token_title#
+                                        }
+                                        Div(col-sm-6){
+                                            DateTime(#key#, Format: YYYY-MM-DD HH:MI:SS)
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            }.Else{
-                Div(md-12 alert alert-danger text-center){
-                    Span(Body: LangRes(@1emission_not_fulfilled))
+                    Div(panel-footer text-left){
+                        Button(Body: $@1back$, Page: @1te_list, Class: btn btn-default)
+                    }
                 }
             }
+        }
+    }.Else{
+        Div(h3 text-center){
+            $@1tokens$ $@1item_not_founded$
         }
     }
 }
