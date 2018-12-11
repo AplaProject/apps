@@ -1,0 +1,134 @@
+SetVar(this_page, e_event_form).(back_page, e_events)
+DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Events"}).Columns("name,id").Vars(application)
+AppParam(App: #application_id#, Name:e_regions, Source:regions)
+AppParam(App: #application_id#, Name:e_types, Source:types)
+
+SetVar(event_name,).(event_description,).(event_event_address_json,{"type":"point","coords":[[37.620558583362,55.75364730329732]],"area":0, "zoom":10})
+Div(fullscreen){
+    Div(breadcrumb text-muted){
+        LinkPage(Body:$e_events$, Page: e_events)
+        Span(/,mh)
+        If(#Id#>0){
+            $e_edit_event$
+        }.Else{
+            $e_create_event$
+        }
+    }
+    Div(row){
+        Div(col-sm-6 col-sm-offset-3){
+            Form(mt-lg panel panel-primary){
+                Div(panel-body){
+                    If(#Id#>0){
+                        Input(Name: Id, Type: hidden, Value: #Id#)
+                        DBFind("e_events").WhereId(#Id#).Vars(event)
+                        If(GetVar(MemberId)==""){
+                            SetVar(MemberId, #event_responsible#)
+                        }
+                        If(GetVar(Type)==""){
+                            SetVar(Type, #event_type#)
+                        }
+                        If(GetVar(Region)==""){
+                            SetVar(Region, #event_region#)
+                        }
+                    }.Else{
+                        SetVar(Id,)
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-4 mt text-bold text-right){
+                            LangRes(e_responsible)
+                        }
+                        Div(col-sm-8 text-left){
+                            Div(input-group){
+                                Div(text-muted mt){
+                                    If(GetVar(MemberId)!=""){
+                                        SetVar(AddressMemberId, Address(#MemberId#))
+                                        #AddressMemberId#
+                                    }.Else{
+                                        xxxx-xxxx-xxxx-xxxx-xxxx
+                                    }
+                                }
+                                Div(input-group-btn){
+                                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: e_select_wallet, PageParams:"back_page=#this_page#,back_header=$@1send$,EcosystemId=#ecosystem_id#,Id=#Id#").Popup(Header: $@1member$, Width: "50")
+                                }
+                            }
+                        }
+                    }
+                    If(GetVar(MemberId)!=""){
+                        Div(row mb-sm){
+                            Div(col-md-4 mt-sm text-right text-bold){
+                                LangRes(e_event_name)
+                            }
+                            Div(col-md-8 text-left){
+                                Input(Name: Name, Value: #event_name#)
+                            }
+                        }
+                        Div(row mb-sm){
+                            Div(col-sm-4 mt text-bold text-right){
+                                LangRes(@1description)
+                            }
+                            Div(col-sm-8 text-left){
+                                Input(Name: Description, Type: textarea, Value: #event_description#)
+                            }
+                        }
+                        Div(row mb-sm){
+                            Div(col-sm-4 mt-sm text-right text-bold){
+                                LangRes(e_type)
+                            }
+                            Div(col-sm-8 text-left){
+                                Select(Name: Type, Source: types, NameColumn: name, ValueColumn: id, Value: #Type#)
+                            }
+                        }
+                        Div(row mb-sm){
+                            Div(col-sm-4 mt-sm text-right text-bold){
+                                LangRes(e_region)
+                            }
+                            Div(col-sm-8 text-left){
+                                Select(Name: Region, Source: regions, NameColumn: name, ValueColumn: id, Value: #Region#)
+                            }
+                        }
+                        Div(row mb-sm){
+                            Div(col-sm-4 mt text-bold text-right){
+                                LangRes(e_event_address)
+                            }
+                            Div(col-sm-8 text-left){
+                                InputMap(Name: EventAddress, Type: point, MapType: streets, Value: #event_event_address_json#)
+                            }
+                        }
+
+                        Div(row mb-sm){
+                            Div(col-sm-4 mt-sm text-right text-bold){
+                                LangRes(e_starting_date)
+                            }
+                            Div(col-sm-8 text-left){
+                                Div(row){
+                                    Div(col-sm-6){
+                                        If(#Id#>0){
+                                            SetVar(date, DateTime(#event_starting_date#, Format: YYYY-MM-DD))
+                                            Input(Name:StartingDate, Type:date, Value: #date#)
+                                        }.Else{
+                                            Input(Name:StartingDate, Type:date)
+                                        }
+                                    }
+                                    Div(col-sm-6){
+                                        Input(Name:StartingTime, Type:time, Value: "00:00")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Div(panel-footer){
+                    Button(Body: LangRes(@1back), Class: btn btn-default, Page: #back_page#)
+                    If(GetVar(MemberId)!=""){
+                        Button(Body: $@1send$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: EEvent, Params: "Responsible=#MemberId#")
+                    }
+                }
+            }
+        }
+    }
+}.Style(
+    .buttons {
+        border: 1px solid #dde6e9;
+        padding: 6px 16px;
+    }
+)

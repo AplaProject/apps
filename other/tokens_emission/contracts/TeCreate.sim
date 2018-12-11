@@ -1,98 +1,89 @@
 contract TeCreate {
     data {
-        Title string
+        Title string "optional"
         Amount money
-        TypeWithdraw int
-        TypeEmission int
+        TypeWithdraw int "optional"
+        TypeEmission int "optional"
     }
 
-    func getEmissionConditionContract() string{
+    func getEmissionConditionContract() string {
         var param map contractName string contractId int
         param = DBFind("@1parameters").Where({ecosystem:$ecosystem_id, name:"emission_condition_contract"}).Row()
-        if param{
+        if param {
             contractName = param["value"]
-            if Size(contractName) > 0{
+            if Size(contractName) > 0 {
                 contractId = GetContractByName(contractName)
-                if contractId == 0{
+                if contractId == 0 {
                     warning LangRes("@1emission_conditions_contract_not_found", "en")
-                }elif param["conditions"] != "false"{
-                    warning LangRes("@1emission_conditions_param_editable_error", "en")
                 }
             }
         }
         return contractName
     }
+
     func createEmissionConditionParam() {
         if !DBFind("@1parameters").Where({ecosystem:$ecosystem_id, name:"emission_condition_contract"}).Row(){
-            @1NewParameter("Name,Value,Conditions", "emission_condition_contract", "", "ContractConditions(\"MainCondition\")")
+            @1NewParameter("Name,Value,Conditions", "emission_condition_contract", "AdminCondition", "ContractConditions(\"AdminCondition\")")
         }
     }
 
     conditions {
-        $item = DBFind("@1ecosystems").WhereId($ecosystem_id).Row()
-        $EDIT_MODE = $item["type_emission"] == 1 || $item["type_emission"] == 2
-
-        if $item["type_emission"] == 1 && $item["withdraw"] == 0{
-            warning LangRes("@1emission_not_editable", "en")
-        }else{
-            var name string
-            name = getEmissionConditionContract()
-            if name != "" {
-                ContractConditions(name)
-            }else{
-                MainCondition()
-            }
-        }
-        if !$EDIT_MODE {
-            if Size($Title) == 0{
-                warning Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "token_title")
-            }
-        }
-
-        if $item["type_withdraw"] == $TypeWithdraw && $Amount <= 0{
-            warning Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "emission_amount")
-        }
         $guest = 4544233900443112470
         $founder = Int(EcosysParam("founder_account"))
+
+        $item = DBFind("@1ecosystems").WhereId($ecosystem_id).Row()
+        $SECONDARY_EMISSION = $item["type_emission"] == 1 || $item["type_emission"] == 2
+
+        if $SECONDARY_EMISSION {
+            if $item["type_emission"] == 1 {
+                warning LangRes("@1emission_not_editable", "en")
+            }
+        } else {
+            if Size($Title) == 0 {
+                warning Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "token_title")
+            }
+            if $TypeWithdraw < 1 || $TypeWithdraw > 2 {
+                warning Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "type_withdraw")
+            }
+            if $TypeEmission < 1 || $TypeEmission > 2 {
+                warning Sprintf(LangRes("@1template_creation_error_x_unspecified", "en"), "type_emission")
+            }
+        }
     }
+
     action {
         createEmissionConditionParam()
-        
+
+        var contract_name string
+        contract_name = getEmissionConditionContract()
+        ContractConditions(contract_name)
+
         var m amount map
-        
-        if $EDIT_MODE {
-            if $item["type_emission"] == 2{
-                amount = JSONDecode($item["emission_amount"])
-                amount[Str($block_time)] = $Amount
-                m["emission_amount"] = amount
-            }
-            if $item["type_withdraw"] == 2{
-                m["type_withdraw"] = $TypeWithdraw
-            }
-            DBUpdate("@1ecosystems", $ecosystem_id, m)
-        }else{
-            amount[Str($block_time)] = $Amount
-            m = {type_emission:$TypeEmission, token_title:$Title, emission_amount:amount, type_withdraw:$TypeWithdraw}
-            $Id = DBUpdate("@1ecosystems", $ecosystem_id, m)
-            if $TypeWithdraw == 2{
-                if DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $guest}).Row(){
-                    DBUpdateExt("@1keys", {"ecosystem": $ecosystem_id, "id": $guest}, {"blocked": 0})
-                }
-            }
+        if $SECONDARY_EMISSION {
+            amount = JSONDecode($item["emission_amount"])
+            amount[Str($block_time)] = Money($Amount)
+            m["emission_amount"] = amount
+        } else {
+            amount[Str($block_time)] = Money($Amount)
+            m["emission_amount"] = amount
+            m["type_emission"] = $TypeEmission
+            m["token_title"] = $Title
+            m["type_withdraw"] = $TypeWithdraw
         }
-        if $Amount > 0{
-            DBUpdateExt("@1keys", {"ecosystem": $ecosystem_id, "id": $founder}, {"+amount": $Amount})
-            var h map
-            h["sender_id"] = 0
-            h["recipient_id"] = $founder
-            h["amount"] = $Amount
-            h["comment"] = "New emission"
-            h["block_id"] = $block
-            h["txhash"] = $txhash
-            h["ecosystem"] = $ecosystem_id
-            h["type"] = 2
-            h["created_at"] = $block_time
-            DBInsert("@1history", h)
-        }
+
+        var h map
+        h["sender_id"] = 0
+        h["recipient_id"] = $founder
+        h["amount"] = Money($Amount)
+        h["comment"] = "New emission"
+        h["block_id"] = $block
+        h["txhash"] = $txhash
+        h["ecosystem"] = $ecosystem_id
+        h["type"] = 2
+        h["created_at"] = $block_time
+
+        DBInsert("@1history", h)
+        DBUpdate("@1ecosystems", $ecosystem_id, m)
+        DBUpdateExt("@1keys", {"ecosystem": $ecosystem_id, "id": $founder}, {"+amount": $Amount})
     }
 }

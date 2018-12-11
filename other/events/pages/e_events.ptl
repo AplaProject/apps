@@ -1,0 +1,75 @@
+SetVar(this_page, e_events).(this_table, e_events)
+DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Events"}).Columns("name,id").Vars(application)
+Include(@1pager_header)
+
+SetTitle("$e_events$")
+SetVar(isManager,0)
+SetVar(admin_role_id, EcosysParam(Name:role_admin))
+If(#role_id#>0){
+    If(#admin_role_id#==#role_id#){
+        SetVar(isManager,1)
+    }
+}
+If(#isManager#==1){
+    AddToolButton(Title:$@1create$, Page: e_event_form, Icon: icon-calendar)
+}
+
+
+AppParam(App: #application_id#, Name:e_regions, Source:regions, Ecosystem:#ecosystem_id#)
+AppParam(App: #application_id#, Name:e_types, Source:types, Ecosystem:#ecosystem_id#)
+SetVar(where_type,).(where_region,)
+If(GetVar(search)!=""){
+    SetVar(where, {"name": {"$like": #search#}})
+}.ElseIf(Or(GetVar(Type)>0,GetVar(Region)>0)){
+    If(#Type#>0){
+        SetVar(where_type, {type:#Type#})
+    }
+    If(#Region#>0){
+        SetVar(where_region, {region:#Region#})
+    }
+    SetVar(where, {$or:[#where_type#, #where_region#]})
+}.Else{
+    SetVar(where, {id:{$neq:0}}).(Type,0).(Region,0).(search,)
+}
+
+
+Div(){
+    Button(Class: btn bg-gray fa fa-filter pull-right, Page: e_events_filter).Popup(50, $e_events_filter$)
+}
+Div(list-group-item pt-lg pull-left){
+    SetVar(search_name, $@1name$)
+    Include(@1search)
+}
+
+DBFind(#this_table#, src).Where(#where#).Order({starting_date: -1, id:1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,name,description,starting_date,type,region,event_address_json,event_address_json->address,responsible").Custom(_responsible){
+    Address(#responsible#)
+}.Custom(_type){
+    AppParam(App: #application_id#, Name:e_types, Index:#type#, Ecosystem:#ecosystem_id#)
+}.Custom(_region){
+    AppParam(App: #application_id#, Name:e_regions, Index:#region#, Ecosystem:#ecosystem_id#)
+}.Custom(_date){
+    If(#starting_date#>0){
+        Span(Class:text-muted, Body:DateTime(#starting_date#, Format: YYYY-MM-DD HH:MI))
+    }
+}.Custom(_address){
+    Button(Body:#event_address_json.address#, Page:e_map, Class: btn btn-link p0 m0, PageParams: "Coords=#event_address_json#").Popup(50, $e_map$)
+}.Custom(_actions){
+    Button(Page: e_event_form, Class: btn btn-default fa fa-pencil, PageParams: "Id=#id#")
+}.Count(count)
+
+Div(fullscreen){
+    Div(table-responsive list-group-item){
+        If(#count# > 0){
+            Table(src, "$@1id$=id,$@1name$=name,$@1description$=description,$e_starting_date$=_date,$@1type$=_type,$e_region$=_region,$@1address$=_address,$e_responsible$=_responsible,=_actions")
+        }.Else{
+            Div(Class: text-center h4 text-muted, Body: "$e_events$ $@1not_founded$")
+        }
+    }
+}.Style(
+    tbody > tr:nth-of-type(odd) {
+        background-color: #f8f9fc;
+    }
+)
+Div(mt-sm mb-sm){
+    Include(@1pager)
+}
