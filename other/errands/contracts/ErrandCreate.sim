@@ -1,21 +1,23 @@
 contract ErrandCreate {
     data {
         errand_type int
+        rec_role_id int "optional"
+        send_role_id int
+        member_id string "optional"
         errand_name string
         errand_text string
-        send_role_id int
-        rec_role_id int "optional"
-        member_id string "optional"
-        end_date string
-        end_time string
-    }
+        role_type_errand int "optional"
 
+        end_date string
+        end_time string "optional"
+
+    }
     func isCalledFromPage() bool {
         return $stack[0] == Sprintf("@%v%v", $ecosystem_id, $this_contract)
     }
     func trimZeroTime(s string) string {
         if Contains(s, "T00:00:00Z") {
-            s = Replace(s, "T00:00:00Z", "")
+            s = s Replace(s, "T00:00:00Z", "")
         }
         return s
     }
@@ -33,21 +35,21 @@ contract ErrandCreate {
             if isCalledFromPage(){
                 var errs array
                 if Size($end_date) < 10 {
-                    warning LangRes("@1ending_date_invalid", "en")
+                    error LangRes("@1ending_date_invalid", "en")
                 }
                 if Size($end_time) < 5 {
-                    warning LangRes("@1invalid_time_end", "en")
+                    error LangRes("@1invalid_time_end", "en")
                 }
             }
         }
-        if UnixDateTime($date_ended) < $block_time {
-            warning LangRes("@1ending_date_invalid", "en")
+        if UnixDateTime($date_ended) < $block_time{
+            error LangRes("@1starting_date_invalid", "en")
         }
     }
-
+	
     conditions {
         $check_access = EcosysParam("errand_access")
-
+        
         if $check_access {
             var rids array
             rids = JSONDecode("["+$check_access+"]")
@@ -75,7 +77,7 @@ contract ErrandCreate {
             info LangRes("@1empty_text", "en")
         }
         if $errand_type == 0 {
-            $valid_role = DBFind("roles").Where({ecosystem:$ecosystem_id, id:$rec_role_id, deleted:0}).One("id")
+            $valid_role = DBFind("@1roles").Where({ecosystem:$ecosystem_id,id:$rec_role_id,deleted:0}).One("id")
             if $valid_role == 0 {
                 info LangRes("@1role_not_found", "en")
             }
@@ -85,33 +87,55 @@ contract ErrandCreate {
                 info LangRes("@1empty_wallet", "en")
             }
             $member_id = AddressToId($member_id)
-            $check_member = DBFind("@1keys").Where({id:$member_id, ecosystem:$ecosystem_id}).One("id")
-            if Int($check_member) == 0 {
-                warning LangRes("@1member_not_fount", "en")
+            $check_member = DBFind("@1members").Where({id:$member_id,ecosystem:$ecosystem_id}).One("id")
+            if (Int($check_member) == 0){
+                if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$member_id}).Columns("id").Row() {
+                    error LangRes("@1member_not_fount", "en")
+                }
             }
         }
         fixDatetimes()
     }
-
+	
     action {
         var info_errand map
+
         info_errand["name"] = $errand_name
         info_errand["text"] = $errand_text
         info_errand["date_end"] = $date_ended
         info_errand["status"] = 0
         info_errand["type"] = "task"
         if $errand_type == 0 {
-            info_errand["recipient_type"] = 0
+            if $role_type_errand == 2 {
+                info_errand["recipient_type"] = 1
+            } else{
+                info_errand["recipient_type"] = 0
+            }
         }
         if $errand_type == 1 {
             info_errand["recipient_type"] = 1
         }
 
         if $errand_type == 0 {
-            @1NotificationsSend("current_role_id,rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id", $send_role_id, $rec_role_id, 2, "icon icon-envelope-open", "New Errand", LangRes("@1details_view", "en"), "@1errand_view", info_errand, 1, $ecosystem_id)
+            if $role_type_errand == 2 {
+                var errands array i lenErrands member_r_id int v map
+                errands = DBFind("@1roles_participants").Columns("id,role->id,member->member_id,ecosystem,deleted").Where({"role->id":$rec_role_id,"deleted":0,"ecosystem":$ecosystem_id})
+                lenErrands = Len(errands)
+                if lenErrands == 0 {
+                    info(LangRes("@1recipient_role_no_members", "en"))
+                }
+                while i < lenErrands{
+                    v = errands[i]
+                    member_r_id = Int(v["member.member_id"])
+                    @1NotificationsSend("current_role_id,member_id,sender,icon_name,text_header,text_body,page_name,params_map,rid,closure_type,eco_id",$send_role_id,member_r_id, 2, "icon icon-envelope-open", "New Errand", LangRes("@1details_view", "en"), "@1errand_view", info_errand, 0, 0,$ecosystem_id)
+                    i = i + 1
+                }
+            } else { 
+                @1NotificationsSend("current_role_id,rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id",$send_role_id,$rec_role_id, 2, "icon icon-envelope-open", "New Errand", LangRes("@1details_view", "en"), "@1errand_view",info_errand,1,$ecosystem_id)
+            }
         }
         if $errand_type == 1 {
-            @1NotificationsSend("current_role_id,member_id,sender,icon_name,text_header,text_body,page_name,params_map,rid,closure_type,eco_id", $send_role_id, Int($member_id), 2, "icon icon-envelope-open", "New Errand", LangRes("@1details_view", "en"), "@1errand_view", info_errand, 0, 0,$ecosystem_id)
+            @1NotificationsSend("current_role_id,member_id,sender,icon_name,text_header,text_body,page_name,params_map,rid,closure_type,eco_id",$send_role_id,Int($member_id), 2, "icon icon-envelope-open", "New Errand", LangRes("@1details_view", "en"), "@1errand_view", info_errand, 0, 0,$ecosystem_id)
         }
     }
 }
