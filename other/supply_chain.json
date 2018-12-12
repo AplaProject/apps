@@ -1,10 +1,29 @@
 {
     "blocks": [],
-    "contracts": [],
+    "contracts": [
+        {
+            "Name": "CreateObject",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract CreateObject {\n    data {\n    Name string\n    Weight int\n    image file\n    }\n    conditions {\n        $Body = $image[\"Body\"]\n        $ImageMimeType = $image[\"MimeType\"] \n    }\n\n    action {\n        var m map\n        $appId = Int(DBFind(\"@1applications\").Where({ecosystem:1, name:\"supply_chain\"}).One(\"id\"))\n        $imageId=@1UploadBinary(\"ApplicationId,Name,Data,DataMimeType\", $appId, $Name, $Body, $ImageMimeType)\n        m[\"name\"] = $Name\n        m[\"weight\"] = $Weight\n        m[\"image_id\"] = $imageId\n        m[\"status\"] = 1\n        \n        DBInsert(\"supply_objects\", m)\n    }\n}"
+        }
+    ],
     "data": [],
     "languages": [],
     "menus": [],
-    "pages": [],
+    "pages": [
+        {
+            "Name": "create_object",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "Div(content-wrapper){\n    Div(row){\n        Div(col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3){\n            Form(panel panel-primary){\n                Div(panel-heading, Body: LangRes(@1creating_object))\n                Div(panel-body){\n                    Div(row){\n                        Div(col-md-12 mc-sm text-left){\n                            Div(form-group){\n                                Label(){\n                                    Span(Body: LangRes(@1object_name))\n                                    Span(Class: text-danger, Body:*)\n                                }\n                                Input(Name: Name)\n                                \n                                Label(){\n                                    Span(Body: LangRes(@1object_weight))\n                                    Span(Class: text-danger, Body:*)\n                                }\n                                Input(Name: Weight)\n                                \n                                Label(){\n                                    Span(Body: LangRes(@1object_image))\n                                    Span(Class: text-danger, Body:*)\n                                }\n                                Input(Name: image, Type: file)\n                        }\n                    }\n                }\n                Div(panel-footer text-left){\n                    Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1create_object)\n                    Button(Body: LangRes(@1create), Class: btn btn-primary pull-right, Page: @1objects_list, Contract: @1CreateObject).Alert(Text: \"$@1want_create_object$\", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)\n                }\n            }\n        }\n    }\n}",
+            "Menu": "default_menu"
+        },
+        {
+            "Name": "objects_list",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "SetVar(this_page, @1objects_list).(this_table, @1supply_objects)\nInclude(@1pager_header)\n\nSetTitle(\"$@1objects$\")\nSpan(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: \"$@1objects_list$\"))\nAddToolButton(Title: $@1create_object$, Page: @1create_object, Icon: icon-plus).Popup(Header: $@1create_object$, Width: \"50\")\n\nDBFind(#this_table#, src).Custom(custom_status){\n    DBFind(#this_table#)\n    If(#status#==1){\n        Div(Class: text-normal, Body: \"$@1created$\")\n    }.ElseIf(#status#==2){\n        Div(Class: text-normal, Body: \"$@1in_chain$\")\n    }.ElseIf(#status#==3){\n        Div(Class: text-success, Body: \"$@1delivered$\")\n    }.ElseIf(#status#==4){\n        Div(Class: text-warning, Body: \"$@1delivery_failed$\")\n    }.Else{\n        Span(\"\")\n    }\n}.Custom(custom_image){\n    LinkPage(Page: lots_view, PageParams: \"Id=#id#\"){\n        Image(Src: Binary().ById(#image_id#), Class: photo).Style(height: 60px;width: 60px; border: 1px solid #5A5D63; margin-right: 10px;)\n    }\n}.Custom(custom_action){\n    DBFind(#this_table#)\n    If(#status#==1){\n        Button(Body: LangRes(@1send_by_chain), Class: btn btn-primary, Page: @1objects_list)\n    }.ElseIf(#status#==2){\n        Button(Body: LangRes(@1view_chain), Class: btn btn-primary, Page: @1chains_view)\n    }.ElseIf(#status#==3){\n        Button(Body: LangRes(@1view_chain), Class: btn btn-primary, Page: @1chains_view)\n    }.ElseIf(#status#==4){\n        Button(Body: LangRes(@1view_chain), Class: btn btn-primary, Page: @1chains_view)\n    }.Else{\n        Span(\"\")\n    }\n}\nDiv(fullscreen){\n    Div(table-responsive ml-lg mr-lg){\n        Div(list-group-item){\n            Table(src, \"$@1id$=id,$@1image$=custom_image,$@1name$=name,$@1object_weight$=weight,$@1status$=custom_status,$@1action$=custom_action\")                      \n        }.Style(\n            margin-top:-15px;\n            tbody > tr:nth-of-type(odd) {\n                background-color: #f8f9fc;\n            }\n        )\n    }\n}",
+            "Menu": "default_menu"
+        }
+    ],
     "parameters": [],
     "tables": [
         {
