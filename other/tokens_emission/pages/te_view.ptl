@@ -5,8 +5,12 @@ DBFind(@1ecosystems).WhereId(#ecosystem_id#).Vars(e)
 
 SetTitle($@1emission_tokens$)
 If(#e_type_emission#>0){
-    AddToolButton(Page: @1te_create, Icon: icon-plus, Title: $@1emission_new$).Popup(50, $@1emission_new$)
-    AddToolButton(Page: @1te_burn, Icon: icon-plus, Title: $@1burn$).Popup(50, $@1emission_new$)
+    If(#e_type_withdraw#==2){    
+        AddToolButton(Page: @1te_burn, Icon: icon-minus, Title: $@1burn$).Popup(50, $@1emission_new$)
+    }
+    If(#e_type_emission#==2){
+        AddToolButton(Page: @1te_create, Icon: icon-plus, Title: $@1emission_new$).Popup(50, $@1emission_new$)
+    }
 }.Else{
     SetVar(role_admin, EcosysParam(Ecosystem:#ecosystem_id#, Name: role_admin))
     If(#role_id#==#role_admin#){
@@ -50,21 +54,38 @@ Form(content-wrapper){
                             }.Popup(50, $@1change$)
                         }
                     }
-                    JsonToSource(amounts, #e_emission_amount#)
+                    ArrayToSource(emission, #e_emission_amount#)
                     Div(list-group-item mt){
-                        Div(text-center text-bold h5 m0){
+                        Div(text-center text-bold h5 m0 mb){
                             LangRes(@1completed_stages)
                         }
-                        ForList(Source: amounts, Index:ind){
+                        ForList(Source: emission, Index:ind){
                             Div(row mt-sm){
-                                Div(col-sm-2){
+                                Div(col-sm-1){
                                     #ind#
                                 }
-                                Div(col-sm-6){
-                                    DateTime(#key#, Format: YYYY-MM-DD HH:MI:SS)
-                                }
-                                Div(col-sm-4 text-right){
-                                    Money(#value#) #e_token_title#
+                                JsonToSource(src, #value#, src)
+                                ForList(Source: src){
+                                    If(#src_key#==time){
+                                        Div(col-sm-5){
+                                            DateTime(#src_value#, Format: YYYY-MM-DD HH:MI:SS)
+                                        }  
+                                    }
+                                    If(#src_key#==type){
+                                        Div(col-sm-3 text-center){
+                                            If(#src_value# == emission){
+                                                Span(Class: text-success, Body: $@1emission_tokens$)
+                                            }
+                                            If(#src_value# == burn){
+                                                Span(Class: text-danger, Body: $@1burning_tokens$)
+                                            }
+                                        }  
+                                    }
+                                    If(#src_key#==val){
+                                        Div(col-sm-3 text-right #stl#){
+                                            Money(#src_value#) #e_token_title#
+                                        }  
+                                    }
                                 }
                             }
                         }

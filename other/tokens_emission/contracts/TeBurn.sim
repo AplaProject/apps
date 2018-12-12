@@ -31,11 +31,23 @@ contract TeBurn {
         if $Amount < 0 {
             warning LangRes("@1amount_less_zero", "en")
         }
+
+        $item = DBFind("@1ecosystems").WhereId($ecosystem_id).Row()
+        if $item["type_withdraw"] == 1 {
+            warning LangRes("@1burning_blocked", "en")
+        }
     }
 
     action {
-        DBUpdateExt("@1keys", {"id": $key_id, "ecosystem": $ecosystem_id}, {"-amount": $Amount})
-        DBUpdateExt("@1keys", {"id": 4544233900443112470, "ecosystem": $ecosystem_id}, {"+amount": $Amount})
+        var mb map
+        var burn map arr array
+        burn["type"] = "burn"
+        burn["time"] = Str($block_time)
+        burn["val"] = Money($Amount)
+        arr = JSONDecode($item["emission_amount"])
+        arr = Append(arr, burn)
+        mb["emission_amount"] = JSONEncode(arr)
+        DBUpdate("@1ecosystems", $ecosystem_id, mb)
 
         var m map
         m["sender_id"] = $key_id
@@ -48,5 +60,8 @@ contract TeBurn {
         m["type"] = 4
         m["created_at"] = $block_time
         DBInsert("@1history", m)
+
+        DBUpdateExt("@1keys", {"id": $key_id, "ecosystem": $ecosystem_id}, {"-amount": $Amount})
+        DBUpdateExt("@1keys", {"id": 4544233900443112470, "ecosystem": $ecosystem_id}, {"+amount": $Amount})
     }
 }

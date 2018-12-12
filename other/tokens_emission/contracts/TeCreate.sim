@@ -36,7 +36,7 @@ contract TeCreate {
 
         if $SECONDARY_EMISSION {
             if $item["type_emission"] == 1 {
-                warning LangRes("@1emission_not_editable", "en")
+                warning LangRes("@1emission_blocked", "en")
             }
         } else {
             if Size($Title) == 0 {
@@ -58,14 +58,22 @@ contract TeCreate {
         contract_name = getEmissionConditionContract()
         ContractConditions(contract_name)
 
-        var m amount map
+        var m map
         if $SECONDARY_EMISSION {
-            amount = JSONDecode($item["emission_amount"])
-            amount[Str($block_time)] = Money($Amount)
-            m["emission_amount"] = amount
+            var emission map arr array
+            emission["type"] = "emission"
+            emission["time"] = Str($block_time)
+            emission["val"] = Money($Amount)
+            arr = JSONDecode($item["emission_amount"])
+            arr = Append(arr, emission)
+            m["emission_amount"] = JSONEncode(arr)
         } else {
-            amount[Str($block_time)] = Money($Amount)
-            m["emission_amount"] = amount
+            var emission map arr array
+            emission["type"] = "emission"
+            emission["time"] = Str($block_time)
+            emission["val"] = Money($Amount)
+            arr = Append(arr, emission)
+            m["emission_amount"] = JSONEncode(arr)
             m["type_emission"] = $TypeEmission
             m["token_title"] = $Title
             m["type_withdraw"] = $TypeWithdraw
