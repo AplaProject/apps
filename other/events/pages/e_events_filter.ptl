@@ -1,35 +1,40 @@
 SetVar(this_page, e_events_filter)
 If(GetVar(back_page)==""){
-    SetVar(back_page,e_events)
+    SetVar(back_page, e_events)
 }
-DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Events"}).Columns("name,id").Vars(application)
 
+DBFind(@1applications).Where({ecosystem:#ecosystem_id#, name:"Events"}).Columns("name,id").Vars(application)
 AppParam(App: #application_id#, Name:e_regions, Source:r, Ecosystem:#ecosystem_id#)
 AppParam(App: #application_id#, Name:e_types, Source:t, Ecosystem:#ecosystem_id#)
-SetVar(types_json,`"0":"выбрать тип.."`)
+
+SetVar(types_json,`"0":"select type..."`)
 ForList(t){
     SetVar(types_json,`#types_json#,"#id#":"#name#"`)
 }
-SetVar(regions_json,`"0":"выбрать регион.."`)
+JsonToSource(types,{#types_json#})
+
+SetVar(regions_json,`"0":"select region..."`)
 ForList(r){
     SetVar(regions_json,`#regions_json#,"#id#":"#name#"`)
 }
-JsonToSource(types,{#types_json#})
 JsonToSource(regions,{#regions_json#})
 
-Form(input-group){
-    Label(For:Type){
-        $e_type$
+Form(){
+    Div(row mb-sm){
+        Div(col-md-3 mt-sm text-right text-bold){
+            Label($e_type$)
+        }
+        Div(col-md-9 text-left){
+            Select(Name: Type, Source: types, NameColumn: value, ValueColumn: key)
+        }
     }
-    Div(){
-        Select(Name: Type, Source: types, NameColumn: value, ValueColumn: key)
-    }
-    Label(For:Region){
-        $e_region$
-    }
-    Div(){
-        Select(Name: Region, Source: regions, NameColumn: value, ValueColumn: key)
-
+    Div(row mb-sm){
+        Div(col-md-3 mt-sm text-right text-bold){
+            Label($e_region$)
+        }
+        Div(col-md-9 text-left){
+            Select(Name: Region, Source: regions, NameColumn: value, ValueColumn: key)
+        }
     }
     Div(mt pull-right){
         Button(Class: btn btn-default, Page: #back_page#, Body:$e_reset$)
