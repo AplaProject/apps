@@ -8,7 +8,9 @@ contract MSCreate {
         AmountMaxDay money
         AmountMaxMonth money
         Sign int
-        TemplateId int
+        Duration int "optional"
+        Quorum int "optional"
+        Volume int "optional"
         PoaTemplateId int
     }
 
@@ -48,26 +50,24 @@ contract MSCreate {
         }
 
         if $Sign != $ONE_SIGN{
-            var templateId int
-            templateId = Int(DBFind("@1voting_templates").Where({id:$TemplateId, ecosystem:$ecosystem_id}))
-            if templateId == 0{
-                warning "Voting template not founded"
+            if $Duration == 0 || $Quorum == 0|| $Volume == 0 {
+                warning "Invalid parameters of voting"
             }
-            // in the table 1_keys in the multi column is written the id of a template vote
-            $multi = templateId
+            $multi = 1
         }else{
             // -1 if the selected "one signature"
             $multi = -1
         }
-        var amount_day amount_month date_day date_month int role_ids array
+        var amountDay amountMonth dateDay dateMonth int roleIds groupIds array
         if $buf["value.type"] == $ROLE_SINGLE || $buf["value.type"] == $ROLE_VOTING{
-            role_ids = $units
+            roleIds = $units
             $isGroup = false
         }else{
+            groupIds = $units
             $isGroup = true
         }
-        $PARAMS = ["amount_max", "amount_max_day", "amount_max_month", "amount_day", "amount_month", "date_day", "date_month", "voting_template_id", "role_ids"]
-        $VALUES = [$AmountMax, $AmountMaxDay, $AmountMaxMonth, amount_day, amount_month, date_day, date_month, $TemplateId, role_ids]
+        $PARAMS = ["amount_max", "amount_max_day", "amount_max_month", "amount_day", "amount_month", "date_day", "date_month", "voting_duration", "voting_quorum", "voting_volume", "role_ids", "group_ids"]
+        $VALUES = [$AmountMax, $AmountMaxDay, $AmountMaxMonth, amountDay, amountMonth, dateDay, dateMonth, $Duration, $Quorum, $Volume, roleIds, groupIds]
     }
 
     action {
