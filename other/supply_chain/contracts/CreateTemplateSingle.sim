@@ -1,0 +1,52 @@
+contract CreateTemplateSingle {
+    data {
+        Name string
+        Sender int
+        Recipient int
+        StartingDate string
+        StartingTime string
+        EndingDate string
+        EndingTime string
+        SupplyMap string
+    }
+    func dateAddTime(d, t string) string {
+        var dt string
+        if Contains(d, "T00:00:00Z") {
+            d = Replace(d, "T00:00:00Z", "")
+        }
+        if Size(t) == 5 {
+            dt = Sprintf("%v %v:00", d, t)
+        }
+        return dt
+    }
+    conditions {
+        var admin int
+        admin = Int(EcosysParam("role_admin"))
+        if !RoleAccess(admin){
+            warning LangRes("@1access_denied", "en")
+        }
+
+        $dateStart = UnixDateTime(dateAddTime($StartingDate, $StartingTime))
+        if $dateStart == 0 {
+            warning "Invalid starting date"
+        }
+        $dateEnd = UnixDateTime(dateAddTime($EndingDate, $EndingTime))
+        if $dateEnd == 0 {
+            warning "Invalid ending date"
+        }
+    }
+    action {
+     var m addr map encAddr string 
+        addr = JSONDecode($SupplyMap)
+        addr["zoom"] = 11
+        encAddr = JSONEncode(addr)
+        $senderRoleName = DBFind("@1roles").Where({ecosystem:$ecosystem_id,id:$Sender, deleted:0}).One("role_name")
+        $recipientRoleName = DBFind("@1roles").Where({ecosystem:$ecosystem_id,id:$Recipient, deleted:0}).One("role_name")
+        m["name"] = $Name
+        m["chain"] = {recipient_id:$Recipient,sender_id:$Sender,starting:$dateStart,ending:$dateEnd,cords:$addr,recipient_role_name:$recipientRoleName,sender_role_name:$senderRoleName}
+        m["counter"] = 0
+        m["deleted"] = 0
+		m["total_steps"] = 1
+        DBInsert("@1supply_templates", m)
+    }
+}
