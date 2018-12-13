@@ -1,10 +1,18 @@
-SetVar(this_page, @1members_list).(this_table, @1keys)
+SetVar(this_page, r_ratings).(this_table, @1keys)
 Include(@1pager_header)
 
 SetTitle("$@1ecosystem_members$")
 Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1ecosystem_members_list_desc$"))
-If(And(#role_id# == EcosysParam(role_admin),#ecosystem_id# != 1)){
-    AddToolButton(Title: $@1members_add$, Page:@1ecosystem_add_members, Icon: icon-plus).Popup(50, $@1ecosystem_add_members$)
+
+SetVar(isManager,0)
+SetVar(admin_role_id, EcosysParam(Name:role_admin))
+If(#role_id#>0){
+    If(#admin_role_id#==#role_id#){
+        SetVar(isManager,1)
+    }
+}
+If(#isManager#==1){
+    AddToolButton(Title:$r_rating_group$, Page: r_rating_group, Icon: icon-calendar).Popup(Header: $r_rating_group$, Width: "50")
 }
 
 If(GetVar(search)){
@@ -18,9 +26,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind("@1ecosystems").Where({"id": #ecosystem_id#}).Vars("custom")
-
-DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(custom_id){
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Count(count).Custom(_id){
     SetVar(Name: style_text, Value: "text-normal")
     SetVar(Name: style_link, Value: "text-primary")
     Span(Class: h6 text-muted, Body: #id#)
@@ -33,15 +39,15 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
         SetVar(image_id, 0)
         SetVar(member_name, Address(#id#))
     }
-}.Custom(custom_member_id){
-    If(Or(#ecosystem_id# == 1, GetVar(custom_token_title) != "")){
-        Button(Class: btn-xs btn-link, Page: @1tokens_send, PageParams: "v_key_id=#id#"){
-            Span(Class: h5, Body: Address(#id#))
-        }.Popup(Header: $@1tokens_send$, Width: "50")
-    }.Else{
+}.Custom(_member_id){
+    Button(Class: btn-xs btn-link, Page: r_accruals, PageParams: "Id=#id#"){
         Span(Class: h5, Body: Address(#id#))
     }
-}.Custom(custom_username){
+}.Custom(_rating){
+    SetVar(rating_amount, 0).(member, Address(#id#))
+    DBFind(r_ratings, r).Where({member:#member#}).Vars(rating)
+    Span(#rating_amount#)
+}.Custom(_username){
     LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#"){
         If(#image_id#>0){
             Image(Src: Binary().ById(#image_id#), Class: img-circle).Style(height: 30px;width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
@@ -53,16 +59,20 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
             }.Style(display:flex; align-items:center;)
         }
     }
-}.Count(count)
+}.Custom(_actions){
+    If(#isManager#==1){
+        Button(Page:r_rating_member, PageParams: "MemberId=#id#", Class: btn btn-default fa fa-pencil pull-right).Popup(Header:$r_change_rating$, Width: 50)
+    }
+}
 
 Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){
-                Table(src, "$@1name$=custom_username,$@1wallet$=custom_member_id")
+                Table(src, "$@1name$=_username,$r_rating$=_member_id,$r_rating$=_rating,=_actions")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1members$ $@1not_founded$")
-            }                       
+            }
         }.Style(
             margin-top:-15px;
             tbody > tr:nth-of-type(odd) {
