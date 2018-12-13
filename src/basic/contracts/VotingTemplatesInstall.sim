@@ -21,12 +21,7 @@ contract VotingTemplatesInstall {
         return rid
     }
 
-    conditions {
-        $consensusRoleId = getRoleId("role_apla_consensus_asbl")
-        $validatorRoleId = getRoleId("role_validator")
-    }
-
-    action {
+    func installSystem() {
         var template map
         // common
         template["quorum"] = 51
@@ -82,5 +77,60 @@ contract VotingTemplatesInstall {
         template["type_decision"] = 5
         template["subject"] = "Token refund"
         applyTemplate(template, "voting_tokenrefund_template_id")
+    }
+    func installCustom() {
+        var template map
+        // A decision by a simple majority of votes
+        // Принятие решения простым большинством голосов
+        template["title"] = "A decision by a simple majority of votes"
+        template["subject"] = "Simple decision"
+        template["quorum"] = 51
+        template["volume"] = 100
+        template["accept_params"] = ""
+        template["reject_params"] = ""
+        template["type"] = "custom"
+        template["voters"] = 0 //
+        template["type_participants"] = 1 // all
+        template["type_voting"] = 1
+        template["ecosystem"] = $ecosystem_id
+        template["init_contract"] = ""
+        template["contract_accept"] = ""
+        template["contract_reject"] = ""
+        template["vacancies"] = 1
+        template["candidates"] = 0
+        template["type_decision"] = 3
+        DBInsert("@1voting_templates", template)
+
+        var template map
+        // The vote for assigning the role of one candidate
+        // Голосование за присвоение роли одному кандидату
+        template["title"] = "The vote for assigning the role of one candidate"
+        template["subject"] = "Role assign"
+        template["quorum"] = 51
+        template["volume"] = 100
+        template["accept_params"] = ""
+        template["reject_params"] = ""
+        template["type"] = "custom"
+        template["voters"] = 0 //
+        template["type_participants"] = 1 // all
+        template["type_voting"] = 1
+        template["ecosystem"] = $ecosystem_id
+        template["init_contract"] = ""
+        template["contract_accept"] = "@1RolesAssign"
+        template["contract_reject"] = ""
+        template["vacancies"] = 1
+        template["candidates"] = 0
+        template["type_decision"] = 2
+        DBInsert("@1voting_templates", template)
+    }
+
+    conditions {
+        $consensusRoleId = getRoleId("role_apla_consensus_asbl")
+        $validatorRoleId = getRoleId("role_validator")
+    }
+
+    action {
+        installSystem()
+        installCustom()
     }
 }
