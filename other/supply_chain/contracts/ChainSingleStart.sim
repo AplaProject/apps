@@ -1,20 +1,19 @@
-contract ChainStages {
+contract ChainSingleStart {
     data {
         Object int
         Template int
     }
     conditions {
+        var admin int
+        admin = Int(EcosysParam("role_admin"))
+        if !RoleAccess(admin){
+            warning LangRes("@1access_denied", "en")
+        }
+
         $templateName = DBFind("@1supply_templates").Where({"id":$Template}).Columns("id,name").One("name")
         $objectName = DBFind("@1supply_objects").Where({"id":$Object}).Columns("id,name").One("name")
         $recipientID = Int(DBFind("@1supply_templates").Where({"id":$Template}).Columns("chain->recipient_id").One("chain.recipient_id"))
         $senderID = Int(DBFind("@1supply_templates").Where({"id":$Template}).Columns("chain->sender_id").One("chain.sender_id"))
-        
-        var admin_id int
-        admin_id = EcosysParam("role_admin")
-       
-        if !RoleAccess(Int(admin_id)) {
-            warning LangRes("@1access_denied", "en")
-        }
     }
     action {
     var bt string m map
@@ -27,6 +26,15 @@ contract ChainStages {
     m["date_start"] = bt
     m["recipients_id"] = $recipientID
     m["senders_id"] = $senderID
-    DBInsert("@1supply_chains", m)
+    $chainID = DBInsert("@1supply_chains", m)
+    $result = $chainID
+
+    var n map
+    n["chain_id"] = $chainID 
+    n["recipient_ID"] = $recipientID
+    n["sender_ID"] = $senderID
+    DBInsert("@1supply_stages", n)
+    
+    @1SupplyNotificSend("chain_id,sender_role_id,recipient_role_id",$chainID,$senderID,$recipientID)
     }
 }
