@@ -11,6 +11,18 @@ contract VotingTemplatesInstall {
             @1EditAppParam("Id,Value", paramId, templateId)
         }
     }
+    func applyEcosystemTemplate(m map, param string) {
+        var templateId paramId int
+        templateId = DBInsert("@1voting_templates", m)
+        if $fill_ids == "yes" {
+            paramId = Int(DBFind("@parameters").Where({name:param, ecosystem: $ecosystem_id}).One("id"))
+            if paramId == 0{
+                @1NewParameter("Name,Value,Conditions", param, templateId, `ContractConditions("DeveloperCondition")`)
+            }else{
+                @1EditParameter("Id,Value", paramId, templateId)
+            }
+        }
+    }
 
     func getRoleId(name string) int {
         var rid int
@@ -80,29 +92,28 @@ contract VotingTemplatesInstall {
         template["type_decision"] = 5
         template["subject"] = "Token refund"
         applyTemplate(template, "voting_tokenrefund_template_id")
-        
+
         // Change parameter of the ecosystem by a qualified majority of votes
         // Изменение параметра экосистемы квалифицированным большинством голосов
         template["quorum"] = 75
         template["title"] = "Change parameter of the ecosystem"
         template["subject"] = "Ecosystem parameter"
-        template["init_contract"] = "@1AdminCondition"
+        template["init_contract"] = "AdminCondition"
         template["contract_accept"] = ""
         template["contract_reject"] = ""
         template["vacancies"] = 0
         template["candidates"] = 0
         template["voters"] = 0
         template["type_decision"] = 4
-        applyTemplate(template, "voting_ecosysparam_template_id")
+        applyEcosystemTemplate(template, "voting_ecosysparam_template_id")
     }
     func installCustom() {
         var template map
-        // A decision by a simple majority of votes
         // Принятие решения простым большинством голосов
         template["title"] = "A decision by a simple majority of votes"
         template["subject"] = "Simple decision"
         template["quorum"] = 51
-        template["volume"] = 100
+        template["volume"] = 70
         template["accept_params"] = ""
         template["reject_params"] = ""
         template["type"] = "custom"
@@ -118,13 +129,33 @@ contract VotingTemplatesInstall {
         template["type_decision"] = 3
         DBInsert("@1voting_templates", template)
 
-        var template map
-        // The vote for assigning the role of one candidate
         // Голосование за присвоение роли одному кандидату
+        template = {}
         template["title"] = "The vote for assigning the role of one candidate"
         template["subject"] = "Role assign"
         template["quorum"] = 51
-        template["volume"] = 100
+        template["volume"] = 70
+        template["accept_params"] = ""
+        template["reject_params"] = ""
+        template["type"] = "custom"
+        template["voters"] = 0 //
+        template["type_participants"] = 1 // all
+        template["type_voting"] = 1
+        template["ecosystem"] = $ecosystem_id
+        template["init_contract"] = ""
+        template["contract_accept"] = "@1RolesAssign"
+        template["contract_reject"] = ""
+        template["vacancies"] = 1
+        template["candidates"] = 0
+        template["type_decision"] = 2
+        DBInsert("@1voting_templates", template)
+
+        // Выборы на роль из нескольких кандидатов
+        template = {}
+        template["title"] = "Elections for the role of several candidates"
+        template["subject"] = "Role assign"
+        template["quorum"] = 51
+        template["volume"] = 70
         template["accept_params"] = ""
         template["reject_params"] = ""
         template["type"] = "custom"
