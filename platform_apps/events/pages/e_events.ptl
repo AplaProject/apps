@@ -14,21 +14,17 @@ If(#isManager#==1){
     AddToolButton(Title:$@1create$, Page: @1e_event_form, Icon: icon-calendar)
 }
 
-AppParam(App: #application_id#, Name:e_regions, Source:regions, Ecosystem:#ecosystem_id#)
 AppParam(App: #application_id#, Name:e_types, Source:types, Ecosystem:#ecosystem_id#)
-SetVar(where_type,).(where_region,)
+SetVar(where_type,)
 If(GetVar(search)!=""){
     SetVar(where, {"name": {"$like": #search#}})
-}.ElseIf(Or(GetVar(Type)>0,GetVar(Region)>0)){
+}.ElseIf(GetVar(Type)>0){
     If(#Type#>0){
         SetVar(where_type, {type:#Type#})
     }
-    If(#Region#>0){
-        SetVar(where_region, {region:#Region#})
-    }
-    SetVar(where, {ecosystem:#ecosystem_id#, $or:[#where_type#, #where_region#]})
+    SetVar(where, {ecosystem:#ecosystem_id#, #where_type#})
 }.Else{
-    SetVar(where, {ecosystem:#ecosystem_id#, id:{$neq:0}}).(Type,0).(Region,0).(search,)
+    SetVar(where, {ecosystem:#ecosystem_id#, id:{$neq:0}}).(Type,0).(search,)
 }
 
 Div(mr-lg text-right){
@@ -40,12 +36,10 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(#this_table#, src).Where(#where#).Order({starting_date: -1, id:1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,name,description,starting_date,type,region,event_address_json,event_address_json->address,responsible").Custom(_responsible){
+DBFind(#this_table#, src).Where(#where#).Order({starting_date: -1, id:1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,name,description,starting_date,type,event_address_json,event_address_json->address,responsible").Custom(_responsible){
     Address(#responsible#)
 }.Custom(_type){
     AppParam(App: #application_id#, Name:e_types, Index:#type#, Ecosystem:#ecosystem_id#)
-}.Custom(_region){
-    AppParam(App: #application_id#, Name:e_regions, Index:#region#, Ecosystem:#ecosystem_id#)
 }.Custom(_date){
     If(#starting_date#>0){
         Span(Class:text-muted, Body:DateTime(#starting_date#, Format: YYYY-MM-DD HH:MI))
@@ -60,7 +54,7 @@ Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item mt-lg){
             If(#count# > 0){
-                Table(src, "$@1id$=id,$@1name$=name,$@1description$=description,$e_starting_date$=_date,$@1type$=_type,$e_region$=_region,$@1address$=_address,$e_responsible$=_responsible,=_actions")
+                Table(src, "$@1id$=id,$@1name$=name,$@1description$=description,$e_starting_date$=_date,$@1type$=_type,$@1address$=_address,$e_responsible$=_responsible,=_actions")
             }.Else{
                 Div(text-center h4 text-muted){
                     $e_events$ $@1not_founded$
