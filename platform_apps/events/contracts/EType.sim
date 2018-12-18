@@ -1,0 +1,35 @@
+contract EType {
+    data {
+        Id int "optional"
+        Name string
+    }
+
+    conditions{
+        var adminId int
+        adminId = Int(EcosysParam("role_admin"))
+        if !RoleAccess(adminId){
+            warning LangRes("@1access_denied", "en")
+        }
+        
+        if $Id > 0 {
+            var type map
+            type = DBFind("@1e_types").Where({id:$Id, ecosystem:$ecosystem_id}).Row()
+            if !type{
+                warning "Type not founded"
+            }
+        }
+    }
+
+    action {
+        var m addr map
+        
+        m = {name:$Name}
+        
+        if $Id > 0 {
+            DBUpdate("@1e_types", $Id, m)
+        }else{
+            m["ecosystem"] = $ecosystem_id
+            DBInsert("@1e_types", m)
+        }
+    }
+}

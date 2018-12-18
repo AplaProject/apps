@@ -1,5 +1,4 @@
 SetVar(this_page, @1e_events).(this_table, @1e_events)
-DBFind(@1applications).Where({ecosystem:1, name:"Events"}).Columns("name,id").Vars(application)
 Include(@1pager_header)
 
 SetTitle("$e_events$")
@@ -14,7 +13,6 @@ If(#isManager#==1){
     AddToolButton(Title:$@1create$, Page: @1e_event_form, Icon: icon-calendar)
 }
 
-AppParam(App: #application_id#, Name:e_types, Source:types, Ecosystem:#ecosystem_id#)
 SetVar(where_type,)
 If(GetVar(search)!=""){
     SetVar(where, {"name": {"$like": #search#}})
@@ -39,7 +37,9 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 DBFind(#this_table#, src).Where(#where#).Order({starting_date: -1, id:1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,name,description,starting_date,type,event_address_json,event_address_json->address,responsible").Custom(_responsible){
     Address(#responsible#)
 }.Custom(_type){
-    AppParam(App: #application_id#, Name:e_types, Index:#type#, Ecosystem:#ecosystem_id#)
+    SetVar(t_name,)
+    DBFind(@1e_types,tt).Where({ecosystem:#ecosystem_id#, id:#type#}).Columns("name").Vars(t)
+    Span(#t_name#)
 }.Custom(_date){
     If(#starting_date#>0){
         Span(Class:text-muted, Body:DateTime(#starting_date#, Format: YYYY-MM-DD HH:MI))
