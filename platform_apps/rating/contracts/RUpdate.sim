@@ -25,7 +25,7 @@ contract RUpdate {
             offset = offset + limit
         }
         var rating m map
-        rating = DBFind("@1r_ratings").Where({member:$Member}).Row()
+        rating = DBFind("@1r_ratings").Where({member:$Member, ecosystem:$ecosystem_id}).Row()
         m = {amount:total, updated_at:$block_time}
         if rating {
             if Money(rating["amount"]) != total {
@@ -33,6 +33,7 @@ contract RUpdate {
             }
         } else {
             m["member"] = $Member
+            m["ecosystem"] = $ecosystem_id
             DBInsert("@1r_ratings", m)
         }
     }
@@ -56,7 +57,7 @@ contract RUpdate {
 
         if $LastEvent == "true" {
             var event map
-            event = DBFind("e_events").WhereId($EventId).Row()
+            event = DBFind("@1e_events").WhereId($EventId).Row()
             if !event{
                 warning "Event not founded"
             }
@@ -67,9 +68,9 @@ contract RUpdate {
     action {
         var m map manager string
         manager = IdToAddress($key_id)
-        m = {member:$Member, amount:$Amount, manager:manager, created_at:$block_time, event_id:$EventId, event_type:$EventType}
+        m = {member:$Member, amount:$Amount, manager:manager, created_at:$block_time, event_id:$EventId, event_type:$EventType, ecosystem:$ecosystem_id}
 
-        DBInsert("r_accruals", m)
+        DBInsert("@1r_accruals", m)
         updateRating()
     }
 }
