@@ -1,0 +1,62 @@
+contract CreateTemplateMultisteps {
+    data {
+        Steps int 
+        Name string
+        Sender array
+        Recipient array
+        StartingDate array
+        StartingTime array
+        EndingDate array
+        EndingTime array
+        SupplyMap string "optional"
+    }
+    conditions {
+        var admin int
+        admin = Int(EcosysParam("role_admin"))
+        if !RoleAccess(admin){
+            warning LangRes("@1access_denied", "en")
+        }
+    }
+   action {
+        var i j int 
+        var Trans steps map
+        var stt string
+        var json map
+        while i < Int($Steps) {
+            if i == 0 {
+                steps["sender"] = $Sender[i]
+                steps["recipient"] = $Recipient[i]
+                //steps["date_start"] = JSONDecode($StartingDate[i])
+                //steps["date_end"] = JSONDecode($EndingDate[i])
+            } else {
+                j = i - 1
+                steps["sender"] = $Recipient[j]
+                steps["recipient"] = $Recipient[i]
+               // steps["date_start"] = JSONDecode($StartingDate[j])
+                //steps["date_end"] = JSONDecode($EndingDate[j])
+            }
+            var params map
+            params["Trans"] = JSONEncode(steps)
+            if i == 0 {
+                stt = "[" + Str(params["Trans"])
+            } else{ 
+                stt = stt + "," + Str(params["Trans"])
+            }
+            i = i + 1
+        }
+        json = stt + "]"
+        var addr map encAddr string 
+        addr = JSONDecode($SupplyMap)
+        addr["zoom"] = 11
+        encAddr = JSONEncode(addr)
+        //var m map
+        //m["name"] = $Name
+        //m["chain"] = {stages:stt}
+        //m["counter"] = 0
+        //m["deleted"] = 0
+        //m["supply_map"] = {cords:encAddr}
+        //m["total_steps"] = $Steps
+
+        DBInsert("@1supply_templates",{name:$Name,chain:json,counter:0,deleted:0,supply_map:encAddr,total_steps:$Steps})
+	}
+}
