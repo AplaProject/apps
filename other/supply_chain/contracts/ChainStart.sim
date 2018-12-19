@@ -1,0 +1,58 @@
+contract ChainStart {
+    data {
+        Object int
+        Template int
+    }
+    conditions {
+        var admin int
+        admin = Int(EcosysParam("role_admin"))
+        if !RoleAccess(admin){
+            warning LangRes("@1access_denied", "en")
+        }
+
+        $templateName = DBFind("@1supply_templates").Where({"id":$Template}).Columns("id,name").One("name")
+        $objectName = DBFind("@1supply_objects").Where({"id":$Object}).Columns("id,name").One("name")
+    }
+    action {
+        var bt string m map
+        bt = BlockTime()
+        m["object_id"] = $Object
+        m["template_id"] = $Template
+        m["template_name"] = $templateName
+        m["object_name"] = $objectName
+        m["status"] = 1
+        m["date_start"] = bt
+        $chainID = DBInsert("@1supply_chains", m)
+        $result = $chainID
+
+        
+        $sr = DBFind("@1supply_templates").WhereId($Template).One("chain")
+        var myarr map
+        myarr = Split($sr, ",")
+        myarr = JSONDecode($sr)
+        var i int
+        while i < Len(myarr) {
+            var arr_map map n map
+            arr_map = myarr[i]
+            n["chain_id"] = $chainID
+            n["sender_id"] = arr_map["sender"]
+            n["recipient_id"] = arr_map["recipient"]
+            n["current_stage"] = i
+            DBInsert("@1supply_stages",n)
+            i = i + 1
+        }
+        var notific map params map
+        notific = myarr[0]
+        $senderId = notific["sender"]
+        $recipientId = notific["recipient"]
+        $totalStages = Len(myarr)
+        params["chain_id"] = $chainID
+        params["current_stage"] = 0
+        params["total_stages"] = Int($totalStages)
+        @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type", Int($senderId), 1, "fa-check", LangRes("@1supply_chain", "en"), "Need your signature", "@1act_sender", params,1)
+        @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type", Int($recipientId), 1, "fa-check", LangRes("@1supply_chain", "en"), "Need your signature", "@1act_recipient", params,1)
+        var b map
+        b["counter"] = +1
+        DBUpdate("@1supply_templates", Int($Template), b)
+    }
+}

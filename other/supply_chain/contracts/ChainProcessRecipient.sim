@@ -2,26 +2,51 @@ contract ChainProcessRecipient {
     data {
         ChainID int
         notific_id int 
+        TotalStages int
+        CurrentStage int
     }
     conditions {
-        $stageID = DBFind("@1supply_stages").Where({"chain_id":$ChainID}).One("id")
-        var admin int
-        admin = Int(EcosysParam("role_admin"))
-        if !RoleAccess(admin){
-            warning LangRes("@1access_denied", "en")
+        $stageID = DBFind("@1supply_stages").Where({"chain_id":$ChainID,"current_stage":$CurrentStage}).One("id")
+        $pub = DBFind("@1keys").Columns("id,pub,ecosystem").Where({"id":$key_id}).One("pub")
+        $pub_sign = Sha256($pub)
+        $Template = DBFind("@1supply_chains").Columns("id,template_id").Where({"id":$ChainID}).One("template_id")
+        $StageCounter = $TotalStages - 1
+        $sr = DBFind("@1supply_templates").Where({"id":$Template}).Columns("id,chain").One("chain")
+        //sender signature check
+        $SenderSign = DBFind("@1supply_stages").Where({"id":$stageID}).Columns("id,sender_sign").One("sender_sign")
+        if !$SenderSign {
+            warning "Sender has not signed this act yet"
         }
-        //$pub = DBFind("@1keys").Columns("id,pub,ecosystem").Where({"id":$key_id}).One("pub")
-        //$pub_sign = Sha256($pub)
     }
     action {
-        var bt string m map
-        bt = BlockTime()
-        m["status"] = 3
-        m["date_end"] = bt    
-        DBUpdate("@1supply_chains", $ChainID, m)
-
-        var n map
-        n["recipient_sign_time"] = bt 
+        var myarr map
+        myarr = Split($sr, ",")
+        myarr = JSONDecode($sr)
+        var i int t int
+        i = $CurrentStage
+        t = i + 1
+        if $CurrentStage == $StageCounter{
+            var m map bt string
+            bt = BlockTime()
+            m["status"] = 3
+            m["date_end"] = bt    
+            DBUpdate("@1supply_chains", $ChainID, m)
+        }
+        else{
+            var notific map params map
+            notific = myarr[t]
+            $senderId = notific["sender"]
+            $recipientId = notific["recipient"]
+            params["chain_id"] = $ChainID
+            params["current_stage"] = t
+            params["total_stages"] = Int($TotalStages)
+            @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type", Int($senderId), 1, "fa-check", LangRes("@1supply_chain", "en"), "Need your signature", "@1act_sender", params,1)
+            @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type", Int($recipientId), 1, "fa-check", LangRes("@1supply_chain", "en"), "Need your signature", "@1act_recipient", params,1)
+        }
+        var n map btt string
+        btt = BlockTime()
+        n["recipient_sign_time"] = btt
+        n["recipient_sign"] = $pub_sign
         DBUpdate("@1supply_stages", Int($stageID), n)
 
         //@1NotificationsClose("notific_id", $notific_id)

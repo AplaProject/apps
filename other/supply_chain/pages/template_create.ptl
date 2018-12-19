@@ -1,54 +1,109 @@
-SetVar(objects_page, @1objects_list).(objects_table, @1supply_objects)
-SetVar(roles_list, @1roles)
-Div(Class: content-wrapper){
-    SetTitle($create_supply_chain$)
-	Div(breadcrumb){
-        LinkPage($supply_chain$, supplychains_list)
-        Span(/).Style(margin-right: 10px; margin-left: 10px;)
-		Span(Class: text-muted, Body: $create_supply_chain$)
-	}
-	
-    Div(Class: row df f-valign){
-        Div(Class: col-md-3)
-
-        Div(Class: col-md-6){
-            Div(Class: panel panel-primary){
-                Div(Class: panel-heading, Body: LangRes(supply_chain))
-                Form(){
-						
-                    Div(Class: list-group-item){
-                        Div(Class: row df f-valign){
-                            Div(Class: col-md-3 mt-sm text-right){
-                                Label(For: supplier){
-                                    Span(Body: LangRes(supplier))
+DBFind(@1roles, src_roles).Where({ecosystem:#ecosystem_id#})
+Div(fullscreen){
+    Div(row){
+        Div(col-sm-6 col-sm-offset-3){
+            Form(mt-lg panel panel-primary){
+                Div(panel-body){
+                    Div(row mb-sm){
+                        Div(row mb-sm){
+                            Div(col-md-4 mt-sm text-right text-bold){
+                                LangRes(template_name)
+                            }
+                            Div(col-md-8 text-left){
+                                Input(Name: Name)
+                            }
+                        }
+                        If(GetVar(cs)==""){
+                            SetVar(cs,0)
+                        }
+                        If(#del# == 1){
+                            SetVar(cs,Calculate(#cs# - 1))
+                        }.Else{
+                            SetVar(cs,Calculate(#cs# + 1))
+                        }
+                        Range(params_range, 0, #cs#)
+                        ForList(Source: params_range){
+                            Div(row mb-sm){
+                                Div(col-sm-4 mt-sm text-right text-bold){
+                                    LangRes(supply_sender)
+                                }
+                                Div(col-sm-8 text-left){
+                                    Select(Name: Sender, Source: src_roles, NameColumn: role_name, ValueColumn: id)
                                 }
                             }
-                            Div(Class: col-md-9 mc-sm text-left){
-								DBFind(#roles_list#, src_roles)
-								Select(Name: Recipient, Source: src_roles, NameColumn: role_name, ValueColumn: id)
-                            }
-                            Div(Class: col-md-3 mt-sm text-right){
-                                Label(For: supplier){
-                                    Span(Body: LangRes(object))
+                            Div(row mb-sm){
+                                Div(col-sm-4 mt-sm text-right text-bold){
+                                    LangRes(supply_recipient)
+                                }
+                                Div(col-sm-8 text-left){
+                                    Select(Name: Recipient, Source: src_roles, NameColumn: role_name, ValueColumn: id)
                                 }
                             }
-                            Div(Class: col-md-9 mc-sm text-left){
-								DBFind(#objects_table#, src_objects)
-								Select(Name: Object, Source: src_objects, NameColumn: name, ValueColumn: id)
-                            }  
+                            Div(row mb-sm){
+                                Div(col-sm-4 mt-sm text-right text-bold){
+                                    LangRes(supply_starting_date)
+                            }
+                            Div(col-sm-8 text-left){
+                                Div(row){
+                                    Div(col-sm-6){
+                                        Input(Name:StartingDate, Type:date)
+                                    }
+                                    Div(col-sm-6){
+                                        Input(Name:StartingTime, Type:time, Value: "00:00")
+                                    }
+                                }
+                            }
+                        }
+                        Div(row mb-sm){
+                            Div(col-sm-4 mt-sm text-right text-bold){
+                                LangRes(supply_ending_date)
+                            }
+                            Div(col-sm-8 text-left){
+                                Div(row){
+                                    Div(col-sm-6){
+                                        Input(Name:EndingDate, Type:date)
+                                    }
+                                    Div(col-sm-6){
+                                        Input(Name:EndingTime, Type:time, Value: "00:00")
+                                    }
+                                }
+                            }
                         }
                     }
-
-                    Div(Class: panel-footer clearfix){
-                        Div(Class: pull-right){
-							Button(Body: LangRes(next_step), Class: btn btn-primary, Page: supplychains_add_step2, PageParams: "supplier_id=Val(supplier)")
+                    Div(row){
+                        Div(col-md-6 mt-lg text-right){
+                            If(#cs#>1){
+                                LinkPage(Body:$@1lstage_delete$, Page: @1template_create, PageParams:"cs=#cs#,del=1")
+                            }
+                        }
+                        Div(col-md-6 mt-lg text-right){
+                            LinkPage(Body:$@1lstage_add$, Page: @1template_create, PageParams:"cs=#cs#")
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-8 text-left){
+                            Input(Name: Steps, Value: #cs#, Type: hidden)
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-4 mt text-bold text-right){
+                            LangRes(supply_map)
+                        }
+                        Div(col-sm-8 text-left){
+                            InputMap(Name: SupplyMap, Type: point, MapType: streets)
                         }
                     }
                 }
-
+                Div(panel-footer){
+                    Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1templates_list)
+                    Button(Body: $@1create$, Class: btn btn-primary pull-right, Page: @1templates_list, Contract: CreateTemplate)
+                }
             }
         }
-
-        Div(Class: col-md-3)
+    }
+}.Style(
+    .buttons{
+        border: 1px solid #dde6e9;
+        padding: 6px 16px;)
     }
 }
