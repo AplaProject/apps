@@ -1,17 +1,33 @@
 SetVar(this_page, @1cf_startups).(this_table, @1cf_startups)
 Include(@1pager_header)
 
-кнопка "Инвестировать"
-
-If(GetVar(Id)!=""){
-    SetVar(member, Address(#Id#))
+If(GetVar(StartDate)!=""){
+    SetVar(where_started, {date_started:{$gte:#StartDate#}})
 }.Else{
-    SetVar(member, Address(#key_id#))
+    SetVar(where_started, {}).(StartDate,)
+}
+If(GetVar(EndDate)!=""){
+    SetVar(where_finished, {date_finished:{$lte:#EndDate#}})
+}.Else{
+    SetVar(where_finished, {}).(EndDate,)
+}
+If(GetVar(Minimal)!=""){
+    SetVar(where_min, {minimal_investment:{$lte:#Minimal#}})
+}.Else{
+    SetVar(where_min, {}).(Minimal,)
+}
+If(GetVar(Estimated)!=""){
+    SetVar(where_est, {estimated_amount:{$lte:#Estimated#}})
+}.Else{
+    SetVar(where_est, {}).(Estimated,)
 }
 
-SetVar(where, {member:#member#, ecosystem:#ecosystem_id#})
+SetVar(where, {$or:[#where_started#, #where_finished#, #where_min#, #where_est#]})
 
 SetTitle($@1cf_startups$)
+Div(mr-lg text-right){
+    Button(Page: @1cf_startup_filter, Class: btn bg-gray-lighter mr-sm, PageParams: "StartDate=#StartDate#,EndDate=#EndDate#,Minimal=#Minimal#,Estimated=#Estimated#", Body: Em(Class: fa fa-filter) $@1filter$).Popup(Header: $@1filter$, Width: "50")
+}
 
 DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Count(count).Custom(_name){
     LinkPage(Page: @1cf_company, PageParams: "Id=#id#", Body: #name#)
@@ -25,25 +41,27 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
     Money(#estimated_amount#)
 }.Custom(_current){
     Money(#current_investment#)
+}.Custom(_actions){
+    Button(Body:$@1invest$, Page:@1cf_investment_form, PageParams: "Id=#id#,StartDate=#StartDate#,EndDate=#EndDate#,Minimal=#Minimal#,Estimated=#Estimated#", Class:btn btn-default).Popup(50, $@1investment$)
 }
-
 Div(fullscreen){
+    AddToolButton(Title:$@1cf_add_company$, Page: @1cf_startup_form, Icon: icon-plus).Popup(Header: $@1cf_startup_form$, Width: "50")
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){
-                Table(src, "$@1id$=id,$@1r_amount$=amount,$@1r_manager$=_manager,$@1r_created$=_created,$@1r_event_type$=_type,$@1r_event_id$=event_id")
+                Table(src, "$@1name$=_name,$@1date_start$=_started,$@1date_end$=_finished,$@1minimum_amount$=_minimal,$@1estimated_amount$=_estimated,$@1current_amount$=_current")
             }.Else{
                 Div(text-center h4 text-muted){
-                    $@1r_accruals$ $@1not_founded$
+                    $@1cf_startups$ $@1not_founded$
                 }
             }
-        }.Style(
-            tbody > tr:nth-of-type(odd) {
-                background-color: #f8f9fc;
-            }
-        )
+        }
     }
-}
+}.Style(
+    tbody > tr:nth-of-type(odd) {
+        background-color: #f8f9fc;
+    }
+)
 Div(mt-sm ml-lg mr-sm mb-sm){
     Include(@1pager)
 }

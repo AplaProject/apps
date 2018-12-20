@@ -1,11 +1,37 @@
 contract CFInvestment {
-    data {}
+    data {
+        Id int
+        Amount money
+    }
 
     conditions{
-        // TODO: this
+        $startup = DBFind("@1startups").WhereId($Id).Row()
+        if !$startup{
+            warning "Startup not found"
+        }
+        if $Amount < $startup["minimal_investment"]{
+            warning "Too small amount"
+        }
+        if $Amount < $startup["minimal_investment"]{
+            warning "Too small amount"
+        }
+        $recipient = AddressToId($startup["wallet"])
+        if $recipient == 0{
+            warning "Startup wallet not found"
+        }
     }
 
     action {
-        // TODO: this
+        var m map
+        m["startup_id"] = $Id
+        m["investment_wallet"] = $key_id
+        m["amount"] = $Amount
+        m["created_at"] = $block_time
+        DBInsert("@1investments", m)
+
+        var comment string ecosystem int
+        comment = "startup investment"
+        ecosystem = Int($startup["ecosystem"])
+        @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", $Amount, $key_id, $recipient, comment, ecosystem)
     }
 }
