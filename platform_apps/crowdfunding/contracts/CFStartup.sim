@@ -1,5 +1,6 @@
 contract CFStartup {
     data {
+        Id int "optional"
         Ecosystem int
         Name string
         Description string
@@ -8,18 +9,96 @@ contract CFStartup {
         NameEscrow string
         WebAddress string
         StartDate string
-        StartTimestring 
+        StartTime string
         EndDate string
         EndTime string
         Estimated money
         Minimal money
     }
-
+    func dateAddTime(d, t string) string {
+        var dt string
+        if Contains(d, "T00:00:00Z") {
+            d = Replace(d, "T00:00:00Z", "")
+        }
+        if Size(t) == 5 {
+            dt = Sprintf("%v %v:00", d, t)
+        }
+        return dt
+    }
     conditions{
-        // TODO: this
+        if $Id > 0 {
+            $startup = DBFind("@1startups").WhereId($Id).Row()
+            if !$startup{
+                warning "Startup not found"
+            }
+        }
+
+        // $key_id - делегат экосистемы $Ecosystem
+        var delegate delegateKey founderKey int
+        // delegate = Int(EcosysParam("role_delegate"))
+        // if !RoleAccess(delegate){
+        //     warning "You must be Delegate of ecosystem"
+        // }
+        delegateKey = Int(DBFind("@1parameters").Where({name:"delegate_account", ecosystem:$Ecosystem}).One("value"))
+        founderKey = Int(DBFind("@1parameters").Where({name:"founder_account", ecosystem:$Ecosystem}).One("value"))
+        if !($key_id == delegateKey || $key_id == founderKey){
+            warning "You must be Delegate of the ecosystem"
+        }
+
+        if DBFind("@1keys").Where({ecosystem:$Ecosystem, id:$Wallet, multi:0}).Row(){
+            // $Wallet - кошелек с мультиподписями
+            warning "Wallet must be multisigned"
+        }
+
+        var eco token map
+        eco = DBFind("@1ecosystem").WhereId($Ecosystem).Row()
+        // токен $Ecosystem - без дополнительной эмиссии и без сжигания
+        if eco["type_withdraw"] != 1 {
+            warning "Ecosystem token must be with out withdraw"
+        }
+        if eco["type_emission"] != 1 {
+            warning "Ecosystem additional emission must be blocked"
+        }
+        
+        token["token_title"] = eco["token_title"]
+        token["emission_amount"] = eco["emission_amount"]
+        // TODO: наличие токена на бирже
+        $token = token
+
+        $dateStartString = dateAddTime($StartDate, $StartTime)
+        $dateStart = UnixDateTime($dateStartString)
+        if $dateStart == 0 {
+            warning "Invalid starting date"
+        }
+        $dateEndString = dateAddTime($EndDate, $EndTime)
+        $dateEnd = UnixDateTime($dateEndString)
+        if $dateEnd == 0 {
+            warning "Invalid ending date"
+        }
     }
 
     action {
-        // TODO: this
+        var m map
+        m["ecosystem"] = $Ecosystem
+        m["name"] = $Name
+        m["description"] = $Description
+        m["wallet"] = $Wallet
+        m["escrow_wallet"] = $WalletEscrow
+        m["escrow_name"] = $NameEscrow
+        m["web_address"] = $WebAddress
+        m["registered_at"] = $block_time
+        m["started_at"] = $dateStart
+        m["finished_at"] = $dateEnd
+        m["estimated_amount"] = $Estimated
+        m["minimal_investment"] = $Minimal
+        m["token_info"] = $token
+        m["date_started"] = $dateStartString
+        m["date_finished"] = $dateEndString
+
+        if $Id > 0{
+            DBUpdate("@1startups", $Id, m)
+        }else{
+            DBInsert("@1startups", m)
+        }
     }
 }
