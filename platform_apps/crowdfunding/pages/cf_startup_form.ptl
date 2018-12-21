@@ -1,38 +1,42 @@
 SetVar(this_page, @1cf_startup_form).(back_page,@1cf_startups)
 
-DBFind(@1ecosystems, ecosystems).Columns("id,name").Where({id:{$gt:1}})
+If(GetVar(EcosystemId)!=""){
+    DBFind(@1ecosystems, ecosystems).Columns("id,name").Where({id:#EcosystemId#}).Columns("id,name,info->description").Vars(eco)
+
+}.Else{
+    SetVar(EcosystemId,).(eco_info_description,).(eco_name,)
+}
 Form(){
-    Div(text-right){
+    Div(){
         Label(For: Ecosystem){
-            $@1cf_ecosystem$
+            $@1ecosystem$
         }
+        Span(*, text-danger)
     }
     Div(mb){
-        Select(Name: Ecosystem, Source: ecosystems, NameColumn: name, ValueColumn: id)
-        TODO: вынести выбор экосистемы на отдельную страницу
-    }
-
-    Div(text-right){
-        Label(For: Name){
-            $@1name$
+        Input(Name: Ecosystem, Type: hidden, Value: #EcosystemId#)
+        If(GetVar(EcosystemId)!=""){
+            Input(Name: Name, Value: #eco_name#, Disabled: true)
+        }.Else{
+            Div(input-group){
+                Input(Name: Name, Value: $@1ecosystem_select$, Disabled: true)
+                Div(input-group-btn){
+                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_ecosystem, PageParams:"back_page=@1cf_startup_form,back_header=$@1cf_startup_form$,EcosystemId=#Ecosystem#,Type=ALL_LIST").Popup(50, $@1ecosystem$)
+                }
+            }
         }
     }
-    Div(mb){
-        Input(Name: Name)
-        TODO: сразу заполять именем экосистемы
-    }
 
-    Div(text-right){
+    Div(){
         Label(For: Description){
             $@1description$
         }
     }
     Div(mb){
-        Input(Name: Description, Type: textarea)
-        TODO: сразу заполять описанием экосистемы
+        Input(Name: Description, Type: textarea, Value:#eco_info_description#)
     }
 
-    Div(text-right){
+    Div(){
         Label(For: Wallet){
             $@1cf_company_wallet$
         }
@@ -41,7 +45,7 @@ Form(){
         Input(Name: Wallet)
     }
 
-    Div(text-right){
+    Div(){
         Label(For: WalletEscrow){
             $@1cf_escrow_wallet$
         }
@@ -50,7 +54,7 @@ Form(){
         Input(Name: WalletEscrow)
     }
 
-    Div(text-right){
+    Div(){
         Label(For: NameEscrow){
             $@1cf_escrow_name$
         }
@@ -59,7 +63,7 @@ Form(){
         Input(Name: NameEscrow)
     }
 
-    Div(text-right){
+    Div(){
         Label(For: WebAddress){
             $@1web_address$
         }
@@ -68,7 +72,7 @@ Form(){
         Input(Name: WebAddress)
     }
 
-    Div(text-right){
+    Div(){
         Label(For: StartDate){
             $@1date_start$
         }
@@ -82,7 +86,7 @@ Form(){
         }
     }
 
-    Div(text-right){
+    Div(){
         Label(For: EndDate){
             $@1date_end$
         }
@@ -96,7 +100,7 @@ Form(){
         }
     }
 
-    Div(text-right){
+    Div(){
         Label(For: EndDate){
             $@1cf_estimated_amount$
         }
@@ -104,8 +108,8 @@ Form(){
     Div(mb row){
         Input(Name: Estimated, Type:money)
     }
-    
-    Div(text-right){
+
+    Div(){
         Label(For: Minimal){
             $@1cf_minimal_investment$
         }
@@ -113,9 +117,13 @@ Form(){
     Div(mb row){
         Input(Name: Minimal, Type:money)
     }
-    
     Div(){
         Button(Body: $@1send$, Class: btn btn-primary pull-right mt, Page: #back_page#, Contract: @1CFStartup)
         Button(Body: $@1back$, Class: btn btn-default pull-right mt, Page: #back_page#)
     }
-}
+}.Style(
+    .buttons {
+        border: 1px solid #dde6e9;
+        padding: 6px 16px;
+    }
+)
