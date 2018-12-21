@@ -33,18 +33,17 @@ contract CFStartup {
             }
         }
 
-        // $key_id - делегат экосистемы $Ecosystem
-        var delegate delegateKey founderKey int
-        // delegate = Int(EcosysParam("role_delegate"))
-        // if !RoleAccess(delegate){
-        //     warning "You must be Delegate of ecosystem"
-        // }
-        delegateKey = Int(DBFind("@1parameters").Where({name:"delegate_account", ecosystem:$Ecosystem}).One("value"))
-        founderKey = Int(DBFind("@1parameters").Where({name:"founder_account", ecosystem:$Ecosystem}).One("value"))
-        if !($key_id == delegateKey || $key_id == founderKey){
-            warning "You must be Delegate of the ecosystem"
+        // $key_id - админ $Ecosystem
+        var adminRoleId int admin map
+        adminRoleId = Int(DBFind("@1parameters").Where({name:"role_admin", ecosystem:$Ecosystem}).One("value"))
+        if adminRoleId == 0{
+            warning "Admin role not defined in target ecosystem"
         }
-
+        admin = DBFind("@1roles_particiants").Where({"role->id":adminRoleId, "member->member_id": $key_id, ecosystem:$Ecosystem}).Row()
+        if !admin{
+            warning "You must be Admin in target ecosystem"
+        }
+        
         if DBFind("@1keys").Where({ecosystem:$Ecosystem, id:$Wallet, multi:0}).Row(){
             // $Wallet - кошелек с мультиподписями
             warning "Wallet must be multisigned"
