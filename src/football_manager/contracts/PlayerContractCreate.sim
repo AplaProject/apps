@@ -22,6 +22,13 @@ contract PlayerContractCreate {
         bonus_starting money "optional"
         bonus_action money "optional"
         bonus_other string "optional"
+        triggers string "optional"
+        payment string "optional"
+        //other_bonus
+        sign_bonus money "optional"
+        fid_bonus money "optional"
+        trans_bonus int "optional"
+        oth_bonus string "optional"
         //other advantage
         housing_rent money "optional"
         housing_description string "optional"
@@ -33,6 +40,7 @@ contract PlayerContractCreate {
         //insurance
         group_insurance string "optional"
         other_insurance string "optional"
+        estimated_amount money "optional"
     }
 
     conditions {
@@ -40,14 +48,25 @@ contract PlayerContractCreate {
             if $country == "" {
                 info("Country empty")
             }
-            if $num_seasons > 10 {
-                info("10 Seasons maximum")
+            if $num_seasons > 5 {
+                info("5 Seasons maximum")
+            }
+            if $num_seasons < 0 {
+                info("The number of seasons cannot be negative")
             }
             if $start_date == "" {
                 info LangRes("@1starting_date_invalid", "en")
             }
             if $end_date == "" {
                 info LangRes("@1ending_date_invalid", "en")
+            }
+        }
+        if $contract_block == "other_bonus" {
+            if $trans_bonus > 100 {
+                info("100 % maximum")
+            }
+            if $trans_bonus < 0 {
+                info("The percentage can not be negative")
             }
         }
         if $contract_block == "salary" {
@@ -119,10 +138,19 @@ contract PlayerContractCreate {
             bonus_details["bonus_starting"] = Money($bonus_starting) 
             bonus_details["bonus_action"] = Money($bonus_action) 
             bonus_details["bonus_other"] = $bonus_other
+            bonus_details["triggers"] = $triggers
+            bonus_details["payment"] = $payment
             bonus_details["check_filled"] = 1
            
             DBUpdate("player_contracts",$id_contract,{performance_bonus:bonus_details,performance_bonus_sign:sign})
         }
+        /*if $contract_block == "bonus" {
+            var other_details map
+            other_details["sign_bonus"] = Money($sign_bonus) 
+            other_details["fid_bonus"] = Money($fid_bonus) 
+            other_details["trans_bonus"] = $trans_bonus
+            other_details["oth_bonus"] = $oth_bonus
+        }*/
         if $contract_block == "other_advatages" {
             var other_advatages_details map
             other_advatages_details["housing_rent"] = Money($housing_rent)
@@ -140,6 +168,7 @@ contract PlayerContractCreate {
             var insurance_details map
             insurance_details["group_insurance"] = $group_insurance
             insurance_details["other_insurance"] = $other_insurance
+            insurance_details["estimated_amount"] = Money($estimated_amount)
             insurance_details["check_filled"] = 1
            
             DBUpdate("player_contracts",$id_contract,{insurance:insurance_details,insurance_sign:sign})

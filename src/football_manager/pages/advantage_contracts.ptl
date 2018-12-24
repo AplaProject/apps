@@ -11,10 +11,13 @@ Form(){
                     }
                 }
                 Div(col-md-9 text-left){
+                    DBFind(@1applications).Where({ecosystem:19, name:"FootballManager"}).Columns("name,id").Vars(application)
                     If(#contract_block_type# == edit){
-                        Input(Name: country,Value: #details_general_information_country#)
+                        AppParam(Ecosystem:#ecosystem_id#, App: #application_id#, Name: country_list, Source: list_country)
+                        Select(Name: country, Source: list_country, NameColumn: name, ValueColumn: name)
                     }.Else{
-                        Input(Name: country)
+                        AppParam(Ecosystem:#ecosystem_id#, App: #application_id#, Name: country_list, Source: list_country)
+                        Select(Name: country, Source: list_country, NameColumn: name, ValueColumn: name)
                     }
                 }
             }
@@ -26,9 +29,9 @@ Form(){
                 }
                 Div(col-md-9 text-left){
                     If(#contract_block_type# == edit){
-                        Input(Name: num_seasons,Placeholder: "[1-10]",Type: number,Value: #details_general_information_num_seasons#)
+                        Input(Name: num_seasons,Placeholder: "[1-5]",Type: number,Value: #details_general_information_num_seasons#)
                     }.Else{
-                        Input(Name: num_seasons,Placeholder: "[1-10]",Type: number)
+                        Input(Name: num_seasons,Placeholder: "[1-5]",Type: number)
                     }
                 }
             }.Style(padding-top:10px;)
@@ -162,7 +165,7 @@ Form(){
     }
     If(#contract_block# == bonus){
         If(#contract_block_type# == edit){
-            DBFind("player_contracts",Source: src_contr).Columns("id,performance_bonus->bonus_win_match,performance_bonus->bonus_draw_match,performance_bonus->bonus_selection,performance_bonus->bonus_appearance,performance_bonus->bonus_starting,performance_bonus->bonus_action,performance_bonus->bonus_other").WhereId(#id_contract#).Vars(details)
+            DBFind("player_contracts",Source: src_contr).Columns("id,performance_bonus->bonus_win_match,performance_bonus->bonus_draw_match,performance_bonus->bonus_selection,performance_bonus->bonus_appearance,performance_bonus->bonus_starting,performance_bonus->bonus_action,performance_bonus->bonus_other,performance_bonus->payment,performance_bonus->triggers").WhereId(#id_contract#).Vars(details)
         }
         Div(list-group-item){
             Div(row){
@@ -180,6 +183,34 @@ Form(){
                     }
                 }
             }
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        Span(Body: "Triggers")
+                    }
+                }
+                Div(col-md-9 text-left){
+                    If(#contract_block_type# == edit){
+                        Input(Name: triggers,Type: textarea,Value: #details_performance_bonus_triggers#)
+                    }.Else{
+                        Input(Name: triggers,Type: textarea)
+                    }
+                }
+            }.Style(padding-top:10px;)
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        Span(Body: "Payment Schedule")
+                    }
+                }
+                Div(col-md-9 text-left){
+                    If(#contract_block_type# == edit){
+                        Input(Name: payment,Type: textarea,Value: #details_performance_bonus_payment#)
+                    }.Else{
+                        Input(Name: payment,Type: textarea)
+                    }
+                }
+            }.Style(padding-top:10px;)
             Div(row){
                 Div(col-md-3 mt-sm text-right){
                     Label(){
@@ -266,6 +297,76 @@ Form(){
                         Input(Name: bonus_other,Type: textarea,Value: #details_performance_bonus_bonus_other#)
                     }.Else{
                         Input(Name: bonus_other,Type: textarea)
+                    }
+                }
+            }.Style(padding-top:10px;)
+        }
+        Div(row mt){
+            Div(col-md-12){
+                Button(Body: $@1back$, Class: btn btn-default,Page: player_contract_view,PageParams:"id_contract=#id_contract#")
+                Button(Body: $@1save$, Class: btn btn-primary pull-right,PageParams:"id_contract=#id_contract#",Page: player_contract_view, Contract: PlayerContractCreate,Params: "id_contract=#id_contract#,contract_block=#contract_block#")
+            }
+        }
+    }
+    If(#contract_block# == other_bonus){
+        If(#contract_block_type# == edit){
+        }
+        Div(list-group-item){
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        Span(Body: "Signature Bonus")
+                    }
+                }
+                Div(col-md-9 text-left){
+                    If(#contract_block_type# == edit){
+                        SetVar(sgn_b_money, Money(##))
+                        Input(Name: sign_bonus,Type: number,Value: #sgn_b_money#)
+                    }.Else{
+                        Input(Name: sign_bonus,Type: number)
+                    }
+                }
+            }
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        Span(Body: "Fidelity Bonus")
+                    }
+                }
+                Div(col-md-9 text-left){
+                    If(#contract_block_type# == edit){
+                        SetVar(fid_b_money, Money(##))
+                        Input(Name: fid_bonus,Type: number,Value: #fid_b_money#)
+                    }.Else{
+                        Input(Name: fid_bonus,Type: number)
+                    }
+                }
+            }.Style(padding-top:10px;)
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        Span(Body: "Transfer Bonus %")
+                    }
+                }
+                Div(col-md-9 text-left){
+                    If(#contract_block_type# == edit){
+                        Input(Name: trans_bonus,Type: number,Value: ## %)
+                    }.Else{
+                        Input(Name: trans_bonus,Type: number)
+                    }
+                }
+            }.Style(padding-top:10px;)
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        Span(Body: "Other Bonus")
+                    }
+                }
+                Div(col-md-9 text-left){
+                    If(#contract_block_type# == edit){
+                        Input(Name: oth_bonus,Type: textarea,Value: ##)
+                    }.Else{
+                        Input(Name: oth_bonus,Type: textarea)
                     }
                 }
             }.Style(padding-top:10px;)
@@ -396,7 +497,7 @@ Form(){
     }
     If(#contract_block# == insurance){
         If(#contract_block_type# == edit){
-            DBFind("player_contracts",Source: src_contr).Columns("id,insurance->group_insurance,insurance->other_insurance").WhereId(#id_contract#).Vars(details)
+            DBFind("player_contracts",Source: src_contr).Columns("id,insurance->group_insurance,insurance->other_insurance,insurance->estimated_amount").WhereId(#id_contract#).Vars(details)
         }
         Div(list-group-item){
             Div(row){
@@ -413,6 +514,21 @@ Form(){
                     }
                 }
             }
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        Span(Body: "Estimated amount")
+                    }
+                }.Style(padding-top:4px;)
+                Div(col-md-9 text-left){
+                    If(#contract_block_type# == edit){
+                        SetVar(est_a_money, Money(#details_insurance_estimated_amount#))
+                        Input(Name: estimated_amount, Type: number,Value: #est_a_money#)
+                    }.Else{
+                        Input(Name: estimated_amount, Type: number)
+                    }
+                }
+            }.Style(padding-top:10px;)
             Div(row){
                 Div(col-md-3 mt-sm text-right){
                     Label(){
