@@ -6,7 +6,6 @@ contract CFStartup {
         Description string
         Wallet string
         WalletEscrow string
-        NameEscrow string
         WebAddress string
         StartDate string
         StartTime string
@@ -77,16 +76,23 @@ contract CFStartup {
         if $dateEnd == 0 {
             warning "Invalid ending date"
         }
+        $Wallet = IdToAddress(AddressToId($Wallet))
+        $WalletEscrow = IdToAddress(AddressToId($WalletEscrow))
     }
 
     action {
+        var escrowName string
+        escrowName = DBFind("@1members").Where({ecosystem:$Ecosystem}).Columns("member_name").One("member_name")
+        if !escrowName{
+            escrowName = $WalletEscrow
+        }
         var m map
         m["ecosystem"] = $Ecosystem
         m["name"] = $Name
         m["description"] = $Description
         m["wallet"] = $Wallet
         m["escrow_wallet"] = $WalletEscrow
-        m["escrow_name"] = $NameEscrow
+        m["escrow_name"] = escrowName
         m["web_address"] = $WebAddress
         m["registered_at"] = $block_time
         m["started_at"] = $dateStart

@@ -1,0 +1,48 @@
+contract AppRolesSettings{
+    data {
+        RolesParam string
+        AppIds array
+        Ids array
+        AppId int
+    }
+
+    conditions{
+        ContractConditions("AdminCondition")
+    }
+    func trimPrefix(s string) string{
+        var d array  i int canBreak bool
+        d = ["@", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+        
+        while true{
+            canBreak = true
+            while i < 11{
+                if HasPrefix(s, d[i]){
+                    s = Substr(s, 1, Size(s))
+                    canBreak = false
+                }
+                i = i + 1
+            }
+            if canBreak {
+                break
+            }
+        }
+        return s
+    }
+
+    action {
+        var i i_param lenIds paramId int rolesParam array
+        lenIds = Len($Ids)
+        rolesParam = Split(AppParam($AppId, $RolesParam, $ecosystem_id), ",")
+        while i < lenIds{
+            var name string roleId int
+            i_param = Int($AppIds[i])
+            name = trimPrefix(rolesParam[i_param - 1])
+            roleId = $Ids[i]
+            if roleId > 0{
+                paramId = Int(DBFind("@1app_params").Where({app_id:$AppId, ecosystem:$ecosystem_id, name:{$end:name}}).One("id"))
+                @1EditAppParam("Id,Value", paramId, roleId)
+            }
+            i = i + 1
+        }
+    }
+}

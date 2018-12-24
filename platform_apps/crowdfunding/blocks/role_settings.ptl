@@ -1,0 +1,49 @@
+SetVar(role_admin,0).(role_developer,0)
+SetVar(role_admin, EcosysParam(Name:role_sale_admin))
+SetVar(role_developer, EcosysParam(Name:role_developer))
+
+DBFind(@1roles,roles).Where({ecosystem:#ecosystem_id#, deleted:0}).Columns("role_name,id").Limit(100).Count(roles_count)
+If(#row#==""){
+    SetVar(row,"row mt-sm")
+}
+If(#col_left#==""){
+    SetVar(col_left,"col-sm-4 text-right mt-sm")
+}
+If(#col_right#==""){
+    SetVar(col_right,"col-sm-8 text-left")
+}
+
+Form(panel panel-primary){
+    Input(Name:RolesParam, Type:hidden, Value: #roles_param#)
+    Input(Name:AppId, Type:hidden, Value: #application_id#)
+
+    Div(panel-body){
+        Div(#row#){
+            Div(col-sm-12 text-center text-muted){
+                $@1role_settings_description$
+            }
+        }
+        If(#roles_count#>0){
+            ForList(app_roles){
+                Div(#row#){
+                    Div(#col_left#){
+                        #name#
+                        Input(Name:AppIds, Type:hidden, Value:#id#)
+                    }
+                    Div(#col_right#){
+                        Select(Name:Ids, Source:roles, NameColumn: role_name, ValueColumn: id)
+                    }
+                }
+            }
+        }.Else{
+            Div(text-center h4 text-muted){
+                $@1roles$ $@1not_founded$
+            }
+        }
+    }
+    Div(panel-footer text-center){
+        If(#roles_count#>0){
+            Button(Body: $@1apply_settings$, Class: btn btn-primary, Page: #this_page#, Contract: @1AppRolesSettings)
+        }
+    }
+}

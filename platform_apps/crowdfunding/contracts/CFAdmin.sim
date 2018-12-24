@@ -1,0 +1,26 @@
+contract CFAdmin {
+    data {
+        Id int
+        Action string
+    }
+    conditions{
+        $startup = DBFind("@1startups").WhereId($Id).Row()
+        if !$startup{
+            warning "Startup not found"
+        }
+        // TODO: проверка прав на администрирование (role_id == cf_catalog_admin)
+    }
+
+    action {
+        if $Action == "stop"{
+            $startup["stopped_at"] = $block_time
+        }elif $Action == "accept"{
+            $startup["published_at"] = $block_time
+        }elif $Action == "reject"{
+            $startup["published_at"] = -1
+        }elif $Action == "delete"{
+            $startup["deleted_at"] = $block_time
+        }
+        DBUpdate("@1startups", $Id, $startup)
+    }
+}
