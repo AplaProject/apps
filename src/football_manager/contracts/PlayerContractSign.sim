@@ -77,6 +77,20 @@ contract PlayerContractSign {
                 DBUpdate("player_contracts",$id_contract,{"performance_bonus_sign->time_contragent_agency":$block_time,"performance_bonus_sign->contragent_agency":$pub_sign,"performance_bonus_sign->accept":$plus_accept})
             }
         }
+        if $contract_block == "other_bonus" {
+            $check_accept = DBFind("player_contracts").Columns("id,other_bonus_sign->accept").Where({"id":$id_contract}).Row()
+            $plus_accept = Int($check_accept["other_bonus_sign.accept"]) + 1
+            
+            if Str($check_member["role.name"]) == "Club Representative" {
+                DBUpdate("player_contracts",$id_contract,{"other_bonus_sign->time_contragent_club":$block_time,"other_bonus_sign->contragent_club":$pub_sign,"other_bonus_sign->accept":$plus_accept})
+            }
+            if Str($check_member["role.name"]) == "Player" {
+                DBUpdate("player_contracts",$id_contract,{"other_bonus_sign->time_player":$block_time,"other_bonus_sign->player":$pub_sign,"other_bonus_sign->accept":$plus_accept})
+            }
+            if Str($check_member["role.name"]) == "Player Agency Representative" {
+                DBUpdate("player_contracts",$id_contract,{"other_bonus_sign->time_contragent_agency":$block_time,"other_bonus_sign->contragent_agency":$pub_sign,"other_bonus_sign->accept":$plus_accept})
+            }
+        }
         if $contract_block == "other_advatages" {
             $check_accept = DBFind("player_contracts").Columns("id,other_advantages_sign->accept").Where({"id":$id_contract}).Row()
             $plus_accept = Int($check_accept["other_advantages_sign.accept"]) + 1
@@ -105,8 +119,22 @@ contract PlayerContractSign {
                 DBUpdate("player_contracts",$id_contract,{"insurance_sign->time_contragent_agency":$block_time,"insurance_sign->contragent_agency":$pub_sign,"insurance_sign->accept":$plus_accept})
             }
         }
-        $check_accept = DBFind("player_contracts").Columns("id,id_player,id_club,general_sign->accept,salary_sign->accept,performance_bonus_sign->accept,other_advantages_sign->accept,insurance_sign->accept").Where({"id":$id_contract}).Row()
-        if Int($check_accept["general_sign.accept"]) == 3 && Int($check_accept["salary_sign.accept"]) == 3 && Int($check_accept["performance_bonus_sign.accept"]) == 3 && Int($check_accept["other_advantages_sign.accept"]) == 3 && Int($check_accept["insurance_sign.accept"]) == 3 {
+        if $contract_block == "agent_fees" {
+            $check_accept = DBFind("player_contracts").Columns("id,agent_fees_sign->accept").Where({"id":$id_contract}).Row()
+            $plus_accept = Int($check_accept["agent_fees_sign.accept"]) + 1
+            
+            if Str($check_member["role.name"]) == "Club Representative" {
+                DBUpdate("player_contracts",$id_contract,{"agent_fees_sign->time_contragent_club":$block_time,"agent_fees_sign->contragent_club":$pub_sign,"agent_fees_sign->accept":$plus_accept})
+            }
+            if Str($check_member["role.name"]) == "Player" {
+                DBUpdate("player_contracts",$id_contract,{"agent_fees_sign->time_player":$block_time,"agent_fees_sign->player":$pub_sign,"agent_fees_sign->accept":$plus_accept})
+            }
+            if Str($check_member["role.name"]) == "Player Agency Representative" {
+                DBUpdate("player_contracts",$id_contract,{"agent_fees_sign->time_contragent_agency":$block_time,"agent_fees_sign->contragent_agency":$pub_sign,"agent_fees_sign->accept":$plus_accept})
+            }
+        }
+        $check_accept = DBFind("player_contracts").Columns("id,id_player,id_club,general_sign->accept,salary_sign->accept,performance_bonus_sign->accept,other_advantages_sign->accept,insurance_sign->accept,other_bonus_sign->accept,agent_fees_sign->accept").Where({"id":$id_contract}).Row()
+        if Int($check_accept["general_sign.accept"]) == 3 && Int($check_accept["salary_sign.accept"]) == 3 && Int($check_accept["performance_bonus_sign.accept"]) == 3 && Int($check_accept["other_advantages_sign.accept"]) == 3 && Int($check_accept["insurance_sign.accept"]) == 3 && Int($check_accept["other_bonus_sign.accept"]) == 3 && Int($check_accept["agent_fees_sign.accept"]) == 3 {
             $club_id = Int($check_accept["id_club"])
             DBUpdate("@1members",Int($check_accept["id_player"]),{"manager_info->club":$club_id})
             DBUpdate("player_contracts",$id_contract,{"closed":1})
