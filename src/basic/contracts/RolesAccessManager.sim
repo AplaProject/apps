@@ -3,6 +3,10 @@ contract RolesAccessManager {
         Action string
         Rid int
         ManagerRid string "optional"
+
+        //filled inputs
+        role_name string "optional"
+        role_type int "optional"
     }
     
     func updateAccess(ra array) {
@@ -14,10 +18,15 @@ contract RolesAccessManager {
     func updateBufferAccess(ra array) {
         var roles_access string
         roles_access = JSONEncode(ra)
+        var filled map
+        filled["roles_access"] = roles_access
+        filled["role_name"] = $role_name
+        filled["role_type"] = $role_type
+        
         if !$buffer_id {
-            DBInsert("@1buffer_data", {ecosystem:$ecosystem_id, "member_id": $key_id, "key": "roles_access", "value": roles_access})
+            DBInsert("@1buffer_data", {ecosystem:$ecosystem_id, "member_id": $key_id, "key": "roles_access", "value": filled})
         } else {
-            DBUpdate("@1buffer_data", Int($buffer_id), {"value": roles_access})
+            DBUpdate("@1buffer_data", Int($buffer_id), {"value": filled})
         }
     }
     
@@ -49,9 +58,9 @@ contract RolesAccessManager {
             $buffer_id = 0
             $ids = []
             var buffer map
-            buffer = DBFind("@1buffer_data").Where({ecosystem:$ecosystem_id, "member_id": $key_id, "key": "roles_access"}).Row()
+            buffer = DBFind("@1buffer_data").Where({ecosystem:$ecosystem_id, "member_id": $key_id, "key": "roles_access"}).Columns("id,value,value->roles_access").Row()
             if buffer {
-                $buffer_managers = buffer["value"]
+                $buffer_managers = buffer["value.roles_access"]
                 $buffer_id = buffer["id"]
             }
         }
