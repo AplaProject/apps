@@ -25,12 +25,20 @@ contract CFStartup {
         return dt
     }
     conditions{
+        $CREATED = 1
+        $PUBLISHED = 2
+        $STARTED = 3
+        $FINISHED = 4
+        $FAILED = 5
+        $STOPPED = 6
+        $REJECTED = 7
+
         if $Id > 0 {
             $startup = DBFind("@1startups").WhereId($Id).Row()
             if !$startup{
                 warning "Startup not found"
             }
-            if Int($startup["published_at"]) > 0{
+            if Int($startup["status"]) == $PUBLISHED{
                 warning "Editing a published company is not available"
             }
         }
@@ -45,7 +53,7 @@ contract CFStartup {
         if !admin{
             warning "You must be Admin in target ecosystem"
         }
-        
+
         if DBFind("@1keys").Where({ecosystem:$Ecosystem, id:$Wallet, multi:0}).Row(){
             // $Wallet - кошелек с мультиподписями
             warning "Wallet must be multisigned"
@@ -60,7 +68,7 @@ contract CFStartup {
         if eco["type_emission"] != 1 {
             warning "Ecosystem additional emission must be blocked"
         }
-        
+
         token["token_title"] = eco["token_title"]
         token["emission_amount"] = eco["emission_amount"]
         // TODO: наличие токена на бирже
@@ -106,6 +114,7 @@ contract CFStartup {
         if $Id > 0{
             DBUpdate("@1startups", $Id, m)
         }else{
+            m["status"] = $CREATED
             DBInsert("@1startups", m)
         }
     }
