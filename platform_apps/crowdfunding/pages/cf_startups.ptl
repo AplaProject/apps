@@ -1,3 +1,4 @@
+DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Crowdfunding"}).Vars(application)
 SetVar(this_page, @1cf_startups).(this_table, @1cf_startups)
 Include(@1pager_header)
 
@@ -22,16 +23,25 @@ If(GetVar(Estimated)!=""){
     SetVar(where_est,).(Estimated,)
 }
 
-SetVar(where, {published_at:{$gt:0}, $or:[#where_started# #where_finished# #where_min# #where_est#]})
-
+SetVar(isAdmin,0)
+SetVar(catalogAdmin, AppParam(App:#application_id#, Name:cf_catalog_admin, Ecosystem:1))
+If(#role_id#>0){
+    If(#catalogAdmin#==#role_id#){
+        SetVar(isAdmin,1)
+    }
+}
+If(#isAdmin#==1){
+    SetVar(where, {published_at:{$gte:0}, $or:[#where_started# #where_finished# #where_min# #where_est#]}).(order,{published_at: 1})
+}.Else{
+    SetVar(where, {published_at:{$gt:0}, $or:[#where_started# #where_finished# #where_min# #where_est#]}).(order,{id: -1})
+}
 SetTitle($@1cf_startups$)
 Div(mr-lg text-right){
     Button(Page: @1cf_startup_filter, Class: btn bg-gray-lighter mr-sm, PageParams: "StartDate=#StartDate#,EndDate=#EndDate#,Minimal=#Minimal#,Estimated=#Estimated#", Body: Em(Class: fa fa-filter) $@1filter$).Popup(Header: $@1filter$, Width: "50")
 }
 
-SetVar(isAdmin,0).(isOwner,0).(isInvestor,0)
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Count(count).Custom(_name){
+DBFind(#this_table#, src).Where(#where#).Order(#order#).Limit(#pager_limit#).Offset(#pager_offset#).Count(count).Custom(_name){
     LinkPage(Page: @1cf_company, PageParams: "Id=#id#", Body: #name#)
 }.Custom(_started){
     DateTime(#started_at#, Format: YYYY-MM-DD HH:MI:SS)
@@ -44,13 +54,27 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
 }.Custom(_current){
     Money(#current_investment#)
 }.Custom(_actions){
-    Button(Body:$@1invest$, Page:@1cf_investment_form, PageParams: "Id=#id#,StartDate=#StartDate#,EndDate=#EndDate#,Minimal=#Minimal#,Estimated=#Estimated#", Class:btn btn-default).Popup(50, $@1investment$)
+    SetVar(isOwner,0).(ecoAdminRole_id,0).(ecoAdmin_id,0)
+    DBFind(@1parameters).Where({name:"role_admin", ecosystem:#ecosystem#}).Columns("id").Vars(ecoAdminRole)
+    If(#ecoAdminRole_id#>0){
+        DBFind(@1roles_particiants).Where({"role->id":#ecoAdminRole_id#, "member->member_id": #key_id#, ecosystem:#ecosystem#}).Vars(ecoAdmin)
+    }
     If(#isAdmin#==1){
-        Button(Body:$@1invest$, Page:@1cf_investment_form, PageParams: "Id=#id#,StartDate=#StartDate#,EndDate=#EndDate#,Minimal=#Minimal#,Estimated=#Estimated#", Class:btn btn-default).Popup(50, $@1investment$)
+        If(#published_at#==0){
+            Button(Body:$@1cf_accept$, Page:@1cf_startups_admin, Contract: CFAdmin, Params: "Id=#id#,Action=accept", Class:btn btn-success)
+            Button(Body:$@1cf_reject$, Page:@1cf_startups_admin, Contract: CFAdmin, Params: "Id=#id#,Action=reject", Class:btn btn-danger)
+        }
+        If(#published_at#>0){
+            Button(Body:$@1cf_stop$, Page:@1cf_startups_admin, Contract: CFAdmin, Params: "Id=#id#,Action=stop", Class:btn btn-default)
+        }
+    }.Else{
+        If(#ecoAdmin_id#>0){
+            TODO:удаление кампании, возможно делегатом э/с и админом площадки до начала кампании
+        }.Else{
+            Button(Body:$@1cf_invest$, Page:@1cf_investment_form, PageParams: "Id=#id#", Class:btn btn-default).Popup(50, $@1cf_invest$)
+        }
     }
-    If(#isOwner#==1){
-        Button(Body:$@1invest$, Page:@1cf_investment_form, PageParams: "Id=#id#,StartDate=#StartDate#,EndDate=#EndDate#,Minimal=#Minimal#,Estimated=#Estimated#", Class:btn btn-default).Popup(50, $@1investment$)
-    }
+
 }
 Div(fullscreen){
     AddToolButton(Title:$@1cf_add_company$, Page: @1cf_startup_form, Icon: icon-plus).Popup(Header: $@1cf_startup_form$, Width: "50")
