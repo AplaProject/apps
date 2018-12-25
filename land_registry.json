@@ -1,696 +1,530 @@
 {
     "name": "Land registry",
-    "conditions": "ContractConditions(\"@1DeveloperCondition\")",
+    "conditions": "ContractConditions(\"AdminCondition\")",
     "data": [
         {
-            "Name": "land_registry_edit",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "DBFind(@1applications).Where({ecosystem:1, name:\"Land Registry\"}).Columns(\"name,id\").Vars(app)\n\nIf(#notific_id#>0){\n    DBFind(\"@1notifications\").Where({\"id\": #notific_id#, \"ecosystem\": #ecosystem_id#}).Columns(\"page_params->land_id\").Vars(notific)\n    SetVar(LandId, #notific_page_params_land_id#)\n}.Else{\n    SetVar(notific_id, 0)\n}\n\nIf(#LandId#>0){\n}.Else{\n    SetVar(notific_id, 0)\n    SetVar(LandId, 1)\n}\n\nIf(Or(#depart1#==1,#depart2#==1,#depart3#==1)){\n    SetVar(depart, 1)\n}.Else{\n    SetVar(depart, 0)\n}\nAppParam(App: #app_id#, Name: land_yes_no, Source: src_yes_no)\n\nDBFind(\"land_registry\").WhereId(#LandId#).Vars(entry)\nDBFind(\"@1members\").Where({\"id\": #entry_owner_id#, \"ecosystem\": #ecosystem_id#}).Vars(owner)\n\nDiv(content-wrapper red){\n    Div(breadcrumb){\n        Div(){\n            LinkPage(LangRes(land_records), land_registry_records, PageParams: \"admin=#admin#\").Style(margin-right: 10px;)\n            Span(/).Style(margin-right: 10px;)\n            Span(LangRes(land_records_edit) ##LandId# (#owner_member_name#), text-muted)\n        }\n    }\n    Div(row df f-valign){\n        \n        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3 mt-sm text-left){\n            Div(panel panel-primary data-sweet-alert){\n                Form(){\n                    Div(panel-heading){\n                        Div(panel-title){LangRes(land_records_edit)}\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-12 mt-sm text-left){\n                                If(#admin#==1){\n                                    InputMap(Name: Coords, Type:polygon, MapType:streets, Value:#entry_map_coords#)\n                                }.Else{\n                                    Map(MapType:streets,Hmap:300, Value:`#entry_map_coords#`)\n                                }\n                            }\n                        }\n                        Div(row df f-valign){\n                            If(#admin#==1){}.Else{\n                                Div(col-md-4 mt-sm text-right){\n                                    Strong(LangRes(area_size))\n                                    (Span(m).(2).Style(vertical-align: super;font-size:small;))\n                                }\n                                Div(col-md-8 mt-sm text-left){\n                                    Span(#entry_area#)\n                                }\n                            }\n                        }\n                        If(#admin#==1){}.Else{\n                            Div(row df f-valign){\n                                Div(col-md-4 mt-sm text-right){Strong(LangRes(address))}\n                                Div(col-md-8 mt-sm text-left){#entry_address#}\n                            }\n                        }\n                        \n                        If(#depart#==1){\n                            Div(row df f-valign){\n                                Div(col-md-4 mt-sm text-right h5){Strong(LangRes(owner))}\n                                Div(col-md-8 mt-sm text-left h5){\n                                    If(#owner_image_id#>0){\n                                        Image(Src: Binary().ById(#owner_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)\n                                        Span(Class: ml-sm text-bold, Body: #owner_member_name#)\n                                    }.Else{\n                                        Div(){\n                                            Span(Em(Class: fa icon-user fa-2x))\n                                            Span(Class: ml-sm text-bold, Body: #owner_member_name#)\n                                        }.Style(display:flex; align-items:center;)\n                                    }\n                                }\n                            }\n                        }\n                    }\n                    If(#depart#==1){\n                        Div(list-group-item){\n                            Div(row df f-valign){\n                                Div(col-md-4 mt-sm text-right h5){Strong(LangRes(registration_date):) }\n                                Div(col-md-8 mt-sm text-left h5){DateTime(#entry_registration_date#)}\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-4 mt-sm text-right h5){Strong(LangRes(record_add_date):)}\n                                Div(col-md-8 mt-sm text-left h5){DateTime(#entry_date_create#)}\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-4 mt-sm text-right h5){Strong(LangRes(modification_date):)}\n                                Div(col-md-8 mt-sm text-left h5){DateTime(#entry_modification_date#)}\n                            }\n                        }\n                    }\n                    \n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right){Strong(LangRes(land_use))}\n                            Div(col-md-8 mt-sm text-left){\n                                If(#admin#==1){\n                                    AppParam(App: #app_id#, Name: land_use, Source: src_use)\n                                    Select(Name: LandUse,Source: src_use,Class: form-control, Value: #entry_land_use#, NameColumn: name, ValueColumn: id)\n                                }.Else{\n                                    If(GetVar(entry_land_use)){\n                                        AppParam(App: #app_id#, Name: land_use, Index: #entry_land_use#)\n                                    }.Else{\n                                        LangRes(undefined)\n                                    }\n                                }\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right){Strong(LangRes(buildings_use_class))}\n                            Div(col-md-8 mt-sm text-left){\n                                If(#admin#==1){\n                                    AppParam(App: #app_id#, Name: land_buildings_use_class, Source: src_buildings_use_class)\n                                    Select(Name: BuildingsUseClass, Source: src_buildings_use_class, Class: form-control, Value: #entry_buildings_use_class#, NameColumn: name, ValueColumn: id)\n                                }.Else{\n                                    If(GetVar(entry_buildings_use_class)){\n                                        AppParam(App: #app_id#, Name: buildings_use_class, Index: #entry_buildings_use_class#)\n                                    }.Else{\n                                        LangRes(undefined)\n                                    }\n                                }\n                            }\n                        }\n                    }\n                    \n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right){Strong(LangRes(local_body))}\n                            Div(col-md-8 mt-sm text-left){\n                                If(#admin#==1){\n                                    AppParam(App: #app_id#, Name: land_local_body, Source: src_local_body)\n                                    Select(Name: LandLocalBody, Source: src_local_body,Class: form-control, Value: #entry_land_local_body#, NameColumn: name, ValueColumn: id)\n                                }.Else{\n                                    If(GetVar(entry_land_local_body)){\n                                        AppParam(App: #app_id#, Name: land_local_body, Index: #entry_land_local_body#)\n                                    }.Else{\n                                        LangRes(undefined)\n                                    }\n                                }\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-4 mt-sm text-right){Strong(LangRes(land_nature))}\n                            Div(col-md-8 mt-sm text-left){\n                                If(#admin#==1){\n                                    AppParam(App: #app_id#, Name: land_nature, Source: src_nature)\n                                    Select(Name: LandNature,Source: src_nature, Class: form-control,Value: #entry_land_nature#, NameColumn: name, ValueColumn: id)\n                                }.Else{\n                                    If(GetVar(entry_land_nature)){\n                                        AppParam(App: #app_id#, Name: land_nature, Index: #entry_land_nature#)\n                                    }.Else{\n                                        LangRes(undefined)\n                                    }\n                                }\n                            }\n                        }\n                    }\n                    \n                    \n                    If(#depart#==1){\n                        Div(list-group-item){\n                            Div(row df f-valign){\n                                Div(col-md-4 mt-sm text-right h5){Strong(LangRes(tax_and_bills))}\n                                Div(col-md-8 mt-sm text-left h5){\n                                    If(#depart3#==1){\n                                        Div(form-inline){\n                                            RadioGroup(Name: TaxReceiptAndBills, Source: src_yes_no, Class: form-control, Value: #entry_tax_and_bills#, NameColumn: name, ValueColumn: id)\n                                        }\n                                    }.Else{\n                                        If(GetVar(entry_tax_receipt_and_bills)){\n                                            AppParam(App: #app_id#, Name: land_yes_no, Index: #entry_tax_receipt_and_bills#)\n                                        }.Else{\n                                            LangRes(undefined)\n                                        }\n                                    }\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-4 mt-sm text-right h5){Strong(LangRes(market_value))}\n                                Div(col-md-8 mt-sm text-left h5){\n                                    If(#depart3#==1){\n                                        Input(Name: PriceMarket,Class: form-control input-sm, Value: #entry_price_market_value#, Type: number)\n                                    }.Else{\n                                        If(GetVar(entry_price_market_value)){\n                                            #entry_price_market_value#\n                                        }.Else{\n                                            LangRes(undefined)\n                                        }\n                                    }\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-4 mt-sm text-right h5){Strong(LangRes(government_value))}\n                                Div(col-md-8 mt-sm text-left h5){\n                                    If(#depart3#==1){\n                                        Input(Name: PriceGov,Class: form-control input-sm, Value: #entry_price_gov_value#, Type: number)\n                                    }.Else{\n                                        If(GetVar(entry_price_gov_value)){\n                                            #entry_price_gov_value#\n                                        }.Else{\n                                            LangRes(undefined)\n                                        }\n                                    }\n                                }\n                            }\n                        }\n                        Div(list-group-item){\n                            Div(row df f-valign){\n                                Div(col-md-4 mt-sm text-right h5){Strong(LangRes(consideration_value))}\n                                Div(col-md-8 mt-sm text-left h5){\n                                    If(#depart1#==1){\n                                        Input(Name: Price,Class: form-control input-sm, Value: #entry_price#, Type: number)\n                                    }.Else{\n                                        If(GetVar(entry_price)){\n                                            #entry_price#\n                                        }.Else{}\n                                    }\n                                }\n                            }\n                        }\n                        \n                        Div(list-group-item){\n                            Div(row df f-valign){\n                                Div(col-md-4 mt-sm text-right h5){Strong(LangRes(encumbrance_certificate))}\n                                Div(col-md-8 mt-sm text-left h5){\n                                    If(#depart2#==1){\n                                        Div(form-inline){\n                                            RadioGroup(Name: EncumbranceCertificate,Class: form-control, Value: #entry_encumbrance_certificate#, Source: src_yes_no, ValueColumn: id, NameColumn: name)\n                                        }\n                                    }.Else{\n                                        If(GetVar(entry_encumbrance_certificate)){\n                                            Span(AppParam(App: #app_id#, Name: land_yes_no, Index: #entry_encumbrance_certificate#))\n                                        }.Else{\n                                            LangRes(undefined)\n                                        }\n                                    }\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-4 mt-sm text-right h5){Strong(LangRes(legal_status))}\n                                Div(col-md-8 mt-sm text-left h5){\n                                    If(#depart2#==1){\n                                        Div(form-inline){\n                                            RadioGroup(Name: LegalStatus,Class: form-control, Value: #entry_legal_status#, Source: src_yes_no, ValueColumn: id, NameColumn: name)\n                                        }\n                                    }.Else{\n                                        If(GetVar(entry_legal_status)){\n                                            Span(AppParam(App: #app_id#, Name: land_yes_no, Index: #entry_legal_status#))\n                                        }.Else{\n                                            LangRes(undefined)\n                                        }\n                                    }\n                                }\n                            }\n                        }\n                    }.Else{}\n                    \n                    Div(panel-footer){\n                        Div(clearfix){\n                            Div(pull-right){\n                                Input(Name: LandId, Type: hidden, Value: #LandId#)\n                                Input(Name: Depart, Type: hidden, Value: #depart#)\n                                Div(btn-group){\n                                    Button(Page: land_registry_records, Body: LangRes(@1back), Class: btn btn-default btn-pill-left, PageParams: \"admin=#admin#\")\n                                    \n                                    If(GetVar(depart)){\n                                        If(GetVar(depart1)){\n                                            Button(Body: LangRes(@1save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Depart1Edit, Params: \"Price=Val(Price),LandId=#LandId#,NotificId=#notific_id#\", Page: land_registry_records)\n                                            \n                                        }.ElseIf(GetVar(depart2)){\n                                            Button(Body: LangRes(@1save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Depart2Edit, Params: \"LandId=#LandId#,LegalStatus=Val(LegalStatus),EncumbranceCertificate=Val(EncumbranceCertificate),NotificId=#notific_id#\", Page: land_registry_records)\n                                            \n                                        }.ElseIf(GetVar(depart3)){\n                                            Button(Body: LangRes(@1save), Class: btn btn-primary btn-pill-right, Contract: land_registry_Depart3Edit, Params: \"LandId=#LandId#,TaxReceiptAndBills=Val(TaxReceiptAndBills),PriceMarket=Val(PriceMarket),PriceGov=Val(PriceGov),NotificId=#notific_id#\", Page: land_registry_records)\n                                        }.Else{}\n                                        \n                                    }.Else{\n                                        Button(Body: LangRes(@1save), Class: btn btn-primary btn-pill-right, Contract: land_registry_AdminEdit, Params: \"LandId=#LandId#,Coords=Val(Coords),LandUse=Val(LandUse),BuildingsUseClass=Val(BuildingsUseClass),Area=Val(Area),CoordsAddress=Val(CoordsAddress),LandNature=Val(LandNature),LandLocalBody=Val(LandLocalBody)\", Page: land_registry_records_admin)\n                                    }\n                                }\n                            }\n                        }\n                        If(AppParam(App: #app_id#, Name: debug)==1){\n                            Div(){admin: #admin#}\n                            Div(){notific_id: #notific_id#}\n                        }\n                    }\n                }\n            }\n        }\n    }\n}",
+            "Name": "lr_check_rights",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "DBFind(\"@1applications\").Where({ecosystem: #ecosystem_id#, name: \"Land registry\"}).Vars(\"app\")\r\nSetVar(admin, 0).(bank, 0).(depart2, 0).(depart3, 0)\r\n\r\nIf(#role_id# == AppParam(App: #app_id#, Name: lr_admin_role)){\r\n    SetVar(admin, 1)\r\n}\r\nIf(#role_id# == AppParam(App: #app_id#, Name: lr_bank_role)){\r\n    SetVar(bank, 1)\r\n}\r\nIf(#role_id# == AppParam(App: #app_id#, Name: lr_depart2_role)){\r\n    SetVar(depart2, 1)\r\n}\r\nIf(#role_id# == AppParam(App: #app_id#, Name: lr_depart3_role)){\r\n    SetVar(depart3, 1)\r\n}",
             "Type": "blocks"
         },
         {
-            "Name": "land_registry_records",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "DBFind(@1applications).Where({ecosystem:1, name:\"Land Registry\"}).Columns(\"name,id\").Vars(app)\n\nIf(#isOrder#==1){\n    SetVar(Name:v_Order, Value: {\"price\"})\n}.ElseIf(#isOrder#==2){\n    SetVar(Name:v_Order, Value: {\"area\"})\n}.ElseIf(#isOrder#==3){\n    SetVar(Name:v_Order, Value: {\"price\": \"-1\"})\n}.ElseIf(#isOrder#==4){\n    SetVar(Name:v_Order, Value: {\"area\": \"-1\"})\n}.Else{\n    SetVar(Name:v_Order, Value: {\"id\": \"-1\"})\n}\nSetVar(debug, AppParam(App: #app_id#, Name: debug))\n\nDBFind(Name: \"land_registry\", Source: src_land_registry).Where(#v_Where#).Order(#v_Order#).Custom(_id){\n    Div(text-center h5){#id#}.Style(align:center; width:50px;)\n}.Custom(_owner){\n    DBFind(\"@1members\").Where({\"id\": #owner_id#, \"ecosystem\": #ecosystem_id#}).Vars(row)\n    LinkPage(Page: profile_view, PageParams: \"v_member_id=#row_id#\"){\n        If(#row_image_id#>0){\n            Image(Src: Binary().ById(#row_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)\n            Span(Class: ml-sm text-bold, Body: #row_member_name#)\n        }.Else{\n            Div(){\n                Span(Em(Class: fa icon-user fa-2x))\n                Span(Class: ml-sm text-bold, Body: #row_member_name#)\n            }.Style(display:flex; align-items:center;)\n        }\n    }\n}.Custom(_land){\n    Span(AppParam(App: #app_id#, Name: land_use, Index: #land_use#))\n}.Custom(_buildings){\n    Span(AppParam(App: #app_id#, Name: buildings_use_class, Index: #buildings_use_class#))\n}.Custom(_area){\n    Span(#area#)\n}.Custom(_address){\n    Span(#address#)\n}.Custom(_cons){\n    Div(text-center h6){\n        If(#price#){\n            #price#\n        }.Else{\n            Em(Class: fa fa-1x text-muted fa-question-circle)\n        }\n    }.Style(width:60px;)\n    \n}.Custom(_legal){\n    Div(text-center h6){\n        \n        If(#legal_status#==0){\n            Em(Class: fa fa-1x text-muted fa-question-circle)\n        }\n        If(#legal_status#==1){\n            Em(Class: fa fa-1x text-success fa-check-circle)\n        }\n        If(#legal_status#==2){\n            Em(Class: fa fa-1x text-danger fa-exclamation-circle)\n        }\n    }.Style(width:60px;)\n    \n}.Custom(_encumberance){\n    Div(text-center h6){\n        If(#encumbrance_certificate#==0){\n            Em(Class: fa fa-1x text-muted fa-question-circle)\n        }\n        If(#encumbrance_certificate#==1){\n            Em(Class: fa fa-1x text-success fa-check-circle)\n        }\n        If(#encumbrance_certificate#==2){\n            Em(Class: fa fa-1x text-danger fa-exclamation-circle)\n        }\n    }.Style(width:60px;)\n    \n}.Custom(_tax){\n    Div(text-center h6){\n        If(#tax_receipt_and_bills#==0){\n            Em(Class: fa fa-1x text-muted fa-question-circle)\n        }\n        If(#tax_receipt_and_bills#==1){\n            Em(Class: fa fa-1x text-success fa-check-circle)\n        }\n        If(#tax_receipt_and_bills#==2){\n            Em(Class:fa fa-1x text-danger fa-exclamation-circle)\n        }\n    }.Style(width:60px;)\n    \n}.Custom(_common){\n    Form(){\n        Button(Page: land_registry_view, PageParams: \"LandId=#id#\", Class: btn btn-default pull-right, Body: Em(Class: fa fa-eye))\n    }\n    \n}.Custom(_admin){\n    Form(){\n        Button(Page: #this#, Contract: land_registry_Delete, Params: \"LandId=#id#\", PageParams: \"admin=#admin#\", Class: btn btn-danger pull-right ml-sm, Body: Em(Class: fa fa-trash))\n        Button(Page: land_registry_edit, PageParams: \"LandId=#id#,admin=#admin#\", Class: btn btn-primary pull-right ml-sm, Body: Em(Class: fa fa-pencil-square-o))\n        Button(Page: land_registry_view, PageParams: \"LandId=#id#,admin=#admin#\", Class: btn btn-default pull-right, Body: Em(Class: fa fa-eye))\n    }\n}.Custom(_depart3){\n    Form(){\n        Button(Page: land_registry_view, PageParams: \"LandId=#id#\", Class: btn btn-default pull-right, Body: Em(Class: fa fa-eye))\n    }\n}.Custom(_depart2){\n    Form(){\n        Button(Page: land_registry_view, PageParams: \"LandId=#id#\", Class: btn btn-default pull-right, Body: Em(Class: fa fa-eye))\n    }\n}\n\n\n\nDiv(content-wrapper){\n    Div(panel panel-primary data-sweet-alert){\n        Div(list-group-item){\n            Div(row df f-valign){\n                Div(col-md-2 mt-sm text-center text-bold){$land_use$}\n                Div(col-md-7 mt-sm text-left){\n                    Form(Class: input-group){\n                        AppParam(App: #app_id#, Name: land_use, Source: src_land_use)\n                        Select(Name: LandUseSelect, Source: src_land_use, Class: form-control, NameColumn: name, ValueColumn: id, Value: #str_search#)\n                        \n                        \n                        Div(input-group-btn){\n                            Button(Page: #this#, PageParams: \"str_search=Val(LandUseSelect),isSearch=1,isOrder=#isOrder#,admin=#admin#,sales=#sales#\", Class: btn btn-default, Body: Em(Class: fa fa-search))\n                        }\n                    }\n                }\n                Div(col-md-3 mt-sm btn-group){\n                    SetVar(Name: b_ask, Value: fa fa-long-arrow-up)\n                    SetVar(Name: b_desc, Value: fa fa-long-arrow-down)\n                    If(#isOrder#==1){\n                        Button(Page: #this#, Class: btn btn-default mr-sm, Body: Em(Class:#b_ask# mr-sm) LangRes(price),PageParams: \"isOrder=3\")\n                    }.ElseIf(#isOrder#==3){\n                        Button(Page: #this#, Class: btn btn-default mr-sm, Body: Em(Class:#b_desc# mr-sm) LangRes(price),PageParams: \"isOrder=1\")\n                    }.Else{\n                        Button(Page: #this#, Class: btn btn-default mr-sm, Body: LangRes(price),PageParams: \"isOrder=1\")\n                    }\n                    \n                    If(#isOrder#==2){\n                        Button(Page: #this#, Class: btn btn-default, Body: Em(Class:#b_ask# mr-sm) LangRes(area_size), PageParams: \"isOrder=4\")\n                    }.ElseIf(#isOrder#==4){\n                        Button(Page: #this#, Class: btn btn-default, Body: Em(Class:#b_desc# mr-sm) LangRes(area_size), PageParams: \"isOrder=2\")\n                    }.Else{\n                        Button(Page: #this#, Class: btn btn-default, Body: LangRes(area_size), PageParams: \"isOrder=4\")\n                    }\n                }.Style(display:flex;)\n            }\n            \n            Div(table-responsive){\n                If(#admin#==1){\n                    If(#debug#==1){admin1}\n                    Table(Source: src_land_registry, Columns: \"ID=_id,$owner$=_owner,$land_use$=_land,$buildings_use_class$=_buildings,$area_size$=_area,$address$=_address,=_admin\")\n                }.Else{\n                    If(#depart#==1){\n                        If(#debug#==1){depart:}\n                        If(#depart1#==1){\n                            If(#debug#==1){depart1}\n                            Table(Source:src_land_registry,Columns: \"ID=_id,$owner$=_owner,$land_use$=_land,$buildings_use_class$=_buildings,$area_size$=_area,$address$=_address,$consideration_value$(INR)=_cons,$legal_status$=_legal,$encumbrance_certificate$=_encumberance,$tax_and_bills$=_tax,=_common\")\n                        }.Else{\n                            If(#depart2#==1){\n                                If(#debug#==1){depart2}\n                                Table(Source:src_land_registry,Columns: \"ID=_id,$owner$=_owner,$land_use$=_land,$buildings_use_class$=_buildings,$area_size$=_area,$address$=_address, $consideration_value$(INR)=_cons,$legal_status$=_legal,$encumbrance_certificate$=_encumberance,$tax_and_bills$=_tax,=_depart2\")\n                            }.Else{\n                                If(#depart3#==1){\n                                    If(#debug#==1){depart3}\n                                    Table(Source:src_land_registry,Columns: \"ID=_id,$owner$=_owner,$land_use$=_land,$buildings_use_class$=_buildings,$area_size$=_area,$address$=_address,$consideration_value$(INR)=_cons,$legal_status$=_legal,$tax_and_bills$=_tax,$encumbrance_certificate$=_encumberance,=_depart3\")\n                                }\n                            }\n                        }\n                    }.Else{\n                        If(#debug#==1){common}\n                        Table(Source:src_land_registry,Columns: \"ID=_id,$owner$=_owner,$land_use$=_land,$buildings_use_class$=_buildings,$area_size$=_area,$address$=_address,$consideration_value$(INR)=_cons,$legal_status$=_legal,$encumbrance_certificate$=_encumberance,$tax_and_bills$=_tax,=_common\")\n                    }\n                }\n            }\n            \n            If(#isSearch#==1){\n                Form(text-center){\n                    Button(Page: #this#, PageParams:\"isSearch=0,admin=#admin#,sales=#sales#\", Class: btn btn-primary btn-oval mt){\n                        LangRes(@1view_all)\n                    }\n                }\n            }.Else{}\n            \n        }\n        If(GetVar(sales)){\n        }.Else{\n            If(Or(#admin#==1,#depart1#==1)){\n                Div(panel-footer){\n                    Div(clearfix){\n                        Form(Class: pull-right){\n                            Button(Page: land_registry_add, Class: btn btn-primary){\n                                LangRes(@1add)\n                            }\n                        }\n                    }\n                }\n            }\n        }\n        If(#debug#==1){\n            Div(){depart:#depart#}\n            Div(){depart1:#depart1#}\n            Div(){depart2:#depart2#}\n            Div(){depart3:#depart3#}\n            Div(){admin:#admin#}\n            Div(){searchQuery:#searchQuery#}\n            Div(){v_Where:#v_Where#}\n        }\n    }\n}",
+            "Name": "lr_list",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "If(GetVar(search)!=\"\"){\r\n    SetVar(where, {GetVar(filters), \"specifications->address\": {$ilike: #search#}})\r\n}.Else{\r\n    SetVar(where, GetVar(filters)).(search,)\r\n}\r\n\r\nDiv(list-group-item ml-lg mr-lg pt-lg){\r\n    SetVar(search_name, LangRes(lr_location))\r\n    Include(@1search)\r\n}\r\n\r\nDBFind(#this_table#, src).Where(#where#).Order({\"id\": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns(\"owner_id,specifications->address,specifications->land_use,specifications->buildings_class,specifications->area,price,status->legal_status,status->encumbrance_certificate,status->tax_receipt_and_bills\").Custom(location){\r\n    Button(Page: lr_view, PageParams: \"object_id=#id#\", Body: #specifications.address#, Class: btn-link).Popup(50, $lr_view$)\r\n}.Custom(owner){\r\n    DBFind(\"@1members\").Where({\"id\": #owner_id#, \"ecosystem\": #ecosystem_id#}).Vars(member)\r\n    LinkPage(Page: profile_view, PageParams: \"v_member_id=#member_id#\"){\r\n        If(#member_image_id#>0){\r\n            Image(Src: Binary().ById(#member_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)\r\n            Span(Class: ml-sm text-bold, Body: #member_member_name#)\r\n        }.Else{\r\n            Div(){\r\n                Span(Em(Class: fa icon-user fa-2x))\r\n                Span(Class: ml-sm text-bold, Body: #member_member_name#)\r\n            }.Style(display:flex; align-items:center;)\r\n        }\r\n    }\r\n}.Custom(area){\r\n    #specifications.area#\r\n}.Custom(owner_price){\r\n    If(GetVar(price)){\r\n        Money(#price#) APLA\r\n    }.Else{\r\n        Em(Class: fa fa-question-circle text-muted)\r\n    }\r\n}.Custom(legal_status){\r\n    If(#status.legal_status#==1){\r\n        Em(Class: fa fa-check-circle text-success)\r\n    }.ElseIf(#status.legal_status#==2){\r\n        Em(Class: fa fa-exclamation-circle text-danger)\r\n    }.Else{\r\n        Em(Class: fa fa-question-circle text-muted)\r\n    }\r\n}.Custom(encumbrance_certificate){\r\n    If(#status.encumbrance_certificate#==1){\r\n        Em(Class: fa fa-check-circle text-success)\r\n    }.ElseIf(#status.encumbrance_certificate#==2){\r\n        Em(Class: fa fa-exclamation-circle text-danger)\r\n    }.Else{\r\n        Em(Class: fa fa-question-circle text-muted)\r\n    }\r\n}.Custom(tax_receipt_and_bills){\r\n    If(#status.tax_receipt_and_bills#==1){\r\n        Em(Class: fa fa-check-circle text-success)\r\n    }.ElseIf(#status.tax_receipt_and_bills#==2){\r\n        Em(Class: fa fa-exclamation-circle text-danger)\r\n    }.Else{\r\n        Em(Class: fa fa-question-circle text-muted)\r\n    }\r\n}.Custom(actions){\r\n    If(Or(#owner_id# == #key_id#, #admin# == 1)){\r\n        Button(Page: #this_page#, Contract: LrEdit, Params: \"ObjectId=#id#,RoleId=#role_id#,DeleteObject=1\", Class: fa fa-trash btn btn-danger pull-right ml-sm).Alert($lr_want_delete_object$, $@1confirm_button$, $@1cancel$)\r\n        Button(Page: lr_edit, PageParams: \"object_id=#id#\", Class: fa fa-edit btn btn-default pull-right).Popup(50, $lr_object_edit$)\r\n    }\r\n}.Count(count)\r\n\r\nDiv(fullscreen){\r\n    Div(table-responsive ml-lg mr-lg){\r\n        Div(list-group-item){\r\n            If(#count# > 0){\r\n                Table(src, \"$lr_location$=location,$lr_owner$=owner,$lr_area_size$=area,$lr_price$=owner_price,$lr_legal_status$=legal_status,$lr_encumbrance_certificate$=encumbrance_certificate,$lr_tax_and_bills$=tax_receipt_and_bills,=actions\")\r\n            }.Else{\r\n                Div(Class: text-center h4 text-muted, Body: \"$lr_no_objects_found$\")\r\n            }\r\n        }.Style(\r\n            margin-top:-15px;\r\n            tbody > tr:nth-of-type(odd) {\r\n                background-color: #f8f9fc;\r\n            }\r\n        )\r\n    }\r\n}\r\nDiv(mt-sm ml-lg mr-sm mb-sm){\r\n    Include(@1pager)\r\n}",
             "Type": "blocks"
         },
         {
-            "Name": "land_registry_set_depart",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "DBFind(\"@1roles_participants\").Where({\"role->name\": \"land_depart1\", \"member->member_id\": #key_id#, \"deleted\": 0, \"ecosystem\": #ecosystem_id#}).Vars(d1)\nDBFind(\"@1roles_participants\").Where({\"role->name\": \"land_depart2\", \"member->member_id\": #key_id#, \"deleted\": 0, \"ecosystem\": #ecosystem_id#}).Vars(d2)\nDBFind(\"@1roles_participants\").Where({\"role->name\": \"land_depart3\", \"member->member_id\": #key_id#, \"deleted\": 0, \"ecosystem\": #ecosystem_id#}).Vars(d3)\n\nIf(#d1_id#>0){\n    SetVar(depart1, 1)\n    SetVar(depart, 1)\n}.Else{\n    If(#d2_id#>0){\n        SetVar(depart1, 0)\n        SetVar(depart2, 1)\n        SetVar(depart, 1)\n    }.Else{\n        SetVar(depart2, 0)\n        If(#d3_id#>0){\n            SetVar(depart3, 1)\n            SetVar(depart, 1)\n        }.Else{\n            SetVar(depart3, 0)\n            SetVar(depart, 0)\n        }\n    }\n}",
-            "Type": "blocks"
-        },
-        {
-            "Name": "default_menu",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "MenuItem(Title: \"$land_records$\",Page: land_registry_records,Icon: \"icon-home\")\nMenuItem(Title: \"$available_sale$\",Page: land_registry_records_for_sale, Icon: \"icon-basket-loaded\")\nDBFind(\"@1roles_participants\").Where({\"role->name\": \"Admin\", \"member->member_id\": #key_id#, \"deleted\": 0, \"ecosystem\": #ecosystem_id#}).Count(admin_role)\nIf(#admin_role#>0){\n    MenuItem(Title: \"$@1admin$\", Page: land_registry_records_admin, Icon: \"icon-wrench\")\n}\nDBFind(\"@1roles_participants\").Where({\"role->name\": \"land_bank\", \"member->member_id\": #key_id#, \"deleted\": 0, \"ecosystem\": #ecosystem_id#}).Count(bank_role)\nIf(#bank_role#>0){\n    MenuItem(Title: \"$land_bank$\", Page: land_registry_bank, Icon: \"icon-briefcase\")\n}\nDBFind(\"@1roles\").Where({\"role_name\": \"land_depart1\", \"deleted\": 0, \"ecosystem\": #ecosystem_id#}).Count(installed)\nIf(#installed#>0){\n}.Else{\n    MenuItem(Title: \"$@1install$\", Page: land_registry_install, Icon: \"icon-share-alt\")\n}",
+            "Name": "admin_menu",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "MenuItem(Title: \"$lr_settings$\", Page: lr_settings, Icon: \"icon-wrench\")",
             "Type": "menu"
         },
         {
-            "Name": "add_new_record",
-            "Trans": "{\"en\":\"Add new record\",\"ru\":\"Добавить новую запись\"}",
+            "Name": "default_menu",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "MenuItem(Title: \"$lr_land_registry$\",Page: lr_list_all,Icon: \"icon-home\")\r\nMenuItem(Title: \"$lr_available_for_sale$\",Page: lr_list_for_sale, Icon: \"icon-basket-loaded\")",
+            "Type": "menu"
+        },
+        {
+            "Name": "lr_additional_request",
+            "Trans": "{\"en\":\"Additional request\",\"ru\":\"Дополнительный запрос\"}",
             "Type": "languages"
         },
         {
-            "Name": "address",
-            "Trans": "{\"en\":\"Address\",\"ru\":\"Адрес\"}",
+            "Name": "lr_admin_role_name",
+            "Trans": "{\"en\":\"Administrator\",\"ru\":\"Администратор\"}",
             "Type": "languages"
         },
         {
-            "Name": "area_size",
+            "Name": "lr_all_roles_needed",
+            "Trans": "{\"en\":\"All application roles must be set before using this application\",\"ru\":\"Необходимо установить все роли этого приложения перед его использованием\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_area_size",
             "Trans": "{\"en\":\"Area size\",\"ru\":\"Размер\"}",
             "Type": "languages"
         },
         {
-            "Name": "ask_accept_purchase",
-            "Trans": "{\"en\":\" Do you want to accept the purchase?\",\"ru\":\"Вы хотите принять покупку?\"}",
+            "Name": "lr_attention_required",
+            "Trans": "{\"en\":\"Attention required\",\"ru\":\"Требует внимания\"}",
             "Type": "languages"
         },
         {
-            "Name": "ask_delete",
-            "Trans": "{\"en\":\"Do you want to delete entry?\",\"ru\":\"Вы хотите удалить эту запись?\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "ask_initiate_land_purchase",
-            "Trans": "{\"en\":\"Do you want to initiate land purchase?\",\"ru\":\"Вы хотите начать процесс покупки земли?\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "ask_reject_purchase",
-            "Trans": "{\"en\":\"Do you want to reject the purchase?\",\"ru\":\"Вы хотите отклонить покупку?\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "ask_request_second",
-            "Trans": "{\"en\":\"Do you want to send a second request?\",\"ru\":\"Вы хотите отправить повторный запрос?\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "ask_sign",
-            "Trans": "{\"en\":\"Do you want to sign?\",\"ru\":\"Вы хотите поставить подпись?\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "available_sale",
+            "Name": "lr_available_for_sale",
             "Trans": "{\"en\":\"Available for sale\",\"ru\":\"Доступно для продажи\"}",
             "Type": "languages"
         },
         {
-            "Name": "buildings_use_class",
-            "Trans": "{\"en\":\"Buildings use class\",\"ru\":\"Класс используемых зданий\"}",
+            "Name": "lr_bank_account_not_found",
+            "Trans": "{\"en\":\"Land bank account was not found\",\"ru\":\"Счёт земельного банка не найден\"}",
             "Type": "languages"
         },
         {
-            "Name": "buy",
-            "Trans": "{\"en\":\"Buy\",\"ru\":\"Купить\"}",
+            "Name": "lr_bank_response_waiting",
+            "Trans": "{\"en\":\"Waiting for a bank response\",\"ru\":\"Ожидание ответа банка\"}",
             "Type": "languages"
         },
         {
-            "Name": "buyer",
-            "Trans": "{\"en\":\"Buyer\",\"ru\":\"Покупатель\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "buyer_has_money",
-            "Trans": "{\"en\":\"The buyer has the necessary amount in the bank account\",\"ru\":\"Покупатель имеет необходимую сумму на банковском счете\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "buyer_not_has_money",
-            "Trans": "{\"en\":\"The buyer has NOT the necessary amount in the bank account\",\"ru\":\"У покупателя нет необходимой суммы на банковском счете\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "buyer_trans_amount",
-            "Trans": "{\"en\":\"Buyer transferred amount to account \",\"ru\":\"Покупатель перечислил сумму на счет\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "buyer_trans_self",
-            "Trans": "{\"en\":\"Buyer transferred an amount of\",\"ru\":\"Покупатель перечислил сумму\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "buyer_transferred_to_account_amount",
-            "Trans": "{\"en\":\"Buyer transferred an amount of\",\"ru\":\"Покупатель перечислил сумму \"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "cancel",
-            "Trans": "{\"en\":\"Cancel\",\"ru\":\"Отмена\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "confirm",
-            "Trans": "{\"en\":\"Confirm\",\"ru\":\"Подтвердить\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "consideration_value",
-            "Trans": "{\"en\":\"Consideration value\",\"ru\":\"Справедливая стоимость\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "coordinates",
-            "Trans": "{\"en\":\"Coordinates\",\"ru\":\"Координаты\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "department_of_land_resources",
-            "Trans": "{\"en\":\"Department of Land Resources\",\"ru\":\"Отдел земельных ресурсов\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "edit",
-            "Trans": "{\"en\":\"Edit\",\"ru\":\"Редактирование\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "encumbrance_certificate",
-            "Trans": "{\"en\":\"Encumbrance certificate\",\"ru\":\"Сертификат обременения\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "government_value",
-            "Trans": "{\"en\":\"Government value\",\"ru\":\"Государственная стоимость\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "have_offer_buy_land",
-            "Trans": "{\"en\":\"You have an offer to buy land\",\"ru\":\"Вы получили предложение купить землю\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "install_app",
-            "Trans": "{\"en\":\"Install app\",\"ru\":\"Установить приложение\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "land_bank",
+            "Name": "lr_bank_role_name",
             "Trans": "{\"ru\":\"Земельный Банк\",\"en\":\"Land Bank\"}",
             "Type": "languages"
         },
         {
-            "Name": "land_depart1",
+            "Name": "lr_buildings_class",
+            "Trans": "{\"en\":\"Buildings use class\",\"ru\":\"Класс используемых зданий\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_buyer",
+            "Trans": "{\"en\":\"Buyer\",\"ru\":\"Покупатель\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_buyer_enough_money",
+            "Trans": "{\"en\":\"The buyer has the necessary amount in the bank account\",\"ru\":\"Покупатель имеет необходимую сумму на банковском счете\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_buyer_transferred_amount",
+            "Trans": "{\"en\":\"Buyer transferred an amount of\",\"ru\":\"Покупатель перечислил сумму\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_date_entry",
+            "Trans": "{\"en\":\"Date of entry\",\"ru\":\"Дата добавления записи\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_depart2_role_name",
+            "Trans": "{\"en\":\"Department of Legal Affairs\",\"ru\":\"Департамент по правовым вопросам\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_depart3_role_name",
+            "Trans": "{\"en\":\"Department of Revenue\",\"ru\":\"Департамент налогов и сборов\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_department",
             "Trans": "{\"en\":\"Department of Land Resources\",\"ru\":\"Департамент земельных ресурсов\"}",
             "Type": "languages"
         },
         {
-            "Name": "land_depart2",
-            "Trans": "{\"en\":\"Department of Legal Affairs\",\"ru\":\"Департамент по правовым вопросам\"}",
+            "Name": "lr_deposit_money",
+            "Trans": "{\"en\":\"Deposit money\",\"ru\":\"Внести деньги на депозит\"}",
             "Type": "languages"
         },
         {
-            "Name": "land_depart3",
-            "Trans": "{\"en\":\"Department of Revenue\",\"ru\":\"Департамент налогов и сборов\"}",
+            "Name": "lr_encumbrance_certificate",
+            "Trans": "{\"en\":\"Encumbrance certificate\",\"ru\":\"Сертификат обременения\"}",
             "Type": "languages"
         },
         {
-            "Name": "land_nature",
-            "Trans": "{\"en\":\"Nature\",\"ru\":\"Тип\"}",
+            "Name": "lr_fair_value",
+            "Trans": "{\"en\":\"Fair value\",\"ru\":\"Справедливая стоимость\"}",
             "Type": "languages"
         },
         {
-            "Name": "land_record",
-            "Trans": "{\"en\":\"Land record\",\"ru\":\"Земельная запись\"}",
+            "Name": "lr_government_price",
+            "Trans": "{\"en\":\"Government value\",\"ru\":\"Государственная стоимость\"}",
             "Type": "languages"
         },
         {
-            "Name": "land_records",
-            "Trans": "{\"en\":\"Land Registry\",\"ru\":\"Земельный реестр\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "land_records_add",
-            "Trans": "{\"en\":\"Land Record adding\",\"ru\":\"Добавление земельной записи\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "land_records_admin",
-            "Trans": "{\"en\":\"Land records (edit)\",\"ru\":\"Земельный реестр (ред.)\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "land_records_edit",
-            "Trans": "{\"en\":\"Land record edit\",\"ru\":\"Редактирование земельной записи\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "land_records_sales",
-            "Trans": "{\"en\":\"Land records (Available for sale)\",\"ru\":\"Земельный реестр (продажа)\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "land_registry",
-            "Trans": "{\"en\":\"Land Registry\",\"ru\":\"Земельный реестр\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "land_registry_depart1_edit",
-            "Trans": "{\"en\":\"Add price\",\"ru\":\"Установите цену\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "land_registry_depart2_edit",
-            "Trans": "{\"en\":\"Department of Legal Affairs\",\"ru\":\"Департамент по правовым вопросам\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "land_registry_depart3_edit",
-            "Trans": "{\"en\":\"Department of Revenue\",\"ru\":\"Департамент налогов и сборов\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "land_registry_view",
-            "Trans": "{\"en\":\"Land record\",\"ru\":\"Страница земельного ресурса\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "land_use",
-            "Trans": "{\"en\":\"Land use\",\"ru\":\"Землепользование\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "legal_status",
-            "Trans": "{\"en\":\"Legal status\",\"ru\":\"Правовой статус\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "local_body",
-            "Trans": "{\"en\":\"Local Body\",\"ru\":\"Местный орган\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "market_value",
-            "Trans": "{\"en\":\"Market value\",\"ru\":\"Рыночная стоимость\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "message",
-            "Trans": "{\"en\":\"Message\",\"ru\":\"Сообщение\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "modification_date",
-            "Trans": "{\"en\":\"Modification date\",\"ru\":\"Дата изменения\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "need_processing",
-            "Trans": "{\"en\":\"Need your processing\",\"ru\":\"Нужна ваша обработка\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "need_your_processing",
-            "Trans": "{\"en\":\"Need your processing\",\"ru\":\"Нужна ваша обработка\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "new_land",
-            "Trans": "{\"en\":\"New land\",\"ru\":\"Новая земля\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "new_purchase",
-            "Trans": "{\"en\":\"New purchase\",\"ru\":\"Новая покупка\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "no_acquisition_requests",
-            "Trans": "{\"en\":\"There are no active acquisition requests at the moment\",\"ru\":\"На данный момент нет активных заявок на приобретение\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "no_problem",
-            "Trans": "{\"en\":\"No Issues\",\"ru\":\"Нет проблем\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "offer_purchase_sent",
-            "Trans": "{\"en\":\"The offer has sent to the owner\",\"ru\":\"Предложение отправлено владельцу\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "owner",
-            "Trans": "{\"en\":\"Owner\",\"ru\":\"Владелец\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "owner_rejected_purchase",
-            "Trans": "{\"en\":\"Owner rejected to purchase\",\"ru\":\"Владелец отказался от продажи\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "owner_rejected_selling",
-            "Trans": "{\"en\":\"Owner rejected to selling\",\"ru\":\"Владелец отказался от продажи\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "please_amount",
-            "Trans": "{\"en\":\"Please send\",\"ru\":\"Пожалуйста, перечислите\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "price",
-            "Trans": "{\"en\":\"Price\",\"ru\":\"Цена\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "problem",
-            "Trans": "{\"en\":\"Have Issues\",\"ru\":\"Проблемы\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "publickey",
-            "Trans": "{\"en\":\"Public key\",\"ru\":\"Публичный ключ\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "purchase_approved",
-            "Trans": "{\"en\":\"Purchase Approved\",\"ru\":\"Подтверждение покупки\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "purchase_rejected",
-            "Trans": "{\"en\":\"Purchase rejected\",\"ru\":\"Сделка отменена\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "purchase_request",
-            "Trans": "{\"en\":\"Purchase request\",\"ru\":\"Предложение о покупке\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "record_add_date",
-            "Trans": "{\"en\":\"Record Add Date\",\"ru\":\"Дата добавления записи\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "registration_date",
-            "Trans": "{\"en\":\"Registration Date\",\"ru\":\"Дата регистрации\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "send_request",
-            "Trans": "{\"en\":\"Send request\",\"ru\":\"Послать запрос\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "sign_sales_contract",
-            "Trans": "{\"en\":\"Sign the sales contract\",\"ru\":\"Подписать договор купли-продажи\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "start_buying_land",
+            "Name": "lr_initiate_acquisition",
             "Trans": "{\"en\":\"Initiate the acquisition\",\"ru\":\"Начать процесс приобретения\"}",
             "Type": "languages"
         },
         {
-            "Name": "taken_note",
-            "Trans": "{\"en\":\"Taken note\",\"ru\":\"Понятно\"}",
+            "Name": "lr_land_authority",
+            "Trans": "{\"en\":\"Land authority\",\"ru\":\"Местный орган\"}",
             "Type": "languages"
         },
         {
-            "Name": "tax",
-            "Trans": "{\"ru\":\"Налог\",\"en\":\"Tax\"}",
+            "Name": "lr_land_record",
+            "Trans": "{\"en\":\"Land record\",\"ru\":\"Земельная запись\"}",
             "Type": "languages"
         },
         {
-            "Name": "tax_and_bills",
+            "Name": "lr_land_record_adding",
+            "Trans": "{\"en\":\"Land record adding\",\"ru\":\"Добавление земельной записи\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_land_record_edit",
+            "Trans": "{\"en\":\"Land record edit\",\"ru\":\"Редактирование земельной записи\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_land_registry",
+            "Trans": "{\"en\":\"Land Registry\",\"ru\":\"Земельный реестр\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_land_use",
+            "Trans": "{\"en\":\"Land use\",\"ru\":\"Землепользование\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_legal_status",
+            "Trans": "{\"en\":\"Legal status\",\"ru\":\"Правовой статус\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_list_desc",
+            "Trans": "{\"en\":\"Complete list of all Land registry objects\",\"ru\":\"Полный список всех объектов земельного реестра\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_list_for_sale_desc",
+            "Trans": "{\"en\":\"List of Land registry objects available for sale\",\"ru\":\"Cписок объектов земельного реестра доступных для покупки\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_location",
+            "Trans": "{\"en\":\"Location\",\"ru\":\"Местоположение\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_market_price",
+            "Trans": "{\"en\":\"Market value\",\"ru\":\"Рыночная стоимость\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_modification_date",
+            "Trans": "{\"en\":\"Modification date\",\"ru\":\"Дата изменения\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_need_processing",
+            "Trans": "{\"en\":\"Need your processing\",\"ru\":\"Нужна ваша обработка\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_new_object",
+            "Trans": "{\"en\":\"New object\",\"ru\":\"Новый объект\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_new_offer",
+            "Trans": "{\"en\":\"You have a new offer to buy land\",\"ru\":\"Вы получили новое предложение купить земельный участок\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_new_purchase",
+            "Trans": "{\"en\":\"New purchase\",\"ru\":\"Новая покупка\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_no_acquisition_requests",
+            "Trans": "{\"en\":\"There are no active acquisition requests at the moment\",\"ru\":\"На данный момент нет активных заявок на приобретение\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_no_issues",
+            "Trans": "{\"en\":\"No issues\",\"ru\":\"Нет проблем\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_no_objects_found",
+            "Trans": "{\"en\":\"Objects not found\",\"ru\":\"Объекты не найдены\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_no_rights_to_change",
+            "Trans": "{\"en\":\"You have no rights to change this property\",\"ru\":\"У вас нет прав на редактирование этого свойства\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_object_create",
+            "Trans": "{\"en\":\"Create object\",\"ru\":\"Создать объект\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_owner",
+            "Trans": "{\"en\":\"Owner\",\"ru\":\"Владелец\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_owner_rejected_purchase",
+            "Trans": "{\"en\":\"The owner rejected the purchase\",\"ru\":\"Владелец отклонил покупку\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_owner_rejected_selling",
+            "Trans": "{\"en\":\"The owner rejected the selling\",\"ru\":\"Владелец отказался от продажи\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_price",
+            "Trans": "{\"en\":\"Price\",\"ru\":\"Цена\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_purchase",
+            "Trans": "{\"en\":\"Purchase object\",\"ru\":\"Приобрести объект\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_purchase_approved",
+            "Trans": "{\"en\":\"Your purchase request approved\",\"ru\":\"Ваша заявка на покупку подтверждена\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_purchase_offer_sent",
+            "Trans": "{\"en\":\"The offer was sent to the owner\",\"ru\":\"Предложение отправлено владельцу\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_purchase_rejected",
+            "Trans": "{\"en\":\"Your purchase request rejected\",\"ru\":\"Ваша заявка на покупку отменена\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_purchase_request",
+            "Trans": "{\"en\":\"Purchase request\",\"ru\":\"Предложение о покупке\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_registration_date",
+            "Trans": "{\"en\":\"Registration date\",\"ru\":\"Дата регистрации\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_requests_limit_reached",
+            "Trans": "{\"en\":\"Only one additional request to the department allowed\",\"ru\":\"Разрешён только один дополнительный запрос в департамент\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_send_amount",
+            "Trans": "{\"en\":\"Please send\",\"ru\":\"Пожалуйста, перечислите\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_send_tokens",
+            "Trans": "{\"en\":\"Send tokens\",\"ru\":\"Перевести токены\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_settings",
+            "Trans": "{\"en\":\"Land registry settings\",\"ru\":\"Настройки земельного реестра\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_settings_description",
+            "Trans": "{\"en\": \"Ecosystem's and Land registry application roles compliance\", \"ru\": \"Соответствие ролей приложения Земельный реестр ролям экосистемы\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_sign_sales_contract",
+            "Trans": "{\"en\":\"Sign the sales contract\",\"ru\":\"Подписать договор купли-продажи\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_tax",
+            "Trans": "{\"en\":\"Tax\",\"ru\":\"Налог\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_tax_and_bills",
             "Trans": "{\"en\":\"Tax and bills\",\"ru\":\"Налог и счета\"}",
             "Type": "languages"
         },
         {
-            "Name": "title",
-            "Trans": "{\"en\":\"Title\",\"ru\":\"Название\"}",
+            "Name": "lr_to_land_bank",
+            "Trans": "{\"en\":\"to Land Bank\",\"ru\":\"к Земельный банк\"}",
             "Type": "languages"
         },
         {
-            "Name": "to_land_bank",
-            "Trans": "{\"en\":\"to Land Bank\",\"ru\":\"к Земельному банку\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "total",
-            "Trans": "{\"en\":\"Total\",\"ru\":\"Всего\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "transactions_not_found",
-            "Trans": "{\"en\":\"Transactions not found\",\"ru\":\"Сделки не найдены\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "transfer_tokens",
-            "Trans": "{\"en\":\"Transfer INR tokens\",\"ru\":\"Перевести токены\"}",
-            "Type": "languages"
-        },
-        {
-            "Name": "undefined",
+            "Name": "lr_undefined",
             "Trans": "{\"en\":\"Undefined\",\"ru\":\"Не определено\"}",
             "Type": "languages"
         },
         {
-            "Name": "waiting_bank",
-            "Trans": "{\"en\":\"Waiting for a response bank\",\"ru\":\"Ожидание ответа банка\"}",
+            "Name": "lr_want_accept_purchase",
+            "Trans": "{\"en\":\"Do you really want to accept the purchase?\",\"ru\":\"Вы действительно хотите утвердить покупку?\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_want_delete_object",
+            "Trans": "{\"en\":\"Do you really want to delete this object?\",\"ru\":\"Вы действительно хотите удалить этот объект?\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_want_initiate_purchase",
+            "Trans": "{\"en\":\"Do you want to initiate the purchase?\",\"ru\":\"Вы хотите начать процесс покупки?\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_want_reject_purchase",
+            "Trans": "{\"en\":\"Do you want to reject the purchase?\",\"ru\":\"Вы хотите отклонить покупку?\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_want_send_request",
+            "Trans": "{\"en\":\"Do you want to send an additional request?\",\"ru\":\"Вы хотите отправить дополнительный запрос?\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "lr_want_sign_contract",
+            "Trans": "{\"en\":\"Do you want to sign the contract?\",\"ru\":\"Вы хотите подписать контракт?\"}",
             "Type": "languages"
         },
         {
             "Name": "land_registry",
-            "Columns": "[{\"name\":\"delete\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"legal_status\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"area\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"land_use\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"owner_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"map_coords\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"land_nature\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"land_local_body\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"modification_date\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"price_market_value\",\"type\":\"money\",\"conditions\":\"true\"},{\"name\":\"tax_receipt_and_bills\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"encumbrance_certificate\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"address\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"date_create\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"price_gov_value\",\"type\":\"money\",\"conditions\":\"true\"},{\"name\":\"buildings_use_class\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"price\",\"type\":\"money\",\"conditions\":\"true\"},{\"name\":\"registration_date\",\"type\":\"datetime\",\"conditions\":\"true\"}]",
+            "Columns": "[\r\n    {\r\n        \"name\": \"owner_id\",\r\n        \"type\": \"number\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"specifications\",\r\n        \"type\": \"json\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"status\",\r\n        \"type\": \"json\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"price\",\r\n        \"type\": \"money\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"market_price\",\r\n        \"type\": \"money\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"government_price\",\r\n        \"type\": \"money\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"date_created\",\r\n        \"type\": \"number\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"registration_date\",\r\n        \"type\": \"number\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"modification_date\",\r\n        \"type\": \"number\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"deleted\",\r\n        \"type\": \"number\",\r\n        \"conditions\": \"true\"\r\n    }\r\n]",
             "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}",
             "Type": "tables"
         },
         {
-            "Name": "land_registry_accounts",
-            "Columns": "[{\n    \"name\": \"amount\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"onhold\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"member_id\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"member_name\",\n    \"type\": \"varchar\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"account_type\",\n    \"type\": \"number\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"amount_money\",\n    \"type\": \"money\",\n    \"conditions\": \"true\"\n}, {\n    \"name\": \"member_avatar\",\n    \"type\": \"text\",\n    \"conditions\": \"true\"\n}]",
-            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}",
-            "Type": "tables"
-        },
-        {
-            "Name": "land_registry_editing",
-            "Columns": "[{\"name\":\"person_name\",\"type\":\"varchar\",\"conditions\":\"true\"},{\"name\":\"lend_object_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"new_attr_value\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"old_attr_value\",\"type\":\"text\",\"conditions\":\"true\"},{\"name\":\"editing_attribute\",\"type\":\"varchar\",\"conditions\":\"true\"},{\"name\":\"date\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"person_id\",\"type\":\"number\",\"conditions\":\"true\"}]",
+            "Name": "land_registry_history",
+            "Columns": "[\r\n    {\r\n        \"name\": \"object_id\",\r\n        \"type\": \"number\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"attribute_name\",\r\n        \"type\": \"varchar\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"old_value\",\r\n        \"type\": \"text\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"new_value\",\r\n        \"type\": \"text\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"date\",\r\n        \"type\": \"number\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"member_id\",\r\n        \"type\": \"number\",\r\n        \"conditions\": \"true\"\r\n    }\r\n]",
             "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}",
             "Type": "tables"
         },
         {
             "Name": "land_registry_ownership",
-            "Columns": "[{\"name\":\"dep3_approved\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"owner_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"date_create\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"date_signing\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"owner_new_id\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"dep2_approved\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"step\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"price\",\"type\":\"money\",\"conditions\":\"true\"},{\"name\":\"owner_type\",\"type\":\"number\",\"conditions\":\"true\"},{\"name\":\"lend_object_id\",\"type\":\"number\",\"conditions\":\"true\"}]",
+            "Columns": "[\r\n    {\r\n        \"name\": \"object_id\",\r\n        \"type\": \"number\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"owner_id\",\r\n        \"type\": \"number\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"new_owner_id\",\r\n        \"type\": \"number\",\r\n        \"conditions\": \"true\"\r\n    },\r\n    {\r\n        \"name\": \"step\",\r\n        \"type\": \"number\",\r\n        \"conditions\": \"true\"\r\n    }\r\n]",
             "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}",
             "Type": "tables"
         },
         {
-            "Name": "buildings_use_class",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "Shops,Financial and professional services,Restaurants and cafes,Business,Hotels,Dwellinghouses,Non-residential institutions,No",
-            "Type": "app_params"
-        },
-        {
-            "Name": "debug",
-            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Name": "lr_admin_role",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
             "Value": "0",
             "Type": "app_params"
         },
         {
-            "Name": "land_buildings_use_class",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "Shops,Financial and professional services,Restaurants and cafes,Business,Hotels,Dwellinghouses,Non-residential institutions,No",
+            "Name": "lr_bank_role",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "0",
             "Type": "app_params"
         },
         {
-            "Name": "land_local_body",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "Minor Gram Panchayat,Major Gram Panchayat,Other Municipality/Notified Area,Municipal Corporation",
+            "Name": "lr_buildings_class",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "Shops,Financial and professional services,Restaurants and cafes,Drinking establishments,Hot food takeaways,Drinking establishments with expanded food provision,Business,General industrial,Storage or distribution,Hotels,Residential institutions,Secure Residential Institution,Dwellinghouses,Houses in multiple occupation,Non-residential institutions,Assembly and leisure",
             "Type": "app_params"
         },
         {
-            "Name": "land_nature",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "0101 Sale Deed,0111 AGREEMENT OF SALE CUM GPA,0202 Mortgage without Possession,0206 Mortgage deed by small farmer for Agrl.loans in f/o PAC/Bank,0208 Deposit of Title Deeds,0302 Gift Settlement in f/o family member,0303 Gift Settlement in f/o others,0304 Gift Settlement for Charitable/religious purposes,0401 Partition,0402 Partition among Family Members,0505 RECEIPT(R.T.D.M),0701 Lease Deed,0801 Rectification Deed,0803 Cancellation Deed",
+            "Name": "lr_depart2_role",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "0",
             "Type": "app_params"
         },
         {
-            "Name": "land_use",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "01 Residential-U,09 URBAN VacantLand(Residential)-U,21 Dry land-R,26 Wet Land double crop-R,27 Wet Land single crop-R,30 Coconut Garden-R",
+            "Name": "lr_depart3_role",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "0",
             "Type": "app_params"
         },
         {
-            "Name": "land_yes_no",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "no_problem,problem",
+            "Name": "lr_issues",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "lr_no_issues,lr_attention_required",
             "Type": "app_params"
         },
         {
-            "Name": "legal_status",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "No Issues,Title Not Clear,Multiple Owner Claims,Khata Not Clear",
+            "Name": "lr_land_authority",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "Municipal,Regional,Federal",
             "Type": "app_params"
         },
         {
-            "Name": "tax_receipt_and_bills",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "No Issues,Have Issues",
+            "Name": "lr_land_type",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "Inheritance,Partition,Gift,Settlement,Grant,Release",
             "Type": "app_params"
         },
         {
-            "Name": "land_registry_add",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "SetVar(this, land_registry_add)\nDBFind(@1applications).Where({ecosystem:1, name:\"Land Registry\"}).Columns(\"name,id\").Vars(app)\n\nDiv(content-wrapper){\n    Div(breadcrumb){\n        Div(){\n            LinkPage(LangRes(land_records), land_registry_records)\n            Span(/).Style(margin-right: 10px; margin-left: 10px;)\n            Span(LangRes(land_records_add), text-muted)\n        }\n    }\n    SetTitle($department_of_land_resources$)\n    \n    Div(row df f-valign){\n        Div(col-sm-8 col-sm-offset-2 text-left){\n            Div(panel panel-primary data-sweet-alert){\n                Form(){\n                    Div(panel-heading){\n                        Div(panel-title, LangRes(add_new_record))\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong(LangRes(address))\n                            }\n                            Div(col-md-9 text-center){\n                                InputMap(Name: Coords,Type: polygon, MapType: streets, Value: `{\"zoom\":18, \"center\":{\"lng\":40.777045,\"lat\":-73.963719}}`)\n                            }\n                        }\n                    }\n                \n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong(LangRes(registration_date))\n                            }\n                            Div(col-md-9 mt-xs text-left){\n                                Input(Name: RegistrationDate, Type: date, Class: form-control input-sm, Value: \"\")\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong(LangRes(owner))\n                            }\n                            Div(col-md-9 mt-xs text-left){\n                                DBFind(Name: \"@1members\", Source: src_owners).Where({\"ecosystem\": #ecosystem_id#})\n                                Select(Name: OwnerId, Source: src_owners, ValueColumn: id, NameColumn: member_name, Class: form-control m-b)\n                            }\n                        }\n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong(LangRes(land_nature))\n                            }\n                            Div(col-md-9 mt-xs text-left){\n                                AppParam(App: #app_id#, Name: land_nature, Source: src_nature)\n                                Select(Name: LandNature, Source: src_nature, Class: form-control, ValueColumn: id, NameColumn: name)\n                            }\n                        }\n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong(LangRes(local_body))\n                            }\n                            Div(col-md-9 mt-xs text-left){\n                                AppParam(App: #app_id#, Name: land_local_body, Source: src_local_body)\n                                Select(Name: LandLocalBody, Source: src_local_body, Class: form-control, ValueColumn: id, NameColumn: name)\n                            }\n                        }\n                    }\n                    Div(list-group-item){\n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong(LangRes(land_use))\n                            }\n                            Div(col-md-9 mt-xs text-left){\n                                AppParam(App: #app_id#, Name: land_use, Source: src_use)\n                                Select(Name: LandUse, Source: src_use, ValueColumn: id, NameColumn: name, Class: form-control)\n                            }\n                        }\n                        Div(row df f-valign){\n                            Div(col-md-3 text-right){\n                                Strong(LangRes(buildings_use_class))\n                            }\n                            Div(col-md-9 mt-xs text-left){\n                                AppParam(App: #app_id#, Name: land_buildings_use_class, Source: src_buildings_use_class)\n                                Select(Name: BuildingsUseClass, Source: src_buildings_use_class, Class: form-control, ValueColumn: id, NameColumn: name)\n                            }\n                        }\n                    }\n                    \n                    Div(panel-footer){\n                        Div(clearfix){\n                            Div(pull-right){\n                                Div(btn-group){\n                                    Button(Page: land_registry_records, Body: LangRes(@1back), Class: btn btn-default)\n                                    Button(Body: LangRes(@1add), Class: btn btn-primary, Contract: land_registry_Add, Page: land_registry_records)\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n}\n",
+            "Name": "lr_land_use",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "Agriculture,Business,Community services,Construction,Energy production,Fishing,Forestry,Heavy environmental impact,Industry and manufacturing,Mining and quarrying,Recreation / leisure / sport,Residential,Services and residential,Total Land Use,Transport / communication networks / storage,Protective works,Unused and abandoned area",
+            "Type": "app_params"
+        },
+        {
+            "Name": "lr_legal_status",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "No Issues,Title Not Clear,Multiple Owner Claims",
+            "Type": "app_params"
+        },
+        {
+            "Name": "lr_add",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "DBFind(\"@1applications\").Where({ecosystem: #ecosystem_id#, name: \"Land registry\"}).Columns(\"name,id\").Vars(app)\nSetVar(row,\"row mt-sm\").(col_left,\"col-sm-3 text-right mt-sm\").(col_right,\"col-sm-9 text-left\")\n\nDiv(content-wrapper){\n    Div(row){\n        Div(col-lg-6 col-lg-offset-3 col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1){\n            Form(panel panel-primary){\n                Div(panel-body){\n                    Div(text-center text-bold h4 m0){\n                        LangRes(lr_new_object)\n                    }\n                    Div(row mt-lg){\n                        Div(#col_left#){\n                            Label(){\n                                LangRes(lr_location)\n                            }\n                        }\n                        Div(#col_right#){\n                            InputMap(Name: Coords, Type: polygon, MapType: streets, Value: `{\"zoom\":18, \"center\":{\"lng\":40.777045,\"lat\":-73.963719}}`)\n                        }\n                    }\n                    Div(#row#){\n                        Div(#col_left#){\n                            Label(){\n                                LangRes(@1type)\n                            }\n                        }\n                        Div(#col_right#){\n                            AppParam(App: #app_id#, Name: lr_land_type, Source: lr_land_type)\n                            Select(Name: LandType, Source: lr_land_type, ValueColumn: id, NameColumn: name)\n                        }\n                    }\n                    Div(#row#){\n                        Div(#col_left#){\n                            Label(){\n                                LangRes(lr_land_use)\n                            }\n                        }\n                        Div(#col_right#){\n                            AppParam(App: #app_id#, Name: lr_land_use, Source: src_land_use)\n                            Select(Name: LandUse, Source: src_land_use, ValueColumn: id, NameColumn: name)\n                        }\n                    }\n                    Div(#row#){\n                        Div(#col_left#){\n                            Label(){\n                                LangRes(lr_buildings_class)\n                            }\n                        }\n                        Div(#col_right#){\n                            AppParam(App: #app_id#, Name: lr_buildings_class, Source: src_buildings_class)\n                            Select(Name: BuildingsUseClass, Source: src_buildings_class, ValueColumn: id, NameColumn: name)\n                        }\n                    }\n                    Div(#row#){\n                        Div(#col_left#){\n                            Label(){\n                                LangRes(lr_land_authority)\n                            }\n                        }\n                        Div(#col_right#){\n                            AppParam(App: #app_id#, Name: lr_land_authority, Source: src_land_authority)\n                            Select(Name: LandAuthority, Source: src_land_authority, ValueColumn: id, NameColumn: name)\n                        }\n                    }\n                    Div(#row#){\n                        Div(#col_left#){\n                            Label(){\n                                LangRes(lr_registration_date)\n                            }\n                        }\n                        Div(#col_right#){\n                            If(#edit_price#>0){\n                                SetVar(edit_price,Money(#edit_price#))\n                            }\n                            Input(Name: RegistrationDate, Type: date)\n                        }\n                    }\n                    Div(#row#){\n                        Div(#col_left#){\n                            Label(){\n                                LangRes(lr_price) (APLA)\n                            }\n                        }\n                        Div(#col_right#){\n                            If(#edit_price#>0){\n                                SetVar(edit_price,Money(#edit_price#))\n                            }\n                            Input(Name: Price)\n                        }\n                    }\n                }\n                Div(panel-footer text-right){\n                    Button(Page: lr_list_all, Body: LangRes(@1back), Class: btn btn-default)\n                    Button(Contract: LrAdd, Page: lr_list_all, Body: $lr_object_create$, Class: btn btn-primary)\n                }\n            }\n        }\n    }\n}",
             "Menu": "default_menu",
             "Type": "pages"
         },
         {
-            "Name": "land_registry_bank",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "SetTitle($land_bank$)\nDBFind(@1applications).Where({ecosystem:1, name:\"Land Registry\"}).Columns(\"name,id\").Vars(app)\n\nDBFind(\"land_registry_ownership\").Where({\"step\": 1}).Vars(step1)\n\nIf(GetVar(step1_lend_object_id)){\n    SetVar(LandId, #step1_lend_object_id#)\n}.Else{\n    SetVar(LandId, 0)\n}\n\nIf(GetVar(LandId)){\n    DBFind(\"land_registry\").WhereId(#LandId#).Vars(entity)\n    DBFind(\"land_registry_ownership\").Where({\"lend_object_id\": #LandId#}).Vars(ownership)\n    DBFind(\"@1members\").Where({\"id\": #entity_owner_id#, \"ecosystem\": #ecosystem_id#}).Vars(owner)\n    DBFind(\"@1members\").Where({\"id\": #ownership_owner_new_id#, \"ecosystem\": #ecosystem_id#}).Vars(buyer)\n\n    Div(content-wrapper){\n        Div(row df f-valign){\n            Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){\n                Div(panel panel-primary data-sweet-alert){\n                    Div(panel-heading){\n                        Div(panel-title){\n                            Land Record #GetVar(LandId) Data\n                        }\n                    }\n                    Form(){\n                        Div(list-group-item){\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){\n                                        $area_size$:\n                                    }\n                                }\n                                Div(col-md-7 mt-sm text-left) {\n                                    Div(h5 text-normal){GetVar(entity_area) Span(m).(2).Style(vertical-align: super; font-size:8px;)}\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){ LangRes(address):}\n                                }\n                                Div(col-md-7 mt-sm text-left){\n                                    Div(h5 text-normal){ GetVar(entity_address)}\n                                }\n                            }\n                            \n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){ LangRes(owner):}\n                                }\n                                Div(col-md-7 mt-sm text-left text-bold){\n\t\t\t\t\t\t\t\t\tLinkPage(Page: profile_view, PageParams: \"v_member_id=#owner_id#\"){\n\t\t\t\t\t\t\t\t\t\tIf(#owner_image_id#>0){\n\t\t\t\t\t\t\t\t\t\t\tImage(Src: Binary().ById(#owner_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)\n\t\t\t\t\t\t\t\t\t\t\tSpan(Class: ml-sm text-bold, Body: #owner_member_name#)\n\t\t\t\t\t\t\t\t\t\t}.Else{\n\t\t\t\t\t\t\t\t\t\t\tDiv(){\n\t\t\t\t\t\t\t\t\t\t\t\tSpan(Em(Class: fa icon-user fa-2x))\n\t\t\t\t\t\t\t\t\t\t\t\tSpan(Class: ml-sm text-bold, Body: #owner_member_name#)\n\t\t\t\t\t\t\t\t\t\t\t}.Style(display:flex; align-items:center;)\n\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t}\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){ LangRes(buyer):}\n                                }\n                                Div(col-md-7 mt-sm text-left text-bold){\n\t\t\t\t\t\t\t\t\tLinkPage(Page: profile_view, PageParams: \"v_member_id=#buyer_id#\"){\n\t\t\t\t\t\t\t\t\t\tIf(#buyer_image_id#>0){\n\t\t\t\t\t\t\t\t\t\t\tImage(Src: Binary().ById(#buyer_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)\n\t\t\t\t\t\t\t\t\t\t\tSpan(Class: ml-sm text-bold, Body: #buyer_member_name#)\n\t\t\t\t\t\t\t\t\t\t}.Else{\n\t\t\t\t\t\t\t\t\t\t\tDiv(){\n\t\t\t\t\t\t\t\t\t\t\t\tSpan(Em(Class: fa icon-user fa-2x))\n\t\t\t\t\t\t\t\t\t\t\t\tSpan(Class: ml-sm text-bold, Body: #buyer_member_name#)\n\t\t\t\t\t\t\t\t\t\t\t}.Style(display:flex; align-items:center;)\n\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t}\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){ LangRes(land_use):}\n                                }\n                                Div(col-md-7 mt-sm text-left){\n                                    Div(h5 text-normal){\n                                        AppParam(App: #app_id#, Name: land_use, Index: #entity_land_use#)\n                                    }\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){ LangRes(buildings_use_class):}\n                                }\n                                Div(col-md-7 mt-sm text-left){\n                                    Div(h5 text-normal){\n                                        AppParam(App: #app_id#, Name: buildings_use_class, Index: #entity_buildings_use_class#)\n                                    }\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){ LangRes(local_body):}\n                                }\n                                Div(col-md-7 mt-sm text-left){\n                                    Div(h5 text-normal){\n                                        AppParam(App: #app_id#, Name: land_local_body, Index: #entity_land_local_body#)\n                                    }\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){ LangRes(land_nature):}\n                                }\n                                Div(col-md-7 mt-sm text-left){\n                                    Div(h5 text-normal){\n                                        AppParam(App: #app_id#, Name: land_nature, Index: #entity_land_nature#)\n                                    }\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){ LangRes(legal_status):}\n                                }\n                                Div(col-md-7 mt-sm text-left){\n                                    If(#entity_legal_status#>0){\n                                        Div(h5 text-normal){\n                                            AppParam(App: #app_id#, Name: land_yes_no, Index: #entity_legal_status#)\n                                        }\n                                    }.Else{\n                                        Div(h5 text-normal){ LangRes(undefined)}\n                                    }\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){ LangRes(encumbrance_certificate):}\n                                }\n                                Div(col-md-7 mt-sm text-left){\n                                    If(#entity_encumbrance_certificate#>0){\n                                        Div(h5 text-normal){\n                                            AppParam(App: #app_id#, Name: land_yes_no, Index: #entity_encumbrance_certificate#)\n                                        }\n                                    }.Else{\n                                        Div(h5 text-normal){ LangRes(undefined)}\n                                    }\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){ LangRes(tax_and_bills):}\n                                }\n                                Div(col-md-7 mt-sm text-left){\n                                    If(#entity_tax_receipt_and_bills#>0){\n                                        Div(h5 text-normal){\n                                            AppParam(App: #app_id#, Name: land_yes_no, Index: #entity_tax_receipt_and_bills#)\n                                        }\n                                    }.Else{\n                                        Div(h5 text-normal){ LangRes(undefined)}\n                                    }\n                                }\n                            }\n                            \n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){ LangRes(market_value):}\n                                }\n                                Div(col-md-7 mt-sm text-left){\n                                    Div(h5 text-normal){ GetVar(entity_price_market_value) INR}\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h5 text-normal){ LangRes(government_value):}\n                                }\n                                Div(col-md-7 mt-sm text-left){\n                                    Div(h5 text-normal){ GetVar(entity_price_gov_value) INR}\n                                }\n                            }\n                        }\n                        \n                        Div(list-group-item){\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h4 text-normal){ LangRes(consideration_value):}\n                                }\n                                Div(col-md-3 mt-sm text-right){\n                                    Div(h4 text-normal){ GetVar(entity_price)}\n                                }\n                                Div(col-md-4 mt-sm text-left){\n                                    Div(h4 text-normal){ INR}\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h4 text-normal){ LangRes(tax):}\n                                }\n                                Div(col-md-3 mt-sm text-right){\n                                    SetVar(tax, Calculate(\"#entity_price#*0.05\"))\n                                    Div(h4 text-normal){ GetVar(tax)}\n                                }\n                                Div(col-md-4 mt-sm text-left){\n                                    Div(h4 text-normal){ INR}\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-5 mt-sm text-right){\n                                    Div(h4 text-bold){ LangRes(total):}\n                                }\n                                Div(col-md-3 mt-sm text-right){\n                                    SetVar(smmm, Calculate(\"#entity_price#*1.05\"))\n                                    Div(h4 text-bold){ GetVar(smmm)}\n                                }\n                                Div(col-md-4 mt-sm text-left){\n                                    Div(h4 text-normal){ INR}\n                                }\n                            }\n                            Div(row df f-valign){\n                                Div(col-md-12 mt-sm text-center){\n                                    Div(h4 text-center text-bold){\n                                        LangRes(buyer_has_money)\n                                    }\n                                }\n                            }\n                        }\n                    }\n                    \n                    Form(panel-footer){\n                        Div(clearfix){\n                            Div(pull-right){\n                                Input(Name: LandId, Type: hidden, Value: #LandId#)\n                                Input(Name: NotificId, Type: hidden, Value: #notific_id#)\n                                Button(Class:btn btn-primary, Contract: land_registry_BankAction, Body: LangRes(transfer_tokens), Page: land_registry_records)\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n}.Else{\n    Div(text-center h4){$no_acquisition_requests$}\n}",
+            "Name": "lr_edit",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "If(#object_id#>0){\r\n    Include(lr_check_rights)\r\n    DBFind(\"@1applications\").Where({ecosystem: #ecosystem_id#, name: \"Land registry\"}).Columns(\"name,id\").Vars(app)\r\n    SetVar(row,\"row mt-sm\").(col_left,\"col-md-3 mt-sm text-right\").(col_right,\"col-md-9 text-left\")\r\n\r\n    If(GetVar(edit_specifications_land_type)==\"\"){\r\n        SetVar(edit_specifications_land_type,1)\r\n    }\r\n    If(GetVar(edit_specifications_land_use)==\"\"){\r\n        SetVar(edit_specifications_land_use,1)\r\n    }\r\n    If(GetVar(edit_specifications_buildings_class)==\"\"){\r\n        SetVar(edit_specifications_buildings_class,1)\r\n    }\r\n    If(GetVar(edit_specifications_land_authority)==\"\"){\r\n        SetVar(edit_specifications_land_authority,1)\r\n    }\r\n    If(GetVar(edit_registration_date)==\"\"){\r\n        SetVar(edit_registration_date,)\r\n    }\r\n    If(GetVar(edit_price)==\"\"){\r\n        SetVar(edit_price,)\r\n    }\r\n\r\n\r\n    DBFind(land_registry, src).WhereId(#object_id#).Columns(\"id,owner_id,specifications->map_coords,specifications->address,specifications->land_type,specifications->land_use,specifications->buildings_class,specifications->land_authority,registration_date,price\").Vars(edit)\r\n\r\n    Form(){\r\n        Div(){\r\n            Map(MapType: streets, Hmap: 250, Value: #edit_specifications_map_coords#)\r\n        }\r\n        Div(row mt){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_location)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                Input(Value: #edit_specifications_address#, Disabled: true)\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(@1type)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                If(#admin#==1){\r\n                    AppParam(App: #app_id#, Name: lr_land_type, Source: lr_land_type)\r\n                    Select(Name: LandType, Source: lr_land_type, ValueColumn: id, NameColumn: name, Value: #edit_specifications_land_type#)\r\n                }.Else{\r\n                    SetVar(edit_specifications_land_type, AppParam(App: #app_id#, Name: lr_land_type, Index: #edit_specifications_land_type#))\r\n                    Input(Value: #edit_specifications_land_type#, Disabled: true)\r\n                }\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_land_use)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                If(#admin#==1){\r\n                    AppParam(App: #app_id#, Name: lr_land_use, Source: src_land_use)\r\n                    Select(Name: LandUse, Source: src_land_use, ValueColumn: id, NameColumn: name, Value: #edit_specifications_land_use#)\r\n                }.Else{\r\n                    SetVar(edit_specifications_land_use, AppParam(App: #app_id#, Name: lr_land_use, Index: #edit_specifications_land_use#))\r\n                    Input(Value: #edit_specifications_land_use#, Disabled: true)\r\n                }\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_buildings_class)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                If(#admin#==1){\r\n                    AppParam(App: #app_id#, Name: lr_buildings_class, Source: src_buildings_class)\r\n                    Select(Name: BuildingsUseClass, Source: src_buildings_class, ValueColumn: id, NameColumn: name, Value: #edit_specifications_buildings_class#)\r\n                }.Else{\r\n                    SetVar(edit_specifications_buildings_class, AppParam(App: #app_id#, Name: lr_buildings_class, Index: #edit_specifications_buildings_class#))\r\n                    Input(Value: #edit_specifications_buildings_class#, Disabled: true)\r\n                }\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_land_authority)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                If(#admin#==1){\r\n                    AppParam(App: #app_id#, Name: lr_land_authority, Source: src_land_authority)\r\n                    Select(Name: LandAuthority, Source: src_land_authority, ValueColumn: id, NameColumn: name, Value: #edit_specifications_land_authority#)\r\n                }.Else{\r\n                    SetVar(edit_specifications_land_authority, AppParam(App: #app_id#, Name: lr_land_authority, Index: #edit_specifications_land_authority#))\r\n                    Input(Value: #edit_specifications_land_authority#, Disabled: true)\r\n                }\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_registration_date)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                If(#edit_registration_date#>0){\r\n                    SetVar(edit_registration_date, DateTime(#edit_registration_date#, \"YYYY-MM-DD\"))\r\n                }\r\n                If(#admin#==1){\r\n                    Input(Name: RegistrationDate, Type: date, Value: #edit_registration_date#)\r\n                }.Else{\r\n                    Input(Value: #edit_registration_date#, Disabled: true)\r\n                }\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_price) (APLA)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                If(#edit_price#>0){\r\n                    SetVar(edit_price, Money(#edit_price#))\r\n                }\r\n                If(#edit_owner_id#==#key_id#){\r\n                    Input(Name: Price, Value: #edit_price#)\r\n                }.Else{\r\n                    Input(Value: #edit_price#, Disabled: true)\r\n                }\r\n            }\r\n        }\r\n        Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt, Contract: LrEdit, Params: \"ObjectId=#edit_id#,RoleId=#role_id#\", Page: lr_list_all)\r\n        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: lr_list_all)\r\n    }\r\n}.Else{\r\n    Form(){\r\n        Div(alert alert-danger text-center){\r\n            LangRes(@1attention)\r\n        }\r\n        Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: lr_list_all)\r\n    }\r\n}",
             "Menu": "default_menu",
             "Type": "pages"
         },
         {
-            "Name": "land_registry_depart1_edit",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "SetVar(depart, 1)\nSetVar(depart1, 1)\nSetTitle($land_registry_depart1_edit$)\nInclude(land_registry_edit)",
+            "Name": "lr_list_all",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "SetVar(this_page, lr_list_all).(this_table, land_registry)\r\nInclude(@1pager_header)\r\nInclude(lr_check_rights)\r\n\r\nIf(#admin# == 1){\r\n    SetTitle($lr_land_registry$ ($lr_admin_role_name$))\r\n}.ElseIf(#bank# == 1){\r\n    SetTitle($lr_land_registry$ ($lr_bank_role_name$))\r\n}.ElseIf(#depart2# == 1){\r\n    SetTitle($lr_land_registry$ ($lr_depart2_role_name$))\r\n}.ElseIf(#depart3# == 1){\r\n    SetTitle($lr_land_registry$ ($lr_depart3_role_name$))\r\n}.Else{\r\n    SetTitle($lr_land_registry$)\r\n}\r\n\r\nSpan(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: \"$lr_list_desc$\"))\r\nAddToolButton(Title: $@1add$, Page: lr_add, Icon: icon-plus)\r\n\r\nSetVar(filters, {\"deleted\": 0})\r\nInclude(lr_list)",
             "Menu": "default_menu",
             "Type": "pages"
         },
         {
-            "Name": "land_registry_depart2_edit",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "SetVar(depart, 1)\nSetVar(depart2, 1)\nSetTitle($land_registry_depart2_edit$)\nInclude(land_registry_edit)",
+            "Name": "lr_list_for_sale",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "SetVar(this_page, lr_list_for_sale).(this_table, land_registry)\r\nInclude(@1pager_header)\r\nInclude(lr_check_rights)\r\n\r\nSetTitle($lr_available_for_sale$)\r\nSpan(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: \"$lr_list_for_sale_desc$\"))\r\n\r\nSetVar(filters, {\"price\": {$gt: 0}, \"government_price\": {$gt: 0}, \"market_price\": {$gt: 0}, \"status->legal_status\": 1, \"status->encumbrance_certificate\": 1, \"status->tax_receipt_and_bills\": 1, \"deleted\": 0})\r\n\r\nInclude(lr_list)",
             "Menu": "default_menu",
             "Type": "pages"
         },
         {
-            "Name": "land_registry_depart3_edit",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "SetVar(depart, 1)\nSetVar(depart3, 1)\nSetTitle($land_registry_depart3_edit$)\nInclude(land_registry_edit)",
+            "Name": "lr_settings",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "DBFind(\"@1applications\").Where({ecosystem: #ecosystem_id#, name: \"Land registry\"}).Columns(\"name,id\").Vars(app)\r\n\r\nSetVar(this_page, lr_settings).(admin_role,0).(bank_role,0).(depart2_role,0).(depart3_role,0)\r\nSetVar(admin_role, AppParam(App: #app_id#, Name: lr_admin_role))\r\nSetVar(bank_role, AppParam(App: #app_id#, Name: lr_bank_role))\r\nSetVar(depart2_role, AppParam(App: #app_id#, Name: lr_depart2_role))\r\nSetVar(depart3_role, AppParam(App: #app_id#, Name: lr_depart3_role))\r\n\r\nDBFind(@1roles,src_roles).Where({ecosystem: #ecosystem_id#, deleted: 0}).Columns(\"role_name,id\").Limit(100)\r\n\r\nSetVar(row,\"row mt-sm\").(col_left,\"col-sm-3 text-right mt-sm\").(col_right,\"col-sm-9 text-left\")\r\n\r\nDiv(content-wrapper){\r\n    Div(row){\r\n        Div(col-lg-6 col-lg-offset-3 col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1){\r\n            Form(panel panel-primary){\r\n                Div(panel-body){\r\n                    Div(text-center text-bold h4 m0){\r\n                        LangRes(lr_settings)\r\n                    }\r\n                    Div(text-center text-muted){\r\n                        $lr_settings_description$\r\n                    }\r\n                    Div(row mt-lg){\r\n                        Div(#col_left#){\r\n                            Label(){\r\n                                LangRes(lr_admin_role_name)\r\n                            }\r\n                        }\r\n                        Div(#col_right#){\r\n                            Select(Name: RoleAdmin, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #admin_role#)\r\n                        }\r\n                    }\r\n                    Div(#row#){\r\n                        Div(#col_left#){\r\n                            Label(){\r\n                                LangRes(lr_bank_role_name)\r\n                            }\r\n                        }\r\n                        Div(#col_right#){\r\n                            Select(Name: RoleBank, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #bank_role#)\r\n                        }\r\n                    }\r\n                    Div(#row#){\r\n                        Div(#col_left#){\r\n                            Label(){\r\n                                LangRes(lr_depart2_role_name)\r\n                            }\r\n                        }\r\n                        Div(#col_right#){\r\n                            Select(Name: RoleDepart2, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #depart2_role#)\r\n                        }\r\n                    }\r\n                    Div(#row#){\r\n                        Div(#col_left#){\r\n                            Label(){\r\n                                LangRes(lr_depart3_role_name)\r\n                            }\r\n                        }\r\n                        Div(#col_right#){\r\n                            Select(Name: RoleDepart3, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #depart3_role#)\r\n                        }\r\n                    }\r\n                }\r\n                Div(panel-footer text-right){\r\n                    Button(Body: $@1apply_settings$, Class: btn btn-primary, Page: #this_page#, Contract: LrSettings)\r\n                }\r\n            }\r\n        }\r\n    }\r\n}",
+            "Menu": "admin_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "lr_view",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "If(#notific_id#>0){\r\n    DBFind(\"@1notifications\").Where({\"id\": #notific_id#, \"ecosystem\": #ecosystem_id#}).Columns(\"page_params->object_id\").Vars(notific)\r\n    SetVar(object_id, #notific_page_params_object_id#)\r\n}\r\n\r\nIf(#object_id#>0){\r\n    Include(lr_check_rights)\r\n    DBFind(\"@1applications\").Where({ecosystem: #ecosystem_id#, name: \"Land registry\"}).Columns(\"name,id\").Vars(app)\r\n    AppParam(App: #app_id#, Name: lr_issues, Source: src_issues)\r\n    SetVar(row,\"row mt-sm\").(col_left,\"col-md-4 text-right\").(col_right,\"col-md-8 text-left\")\r\n\r\n    If(GetVar(view_specifications_land_type)==\"\"){\r\n        SetVar(view_specifications_land_type,1)\r\n    }\r\n    If(GetVar(view_specifications_land_use)==\"\"){\r\n        SetVar(view_specifications_land_use,1)\r\n    }\r\n    If(GetVar(view_specifications_buildings_class)==\"\"){\r\n        SetVar(view_specifications_buildings_class,1)\r\n    }\r\n    If(GetVar(view_specifications_land_authority)==\"\"){\r\n        SetVar(view_specifications_land_authority,1)\r\n    }\r\n    If(GetVar(view_registration_date)==\"\"){\r\n        SetVar(view_registration_date,)\r\n    }\r\n    If(GetVar(view_price)==\"\"){\r\n        SetVar(view_price,)\r\n    }\r\n\r\n    DBFind(\"land_registry\", src).WhereId(#object_id#).Columns(\"id,owner_id,specifications->map_coords,specifications->address,specifications->area,specifications->land_type,specifications->land_use,specifications->buildings_class,specifications->land_authority,registration_date,date_created,modification_date,status->legal_status,status->encumbrance_certificate,status->tax_receipt_and_bills,price,market_price,government_price\").Vars(view)\r\n    DBFind(\"land_registry_ownership\").WhereId(#object_id#).Vars(ownership)\r\n    \r\n    If(#view_owner_id#==#key_id#){\r\n        SetVar(owner,1)\r\n        DBFind(\"@1notifications\").Where({\"page_params->object_id\": #view_id#, \"page_params->depart2_requests\": 2, \"ecosystem\": #ecosystem_id#}).Columns(\"id\").Vars(depart2)\r\n        DBFind(\"@1notifications\").Where({\"page_params->object_id\": #view_id#, \"page_params->depart3_requests\": 2, \"ecosystem\": #ecosystem_id#}).Columns(\"id\").Vars(depart3)\r\n        If(#depart2_id#>0){\r\n            SetVar(depart2_requests,2)\r\n        }.Else{\r\n            SetVar(depart2_requests,1)\r\n        }\r\n        If(#depart3_id#>0){\r\n            SetVar(depart3_requests,2)\r\n        }.Else{\r\n            SetVar(depart3_requests,1)\r\n        }\r\n    }\r\n\r\n    Form(){\r\n        Div(){\r\n            Map(MapType: streets, Hmap: 250, Value: #view_specifications_map_coords#)\r\n        }\r\n        Div(row mt){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_location)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                Span(#view_specifications_address#)\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_area_size)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                Span(#view_specifications_area#)\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left# mt-sm){\r\n                Label(){\r\n                    LangRes(lr_owner)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                DBFind(\"@1members\").Where({\"id\": #view_owner_id#, \"ecosystem\": #ecosystem_id#}).Vars(member)\r\n                LinkPage(Page: profile_view, PageParams: \"v_member_id=#member_id#\"){\r\n                    If(#member_image_id#>0){\r\n                        Image(Src: Binary().ById(#member_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)\r\n                        Span(Class: ml-sm text-bold, Body: #member_member_name#)\r\n                    }.Else{\r\n                        Div(){\r\n                            Span(Em(Class: fa icon-user fa-2x))\r\n                            Span(Class: ml-sm text-bold, Body: #member_member_name#)\r\n                        }.Style(display:flex; align-items:center;)\r\n                    }\r\n                }\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(@1date_created)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                If(#view_date_created#>0){\r\n                    SetVar(view_date_created, DateTime(#view_date_created#, \"YYYY-MM-DD\"))\r\n                    Span(#view_date_created#)\r\n                }\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_registration_date)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                If(#view_registration_date#>0){\r\n                    SetVar(view_registration_date, DateTime(#view_registration_date#, \"YYYY-MM-DD\"))\r\n                    Span(#view_registration_date#)\r\n                }\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_modification_date)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                If(#view_modification_date#>0){\r\n                    SetVar(view_modification_date, DateTime(#view_modification_date#, \"YYYY-MM-DD\"))\r\n                    Span(#view_modification_date#)\r\n                }\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(@1type)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                SetVar(view_specifications_land_type, AppParam(App: #app_id#, Name: lr_land_type, Index: #view_specifications_land_type#))\r\n                Span(#view_specifications_land_type#)\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_land_use)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                SetVar(view_specifications_land_use, AppParam(App: #app_id#, Name: lr_land_use, Index: #view_specifications_land_use#))\r\n                Span(#view_specifications_land_use#)\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_buildings_class)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                SetVar(view_specifications_buildings_class, AppParam(App: #app_id#, Name: lr_buildings_class, Index: #view_specifications_buildings_class#))\r\n                Span(#view_specifications_buildings_class#)\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_land_authority)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                SetVar(view_specifications_land_authority, AppParam(App: #app_id#, Name: lr_land_authority, Index: #view_specifications_land_authority#))\r\n                Span(#view_specifications_land_authority#)\r\n            }\r\n        }\r\n        If(And(#depart2#==1,#ownership_step#==-1)){\r\n            Div(list-group-item){\r\n                Div(#row#){\r\n                    Div(#col_left#){\r\n                        Label(){\r\n                            LangRes(lr_legal_status)\r\n                        }\r\n                    }\r\n                    Div(#col_right#){\r\n                        Div(form-inline){\r\n                            If(#view_status_legal_status#>0){\r\n                                RadioGroup(Name: LegalStatus, Value: #view_status_legal_status#, Source: src_issues, ValueColumn: id, NameColumn: name)\r\n                            }.Else{\r\n                                RadioGroup(Name: LegalStatus, Value: 0, Source: src_issues, ValueColumn: id, NameColumn: name)\r\n                            }\r\n                        }\r\n                    }\r\n                }\r\n                Div(#row#){\r\n                    Div(#col_left# mt-sm){\r\n                        Label(){\r\n                            LangRes(lr_encumbrance_certificate)\r\n                        }\r\n                    }\r\n                    Div(#col_right#){\r\n                        Div(form-inline){\r\n                            If(#view_status_encumbrance_certificate#>0){\r\n                                RadioGroup(Name: EncumbranceCertificate, Value: #view_status_encumbrance_certificate#, Source: src_issues, ValueColumn: id, NameColumn: name)\r\n                            }.Else{\r\n                                RadioGroup(Name: EncumbranceCertificate, Value: 0, Source: src_issues, ValueColumn: id, NameColumn: name)\r\n                            }\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n        }.Else{\r\n            Div(#row#){\r\n                Div(#col_left#){\r\n                    Label(){\r\n                        LangRes(lr_legal_status)\r\n                    }\r\n                }\r\n                Div(#col_right#){\r\n                    If(#view_status_legal_status#==1){\r\n                        Em(Class: fa fa-check-circle text-success)\r\n                    }.ElseIf(#view_status_legal_status#==2){\r\n                        Em(Class: fa fa-exclamation-circle text-danger)\r\n                    }.Else{\r\n                        Em(Class: fa fa-question-circle text-muted)\r\n                        If(And(#owner#==1,#depart2_requests#==1)){\r\n                            Button(Body: ($lr_additional_request$), Class: btn-link, Contract: LrDepartRequest, Params: \"ObjectId=#view_id#,DepartNumber=2\", Page: lr_view, PageParams: \"object_id=#view_id#\").Popup(50, $lr_view$)\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n            Div(#row#){\r\n                Div(#col_left#){\r\n                    Label(){\r\n                        LangRes(lr_encumbrance_certificate)\r\n                    }\r\n                }\r\n                Div(#col_right#){\r\n                    If(#view_status_encumbrance_certificate#==1){\r\n                        Em(Class: fa fa-check-circle text-success)\r\n                    }.ElseIf(#view_status_encumbrance_certificate#==2){\r\n                        Em(Class: fa fa-exclamation-circle text-danger)\r\n                    }.Else{\r\n                        Em(Class: fa fa-question-circle text-muted)\r\n                        If(And(#owner#==1,#depart2_requests#==1)){\r\n                            Button(Body: ($lr_additional_request$), Class: btn-link, Contract: LrDepartRequest, Params: \"ObjectId=#view_id#,DepartNumber=2\", Page: lr_view, PageParams: \"object_id=#view_id#\").Popup(50, $lr_view$)\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n        }\r\n        If(And(#depart3#==1,#ownership_step#==-1)){\r\n            Div(list-group-item){\r\n                Div(#row#){\r\n                    Div(#col_left#){\r\n                        Label(){\r\n                            LangRes(lr_tax_and_bills)\r\n                        }\r\n                    }\r\n                    Div(#col_right#){\r\n                        Div(form-inline){\r\n                            If(#view_status_tax_receipt_and_bills#>0){\r\n                                RadioGroup(Name: TaxReceiptAndBills, Value: #view_status_tax_receipt_and_bills#, Source: src_issues, ValueColumn: id, NameColumn: name)\r\n                            }.Else{\r\n                                RadioGroup(Name: TaxReceiptAndBills, Value: 0, Source: src_issues, ValueColumn: id, NameColumn: name)\r\n                            }\r\n                        }\r\n                    }\r\n                }\r\n                Div(#row#){\r\n                    Div(#col_left# mt-sm){\r\n                        Label(){\r\n                            LangRes(lr_government_price)\r\n                        }\r\n                    }\r\n                    Div(#col_right#){\r\n                        If(#view_government_price#>0){\r\n                            SetVar(view_government_price, Money(#view_government_price#))\r\n                            Input(Name: GovernmentPrice, Value: #view_government_price#)\r\n                        }.Else{\r\n                            Input(Name: GovernmentPrice)\r\n                        }\r\n                    }\r\n                }\r\n                Div(#row#){\r\n                    Div(#col_left# mt-sm){\r\n                        Label(){\r\n                            LangRes(lr_market_price)\r\n                        }\r\n                    }\r\n                    Div(#col_right#){\r\n                        If(#view_market_price#>0){\r\n                            SetVar(view_market_price, Money(#view_market_price#))\r\n                            Input(Name: MarketPrice, Value: #view_market_price#)\r\n                        }.Else{\r\n                            Input(Name: MarketPrice)\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n        }.Else{\r\n            Div(#row#){\r\n                Div(#col_left#){\r\n                    Label(){\r\n                        LangRes(lr_tax_and_bills)\r\n                    }\r\n                }\r\n                Div(#col_right#){\r\n                    If(#view_status_tax_receipt_and_bills#==1){\r\n                        Em(Class: fa fa-check-circle text-success)\r\n                    }.ElseIf(#view_status_tax_receipt_and_bills#==2){\r\n                        Em(Class: fa fa-exclamation-circle text-danger)\r\n                    }.Else{\r\n                        Em(Class: fa fa-question-circle text-muted)\r\n                        If(And(#owner#==1,#depart3_requests#==1)){\r\n                            Button(Body: ($lr_additional_request$), Class: btn-link, Contract: LrDepartRequest, Params: \"ObjectId=#view_id#,DepartNumber=3\", Page: lr_view, PageParams: \"object_id=#view_id#\").Popup(50, $lr_view$)\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n            Div(#row#){\r\n                Div(#col_left#){\r\n                    Label(){\r\n                        LangRes(lr_government_price)\r\n                    }\r\n                }\r\n                Div(#col_right#){\r\n                    If(#view_government_price#>0){\r\n                        SetVar(view_government_price, Money(#view_government_price#))\r\n                        Span(#view_government_price# APLA)\r\n                    }.Else{\r\n                        Em(Class: fa fa-question-circle text-muted)\r\n                        If(And(#owner#==1,#depart3_requests#==1)){\r\n                            Button(Body: ($lr_additional_request$), Class: btn-link, Contract: LrDepartRequest, Params: \"ObjectId=#view_id#,DepartNumber=3\", Page: lr_view, PageParams: \"object_id=#view_id#\").Popup(50, $lr_view$)\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n            Div(#row#){\r\n                Div(#col_left#){\r\n                    Label(){\r\n                        LangRes(lr_market_price)\r\n                    }\r\n                }\r\n                Div(#col_right#){\r\n                    If(#view_market_price#>0){\r\n                        SetVar(view_market_price, Money(#view_market_price#))\r\n                        Span(#view_market_price# APLA)\r\n                    }.Else{\r\n                        Em(Class: fa fa-question-circle text-muted)\r\n                        If(And(#owner#==1,#depart3_requests#==1)){\r\n                            Button(Body: ($lr_additional_request$), Class: btn-link, Contract: LrDepartRequest, Params: \"ObjectId=#view_id#,DepartNumber=3\", Page: lr_view, PageParams: \"object_id=#view_id#\").Popup(50, $lr_view$)\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n        }\r\n        Div(#row#){\r\n            Div(#col_left#){\r\n                Label(){\r\n                    LangRes(lr_price)\r\n                }\r\n            }\r\n            Div(#col_right#){\r\n                If(#view_price#>0){\r\n                    SetVar(view_price, Money(#view_price#))\r\n                    Span(#view_price# APLA)\r\n                }.Else{\r\n                    Em(Class: fa fa-question-circle text-muted)\r\n                }\r\n            }\r\n        }\r\n        If(And(#view_status_legal_status#==1,#view_status_encumbrance_certificate#==1,#view_status_tax_receipt_and_bills#==1,#view_government_price#>0,#view_market_price#>0,#view_price#>0,#owner#!=1,#ownership_step#==-1)){\r\n            SetVar(bank_role_id, AppParam(App: #app_id#, Name: lr_bank_role))\r\n            DBFind(\"@1roles_participants\",src_b).Where({\"role->id\": 1, \"deleted\": 0, \"ecosystem\": #ecosystem_id#}).Columns(\"id,member->member_id\").Vars(bank)\r\n            SetVar(bank_account,Address(#bank_member_member_id#))\r\n            If(#bank_id#>0){\r\n                SetVar(price_money,Calculate(Exp: #view_price#*1000000000000000000, Type: money))\r\n                DBFind(@1history).Where({\"sender_id\": #key_id#, \"recipient_id\": #bank_member_member_id#, \"amount\": #price_money#}).Vars(deposit)\r\n                If(#deposit_id#>0){\r\n                    Button(Body: LangRes(lr_purchase), Class: btn btn-success pull-right mt, Contract: LrPurchaseSteps, Params: \"ObjectId=#view_id#,Step=#ownership_step#\", Page: lr_list_all).Alert($lr_want_initiate_purchase$, $@1confirm_button$, $@1cancel$)\r\n                }.Else{\r\n                    Button(Body: LangRes(lr_deposit_money), Class: btn btn-success pull-right mt, Contract: @1TokensSend, Params: \"Amount=#view_price#,Recipient=#bank_account#\", Page: lr_view, PageParams: \"object_id=#view_id#\").Popup(50, $lr_view$)\r\n                }\r\n            }\r\n        }\r\n        If(And(Or(#depart2#==1,#depart3#==1),#ownership_step#==-1)){\r\n            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt, Contract: LrDepartChecks, Params: \"ObjectId=#view_id#,RoleId=#role_id#,NotificId=#notific_id#\", Page: lr_list_all)\r\n        }\r\n        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: lr_list_all)\r\n    }\r\n}.Else{\r\n    Form(){\r\n        Div(alert alert-danger text-center){\r\n            LangRes(@1attention)\r\n        }\r\n        Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: lr_list_all)\r\n    }\r\n}",
             "Menu": "default_menu",
             "Type": "pages"
         },
         {
-            "Name": "land_registry_edit",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "SetTitle($land_records_edit$)\nInclude(land_registry_edit)",
-            "Menu": "default_menu",
-            "Type": "pages"
-        },
-        {
-            "Name": "land_registry_install",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "SetTitle($land_registry$ : $install_app$)\nForm(row text-center){\n    Button(Contract: land_registry_Install, Page: land_registry_records, Body: $install_app$, Class: btn btn-primary)\n}",
-            "Menu": "default_menu",
-            "Type": "pages"
-        },
-        {
-            "Name": "land_registry_records",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "SetTitle($land_records$)\nSetVar(this, land_registry_records)\n\nSetVar(admin, 0)\nSetVar(sales, 0)\n\nInclude(land_registry_set_depart)\n\nIf(And(#isSearch#==1, #str_search#>0)){\n    SetVar(searchQuery, \"delete\": 0, \"land_use\": #str_search#)\n}.Else{\n    SetVar(searchQuery, \"delete\": 0)\n}\n\nIf(#depart2#==1){\n    SetVar(v_Where, {#searchQuery#, \"price\": {$gt: 0}, \"tax_receipt_and_bills\": 1, \"legal_status\": 1, \"encumbrance_certificate\": 1, \"owner_id\": {$neq: #key_id#}})\n}.Else{\n    SetVar(v_Where, {#searchQuery#})\n}\n\nIf(#depart3#==1){\n    SetVar(v_Where, {#searchQuery#, \"owner_id\": #key_id#})\n}.Else{\n    SetVar(v_Where, {#searchQuery#})\n}\n\nInclude(land_registry_records)\n",
-            "Menu": "default_menu",
-            "Type": "pages"
-        },
-        {
-            "Name": "land_registry_records_admin",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "SetTitle($land_records$ ($@1admin$))\nSetVar(this, land_registry_records_admin)\nSetVar(admin, 1)\nSetVar(sales, 0)\nSetVar(depart, 0)\n\nIf(And(#isSearch#==1, #str_search#>0)){\n    SetVar(v_Where, {\"delete\": 0, \"land_use\": #str_search#})\n}.Else{\n    SetVar(v_Where, {\"delete\": 0})\n}\n\nInclude(land_registry_records)",
-            "Menu": "default_menu",
-            "Type": "pages"
-        },
-        {
-            "Name": "land_registry_records_for_sale",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "SetTitle($land_records_sales$)\nSetVar(this, land_registry_records_for_sale)\nSetVar(sales, 1)\nSetVar(admin, 0)\nSetVar(depart, 0)\n\nIf(And(#isSearch#==1, #str_search#>0)){\n    SetVar(searchQuery, \"delete\": 0, \"land_use\": #str_search#)\n}.Else{\n    SetVar(searchQuery, \"delete\": 0)\n}\nIf(){\n    SetVar(v_Where, {#searchQuery#, \"price\": {$gt: 0}, \"tax_receipt_and_bills\": 1, \"legal_status\": 1, \"encumbrance_certificate\": 1, \"owner_id\": {$neq: #key_id#}})\n}\nSetVar(v_Where, {#searchQuery#, \"price\": {$gt: 0}, \"tax_receipt_and_bills\": 1, \"legal_status\": 1, \"encumbrance_certificate\": 1})\n\nInclude(land_registry_records)",
-            "Menu": "default_menu",
-            "Type": "pages"
-        },
-        {
-            "Name": "land_registry_view",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "DBFind(@1applications).Where({ecosystem:1, name:\"Land Registry\"}).Columns(\"name,id\").Vars(app)\n\nIf(#notific_id#>0){\n    DBFind(\"@1notifications\").Where({\"id\": #notific_id#, \"ecosystem\": #ecosystem_id#}).Columns(\"page_params->land_id\").Vars(notific)\n    SetVar(LandId, #notific_page_params_land_id#)\n}.Else{\n    SetVar(notific_id, 0)\n}\n\nIf(#admin#==1){}.Else{SetVar(admin, 0)}\n\nIf(#LandId#>0){\n    SetVar(title, $land_record$)\n    SetVar(debug, AppParam(App: #app_id#, Name: debug))\n    \n    If(GetVar(LandId)){\n        DBFind(\"land_registry\").WhereId(#LandId#).Vars(entry)\n        DBFind(\"land_registry_ownership\").Where({\"lend_object_id\": #LandId#}).Vars(ownership)\n        \n        SetVar(trade_step, #ownership_step#)\n        DBFind(\"@1members\").Where({\"id\": #ownership_owner_id#, \"ecosystem\": #ecosystem_id#}).Vars(owner)\n        DBFind(\"@1members\").Where({\"id\": #ownership_owner_id#, \"ecosystem\": #ecosystem_id#}).Vars(buyer)\n        SetVar(orig_key_id, #key_id#)\n        If(#notific_id#>0){\n            SetVar(key_id,#owner_id#)\n        }.Else{\n            SetVar(key_id,#orig_key_id#)\n        }\n        \n        If(#ownership_owner_id#!=#ownership_owner_new_id#){\n            DBFind(\"@1members\").Where({\"id\": #ownership_owner_new_id#, \"ecosystem\": #ecosystem_id#}).Vars(buyer)\n        }\n    }\n    SetVar(ext_height, 80px;)\n    If(#trade_step#==-1){\n        SetVar(map_height, 400)\n    }.Else{\n        SetVar(map_height, 200)\n    }\n    SetTitle(#title#)\n    Div(content-wrapper){\n        Div(breadcrumb){\n            Div(){\n                LinkPage(Body: $land_records$,Page: land_registry_records, PageParams: \"admin=#admin#\")\n                Span(/).Style(margin-right: 10px; margin-left: 10px;)\n                Span(#title#, text-muted)\n            }\n        }\n        If(GetVar(LandId)){\n            Div(row){\n                Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3 mt-sm text-left){\n                    Div(panel panel-default){\n                        Form(){\n                            Div(list-group-item){\n                                Div(h3){$land_record$ #GetVar(LandId)}\n                            }\n                            Div(list-group-item){\n                                Map(MapType: streets, Hmap:#map_height#, Value:#entry_map_coords#)\n                            }\n                            \n                            Div(list-group-item){\n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){\n                                        Strong($owner$:)\n                                    }\n                                    Div(col-md-6 mt-sm text-left h5){\n                                        Div(){\n\t\t\t\t\t\t\t\t\t\t\tLinkPage(Page: profile_view, PageParams: \"v_member_id=#owner_id#\"){\n\t\t\t\t\t\t\t\t\t\t\t\tIf(#owner_image_id#>0){\n\t\t\t\t\t\t\t\t\t\t\t\t\tImage(Src: Binary().ById(#owner_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)\n\t\t\t\t\t\t\t\t\t\t\t\t\tSpan(Class: ml-sm text-bold, Body: #owner_member_name#)\n\t\t\t\t\t\t\t\t\t\t\t\t}.Else{\n\t\t\t\t\t\t\t\t\t\t\t\t\tDiv(){\n\t\t\t\t\t\t\t\t\t\t\t\t\t\tSpan(Em(Class: fa icon-user fa-2x))\n\t\t\t\t\t\t\t\t\t\t\t\t\t\tSpan(Class: ml-sm text-bold, Body: #owner_member_name#)\n\t\t\t\t\t\t\t\t\t\t\t\t\t}.Style(display:flex; align-items:center;)\n\t\t\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t\t}\n                                        }\n                                    }\n                                }\n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){\n                                        Strong($area_size$:)\n                                    }\n                                    Div(col-md-7 mt-sm text-left h5){#entry_area# Span(m).(2).Style(vertical-align: super; font-size: 8px;)}\n                                }\n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){\n                                        Strong($address$:)\n                                    }\n                                    Div(col-md-7 mt-sm text-left h5){#entry_address#}\n                                }\n                                \n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){Strong($registration_date$:)}\n                                    Div(col-md-7 mt-sm text-left h5){DateTime(#entry_registration_date#)}\n                                }\n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){Strong($record_add_date$:)}\n                                    Div(col-md-7 mt-sm text-left h5){DateTime(#entry_date_create#)}\n                                }\n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){Strong($modification_date$:)}\n                                    Div(col-md-7 mt-sm text-left h5){DateTime(#entry_modification_date#)}\n                                }\n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){Strong($land_use$:)}\n                                    Div(col-md-7 mt-sm text-left h5){\n                                        AppParam(App: #app_id#, Name: land_use, Index: #entry_land_use#)\n                                    }\n                                }\n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){Strong($buildings_use_class$:)}\n                                    Div(col-md-7 mt-sm text-left h5){\n                                        AppParam(App: #app_id#, Name: buildings_use_class, Index: #entry_buildings_use_class#)\n                                    }\n                                }\n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){Strong($local_body$:)}\n                                    Div(col-md-7 mt-sm text-left h5){\n                                        AppParam(App: #app_id#, Name: land_local_body, Index: #entry_land_local_body#)\n                                    }\n                                }\n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){Strong($land_nature$:)}\n                                    Div(col-md-7 mt-sm text-left h5){\n                                        AppParam(App: #app_id#, Name: land_nature, Index: #entry_land_nature#)\n                                    }\n                                }\n                                \n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){Strong($legal_status$:)}\n                                    Div(col-md-7 mt-sm text-left h5){\n                                        DBFind(\"@1notifications\").Where({\"page_params->land_id\": #LandId#, \"page_params->request\": \"second\", \"page_params->depart\": 1, \"page_params->depart2\": 1, \"closed\":0, \"ecosystem\": #ecosystem_id#}).Vars(depart2_alert)\n                                        If(GetVar(depart2_alert_id)){\n                                            SetVar(alert_depart2, 1)\n                                        }.Else{\n                                            SetVar(alert_depart2, 0)\n                                        }\n                                        \n                                        If(GetVar(entry_legal_status)){\n                                            AppParam(App: #app_id#, Name: legal_status, Index: #entry_legal_status#)\n                                        }.Else{\n                                            LangRes(undefined)\n                                        }\n                                        If(And(#entry_legal_status#!=1, #alert_depart2#==0)){\n                                            Button(Contract: land_registry_Depart2Request, Body: $send_request$, \"LandId=#LandId#\", Class: btn btn-default ml request, Page: land_registry_records, Params: \"LandId=#LandId#\").Alert($ask_request_second$, $confirm$, $cancel$)\n                                        }\n                                    }\n                                }\n                                \n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){Strong($encumbrance_certificate$:)}\n                                    Div(col-md-7 mt-sm text-left h5){\n                                        If(GetVar(entry_encumbrance_certificate)){\n                                            AppParam(App: #app_id#, Name: tax_receipt_and_bills, Index: #entry_encumbrance_certificate#)\n                                        }.Else{\n                                            LangRes(undefined)\n                                        }\n                                        If(And(#entry_encumbrance_certificate#!=1, #alert_depart2#==0)){\n                                            Button(Contract: land_registry_Depart2Request, Body: $send_request$, Params: \"LandId=#LandId#\", Class: btn btn-default ml request, Page: land_registry_view, PageParams: \"LandId=#LandId#\").Alert($ask_request_second$, $confirm$, $cancel$)\n                                        }\n                                    }\n                                }\n                                \n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){Strong($tax_and_bills$:)}\n                                    Div(col-md-7 mt-sm text-left h5){\n                                        DBFind(\"@1notifications\").Where({\"page_params->land_id\": #LandId#, \"page_params->request\": \"second\", \"page_params->depart\": 1, \"page_params->depart3\": 1, \"closed\":0, \"ecosystem\": #ecosystem_id#}).Vars(depart3_alert)\n                                        If(GetVar(depart3_alert_id)){\n                                            SetVar(alert_depart3, 1)\n                                        }.Else{\n                                            SetVar(alert_depart3, 0)\n                                        }\n                                        If(GetVar(entry_tax_receipt_and_bills)){\n                                            AppParam(App: #app_id#, Name: tax_receipt_and_bills, Index: #entry_tax_receipt_and_bills#)\n                                        }.Else{\n                                            LangRes(undefined)\n                                        }\n                                        If(And(#entry_tax_receipt_and_bills#!=1, #alert_depart3#==0)){\n                                            Button(Contract: land_registry_Depart3Request, Body: $send_request$, Params: \"LandId=#LandId#\", Class: btn btn-default ml request, Page: land_registry_view, PageParams: \"LandId=#LandId#\").Alert($ask_request_second$, $confirm$, $cancel$)\n                                        }\n                                    }\n                                }\n                                \n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){Strong(\"$market_value$ (INR):\")}\n                                    Div(col-md-7){\n                                        If(#entry_price_market_value#>0){\n                                            #entry_price_market_value#\n                                        }.Else{\n                                            LangRes(undefined)\n                                        }\n                                        If(And(#entry_price_market_value#==0, #alert_depart3#==0)){\n                                            Button(Contract: land_registry_Depart3Request, Body: $send_request$, Params: \"LandId=#LandId#\", Class: btn btn-default ml request, Page: land_registry_view, PageParams: \"LandId=#LandId#\").Alert($ask_request_second$, $confirm$, $cancel$)\n                                        }\n                                    }\n                                }\n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){Strong(\"$government_value$ (INR):\"}\n                                    Div(col-md-7 mt-sm text-left h5){\n                                        \n                                        If(#entry_price_gov_value#>0){\n                                            #entry_price_gov_value#\n                                        }.Else{\n                                            LangRes(undefined)\n                                        }\n                                        If(And(#entry_price_gov_value#==0, #alert_depart3#==0)){\n                                            Button(Contract: land_registry_Depart3Request, Body: $send_request$, Params: \"LandId=#LandId#\", Class: btn btn-default ml request, Page: land_registry_view, PageParams: \"LandId=#LandId#\").Alert($ask_request_second$, $confirm$, $cancel$)\n                                        }\n                                    }\n                                }\n                                Div(row){\n                                    Div(col-md-5 mt-sm text-right h5){\n                                        Strong(\"$consideration_value$ (INR):\")\n                                    }\n                                    Div(col-md-7 mt-sm text-left h5){\n                                        If(#entry_price#>0){\n                                            #entry_price#\n                                        }.Else{\n                                            LangRes(undefined)\n                                        }\n                                        If(#ownership_owner_id#==#key_id#){\n                                            Button(Page: land_registry_edit, PageParams: \"LandId=#LandId#,depart1=1\", Class: btn btn-default fa fa-edit ml).Style(padding: 2px 10px;)\n                                        }\n                                    }\n                                }\n                            }\n                            \n                            SetVar(canStartTrade, And(#entry_price#>0,#entry_tax_receipt_and_bills#==1,#entry_legal_status#==1,#entry_encumbrance_certificate#==1,#ownership_owner_id#!=#key_id#,#trade_step#==-1))\n                            \n                            If(#debug#==1){\n                                Div(){notific_id:#notific_id#}\n                                Div(){entry_tax_receipt_and_bills:#entry_tax_receipt_and_bills#}\n                                Div(){entry_legal_status:#entry_legal_status#}\n                                Div(){entry_encumbrance_certificate:#entry_encumbrance_certificate#}\n                                Div(){ownership_owner_id:#ownership_owner_id#}\n                                Div(){key_id:#key_id#}\n                                Div(){trade_step:#trade_step#}\n                                Div(){canStartTrade: #canStartTrade# }\n                            }\n                            If(#canStartTrade#==1){\n                                Div(list-group-item clearfix){\n                                    DBFind(\"@1members\").Where({\"id\": #key_id#, \"ecosystem\": #ecosystem_id#}).Vars(my)\n                                    DBFind(\"land_registry_accounts\").Where({\"member_id\": #key_id#, \"onhold\": 0}).Vars(my_account)\n                                    If(#my_account_amount#>=#entry_price#){\n                                        Div(pull-right){\n                                            $start_buying_land$:\n                                            Button(Contract: land_registry_InititiatePurchase, Body: $buy$, Params: \"LandId=#LandId#\", Class: btn btn-primary ml, Page: land_registry_view, PageParams: \"LandId=#LandId#\").Alert($ask_initiate_land_purchase$, $confirm$, $cancel$)\n                                        }\n                                    }\n                                }\n                            }\n                        }\n                    }\n                    \n                    If(#trade_step#>=0){\n                        Form(row){\n                            Div(col-md-6 mt-sm text-center){\n                                Div(panel panel-default data-sweet-alert){\n                                    Div(panel-body){\n                                        Strong($owner$)\n                                        Div(row){\n                                            LinkPage(Page: profile_view, PageParams: \"v_member_id=#owner_id#\"){\n\t\t\t\t\t\t\t\t\t\t\t\tIf(#owner_image_id#>0){\n\t\t\t\t\t\t\t\t\t\t\t\t\tImage(Src: Binary().ById(#owner_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)\n\t\t\t\t\t\t\t\t\t\t\t\t\tSpan(Class: ml-sm text-bold, Body: #owner_member_name#)\n\t\t\t\t\t\t\t\t\t\t\t\t}.Else{\n                                                    Span(Em(Class: fa icon-user fa-2x))\n                                                    Span(Class: ml-sm text-bold, Body: #owner_member_name#).Style(vertical-align: super;)\n\t\t\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t\t}\n                                        }\n                                    }\n                                    \n                                    Div(panel-footer){\n                                        If(And(#trade_step#==0, #owner_id#!=#key_id#)){\n                                            SetVar(ext_height, 80px;)\n                                            Div(h5 text-bold text-center){$offer_purchase_sent$}.Style(height:#ext_height#)\n                                        }\n                                        \n                                        If(And(#trade_step#==0, #owner_id#==#key_id#)){\n                                            SetVar(ext_height, 100px;)\n                                            Div(h5 text-bold text-center){$have_offer_buy_land$}\n                                            Div(clearfix){\n                                                Div(pull-left){\n                                                    Button(Contract: land_registry_PurchaseReject, Body: $reject$, Params: \"LandId=#LandId#,NotificId=#notific_id#\", Class: btn btn-danger, Page: land_registry_records).Alert($ask_reject_purchase$, $confirm$, $cancel$)\n                                                }\n                                                Div(pull-right){\n                                                    Button(Contract: land_registry_PurchaseAccept, Params: \"LandId=#LandId#,NotificId=#notific_id#\", Body: $accept$, Class: btn btn-success, Page: land_registry_records).Alert($ask_accept_purchase$, $confirm$, $cancel$)\n                                                }\n                                            }\n                                        }\n                                        \n                                        If(#trade_step#==2){\n                                            SetVar(ext_height, 100px;)\n                                            Div(h5 text-center){\n                                                Button(Contract: land_registry_SignSales, Body: $sign_sales_contract$, Params: \"LandId=#LandId#,NotificId=#notific_id#\", Class: btn btn-success btn-block, Page: land_registry_records).Alert($ask_sign$, $confirm$, $cancel$)\n                                            }\n                                        }\n                                        \n                                    }.Style(height:#ext_height#)\n                                }\n                            }\n                            \n                            Div(col-md-6 mt-sm text-center){\n                                Div(panel panel-default data-sweet-alert){\n                                    Div(panel-body){\n                                        Strong($buyer$)\n                                        Div(row){\n                                            LinkPage(Page: profile_view, PageParams: \"v_member_id=#buyer_id#\"){\n\t\t\t\t\t\t\t\t\t\t\t\tIf(#buyer_image_id#>0){\n\t\t\t\t\t\t\t\t\t\t\t\t\tImage(Src: Binary().ById(#buyer_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)\n\t\t\t\t\t\t\t\t\t\t\t\t\tSpan(Class: ml-sm text-bold, Body: #buyer_member_name#)\n\t\t\t\t\t\t\t\t\t\t\t\t}.Else{\n                                                    Span(Em(Class: fa icon-user fa-2x))\n                                                    Span(Class: ml-sm text-bold, Body: #buyer_member_name#).Style(vertical-align: super;)\n\t\t\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t\t}\n                                        }\n                                    }\n                                    \n                                    Div(panel-footer){\n                                        If(#trade_step#==1){\n                                            Div(h5 text-bold text-center){\n                                                $please_amount$ Calculate(#entry_price# * 1.05)\n                                                INR $to_land_bank$\n                                            }\n                                        }\n                                        \n                                        If(#trade_step#==2){\n                                            DBFind(\"land_registry_accounts\").Where({\"member_id\": #ownership_owner_new_id#, \"account_type\": 3, \"onhold\": 0}).Vars(buyer)\n                                            Div(h5 text-bold text-center){\n                                                $buyer_trans_self$ (INR) Calculate(#entry_price# * 1.05)\n                                            }\n                                        }\n                                        \n                                        If(#trade_step#==10){\n                                            Input(Name: land_id_tmp, Type: hidden, Value: #LandId#)\n                                            Input(Name: notific_id_tmp, Type: hidden, Value: #notific_id#)\n                                            Div(h5 text-bold text-center){$owner_rejected_selling$}\n                                            Div(clearfix){\n                                                Div(pull-right){\n                                                    Button(Class: btn btn-primary, Contract: land_registry_TakenNote, Body: $taken_note$, Page: land_registry_view, PageParams:\"LandId=#LandId#\")\n                                                }\n                                            }\n                                        }\n                                    }.Style(height:#ext_height#)\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }.Style(.request{padding: 2px 5px;})\n}.Else{\n    Div(Class: col-md-12 alert alert-danger text-center){$attention$}\n}",
-            "Menu": "default_menu",
-            "Type": "pages"
-        },
-        {
-            "Name": "land_registry_AccountCreate",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_AccountCreate{\n    data{\n        account_type int\n        member_id string\n    }\n    \n    func conditions{\n        \n        MainCondition()\n        \n        $account_id = 0;\n        $memberId = AddressToId($member_id)\n        \n        var account map\n        if $account_type == 1 || $account_type == 2 {\n            account = DBFind(\"land_registry_accounts\").Where({\"type\": $account_type, \"onhold\": 0}).Row()\n        } else {\n            account = DBFind(\"land_registry_accounts\").Where({\"type\": $account_type, \"member_id\": $memberId, \"onhold\": 0}).Row()\n        }\n        \n        if account {\n            warning \"Account with this type has already been created\"\n        }\n    }\n    \n    func action {\n        DBInsert(\"land_registry_accounts\", {\"member_id\": $memberId, \"type\": $account_type})\n    }\n}",
+            "Name": "LrAdd",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "contract LrAdd {\r\n    data {\r\n        Coords string\r\n        LandUse int\r\n        LandType int\r\n        LandAuthority int\r\n        BuildingsUseClass int\r\n        RegistrationDate string\r\n        Price money\r\n    }\r\n    \r\n    conditions {\r\n        $app_id = DBFind(\"@1applications\").Where({ecosystem: $ecosystem_id, name: \"Land registry\"}).One(\"id\")\r\n        if $app_id > 0 {\r\n            if AppParam(Int($app_id), \"lr_depart2_role\", $ecosystem_id) == 0 || AppParam(Int($app_id), \"lr_depart3_role\", $ecosystem_id) == 0 || AppParam(Int($app_id), \"lr_bank_role\", $ecosystem_id) == 0 || AppParam(Int($app_id), \"lr_admin_role\", $ecosystem_id) == 0 {\r\n                info LangRes(\"lr_all_roles_needed\", \"en\")\r\n            }\r\n        } else {\r\n            warning LangRes(\"@1app_not_found\", \"en\")\r\n        }\r\n    }\r\n    \r\n    action {\r\n        var coords map coordsAddress, area string unixRegDate int\r\n        coords = JSONToMap($Coords)\r\n        coordsAddress = coords[\"address\"]\r\n        area = Sprintf(\"%.0f\", coords[\"area\"])\r\n        unixRegDate = UnixDateTime(Sprintf(\"%s %s\", $RegistrationDate, \"00:00:00\"))\r\n\r\n        var m specifications map objectId int\r\n        specifications[\"address\"] = coordsAddress\r\n        specifications[\"area\"] = area\r\n        specifications[\"buildings_class\"] = $BuildingsUseClass\r\n        specifications[\"map_coords\"] = $Coords\r\n        specifications[\"land_use\"] = $LandUse\r\n        specifications[\"land_type\"] = $LandType\r\n        specifications[\"land_authority\"] = $LandAuthority\r\n\r\n        m[\"owner_id\"] = $key_id\r\n        m[\"deleted\"] = 0\r\n        m[\"date_created\"] = $block_time\r\n        m[\"registration_date\"] = unixRegDate\r\n        m[\"modification_date\"] = $block_time\r\n        m[\"price\"] = $Price\r\n        m[\"specifications\"] = specifications\r\n\r\n        objectId = DBInsert(\"land_registry\", m)\r\n\r\n        var ownership map\r\n        ownership[\"object_id\"] = objectId\r\n        ownership[\"owner_id\"] = $key_id\r\n        ownership[\"new_owner_id\"] = $key_id\r\n        ownership[\"step\"] = \"-1\"\r\n        DBInsert(\"land_registry_ownership\", ownership)\r\n\r\n        // sending the notifications to all departments\r\n        var depart_map depart2_params depart3_params map\r\n        depart2_params[\"object_id\"] = objectId\r\n        depart2_params[\"depart2_requests\"] = 1\r\n\r\n        depart_map[\"sender\"] = 1\r\n        depart_map[\"rid\"] = Int(AppParam(Int($app_id), \"lr_depart2_role\", $ecosystem_id))\r\n        depart_map[\"page_name\"] = \"lr_view\"\r\n        depart_map[\"text_header\"] = \"$lr_new_object$\"\r\n        depart_map[\"text_body\"] = \"$lr_need_processing$\"\r\n        depart_map[\"icon_name\"] = \"fa fa-bell-o\"\r\n        depart_map[\"closure_type\"] = 1\r\n        depart_map[\"popup\"] = \"true\"\r\n        depart_map[\"params_map\"] = depart2_params\r\n\r\n        CallContract(\"@1NotificationsSend\", depart_map)\r\n\r\n        depart3_params[\"object_id\"] = objectId\r\n        depart3_params[\"depart3_requests\"] = 1\r\n\r\n        depart_map[\"rid\"] = Int(AppParam(Int($app_id), \"lr_depart3_role\", $ecosystem_id))\r\n        depart_map[\"params_map\"] = depart3_params\r\n        \r\n        CallContract(\"@1NotificationsSend\", depart_map)\r\n    }\r\n}",
             "Type": "contracts"
         },
         {
-            "Name": "land_registry_Add",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_Add{\n    data{\n        OwnerId int\n        Coords string // {\"coords\":[{\"lat\":float,\"lng\":float},],\"area\": float,\"address\": string}\n        LandUse int\n        BuildingsUseClass int\n        RegistrationDate string\n        LandNature int\n        LandLocalBody int\n    }\n    \n    func conditions{\n        var member map\n        member = DBFind(\"@1members\").Where({\"id\": $OwnerId, \"ecosystem\": $ecosystem_id}).Row()\n        if !member {\n            warning \"Member account for Owner not found\"\n        }\n        \n        $depart2_RoleId = DBFind(\"@1roles\").Where({\"role_name\": \"land_depart2\", \"deleted\": 0, \"ecosystem\": $ecosystem_id}).One(\"id\")\n        $depart3_RoleId = DBFind(\"@1roles\").Where({\"role_name\": \"land_depart3\", \"deleted\": 0, \"ecosystem\": $ecosystem_id}).One(\"id\")\n        if $depart2_RoleId == nil || $depart3_RoleId == nil{\n            info \"Department roles not found\"\n        }\n        \n    }\n    func action{\n        var icon, header, body, page, roleParams, coordsAddress, area string params, params2, params3 map\n        var closureType, landId int\n        var coords map\n        coords = JSONToMap($Coords)\n        coordsAddress = coords[\"address\"]\n        area = Sprintf(\"%.0f\", coords[\"area\"])\n        \n        landId = DBInsert(\"land_registry\", {\"owner_id\": $OwnerId, \"address\": coordsAddress, \"area\": area, \"buildings_use_class\": $BuildingsUseClass, \"map_coords\": $Coords, \"land_use\": $LandUse, \"date_create\": $block_time, \"delete\": 0, \"land_nature\": $LandNature, \"land_local_body\": $LandLocalBody, \"registration_date\": $RegistrationDate, \"modification_date\": $block_time})\n        \n        DBInsert(\"land_registry_ownership\", {\"step\": \"-1\", \"date_create\": $block_time, \"date_signing\": $block_time, \"lend_object_id\": landId, \"owner_id\": $OwnerId, \"owner_new_id\": $OwnerId})\n        \n        icon = \"fa fa-bell-o\"\n        header = \"$new_land$\"\n        body = \"$need_processing$\"\n        closureType = 2\n        \n        roleParams = \"sender,rid,closure_type,icon_name,text_header,text_body,page_name,params_map\"\n        \n        //notify role2\n        params2[\"land_id\"] = landId\n\t\tparams2[\"depart2\"] = 1\n        page = \"land_registry_depart2_edit\"\n        @1NotificationsSend(roleParams,1,Int($depart2_RoleId),closureType,icon,header,body,page,params2)\n        \n        //notify role3\n        params3[\"land_id\"] = landId\n\t\tparams3[\"depart3\"] = 1\n        page = \"land_registry_depart3_edit\"\n        @1NotificationsSend(roleParams,1,Int($depart3_RoleId),closureType,icon,header,body,page,params3)\n        \n        //notify owner\n        params[\"land_id\"] = landId\n\t\tparams[\"depart1\"] = 1\n        page = \"land_registry_depart1_edit\"\n        @1NotificationsSend(\"sender,member_id,icon_name,text_header,text_body,page_name,params_map\", 1,$OwnerId,icon,header,body,page,params)\n    }\n}",
+            "Name": "LrDepartChecks",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "contract LrDepartChecks {\r\n    data {\r\n        ObjectId int\r\n        NotificId int \"optional\"\r\n        LegalStatus int \"optional\"\r\n        EncumbranceCertificate int \"optional\"\r\n        TaxReceiptAndBills int \"optional\"\r\n        GovernmentPrice money \"optional\"\r\n        MarketPrice money \"optional\"\r\n        RoleId int\r\n    }\r\n\r\n    conditions {\r\n        $app_id = DBFind(\"@1applications\").Where({\"ecosystem\": $ecosystem_id, \"name\": \"Land registry\"}).One(\"id\")\r\n        $depart2_role = Int(AppParam(Int($app_id), \"lr_depart2_role\", $ecosystem_id))\r\n        $depart3_role = Int(AppParam(Int($app_id), \"lr_depart3_role\", $ecosystem_id))\r\n\r\n        if $app_id > 0 {\r\n            if $depart2_role == 0 || $depart3_role == 0 || AppParam(Int($app_id), \"lr_admin_role\", $ecosystem_id) == 0 || AppParam(Int($app_id), \"lr_bank_role\", $ecosystem_id) == 0 {\r\n                info LangRes(\"lr_all_roles_needed\", \"en\")\r\n            }\r\n        } else {\r\n            warning LangRes(\"@1app_not_found\", \"en\")\r\n        }\r\n    }\r\n    \r\n    action {\r\n        if $RoleId == $depart2_role {\r\n            var object status m map\r\n            object = DBFind(\"land_registry\").WhereId($ObjectId).Row()\r\n            if object[\"status\"] {\r\n                var depart3_status map\r\n                depart3_status = JSONDecode(object[\"status\"])\r\n                status[\"tax_receipt_and_bills\"] = depart3_status[\"tax_receipt_and_bills\"]\r\n            }\r\n\r\n            status[\"legal_status\"] = $LegalStatus\r\n            status[\"encumbrance_certificate\"] = $EncumbranceCertificate\r\n            m[\"modification_date\"] = $block_time\r\n            m[\"status\"] = status\r\n            DBUpdate(\"land_registry\", $ObjectId, m)\r\n        }\r\n        if $RoleId == $depart3_role {\r\n            var object status m map\r\n            object = DBFind(\"land_registry\").WhereId($ObjectId).Row()\r\n            if object[\"status\"] {\r\n                var depart2_status map\r\n                depart2_status = JSONDecode(object[\"status\"])\r\n                status[\"legal_status\"] = depart2_status[\"legal_status\"]\r\n                status[\"encumbrance_certificate\"] = depart2_status[\"encumbrance_certificate\"]\r\n            }\r\n\r\n            status[\"tax_receipt_and_bills\"] = $TaxReceiptAndBills\r\n            m[\"government_price\"] = $GovernmentPrice\r\n            m[\"market_price\"] = $MarketPrice\r\n            m[\"modification_date\"] = $block_time\r\n            m[\"status\"] = status\r\n            DBUpdate(\"land_registry\", $ObjectId, m)\r\n        }\r\n\r\n        if $NotificId > 0 {\r\n            var opened int\r\n            opened = DBFind(\"@1notifications\").Where({\"id\": $NotificId, \"closed\": 0, \"ecosystem\": $ecosystem_id}).One(\"id\")\r\n            if opened {\r\n                @1NotificationsProcess(\"notific_id\", $NotificId)\r\n                @1NotificationsClose(\"notific_id\", $NotificId)\r\n            }\r\n        }\r\n    }\r\n}",
             "Type": "contracts"
         },
         {
-            "Name": "land_registry_AdminEdit",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_AdminEdit{\n    data {\n        LandId int\n        Coords string // {\"coords\":[{\"lat\":float,\"lng\":float},],\"area\": float,\"address\": string}\n        LandUse int\n        BuildingsUseClass int\n        // Area int\n        // CoordsAddress string\n        LandNature int\n        LandLocalBody int\n    }\n    func conditions {\n        $landRegistryRecord = DBFind(\"land_registry\").Where({\"id\": $LandId}).Row()\n        if !$landRegistryRecord{\n            warning \"Land Registry record not found\"\n        }\n    }\n    \n    func log(field, value string){\n        if value != $landRegistryRecord[field] {\n            var name old_field string\n            name = DBFind(\"@1members\").Where({\"id\": $key_id, \"ecosystem\": $ecosystem_id}).One(\"member_name\")\n            old_field = $landRegistryRecord[field]\n            DBInsert(\"land_registry_editing\", {\"editing_attribute\": field, \"lend_object_id\": $LandId, \"new_attr_value\": value, \"old_attr_value\": old_field, \"person_id\": $key_id, \"person_name\": name, \"date\": $block_time})\n        }\n    }\n    func action {\n        var coords map\n        coords = JSONToMap($Coords)\n        var coordsAddress, area string\n        coordsAddress = coords[\"address\"]\n        area = Sprintf(\"%.0f\", coords[\"area\"])\n\n        log(\"land_use\", Str($LandUse))\n        log(\"buildings_use_class\", Str($BuildingsUseClass))\n        log(\"map_coords\", $Coords)\n        // log(\"address\", coordsAddress)\n        // log(\"area\", area)\n        \n        DBUpdate(\"land_registry\", $LandId, {\"address\": coordsAddress, \"area\": area, \"buildings_use_class\": $BuildingsUseClass, \"map_coords\": $Coords, \"land_use\": $LandUse, \"land_nature\": $LandNature, \"land_local_body\": $LandLocalBody})\n    }\n}",
+            "Name": "LrDepartRequest",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "contract LrDepartRequest {\r\n    data {\r\n        ObjectId int\r\n        DepartNumber int\r\n    }\r\n\r\n    conditions {\r\n        $app_id = DBFind(\"@1applications\").Where({ecosystem: $ecosystem_id, name: \"Land registry\"}).One(\"id\")\r\n        var requests_flag int\r\n        if $DepartNumber == 2 {\r\n            requests_flag = DBFind(\"@1notifications\").Where({\"ecosystem\": $ecosystem_id, \"page_params->object_id\": $ObjectId, \"page_params->depart2_requests\": 2}).One(\"id\")\r\n            if requests_flag {\r\n                warning LangRes(\"lr_requests_limit_reached\", \"en\")\r\n            }\r\n        } elif $DepartNumber == 3 {\r\n            requests_flag = DBFind(\"@1notifications\").Where({\"ecosystem\": $ecosystem_id, \"page_params->object_id\": $ObjectId, \"page_params->depart3_requests\": 2}).One(\"id\")\r\n            if requests_flag {\r\n                warning LangRes(\"lr_requests_limit_reached\", \"en\")\r\n            }\r\n        }\r\n    }\r\n    \r\n    action {\r\n        var request params map\r\n        request[\"sender\"] = 1\r\n        request[\"page_name\"] = \"lr_view\"\r\n        request[\"text_header\"] = \"$lr_additional_request$\"\r\n        request[\"text_body\"] = \"$lr_need_processing$\"\r\n        request[\"icon_name\"] = \"fa fa-bell-o\"\r\n        request[\"closure_type\"] = 1\r\n        request[\"popup\"] = \"true\"\r\n        params[\"object_id\"] = $ObjectId\r\n        \r\n        if $DepartNumber == 2 {\r\n            request[\"rid\"] = Int(AppParam(Int($app_id), \"lr_depart2_role\", $ecosystem_id))\r\n            params[\"depart2_requests\"] = 2\r\n            request[\"params_map\"] = params\r\n        } elif $DepartNumber == 3 {\r\n            request[\"rid\"] = Int(AppParam(Int($app_id), \"lr_depart3_role\", $ecosystem_id))\r\n            params[\"depart3_requests\"] = 2\r\n            request[\"params_map\"] = params\r\n        }\r\n\r\n        CallContract(\"@1NotificationsSend\", request)\r\n    }\r\n}",
             "Type": "contracts"
         },
         {
-            "Name": "land_registry_TokensTransfer",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_TokensTransfer {\n    data {\n        sender_id int\n        recipient_id int\n        amount money\n    }\n    \n    conditions {}\n    \n    action {\n        var sender map\n        sender = DBFind(\"land_registry_accounts\").Where({\"onhold\": 0, \"id\": $sender_id}).Order(\"id\").Row()\n        \n        var recipient map\n        recipient = DBFind(\"land_registry_accounts\").Where({\"onhold\": 0, \"id\": $recipient_id}).Order(\"id\").Row()\n        \n        if sender && recipient {\n            if Money(sender[\"amount\"]) > $amount {\n                DBUpdate(\"land_registry_accounts\", Int(sender[\"id\"]), {\"-amount\": $amount})\n                DBUpdate(\"land_registry_accounts\", Int(recipient[\"id\"]), {\"+amount\": $amount})\n            }\n        } \n    }\n}",
+            "Name": "LrEdit",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "contract LrEdit {\r\n    data {\r\n        ObjectId int\r\n        LandUse int \"optional\"\r\n        LandType int \"optional\"\r\n        LandAuthority int \"optional\"\r\n        BuildingsUseClass int \"optional\"\r\n        RegistrationDate string \"optional\"\r\n        Price money \"optional\"\r\n        DeleteObject int \"optional\"\r\n        RoleId int\r\n    }\r\n\r\n    func log(property, value string) {\r\n        if value != $object[property] {\r\n            var history map\r\n            history[\"object_id\"] = $ObjectId\r\n            history[\"attribute_name\"] = property\r\n            history[\"old_value\"] = $object[property]\r\n            history[\"new_value\"] = value\r\n            history[\"member_id\"] = $key_id\r\n            history[\"date\"] = $block_time\r\n            DBInsert(\"land_registry_history\", history)\r\n        }\r\n    }\r\n\r\n    conditions {\r\n        $app_id = DBFind(\"@1applications\").Where({ecosystem: $ecosystem_id, name: \"Land registry\"}).One(\"id\")\r\n        $object = DBFind(\"land_registry\").WhereId($ObjectId).Row()\r\n        $admin_role = Int(AppParam(Int($app_id), \"lr_admin_role\", $ecosystem_id))\r\n\r\n        if $app_id > 0 {\r\n            if $admin_role == 0 || AppParam(Int($app_id), \"lr_bank_role\", $ecosystem_id) == 0 || AppParam(Int($app_id), \"lr_depart2_role\", $ecosystem_id) == 0 || AppParam(Int($app_id), \"lr_depart3_role\", $ecosystem_id) == 0 {\r\n                info LangRes(\"lr_all_roles_needed\", \"en\")\r\n            }\r\n        } else {\r\n            warning LangRes(\"@1app_not_found\", \"en\")\r\n        }\r\n    }\r\n    \r\n    action {\r\n        if $DeleteObject != 1 {\r\n            if $RoleId == $admin_role {\r\n                var old_specifications specifications m map unixRegDate int\r\n                unixRegDate = UnixDateTime(Sprintf(\"%s %s\", $RegistrationDate, \"00:00:00\"))\r\n                old_specifications = JSONDecode($object[\"specifications\"])\r\n\r\n                specifications[\"address\"] = old_specifications[\"address\"]\r\n                specifications[\"area\"] = old_specifications[\"area\"]\r\n                specifications[\"map_coords\"] = old_specifications[\"map_coords\"]\r\n                specifications[\"land_use\"] = $LandUse\r\n                specifications[\"land_type\"] = $LandType\r\n                specifications[\"land_authority\"] = $LandAuthority\r\n                specifications[\"buildings_class\"] = $BuildingsUseClass\r\n\r\n                m[\"registration_date\"] = unixRegDate\r\n                m[\"specifications\"] = specifications\r\n                DBUpdate(\"land_registry\", $ObjectId, m)\r\n\r\n                log(\"land_use\", Str($LandUse))\r\n                log(\"land_type\", Str($LandType))\r\n                log(\"land_authority\", Str($LandAuthority))\r\n                log(\"buildings_class\", Str($BuildingsUseClass))\r\n                log(\"registration_date\", Str($RegistrationDate))\r\n            }\r\n            if $object[\"owner_id\"] == $key_id {\r\n                DBUpdate(\"land_registry\", $ObjectId, {\"price\": $Price})\r\n                log(\"price\", Str($Price))\r\n            }\r\n        } else {\r\n            if $object[\"owner_id\"] == $key_id || $RoleId == $admin_role {\r\n                DBUpdate(\"land_registry\", $ObjectId, {\"deleted\": 1})\r\n                log(\"deleted\", Str($DeleteObject))\r\n            }\r\n        }\r\n    }\r\n}",
             "Type": "contracts"
         },
         {
-            "Name": "land_registry_Delete",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_Delete{\n    data{\n        LandId int\n    }\n    \n    func conditions{}\n    \n    func action{\n        DBUpdate(\"land_registry\", $LandId, {\"delete\": 1})\n    }\n}",
+            "Name": "LrPurchaseSteps",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "contract LrPurchaseSteps {\r\n    data {\r\n        ObjectId int\r\n        Step int\r\n    }\r\n\r\n    conditions {\r\n        $app_id = DBFind(\"@1applications\").Where({\"ecosystem\": $ecosystem_id, \"name\": \"Land registry\"}).One(\"id\")\r\n        $object = DBFind(\"land_registry\").WhereId($ObjectId).Row()\r\n\r\n        var bank_role int\r\n        bank_role = Int(AppParam(Int($app_id), \"lr_bank_role\", $ecosystem_id))\r\n        $bank_id = DBFind(\"@1roles_participants\").Where({\"role->id\": bank_role, \"deleted\": 0, \"ecosystem\": $ecosystem_id}).One(\"member->member_id\")\r\n        if !$bank_id {\r\n            warning LangRes(\"lr_bank_account_not_found\", \"en\")\r\n        }\r\n\r\n    }\r\n\r\n    action {\r\n        if $Step == -1 {\r\n            var ownership_id int\r\n            ownership_id = Int(DBFind(\"land_registry_ownership\").Where({\"object_id\": $ObjectId}).One(\"id\"))\r\n            DBUpdate(\"land_registry_ownership\", ownership_id, {\"new_owner_id\": $key_id, \"step\": 0})\r\n        }\r\n    }\r\n}",
             "Type": "contracts"
         },
         {
-            "Name": "land_registry_Depart1Edit",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_Depart1Edit{\n    data{\n        LandId int\n        NotificId string \"optional\"\n        Price string\n    }\n    \n    func conditions{\n        $Price = Int($Price)\n        $NotificId = Int($NotificId)\n        var entry map\n        entry = DBFind(\"land_registry\").Where({\"id\": $LandId, \"owner_id\": $key_id}).Row()\n        if !entry{\n            // info \"You can not change this Land\" // comment for testing\n        }\n    }\n    \n    func action{\n        DBUpdate(\"land_registry\", $LandId, {\"price\": $Price, \"modification_date\": $block_time})\n        if $NotificId > 0{\n            @1NotificationsClose(\"notific_id\", $NotificId)\n        }\n    }\n}",
-            "Type": "contracts"
-        },
-        {
-            "Name": "land_registry_Depart2Edit",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_Depart2Edit{\n    data{\n        LandId int\n        NotificId int\n        LegalStatus int\n        EncumbranceCertificate int\n    }\n    \n    func action{\n        DBUpdate(\"land_registry\", $LandId, {\"legal_status\": $LegalStatus, \"encumbrance_certificate\": $EncumbranceCertificate, \"modification_date\": $block_time})\n        \n        @1NotificationsClose(\"notific_id\", $NotificId)\n    }\n}",
-            "Type": "contracts"
-        },
-        {
-            "Name": "land_registry_Depart2Request",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_Depart2Request{\n    data{\n        LandId int\n    }\n    \n    func action{\n        var icon, header, body, page, notifyParams string params map\n        notifyParams = \"sender,rid,closure_type,icon_name,text_header,text_body,page_name,params_map\"\n        icon = \"fa-bell\"\n        header = \"$new_land$\"\n        body = \"$need_your_processing$\"\n        page = \"land_registry_depart2_edit\"\n\t\t\n        params[\"land_id\"] = $LandId\n\t\tparams[\"request\"] = \"second\"\n\t\tparams[\"depart\"] = 1\n\t\tparams[\"depart2\"] = 1\n        \n        var roleId, closureType int\n        closureType = 2\n        roleId = DBFind(\"@1roles\").Where({\"role_name\": \"land_depart2\", \"deleted\": 0, \"ecosystem\": $ecosystem_id}).One(\"id\")\n        \n        @1NotificationsSend(notifyParams,1,roleId,closureType,icon,header,body,page,params)\n    }\n}",
-            "Type": "contracts"
-        },
-        {
-            "Name": "land_registry_Depart3Edit",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_Depart3Edit{\n    data{\n        LandId int\n        NotificId int\n        TaxReceiptAndBills int\n        PriceMarket int\n        PriceGov int\n    }\n    \n    func action{\n        DBUpdate(\"land_registry\", $LandId, {\"tax_receipt_and_bills\": $TaxReceiptAndBills, \"price_market_value\": $PriceMarket, \"price_gov_value\": $PriceGov, \"modification_date\": $block_time})\n        \n        @1NotificationsClose(\"notific_id\", $NotificId)\n    }\n}",
-            "Type": "contracts"
-        },
-        {
-            "Name": "land_registry_Depart3Request",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_Depart3Request{\n    data{\n        LandId int\n    }\n    \n    conditions{}\n    \n    func action{\n        var icon, header, body, page, notifyParams string params map\n        var roleId, closureType int\n        \n        icon = \"fa-bell\"\n        header = \"$new_land$\"\n        body = \"$need_your_processing$\"\n        closureType = 2\n        page = \"land_registry_depart3_edit\"\n        \n\t\tparams[\"land_id\"] = $LandId\n\t\tparams[\"request\"] = \"second\"\n\t\tparams[\"depart\"] = 1\n\t\tparams[\"depart3\"] = 1\n\t\t\n        roleId = DBFind(\"@1roles\").Where({\"role_name\": \"land_depart3\", \"deleted\": 0, \"ecosystem\": $ecosystem_id}).One(\"id\")\n        \n        notifyParams = \"sender,rid,closure_type,icon_name,text_header,text_body,page_name,params_map\"\n        @1NotificationsSend(notifyParams,1,roleId,closureType,icon,header,body,page,params)\n    }\n}",
-            "Type": "contracts"
-        },
-        {
-            "Name": "land_registry_InititiatePurchase",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_InititiatePurchase{\n    data{\n        LandId int\n    }\n    \n    conditions{}\n    \n    action{\n        var ownership map\n        ownership = DBFind(\"land_registry_ownership\").Where({\"lend_object_id\": $LandId}).Row()\n        \n        var ownershipId, ownerId int\n        ownershipId = Int(ownership[\"id\"])\n        ownerId = Int(ownership[\"owner_id\"])\n        \n        DBUpdate(\"land_registry_ownership\", ownershipId, {\"owner_new_id\": $key_id, \"step\": 0})\n        \n        var notifications array\n        notifications = DBFind(\"@1notifications\").Where({\"page_params->land_id\": $LandId, \"recipient->member_id\": $key_id, \"ecosystem\": $ecosystem_id})\n        var i int\n        while i < Len(notifications) {\n            var notification map\n            notification = notifications[i]\n            @1NotificationsClose(\"notific_id\", Int(notification[\"id\"]))\n            i = i + 1\n        }\n        \n        // notify land owner\n        var icon, header, body, page string params map\n        icon = \"fa-bell\"\n        header = \"$purchase_request$\"\n        body = \"$need_your_processing$\"\n        page = \"land_registry_view\"\n        params[\"land_id\"] = $LandId\n        @1NotificationsSend(\"sender,member_id,icon_name,text_header,text_body,page_name,params_map\", 1, ownerId, icon, header, body, page, params)\n    }\n}",
-            "Type": "contracts"
-        },
-        {
-            "Name": "land_registry_Install",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_Install{\n    data{}\n    \n    func conditions{\n        MainCondition()\n    }\n    \n    func action{\n        var roleName string\n        var m, isAssigned, role map\n        var amount int\n        var members, fMembers array\n        amount = 1000000\n        var i int\n        \n        // fake members\n        // fMembers[0] = \"0022-5368-9996-5437-2905\"\n        // fMembers[1] = \"0099-6231-3856-5867-2293\"\n        // fMembers[2] = \"1823-8019-6419-0516-5483\"\n        // fMembers[3] = \"0702-8968-3827-9121-2498\"\n        // DBUpdate(\"keys\", $key_id, \"amount\", 1000000000000)\n        // var keyIdOriginal int\n        // keyIdOriginal = $key_id\n        // while i<Len(fMembers){\n        //     $key_id = keyIdOriginal\n        //     @1MoneyTransfer(\"Recipient,Amount,Comment\", fMembers[i], amount, \"\")\n            \n        //     $key_id = AddressToId(fMembers[i])\n        //     var fName string\n        //     fName = Sprintf(\"fake_member_%v\",i)\n        //     Profile_Edit(\"member_name,avatar\", fName, \"\")\n            \n        //     i=i+1\n        // }\n        \n        members = DBFind(\"@1members\").Where({\"ecosystem\": $ecosystem_id})\n        i=0\n        var m_id r_id int m_avatar, m_name string\n        while i< Len(members){\n            m = members[i]\n            m_id = m[\"id\"]\n            m_avatar = m[\"image_id\"]\n            m_name = m[\"member_name\"]\n            isAssigned = DBFind(\"land_registry_accounts\").Where({\"member_id\": m_id}).Row()\n            if isAssigned {\n                DBUpdate(\"land_registry_accounts\", Int(isAssigned[\"id\"]), {\"member_id\": m_id, \"member_avatar\": m_avatar, \"member_name\": m_name, \"amount_money\": amount, \"amount\": amount, \"onhold\": 0})\n            }else{\n                DBInsert(\"land_registry_accounts\", {\"member_id\": m_id, \"member_avatar\": m_avatar, \"member_name\": m_name, \"amount_money\": amount, \"amount\": amount})\n            }\n            i=i+1\n        }\n        i = 0\n        while i < 4{\n            if i==3{\n                roleName = \"land_bank\"\n            }else{\n                roleName = Sprintf(\"land_depart%v\", i+1)\n            }\n            role = DBFind(\"@1roles\").Where({\"role_name\": roleName, \"role_type\": 1, \"company_id\": 0, \"deleted\": 0, \"ecosystem\": $ecosystem_id}).Row()\n            if !role {\n                // create required roles\n                // role_type==1 must be assigned_role\n                @1RolesCreate(\"role_name,role_type\", roleName, 1)\n                role = DBFind(\"@1roles\").Where({\"role_name\": roleName, \"role_type\": 1, \"company_id\": 0, \"deleted\": 0, \"ecosystem\": $ecosystem_id}).Row()\n            }\n            r_id = Int(role[\"id\"])\n            isAssigned = DBFind(\"@1roles_participants\").Where({\"id\": r_id, \"deleted\": 0, \"ecosystem\": $ecosystem_id}).Row()\n            if isAssigned{\n                var roleCreatorId int\n                //$key_id = Int(DBFind(\"@1roles\").Where({\"id\": r_id, \"ecosystem\": $ecosystem_id}).One(\"creator->member_id\"))\n                @1RolesUnassign(\"row_id\", Int(isAssigned[\"id\"]))\n            }\n            var j int\n            if i < Len(members){\n                j = i\n            }\n            m = members[j]\n            m_id = Int(m[\"id\"])\n            @1RolesAssign(\"rid,member_id\", r_id, m_id)\n            i=i+1\n        }\n    }\n}",
-            "Type": "contracts"
-        },
-        {
-            "Name": "land_registry_PurchaseAccept",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_PurchaseAccept{\n    data{\n        LandId int\n        NotificId int \"optional\"\n    }\n    conditions{\n        $roleId = DBFind(\"@1roles\").Where({\"role_name\": \"land_bank\", \"deleted\": 0, \"ecosystem\": $ecosystem_id}).One(\"id\")\n        if $roleId == nil{\n            info \"Banker not found\"\n        }\n    }\n    action{\n        var ownership map\n        ownership = DBFind(\"land_registry_ownership\").Where({\"lend_object_id\": $LandId}).Row()\n        var ownershipId, buyerId int\n        ownershipId = Int(ownership[\"id\"])\n        buyerId = Int(ownership[\"owner_new_id\"])\n        \n        DBUpdate(\"land_registry_ownership\", ownershipId, {\"step\": 1})\n        \n        // notify buyer\n        var icon, header, body, page string params map\n        icon = \"fa-bell\"\n        header = \"$purchase_approved$\"\n        body = \"$waiting_bank$\"\n        page = \"land_registry_view\"\n\t\tparams[\"land_id\"] = $LandId\n        \n        @1NotificationsSend(\"sender,member_id,icon_name,text_header,text_body,page_name,params_map\", 1, buyerId, icon, header, body, page, params)\n        \n        // notify bank\n        var roleId, closureType int\n        header = \"$new_land$\"\n        body = \"$need_your_processing$\"\n        closureType = 2\n        page = \"land_registry_bank\"\n        @1NotificationsSend(\"sender,rid,closure_type,icon_name,text_header,text_body,page_name,params_map\", 1, Int($roleId), closureType, icon, header, body, page, params)\n        \n        // closing notify for owner\n        if $NotificId > 0 {\n\t\t    @1NotificationsClose(\"notific_id\", $NotificId)\n        }\n    }\n}",
-            "Type": "contracts"
-        },
-        {
-            "Name": "land_registry_PurchaseReject",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_PurchaseReject{\n    data{\n        LandId int\n        NotificId int \"optional\"\n    }\n    \n    action{\n        //close notify for owner\n        if $NotificId > 0 {\n\t\t    @1NotificationsClose(\"notific_id\", $NotificId)\n        }\n        \n        // new status deal - cancelled\n        var ownership map\n        ownership = DBFind(\"land_registry_ownership\").Where({\"lend_object_id\": $LandId}).Row()\n        var ownershipId, buyerId int\n        ownershipId = Int(ownership[\"id\"])\n        buyerId = Int(ownership[\"owner_new_id\"])\n        \n        DBUpdate(\"land_registry_ownership\", ownershipId, {\"step\": 10})\n        \n        // notify buyer\n        var icon, header, body, page string params map\n        icon = \"fa fa-bell-o\"\n        header = \"$purchase_rejected$\"\n        body = \"$owner_rejected_purchase$\"\n        page = \"land_registry_view\"\n        params[\"land_id\"] = $LandId\n        \n        @1NotificationsSend(\"sender,member_id,icon_name,text_header,text_body,page_name,params_map\", 1, buyerId, icon, header, body, page, params)\n    }\n}",
-            "Type": "contracts"
-        },
-        {
-            "Name": "land_registry_BankAction",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_BankAction{    \n    data{\n        LandId int\n    }\n    action{\n        var notes array\n        notes = DBFind(\"@1notifications\").Where({\"page_params->land_id\": $LandId, \"recipient->member_id\": $key_id})\n        var i int\n        while i < Len(notes) {\n            var note map\n            note = notes[i]\n            @1NotificationsClose(\"notific_id\", Int(note[\"id\"]))\n            i = i + 1\n        }\n        var ownership map\n        ownership = DBFind(\"land_registry_ownership\").Where({\"lend_object_id\": $LandId}).Row()\n        var ownershipId, ownerId, buyerId int\n        ownershipId = Int(ownership[\"id\"])\n        ownerId = Int(ownership[\"owner_id\"])\n        buyerId = Int(ownership[\"owner_new_id\"])\n        \n        var land map\n        land = DBFind(\"land_registry\").WhereId($LandId).Row()\n        var landPrice int\n        landPrice = Int(land[\"price\"])\n        landPrice = landPrice * 105 / 100\n        \n        //перевод денег с эмиссии покупателю(персональный счет)\n        var buyerAccount map\n        buyerAccount = DBFind(\"land_registry_accounts\").Where({\"member_id\": buyerId, \"onhold\": 0}).Row()\n        if !buyerAccount {\n            info \"Buyers account not found\"\n        }\n        var buyerAccountId, bankAccountId int\n        bankAccountId = 1\n        buyerAccountId = Int(buyerAccount[\"id\"])\n        land_registry_TokensTransfer(\"sender_id,recipient_id,amount\", buyerAccountId, bankAccountId, landPrice)\n        \n        DBUpdate(\"land_registry_ownership\", ownershipId, {\"step\": 2})\n        \n        //уведомляем продавца\n        var icon, header, body, page string params map\n        icon = \"fa-bell\"\n        header = \"$new_purchase$\"\n        body = \"$need_your_processing$\"\n        page = \"land_registry_view\"\n        params[\"land_id\"] = $LandId\n        @1NotificationsSend(\"sender,member_id,icon_name,text_header,text_body,page_name,params_map\", 1, ownerId, icon, header, body, page, params)\n    }\n}",
-            "Type": "contracts"
-        },
-        {
-            "Name": "land_registry_TakenNote",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_TakenNote{\n    data{\n        land_id_tmp int\n        notific_id_tmp int\n    }\n    \n    action{\n        var table string\n        table = \"land_registry_ownership\"\n\n        //новый статус - сделка отклонена\n        var ownership map\n        ownership = DBFind(table).Where({\"lend_object_id\": $land_id_tmp}).Row()\n        DBUpdate(table, Int(ownership[\"id\"]), {\"step\": \"-1\"})\n        \n        //закрываем оповещение\n        if $notific_id_tmp > 0{\n            @1NotificationsClose(\"notific_id\", $notific_id_tmp)\n        }\n    }\n}",
-            "Type": "contracts"
-        },
-        {
-            "Name": "land_registry_SignSales",
-            "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "contract land_registry_SignSales{\n    data{\n        LandId int\n        NotificId int\n    }\n    \n    func action{\n        var ownership map\n        ownership = DBFind(\"land_registry_ownership\").Where({\"lend_object_id\": $LandId}).Row()\n        \n        var ownershipId, ownerId, buyerId int\n        ownershipId = Int(ownership[\"id\"])\n        ownerId = ownership[\"owner_id\"]\n        buyerId = Int(ownership[\"owner_new_id\"])\n        \n        var land map\n        land = DBFind(\"land_registry\").Where({\"id\": $LandId}).Row()\n        var amount int\n        amount = Int(land[\"price\"])\n        // $bank_tax = amount * 5 / 100\n                \n        // account_type=1 its a personal\n        var ownerAccount, buyerAccount map\n        ownerAccount = DBFind(\"land_registry_accounts\").Where({\"member_id\": ownerId, \"onhold\": 0}).Row()\n        buyerAccount = DBFind(\"land_registry_accounts\").Where({\"member_id\": buyerId, \"onhold\": 0}).Row()\n        \n        var ownerAccountId, buyerAccountId, bankAccountId int\n        ownerAccountId = Int(ownerAccount[\"id\"])\n        buyerAccountId = Int(buyerAccount[\"id\"])\n        bankAccountId = 1\n        \n        // deal\n        land_registry_TokensTransfer(\"sender_id,recipient_id,amount\", bankAccountId, ownerAccountId, amount)\n        // land_registry_TokensTransfer(\"sender_id,recipient_id,amount\", buyerAccountId, ownerAccountId, amount)\n        // land_registry_TokensTransfer(\"sender_id,recipient_id,amount\", buyerAccountId, bankAccountId, $bank_tax)\n        \n        // registered new owner\n        DBUpdate(\"land_registry\", $LandId, {\"owner_id\": buyerId})\n        DBUpdate(\"land_registry_ownership\", ownershipId, {\"owner_id\": buyerId, \"owner_new_id\": buyerId, \"step\": \"-1\"})\n        \n        if($NotificId > 0){\n            @1NotificationsClose(\"notific_id\", $NotificId)\n        }\n    }\n}",
+            "Name": "LrSettings",
+            "Conditions": "ContractConditions(\"AdminCondition\")",
+            "Value": "contract LrSettings {\r\n    data {\r\n        RoleAdmin int\r\n        RoleBank int\r\n        RoleDepart2 int\r\n        RoleDepart3 int\r\n    }\r\n\r\n    conditions{\r\n        AdminCondition()\r\n    }\r\n\r\n    func updateParam(name string, id int) {\r\n        if id > 0 {\r\n            var param paramsNew map app_id int\r\n            app_id = DBFind(\"@1applications\").Where({ecosystem: $ecosystem_id, name: \"Land registry\"}).One(\"id\")\r\n            if app_id > 0 {\r\n                param = DBFind(\"@1app_params\").Where({ecosystem: $ecosystem_id, app_id: app_id, name: name}).Row()\r\n                paramsNew[\"Value\"] = Str(id)\r\n                if param {\r\n                    paramsNew[\"Id\"] = Int(param[\"id\"])\r\n                    paramsNew[\"Conditions\"] = param[\"conditions\"]\r\n                    CallContract(\"@1EditAppParam\", paramsNew)\r\n                } else {\r\n                    paramsNew[\"App\"] = Str(app_id)\r\n                    paramsNew[\"Name\"] = name\r\n                    paramsNew[\"Conditions\"] = \"ContractConditions(\\\"AdminCondition\\\")\"\r\n                    CallContract(\"@1NewAppParam\", paramsNew)\r\n                }\r\n            } else {\r\n                warning LangRes(\"@1app_not_found\", \"en\")\r\n            }\r\n        }\r\n    }\r\n\r\n    action {\r\n        updateParam(\"lr_admin_role\", $RoleAdmin)\r\n        updateParam(\"lr_bank_role\", $RoleBank)\r\n        updateParam(\"lr_depart2_role\", $RoleDepart2)\r\n        updateParam(\"lr_depart3_role\", $RoleDepart3)\r\n    }\r\n}",
             "Type": "contracts"
         }
     ]

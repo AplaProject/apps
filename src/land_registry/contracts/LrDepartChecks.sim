@@ -1,0 +1,70 @@
+contract LrDepartChecks {
+    data {
+        ObjectId int
+        NotificId int "optional"
+        LegalStatus int "optional"
+        EncumbranceCertificate int "optional"
+        TaxReceiptAndBills int "optional"
+        GovernmentPrice money "optional"
+        MarketPrice money "optional"
+        RoleId int
+    }
+
+    conditions {
+        $app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Land registry"}).One("id")
+        $depart2_role = Int(AppParam(Int($app_id), "lr_depart2_role", $ecosystem_id))
+        $depart3_role = Int(AppParam(Int($app_id), "lr_depart3_role", $ecosystem_id))
+
+        if $app_id > 0 {
+            if $depart2_role == 0 || $depart3_role == 0 || AppParam(Int($app_id), "lr_admin_role", $ecosystem_id) == 0 || AppParam(Int($app_id), "lr_bank_role", $ecosystem_id) == 0 {
+                info LangRes("lr_all_roles_needed", "en")
+            }
+        } else {
+            warning LangRes("@1app_not_found", "en")
+        }
+    }
+    
+    action {
+        if $RoleId == $depart2_role {
+            var object status m map
+            object = DBFind("land_registry").WhereId($ObjectId).Row()
+            if object["status"] {
+                var depart3_status map
+                depart3_status = JSONDecode(object["status"])
+                status["tax_receipt_and_bills"] = depart3_status["tax_receipt_and_bills"]
+            }
+
+            status["legal_status"] = $LegalStatus
+            status["encumbrance_certificate"] = $EncumbranceCertificate
+            m["modification_date"] = $block_time
+            m["status"] = status
+            DBUpdate("land_registry", $ObjectId, m)
+        }
+        if $RoleId == $depart3_role {
+            var object status m map
+            object = DBFind("land_registry").WhereId($ObjectId).Row()
+            if object["status"] {
+                var depart2_status map
+                depart2_status = JSONDecode(object["status"])
+                status["legal_status"] = depart2_status["legal_status"]
+                status["encumbrance_certificate"] = depart2_status["encumbrance_certificate"]
+            }
+
+            status["tax_receipt_and_bills"] = $TaxReceiptAndBills
+            m["government_price"] = $GovernmentPrice
+            m["market_price"] = $MarketPrice
+            m["modification_date"] = $block_time
+            m["status"] = status
+            DBUpdate("land_registry", $ObjectId, m)
+        }
+
+        if $NotificId > 0 {
+            var opened int
+            opened = DBFind("@1notifications").Where({"id": $NotificId, "closed": 0, "ecosystem": $ecosystem_id}).One("id")
+            if opened {
+                @1NotificationsProcess("notific_id", $NotificId)
+                @1NotificationsClose("notific_id", $NotificId)
+            }
+        }
+    }
+}

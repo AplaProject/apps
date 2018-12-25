@@ -1,0 +1,27 @@
+contract LrPurchaseSteps {
+    data {
+        ObjectId int
+        Step int
+    }
+
+    conditions {
+        $app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Land registry"}).One("id")
+        $object = DBFind("land_registry").WhereId($ObjectId).Row()
+
+        var bank_role int
+        bank_role = Int(AppParam(Int($app_id), "lr_bank_role", $ecosystem_id))
+        $bank_id = DBFind("@1roles_participants").Where({"role->id": bank_role, "deleted": 0, "ecosystem": $ecosystem_id}).One("member->member_id")
+        if !$bank_id {
+            warning LangRes("lr_bank_account_not_found", "en")
+        }
+
+    }
+
+    action {
+        if $Step == -1 {
+            var ownership_id int
+            ownership_id = Int(DBFind("land_registry_ownership").Where({"object_id": $ObjectId}).One("id"))
+            DBUpdate("land_registry_ownership", ownership_id, {"new_owner_id": $key_id, "step": 0})
+        }
+    }
+}

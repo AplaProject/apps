@@ -1,0 +1,150 @@
+If(#object_id#>0){
+    Include(lr_check_rights)
+    DBFind("@1applications").Where({ecosystem: #ecosystem_id#, name: "Land registry"}).Columns("name,id").Vars(app)
+    SetVar(row,"row mt-sm").(col_left,"col-md-3 mt-sm text-right").(col_right,"col-md-9 text-left")
+
+    If(GetVar(edit_specifications_land_type)==""){
+        SetVar(edit_specifications_land_type,1)
+    }
+    If(GetVar(edit_specifications_land_use)==""){
+        SetVar(edit_specifications_land_use,1)
+    }
+    If(GetVar(edit_specifications_buildings_class)==""){
+        SetVar(edit_specifications_buildings_class,1)
+    }
+    If(GetVar(edit_specifications_land_authority)==""){
+        SetVar(edit_specifications_land_authority,1)
+    }
+    If(GetVar(edit_registration_date)==""){
+        SetVar(edit_registration_date,)
+    }
+    If(GetVar(edit_price)==""){
+        SetVar(edit_price,)
+    }
+
+
+    DBFind(land_registry, src).WhereId(#object_id#).Columns("id,owner_id,specifications->map_coords,specifications->address,specifications->land_type,specifications->land_use,specifications->buildings_class,specifications->land_authority,registration_date,price").Vars(edit)
+
+    Form(){
+        Div(){
+            Map(MapType: streets, Hmap: 250, Value: #edit_specifications_map_coords#)
+        }
+        Div(row mt){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_location)
+                }
+            }
+            Div(#col_right#){
+                Input(Value: #edit_specifications_address#, Disabled: true)
+            }
+        }
+        Div(#row#){
+            Div(#col_left#){
+                Label(){
+                    LangRes(@1type)
+                }
+            }
+            Div(#col_right#){
+                If(#admin#==1){
+                    AppParam(App: #app_id#, Name: lr_land_type, Source: lr_land_type)
+                    Select(Name: LandType, Source: lr_land_type, ValueColumn: id, NameColumn: name, Value: #edit_specifications_land_type#)
+                }.Else{
+                    SetVar(edit_specifications_land_type, AppParam(App: #app_id#, Name: lr_land_type, Index: #edit_specifications_land_type#))
+                    Input(Value: #edit_specifications_land_type#, Disabled: true)
+                }
+            }
+        }
+        Div(#row#){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_land_use)
+                }
+            }
+            Div(#col_right#){
+                If(#admin#==1){
+                    AppParam(App: #app_id#, Name: lr_land_use, Source: src_land_use)
+                    Select(Name: LandUse, Source: src_land_use, ValueColumn: id, NameColumn: name, Value: #edit_specifications_land_use#)
+                }.Else{
+                    SetVar(edit_specifications_land_use, AppParam(App: #app_id#, Name: lr_land_use, Index: #edit_specifications_land_use#))
+                    Input(Value: #edit_specifications_land_use#, Disabled: true)
+                }
+            }
+        }
+        Div(#row#){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_buildings_class)
+                }
+            }
+            Div(#col_right#){
+                If(#admin#==1){
+                    AppParam(App: #app_id#, Name: lr_buildings_class, Source: src_buildings_class)
+                    Select(Name: BuildingsUseClass, Source: src_buildings_class, ValueColumn: id, NameColumn: name, Value: #edit_specifications_buildings_class#)
+                }.Else{
+                    SetVar(edit_specifications_buildings_class, AppParam(App: #app_id#, Name: lr_buildings_class, Index: #edit_specifications_buildings_class#))
+                    Input(Value: #edit_specifications_buildings_class#, Disabled: true)
+                }
+            }
+        }
+        Div(#row#){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_land_authority)
+                }
+            }
+            Div(#col_right#){
+                If(#admin#==1){
+                    AppParam(App: #app_id#, Name: lr_land_authority, Source: src_land_authority)
+                    Select(Name: LandAuthority, Source: src_land_authority, ValueColumn: id, NameColumn: name, Value: #edit_specifications_land_authority#)
+                }.Else{
+                    SetVar(edit_specifications_land_authority, AppParam(App: #app_id#, Name: lr_land_authority, Index: #edit_specifications_land_authority#))
+                    Input(Value: #edit_specifications_land_authority#, Disabled: true)
+                }
+            }
+        }
+        Div(#row#){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_registration_date)
+                }
+            }
+            Div(#col_right#){
+                If(#edit_registration_date#>0){
+                    SetVar(edit_registration_date, DateTime(#edit_registration_date#, "YYYY-MM-DD"))
+                }
+                If(#admin#==1){
+                    Input(Name: RegistrationDate, Type: date, Value: #edit_registration_date#)
+                }.Else{
+                    Input(Value: #edit_registration_date#, Disabled: true)
+                }
+            }
+        }
+        Div(#row#){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_price) (APLA)
+                }
+            }
+            Div(#col_right#){
+                If(#edit_price#>0){
+                    SetVar(edit_price, Money(#edit_price#))
+                }
+                If(#edit_owner_id#==#key_id#){
+                    Input(Name: Price, Value: #edit_price#)
+                }.Else{
+                    Input(Value: #edit_price#, Disabled: true)
+                }
+            }
+        }
+        Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt, Contract: LrEdit, Params: "ObjectId=#edit_id#,RoleId=#role_id#", Page: lr_list_all)
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: lr_list_all)
+    }
+}.Else{
+    Form(){
+        Div(alert alert-danger text-center){
+            LangRes(@1attention)
+        }
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: lr_list_all)
+    }
+}
