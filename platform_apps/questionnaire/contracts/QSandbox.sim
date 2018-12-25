@@ -1,6 +1,6 @@
 contract QSandbox {
     data {
-        answer string
+        kekc string
         operation string
     }
     conditions {
@@ -8,10 +8,57 @@ contract QSandbox {
     }
     action {
         if $operation == "C" {            
-            var answer_json array
-            answer_json[0] = $answer
-            answer_json = JSONEncode(answer_json)
-            warning Sprintf("%v", answer_json)
+            var myarr array
+            myarr[0] = "This is a string"
+            myarr[1] = "This is a line"
+            var json string
+            json = JSONEncode(myarr)
+            var q map
+            q["answer"] = json
+            DBUpdate("@1questionnaire", 1, q)
+            //warning Sprintf("%v", myarr)
+        }
+        if $operation == "M" {
+            var mydata map
+            mydata["0"] = "test1"
+            mydata["1"] = "test2"
+            var json string
+            json = JSONEncode(mydata)
+            var q map
+            q["answer"] = json
+            DBUpdate("@1questionnaire", 1, q)
+            //warning Sprintf("%v", json)
+        }
+        if $operation == "A" {
+            var answer array
+            answer = DBFind("@1questionnaire").Columns("answer").Where({"id":1,ecosystem:$ecosystem_id}).One("answer")
+            answer = JSONDecode(answer)
+            answer = Append(answer, "This is a test")
+            answer = JSONEncode(answer)
+            //warning Sprintf("%s", answer)
+            var q map
+            q["answer"] = answer
+            DBUpdate("@1questionnaire", 1, q)
+            //warning Sprintf("%s", q)
+        }
+        if $operation == "S" {
+            var answer array
+            answer = DBFind("@1questionnaire").Columns("answer").Where({"id":1,ecosystem:$ecosystem_id}).One("answer")
+            answer = JSONDecode(answer)
+            var buffer string
+            buffer = Join(answer, ",")
+            if HasPrefix(buffer, Str($kekc)) {
+                buffer = Replace(buffer, Str($kekc) + `,`, ``)
+            }
+            if Contains(buffer, Str($kekc)) {
+                buffer = Replace(buffer, `,` + Str($kekc), ``)
+            }
+            answer = Split(buffer, ",")
+            answer = JSONEncode(answer)
+            var q map
+            q["answer"] = answer
+            DBUpdate("@1questionnaire", 1, q)
+            //warning Sprintf("%v", answer)
         }
     }
 }
