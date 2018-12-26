@@ -3,9 +3,12 @@ contract QOperations {
         id int "optional"
         description string
         question string
-        answer array
+        answer string
         operation string
         status int
+        notifications bool "optional"
+        hide bool "optional"
+        change bool "optional"
     }
     conditions {
         //admin only
@@ -16,30 +19,63 @@ contract QOperations {
         //aucditorium
         //notifications when start and changing status
         if $operation == "C" {
-            var q map
+            var decision array
+            decision = Split($answer, ",")
+            var q params map
+            params["notifications"] = $notifications
+            params["hide"] = $hide
+            params["change"] = $change
             q["question"] = $question
             q["description"] = $description
-            q["answer"] = JSONEncode($answer) //array with unlimited
+            q["answer"] = JSONEncode(decision)
             q["ecosystem"] = $ecosystem_id
             q["deleted"] = 0
             q["init"] = $key_id
             q["status"] = 0
+            q["created_at"] = $time
+            q["params"] = JSONEncode(params)
             q["lastmodified"] = $time
-            warning Sprintf("%v", q)
-            //DBInsert("@1questionnaire", q)
+            DBInsert("@1questionnaire", q)
         }
         if $operation == "E" {
             var q map
             q["description"] = $description
             q["question"] = $question
-            q["answer"] = $answer_json
             q["ecosystem"] = $ecosystem_id
             q["init"] = $key_id
-            //q["status"] = $status
+            //check status to edit
+            q["status"] = $status
             q["lastmodified"] = $time
             DBUpdate("@1questionnaire", $id, q)
         }
+        if $operation == "AA" {
+            var decision array
+            decision = DBFind("@1questionnaire").Columns("answer").Where({"id":$id,ecosystem:$ecosystem_id}).One("answer")
+            decision = JSONDecode(decision)
+            decision = Append(decision, Str($answer))
+            var q map
+            q["answer"] = JSONEncode(decision)
+            DBUpdate("@1questionnaire", $id, q)
+        }
+        if $operation == "AD" {
+            var decision array
+            decision = DBFind("@1questionnaire").Columns("answer").Where({"id":$id,ecosystem:$ecosystem_id}).One("answer")
+            decision = JSONDecode(decision)
+            var buffer string
+            buffer = Join(decision, ",")
+            if Contains(buffer, Str($answer)) {
+                buffer = Replace(buffer, `,` + Str($answer), ``)
+            }
+            if HasPrefix(buffer, Str($answer)) {
+                buffer = Replace(buffer, Str($answer) + `,`, ``)
+            }
+            decision = Split(buffer, ",")
+            var q map
+            q["answer"] = JSONEncode(decision)
+            DBUpdate("@1questionnaire", $id, q)
+        }
         if $operation == "T" {
+            //notification send
             var q map
             q["init"] = $key_id
             q["status"] = 1
@@ -47,8 +83,10 @@ contract QOperations {
             DBUpdate("@1questionnaire", $id, q)
         }
         if $operation == "D" {
+            //notifications close
             var q map
             q["init"] = $key_id
+            q["status"] = 3
             q["deleted"] = 1
             q["lastmodified"] = $time
             DBUpdate("@1questionnaire", $id, q)

@@ -1,5 +1,7 @@
-DBFind(@1questionnaire).Where({ecosystem:#ecosystem_id#, id:#q_id#}).Vars(question)
-
+DBFind(@1questionnaire).Where({id:#q_id#}).Columns("id,question,description,answer,ecosystem,init,lastmodified,created_at,status,params->hide,params->change").Vars(question)
+DBFind(@1q_answers).Where({question_id:#question_id#}).Count(answers)
+DBFind(@1q_answers).Where({question_id:#question_id#, member:#key_id#}).Vars(your_answer).Count(a)
+DBFind(@1members).Where({ecosystem:#question_ecosystem#}).Count(total)
 Div(content-wrapper){  
     SetTitle(#question_question#)
     Div(breadcrumb){
@@ -13,62 +15,103 @@ Div(content-wrapper){
             Form(panel panel-primary){
                 Div(list-group-item text-center){
                     P(Class: h3 text-bold m0, Body: #question_question#)
-                    If(`#question_description#`!=""){
-                    }
                 }
-                Div(list-group-item text-center t5){
-                    Div(row){
-                        Div(col-md-12 text-center){
-                            #question_description#
-                        }
-                    }
-                }
-                Div(list-group-item text-center t5){
-                    Div(row){
-                        Div(col-md-6 text-right){
-                            "Дата старта"
-                        }
-                        Div(col-md-6 text-left){
-                            "Дата старта"
-                        }
-                    }
-                    Div(row){
-                        Div(col-md-6 text-right){
-                            "Дата Конца"
-                        }
-                        Div(col-md-6 text-left){
-                            "Дата Конца"
-                        }
-                    }
-                    Div(row){
-                        Div(col-md-6 text-right){
-                            "auditoriya"
-                        }
-                        Div(col-md-6 text-left){
-                            "auditoriya"
-                        }
-                    }
-                    Div(row){
-                        Div(col-md-6 text-right){
-                           "chislo otvetov"
-                        }
-                        Div(col-md-6 text-left){
-                            "chislo otvetov"
-                        }
-                    }
-                    Div(row){
-                        Div(col-md-12 text-center){
-                            "вывести графики"
+                If(`#question_description#`!=""){
+                    Div(list-group-item text-center t5){
+                        Div(row){
+                            Div(col-md-12 text-center){
+                                #question_description#
+                            }
                         }
                     }
                 }
                 Div(list-group-item text-center t5){
                     Div(row){
-                        Div(col-md-12 text-center){
-                            ArrayToSource(src, #question_answer#)
-                            ForList(Source: src, Index:ind){
-                                Button(Body: #value#, Page: @1q_question, Class: center-block btn btn-primary, Contract: @1QAnswer, PageParams: "q_id=#question_id#", Params: "question_id=#question_id#, answer_id=#ind#, decision=#value#")
-                            }     
+                        Div(col-md-6 text-right){
+                            Span(Body: LangRes(@1q_date_start)
+                        }
+                        Div(col-md-6 text-left){
+                            DateTime(#question_created_at#,HH:MI DD.MM.YYYY)
+                        }
+                    }
+                    Div(row){
+                        Div(col-md-6 text-right){
+                            Span(Body: LangRes(@1q_lastmodified)
+                        }
+                        Div(col-md-6 text-left){
+                            DateTime(#question_lastmodified#,HH:MI DD.MM.YYYY)
+                        }
+                    }
+                    Div(row){
+                        Div(col-md-6 text-right){
+                            Span(Body: LangRes(@1q_date_expiration)
+                        }
+                        Div(col-md-6 text-left){
+                            DateTime(#question_lastmodified#,HH:MI DD.MM.YYYY)
+                        }
+                    }
+                    Div(row){
+                        Div(col-md-6 text-right){
+                           Span(Body: LangRes(@1status)
+                        }
+                        Div(col-md-6 text-left){
+                            If(#question_status#==0){
+                                Span(Class: text-success, Body: LangRes(@1q_status_created))
+                            }
+                            If(#question_status#==1){
+                                Span(Class: text-success, Body: LangRes(@1q_status_started))
+                            }
+                            If(#question_status#==2){
+                                Span(Class: text-primary, Body: LangRes(@1q_status_ended))
+                            }
+                            If(#question_status#==3){
+                                Span(Class: text-warning, Body: LangRes(@1q_status_admin))
+                            }
+                            If(#question_status#==4){
+                                Span(Class: text-danger, Body: LangRes(@1q_status_pause))
+                            }
+                        }
+                    }
+                    Div(row){
+                        Div(col-md-6 text-right){
+                           Span(Body: LangRes(@1q_answer_data)
+                        }
+                        Div(col-md-6 text-left){
+                            #answers# / #total#
+                        }
+                    }
+                    Div(row){
+                        Div(col-md-12 text-center){ 
+                            If(#question_params_hide#==false){
+                                Button(Body: LangRes(@1q_answer_graph), Page: @1q_question, Class: btn).Popup(Header: $@1q_answer_graph$ / #question_question#, Width: "50")
+                            }
+                        }
+                    }
+                }
+                If(#question_status#!=0){
+                    Div(list-group-item text-center t5){
+                        Div(row){
+                            If(#a#>0){
+                                Div(col-sm-6 text-right){
+                                    Input(Name: change, Type: checkbox, Value: true, Disabled: true)
+                                }
+                                Div(col-sm-6 text-left){
+                                    Span(Class: text-bold, Body: #your_answer_decision#)
+                                }.Style(margin-top: 10px;)
+                            }
+                            If(#question_status#==1){
+                                Div(col-md-12 text-center){
+                                    ArrayToSource(src, #question_answer#)
+                                    ForList(Source: src, Index:ind){
+                                        If(#a#==0){
+                                            Button(Body: #value#, Page: @1q_question, Class: btn btn-primary ml-sm, Contract: @1QAnswer, PageParams: "q_id=#question_id#", Params: "question_id=#question_id#, answer_id=#ind#, decision=#value#, operation=CV")
+                                        }
+                                        If(And(#question_params_change#==true,#a#>0)){
+                                            Button(Body: #value#, Page: @1q_question, Class: btn btn-primary ml-sm, Contract: @1QAnswer, PageParams: "q_id=#question_id#", Params: "id=#your_answer_id#, question_id=#question_id#, answer_id=#ind#, decision=#value#, operation=UV")
+                                        }
+                                    }     
+                                }
+                            }
                         }
                     }
                 }

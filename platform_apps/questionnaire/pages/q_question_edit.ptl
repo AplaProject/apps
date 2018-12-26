@@ -1,4 +1,14 @@
 DBFind(@1questionnaire).Where({ecosystem:#ecosystem_id#, id:#q_id#}).Vars(question)
+ArrayToSource(src, #question_answer#)
+Data(src_status,"status_id,status_name"){
+    1,$@1q_status_started$
+    3,$@1q_status_admin$
+    4,$@1q_status_pause$
+}
+If(Or(#question_status#==0, #question_status#==4)){
+    SetVar(editable,1)
+}
+SetVar(time,DateTime(#question_lastmodified#,HH:MI DD.MM.YYYY))
 
 Div(content-wrapper){
     SetTitle(#question_question#)
@@ -11,37 +21,48 @@ Div(content-wrapper){
     Form(){
         Div(form-group){
             Label($@1title$)
-            Input(Name: question, Value: #question_question#)
-            Input(Name: question, Value: #question_question#, Disabled: true)
+            If(#editable#==1){
+                Input(Name: question, Value: #question_question#)
+            }.Else{
+                Input(Name: question, Value: #question_question#, Disabled: true)
+            }
         }
         Div(form-group){
             Label($@1q_description$)
-            Input(Name: description, Value: #question_description#)
-            Input(Name: description, Value: #question_description#, Disabled: true)
+            If(#editable#==1){
+                Input(Type: textarea, Name: description, Value: #question_description#).Style(resize: vertical; min-height: 6em;)
+            }.Else{
+                Input(Type: textarea, Name: description, Value: #question_description#, Disabled: true).Style(resize: vertical; min-height: 6em;)
+            }
         }
         Div(form-group){
-            Label("answer block")
-            Div(input-group mb-sm){
-                Input(Name: test)
-                Div(input-group-btn){
-                    Button(Class: btn btn-primary fa fa-plus, Page: section_access, PageParams:"id=#section_id#", Contract: @1SectionRoles, Params:"id=#section_id#,rid=Val(access_rid),operation=add")
+            Label($@1q_answer_change$)
+            If(#editable#==1){
+                Div(input-group mb-sm){
+                    Input(Name: answer)
+                    Div(input-group-btn){
+                        Button(Class: btn btn-primary fa fa-plus, Page: @1q_question_edit, PageParams:"q_id=#question_id#", Contract: @1QOperations, Params:"id=#question_id#, operation=AA")
+                    }
                 }
             }
-            ArrayToSource(src, #question_answer#)
             ForList(Source: src, Index:ind){
-                Button(Body: #value#, Page: @1q_question, Class: center-block btn btn-primary, Contract: @1QAnswer, PageParams: "q_id=#question_id#", Params: "question_id=#question_id#, answer_id=#ind#, decision=#value#")
-            }
+                If(#editable#==1){
+                    Button(Body: Span(Class: fa fa-remove) #value#, Page: @1q_question_edit, Class: btn btn-primary ml-sm, Contract: @1QOperations, PageParams: "q_id=#question_id#", Params: "id=#question_id#, answer=#value#, operation=AD")
+                }.Else{
+                    Button(Body: #value#, Class: btn btn-primary ml-sm)
+                }
+            } 
         }
         Div(form-group){
-            Label("Status")
-            Select(Name: access_rid, Source:src_roles, NameColumn:role_name, ValueColumn: id)
+            Label($@1status$)
+            Select(Name: status, Source: src_status, NameColumn: status_name, ValueColumn: status_id)
         }
         Div(form-group){
-            Label("lastModified")
-            Input(Name: lastmodified,  Value: #question_lastmodified#, Disabled: true)
+            Label($@1q_lastmodified$)
+            Input(Name: lastmodified,  Value: #time#, Disabled: true)
         }
         Div(form-group){
-            Button(Class: btn btn-primary, Body: $@1save$, Contract: @1ExSymbol, Page: @1ex_edit, PageParams: "id=#symbol_id#", Params: "id=#symbol_id#, name=#symbol_name#, operation=E").Alert(Text: $@1ex_confirmation_kill$, ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+            Button(Class: btn btn-primary, Body: $@1save$, Contract: @1QOperations, Page: @1q_listing, PageParams: "q_id=#question_id#", Params: "id=#question_id#,operation=E")
         }
     }
 }
