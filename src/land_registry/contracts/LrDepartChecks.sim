@@ -25,15 +25,15 @@ contract LrDepartChecks {
     }
     
     action {
+        var object status m map
+
         if $RoleId == $depart2_role {
-            var object status m map
             object = DBFind("land_registry").WhereId($ObjectId).Row()
             if object["status"] {
                 var depart3_status map
                 depart3_status = JSONDecode(object["status"])
                 status["tax_receipt_and_bills"] = depart3_status["tax_receipt_and_bills"]
             }
-
             status["legal_status"] = $LegalStatus
             status["encumbrance_certificate"] = $EncumbranceCertificate
             m["modification_date"] = $block_time
@@ -41,7 +41,6 @@ contract LrDepartChecks {
             DBUpdate("land_registry", $ObjectId, m)
         }
         if $RoleId == $depart3_role {
-            var object status m map
             object = DBFind("land_registry").WhereId($ObjectId).Row()
             if object["status"] {
                 var depart2_status map
@@ -56,6 +55,29 @@ contract LrDepartChecks {
             m["modification_date"] = $block_time
             m["status"] = status
             DBUpdate("land_registry", $ObjectId, m)
+        }
+
+        // checking if the object is ready for sale
+        object = DBFind("land_registry").WhereId($ObjectId).Row()
+        if Money(object["price"]) > 0 && Money(object["market_price"]) > 0 && Money(object["government_price"]) > 0  {
+            var status_map map
+            status_map = JSONDecode(object["status"])
+            if status_map["legal_status"] == 1 && status_map["encumbrance_certificate"] == 1 && status_map["tax_receipt_and_bills"] == 1 {
+                
+                // notification to the object owner
+                var n params map
+                n["sender"] = 1
+                n["page_name"] = "lr_view"
+                n["icon_name"] = "fa fa-bell-o"
+                n["popup"] = "true"
+                n["member_id"] = object["owner_id"]
+                n["text_header"] = LangRes("lr_object_status", "en")
+                n["text_body"] = LangRes("lr_checks_successfull", "en")
+                params["object_id"] = $ObjectId
+                params["info_message"] = 1
+                n["params_map"] = params
+                CallContract("@1NotificationsSend", n)
+            }
         }
 
         if $NotificId > 0 {
