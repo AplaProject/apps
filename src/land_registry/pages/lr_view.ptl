@@ -1,6 +1,7 @@
 If(#notific_id#>0){
-    DBFind("@1notifications").Where({"id": #notific_id#, "ecosystem": #ecosystem_id#}).Columns("page_params->object_id").Vars(notific)
+    DBFind("@1notifications").Where({"id": #notific_id#, "ecosystem": #ecosystem_id#}).Columns("notification->body,page_params->object_id,page_params->deal_status,closed").Vars(notific)
     SetVar(object_id, #notific_page_params_object_id#)
+    SetVar(back_page,@1notifications_list)
 }
 
 If(#object_id#>0){
@@ -28,8 +29,7 @@ If(#object_id#>0){
         SetVar(view_price,)
     }
 
-    DBFind("land_registry", src).WhereId(#object_id#).Columns("id,owner_id,specifications->map_coords,specifications->address,specifications->area,specifications->land_type,specifications->land_use,specifications->buildings_class,specifications->land_authority,registration_date,date_created,modification_date,status->legal_status,status->encumbrance_certificate,status->tax_receipt_and_bills,price,market_price,government_price").Vars(view)
-    DBFind("land_registry_ownership").WhereId(#object_id#).Vars(ownership)
+    DBFind("land_registry", src).WhereId(#object_id#).Columns("id,owner_id,buyer_id,step,specifications->map_coords,specifications->address,specifications->area,specifications->land_type,specifications->land_use,specifications->buildings_class,specifications->land_authority,registration_date,date_created,modification_date,status->legal_status,status->encumbrance_certificate,status->tax_receipt_and_bills,price,market_price,government_price").Vars(view)
     
     If(#view_owner_id#==#key_id#){
         SetVar(owner,1)
@@ -45,6 +45,9 @@ If(#object_id#>0){
         }.Else{
             SetVar(depart3_requests,1)
         }
+    }
+    If(#view_buyer_id#==#key_id#){
+        SetVar(buyer,1)
     }
 
     Form(){
@@ -175,7 +178,7 @@ If(#object_id#>0){
                 Span(#view_specifications_land_authority#)
             }
         }
-        If(And(#depart2#==1,#ownership_step#==-1)){
+        If(And(#depart2#==1,#view_step#==-1)){
             Div(list-group-item){
                 Div(#row#){
                     Div(#col_left#){
@@ -250,7 +253,7 @@ If(#object_id#>0){
                 }
             }
         }
-        If(And(#depart3#==1,#ownership_step#==-1)){
+        If(And(#depart3#==1,#view_step#==-1)){
             Div(list-group-item){
                 Div(#row#){
                     Div(#col_left#){
@@ -371,24 +374,82 @@ If(#object_id#>0){
                 }
             }
         }
-        If(And(#view_status_legal_status#==1,#view_status_encumbrance_certificate#==1,#view_status_tax_receipt_and_bills#==1,#view_government_price#>0,#view_market_price#>0,#view_price#>0,#owner#!=1,#ownership_step#==-1)){
-            SetVar(bank_role_id, AppParam(App: #app_id#, Name: lr_bank_role))
-            DBFind("@1roles_participants",src_b).Where({"role->id": 1, "deleted": 0, "ecosystem": #ecosystem_id#}).Columns("id,member->member_id").Vars(bank)
-            SetVar(bank_account,Address(#bank_member_member_id#))
-            If(#bank_id#>0){
-                SetVar(price_money,Calculate(Exp: #view_price#*1000000000000000000, Type: money))
-                DBFind(@1history).Where({"sender_id": #key_id#, "recipient_id": #bank_member_member_id#, "amount": #price_money#}).Vars(deposit)
-                If(#deposit_id#>0){
-                    Button(Body: LangRes(lr_purchase), Class: btn btn-success pull-right mt, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,Step=#ownership_step#", Page: lr_list_all).Alert($lr_want_initiate_purchase$, $@1confirm_button$, $@1cancel$)
-                }.Else{
-                    Button(Body: LangRes(lr_deposit_money), Class: btn btn-success pull-right mt, Contract: @1TokensSend, Params: "Amount=#view_price#,Recipient=#bank_account#", Page: lr_view, PageParams: "object_id=#view_id#").Popup(50, $lr_object_view$)
+        If(Or(#view_step#>=0,#notific_page_params_deal_status#!="")){
+            Div(list-group-item){
+                Div(#row#){
+                    Div(col-md-2 text-center){
+                        DBFind("@1members").Where({"id": #view_owner_id#, "ecosystem": #ecosystem_id#}).Vars(deal_owner)
+                        LinkPage(Page: profile_view, PageParams: "v_member_id=#deal_owner_id#"){
+                            If(#deal_owner_image_id#>0){
+                                Image(Src: Binary().ById(#deal_owner_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)
+                            }.Else{
+                                Span(Em(Class: fa icon-user fa-2x))
+                            }
+                            Div(Class: text-bold, Body: #deal_owner_member_name#)
+                            Div(Class: text-muted m0, Body: ($lr_owner$))
+                        }
+                    }
+                    Div(col-md-8 text-center){
+                        Div(Class: h4){
+                            If(#notific_page_params_deal_status#!=""){
+                                #notific_notification_body#
+                            }.ElseIf(#view_step#==0){
+                                $lr_awaiting_owner_accept$
+                            }.ElseIf(#view_step#==1){
+                                $lr_awaiting_buyer_deposit$
+                            }.ElseIf(#view_step#==2){
+                                $lr_awaiting_bank_transfer$
+                            }
+                        }.Style(line-height: 60px;)
+                    }
+                    Div(col-md-2 text-center){
+                        DBFind("@1members").Where({"id": #view_buyer_id#, "ecosystem": #ecosystem_id#}).Vars(deal_buyer)
+                        LinkPage(Page: profile_view, PageParams: "v_member_id=#deal_buyer_id#"){
+                            If(#deal_buyer_image_id#>0){
+                                Image(Src: Binary().ById(#deal_buyer_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)
+                            }.Else{
+                                Span(Em(Class: fa icon-user fa-2x))
+                            }
+                            Div(Class: text-bold, Body: #deal_buyer_member_name#)
+                            Div(Class: text-muted m0, Body: ($lr_buyer$))
+                        }
+                    }
                 }
             }
         }
-        If(And(Or(#depart2#==1,#depart3#==1),#ownership_step#==-1)){
-            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt, Contract: LrDepartChecks, Params: "ObjectId=#view_id#,RoleId=#role_id#,NotificId=#notific_id#", Page: lr_list_all)
+        If(And(#view_step#==-1,#owner#!=1,#view_status_legal_status#==1,#view_status_encumbrance_certificate#==1,#view_status_tax_receipt_and_bills#==1,#view_government_price#>0,#view_market_price#>0,#view_price#>0)){
+            Button(Body: LangRes(lr_purchase), Class: btn btn-success pull-right mt, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,Step=#view_step#", Page: #back_page#).Alert($lr_want_initiate_purchase$, $@1confirm_button$, $@1cancel$)
         }
-        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: lr_list_all)
+        If(And(#view_step#==-1,#notific_closed#==0)){
+            If(#notific_page_params_deal_status#!=""){
+                Button(Body: LangRes(@1understood), Class: btn btn-primary pull-right mt, Contract: @1NotificationsClose, Params: "notific_id=#notific_id#", Page: #back_page#)
+            }.Else{
+                Button(Body: LangRes(@1close), Class: btn btn-primary pull-right mt, Contract: @1NotificationsClose, Params: "notific_id=#notific_id#", Page: #back_page#)
+            }
+        }
+        If(And(#view_step#==-1,Or(#depart2#==1,#depart3#==1))){
+            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right mt, Contract: LrDepartChecks, Params: "ObjectId=#view_id#,RoleId=#role_id#,NotificId=#notific_id#", Page: #back_page#)
+        }
+        If(And(#view_step#==0,#owner#==1)){
+            Button(Body: LangRes(@1accept), Class: btn btn-success pull-right mt, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,NotificId=#notific_id#,Step=#view_step#,Decision=accept", Page: #back_page#).Alert($lr_want_accept_purchase$, $@1confirm_button$, $@1cancel$)
+            Button(Body: LangRes(@1reject), Class: btn btn-danger pull-right mt, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,NotificId=#notific_id#,Step=#view_step#,Decision=reject", Page: #back_page#).Alert($lr_want_reject_purchase$, $@1confirm_button$, $@1cancel$)
+        }
+        If(And(#view_step#==1,Or(#owner#==1,#buyer#==1))){
+            If(#buyer#==1){
+                SetVar(bank_role_id, AppParam(App: #app_id#, Name: lr_bank_role))
+                DBFind("@1roles_participants").Where({"role->id": #bank_role_id#, "deleted": 0, "ecosystem": #ecosystem_id#}).Columns("id,member->member_id").Vars(bank)
+                SetVar(bank_account,Address(#bank_member_member_id#))
+                If(#bank_id#>0){
+                    Button(Body: LangRes(lr_deposit_money), Class: btn btn-success pull-right mt, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,NotificId=#notific_id#,Step=#view_step#,Decision=deposit", Page: #back_page#).CompositeContract(@1TokensSend, [{"Amount": #view_price#, "Recipient": "#bank_account#"}])
+                }
+            }
+            Button(Body: LangRes(@1cancel), Class: btn btn-danger pull-right mt, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,NotificId=#notific_id#,Step=#view_step#,Decision=cancel", Page: #back_page#).Alert($lr_want_cancel_deal$, $@1confirm_button$, $@1cancel$)
+        }
+        If(And(#view_step#==2,#bank#==1)){
+            Button(Body: LangRes(lr_finalize_deal), Class: btn btn-success pull-right mt, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,NotificId=#notific_id#,Step=#view_step#,Decision=finalize", Page: #back_page#).CompositeContract(@1TokensSend, [{"Amount": #view_price#, "Recipient": "#view_owner_id#"}])
+            Button(Body: LangRes(@1cancel), Class: btn btn-danger pull-right mt, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,NotificId=#notific_id#,Step=#view_step#,Decision=cancel", Page: #back_page#).Alert($lr_want_cancel_deal$, $@1confirm_button$, $@1cancel$)
+        }
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: #back_page#)
     }
 }.Else{
     Form(){

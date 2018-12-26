@@ -1,7 +1,9 @@
 contract LrPurchaseSteps {
     data {
         ObjectId int
+        NotificId int "optional"
         Step int
+        Decision string "optional"
     }
 
     conditions {
@@ -14,14 +16,119 @@ contract LrPurchaseSteps {
         if !$bank_id {
             warning LangRes("lr_bank_account_not_found", "en")
         }
-
     }
 
     action {
+        var owner buyer int
+        owner = $object["owner_id"]
+        buyer = $object["buyer_id"]
+
+        var m params map
+        m["sender"] = 1
+        m["text_header"] = LangRes("lr_deal_status", "en")
+        m["text_body"] = LangRes("lr_need_processing", "en")
+        m["page_name"] = "lr_view"
+        m["icon_name"] = "fa fa-bell-o"
+        m["popup"] = "true"
+        params["object_id"] = $ObjectId
+
         if $Step == -1 {
-            var ownership_id int
-            ownership_id = Int(DBFind("land_registry_ownership").Where({"object_id": $ObjectId}).One("id"))
-            DBUpdate("land_registry_ownership", ownership_id, {"new_owner_id": $key_id, "step": 0})
+            DBUpdate("land_registry", $ObjectId, {"buyer_id": $key_id, "step": 0})
+            
+            // notification to the object owner
+            m["member_id"] = owner
+            m["text_header"] = LangRes("lr_new_offer", "en")
+            m["params_map"] = params
+            CallContract("@1NotificationsSend", m)
+
+        } elif $Step == 0 {
+            if $Decision == "accept" {
+                DBUpdate("land_registry", $ObjectId, {"step": 1})
+                m["text_body"] = LangRes("lr_purchase_accepted", "en")
+            } elif $Decision == "reject" {
+                DBUpdate("land_registry", $ObjectId, {"buyer_id": owner, "step": "-1"})
+                m["text_body"] = LangRes("lr_purchase_rejected", "en")
+                params["deal_status"] = "cancelled"
+            }
+            
+            // notification to the object buyer
+            m["member_id"] = buyer
+            m["params_map"] = params
+            CallContract("@1NotificationsSend", m)
+
+        } elif $Step == 1 {
+            if $Decision == "deposit" {
+                DBUpdate("land_registry", $ObjectId, {"step": 2})
+
+                // notification to the land bank
+                m["rid"] = Int(AppParam(Int($app_id), "lr_bank_role", $ecosystem_id))
+                m["text_header"] = LangRes("lr_new_object", "en")
+                m["closure_type"] = 1
+                m["params_map"] = params
+                CallContract("@1NotificationsSend", m)
+
+                // notification to the object owner
+                var n map
+                n["sender"] = 1
+                n["page_name"] = "lr_view"
+                n["icon_name"] = "fa fa-bell-o"
+                n["popup"] = "true"
+                n["member_id"] = owner
+                n["text_header"] = LangRes("lr_deal_status", "en")
+                n["text_body"] = LangRes("lr_buyer_made_deposit", "en")
+                n["params_map"] = params
+                CallContract("@1NotificationsSend", n)
+
+            } elif $Decision == "cancel" {
+                DBUpdate("land_registry", $ObjectId, {"buyer_id": owner, "step": "-1"})
+
+                if $key_id == owner {
+                    // notification to the object buyer
+                    m["member_id"] = buyer
+                    m["text_body"] = LangRes("lr_owner_cancelled_purchase", "en")
+                } else {
+                    // notification to the object owner
+                    m["member_id"] = owner
+                    m["text_body"] = LangRes("lr_buyer_cancelled_purchase", "en")
+                }
+                
+                params["deal_status"] = "cancelled"
+                m["params_map"] = params
+                CallContract("@1NotificationsSend", m)
+            }
+
+        } elif $Step == 2 {
+            DBUpdate("land_registry", $ObjectId, {"owner_id": buyer, "buyer_id": buyer, "step": "-1"})
+
+            // notification to the old object owner
+            params["deal_status"] = "successful"
+            m["member_id"] = owner
+            m["text_body"] = LangRes("lr_deal_successful", "en")
+            m["params_map"] = params
+            CallContract("@1NotificationsSend", m)
+
+            // notification to the new object owner
+            var n map
+            n["sender"] = 1
+            n["page_name"] = "lr_view"
+            n["icon_name"] = "fa fa-bell-o"
+            n["popup"] = "true"
+            n["member_id"] = buyer
+            n["text_header"] = LangRes("lr_deal_status", "en")
+            n["text_body"] = LangRes("lr_deal_successful", "en")
+            n["params_map"] = params
+            CallContract("@1NotificationsSend", n)
+        }
+
+        if $NotificId > 0 {
+            var opened int
+            opened = DBFind("@1notifications").Where({"id": $NotificId, "closed": 0, "ecosystem": $ecosystem_id}).One("id")
+            if $Step == 2 {
+                @1NotificationsProcess("notific_id", $NotificId)
+            }
+            if opened {
+                @1NotificationsClose("notific_id", $NotificId)
+            }
         }
     }
 }
