@@ -1,26 +1,21 @@
 SetVar(this_page, @1cf_investments).(this_table, @1cf_investments)
 Include(@1pager_header)
 
-If(GetVar(search)!=""){
-    SetVar(where, {investment_wallet:{$like:#search#}})
+If(Id!=""){
+    SetVar(where, {startup_id:#Id#})
 }.Else{
     SetVar(where,)
-
+}
+SetVar(isAdmin,0)
+SetVar(catalogAdmin, AppParam(App:#application_id#, Name:cf_catalog_admin, Ecosystem:1))
+If(#role_id#>0){
+    If(#catalogAdmin#==#role_id#){
+        SetVar(isAdmin,1)
+    }
 }
 
 SetTitle($@1cf_investments$)
 
-Span(Class: h5 m0 mb ml-lg){
-    LinkPage(Class: ml-sm, Body: $@1r_rating$, Page: @1r_ratings)
-    Span(/,text-muted mh)
-    Span($@1r_accruals$, text-muted)
-}.Style(
-    display: inline-block;
-)
-Div(list-group-item ml-lg mr-lg pt-lg){
-    SetVar(search_name, $@1wallet$)
-    Include(@1search)
-}
 
 DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Count(count).Custom(_created){
     DateTime(#created_at#, Format: YYYY-MM-DD HH:MI:SS)
@@ -39,7 +34,7 @@ Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){
-                Table(src, "$@1wallet$=_wallet,$@1amount$=_amount,$@1date_created$=_created")
+                Table(src, "$@1cf_startup$=startup_id,$@1wallet$=_wallet,$@1amount$=_amount,$@1date_created$=_created")
             }.Else{
                 Div(text-center h4 text-muted){
                     $@1cf_investments$ $@1not_founded$

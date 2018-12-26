@@ -1,5 +1,5 @@
 DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Crowdfunding"}).Vars(application)
-SetVar(this_page, @1cf_startups).(this_table, @1cf_startups)
+SetVar(this_page, @1cf_startups).(this_table, @1cf_startups).(pager_limit,10)
 Include(@1pager_header)
 
 If(GetVar(StartDate)!=""){
@@ -13,12 +13,12 @@ If(GetVar(EndDate)!=""){
     SetVar(where_finished,).(EndDate,)
 }
 If(GetVar(Minimal)!=""){
-    SetVar(where_min, "{minimal_investment:{$lte:#Minimal#}}")
+    SetVar(where_min, "{minimal_investment:{$lte:#Minimal#}},")
 }.Else{
     SetVar(where_min,).(Minimal,)
 }
 If(GetVar(Estimated)!=""){
-    SetVar(where_est, "{estimated_amount:{$lte:#Estimated#}}")
+    SetVar(where_est, "{estimated_amount:{$lte:#Estimated#}},")
 }.Else{
     SetVar(where_est,).(Estimated,)
 }
@@ -31,9 +31,9 @@ If(#role_id#>0){
     }
 }
 If(#isAdmin#==1){
-    SetVar(where, {published_at:{$gte:0}, $or:[#where_started# #where_finished# #where_min# #where_est#]}).(order,{published_at: 1})
+    SetVar(where, {published_at:{$gte:0}, #where_started# #where_finished# #where_min# #where_est#}).(order,{published_at: 1})
 }.Else{
-    SetVar(where, {published_at:{$gt:0}, $or:[#where_started# #where_finished# #where_min# #where_est#]}).(order,{id: -1})
+    SetVar(where, {published_at:{$gt:0}, #where_started# #where_finished# #where_min# #where_est#}).(order,{id: -1})
 }
 SetTitle($@1cf_startups$)
 Div(mr-lg text-right){
@@ -54,10 +54,10 @@ DBFind(#this_table#, src).Where(#where#).Order(#order#).Limit(#pager_limit#).Off
 }.Custom(_current){
     Money(#current_investment#)
 }.Custom(_actions){
-    SetVar(isOwner,0).(ecoAdminRole_id,0).(ecoAdmin_id,0)
+    SetVar(isOwner,0).(startupAdminRole_id,0).(startupAdmin_id,0)
     DBFind(@1parameters).Where({name:"role_admin", ecosystem:#ecosystem#}).Columns("id,value").Vars(ecoAdminRole)
-    If(#ecoAdminRole_id#>0){
-        DBFind(@1roles_particiants).Where({"role->id":#ecoAdminRole_value#, "member->member_id": #key_id#, ecosystem:#ecosystem#}).Vars(ecoAdmin)
+    If(#startupAdminRole_id#>0){
+        DBFind(@1roles_participants).Where({"role->id":#startupAdminRole_value#, "member->member_id": #key_id#, ecosystem:#ecosystem#}).Vars(startupAdmin)
     }
     If(#isAdmin#==1){
         If(#published_at#==0){
@@ -69,7 +69,7 @@ DBFind(#this_table#, src).Where(#where#).Order(#order#).Limit(#pager_limit#).Off
         }
         TODO:удаление кампании возможно админом площадки до начала кампании
     }.Else{
-        If(#ecoAdmin_id#>0){
+        If(#startupAdmin_id#>0){
             TODO:удаление кампании возможно админом э/с до начала кампании
         }.Else{
             Button(Body:$@1cf_invest$, Page:@1cf_investment_form, PageParams: "Id=#id#", Class:btn btn-default).Popup(50, $@1cf_invest$)
@@ -78,7 +78,7 @@ DBFind(#this_table#, src).Where(#where#).Order(#order#).Limit(#pager_limit#).Off
 
 }
 Div(fullscreen){
-    AddToolButton(Title:$@1cf_add_company$, Page: @1cf_startup_form, Icon: icon-plus).Popup(Header: $@1cf_startup_form$, Width: "50")
+    AddToolButton(Title:$@1cf_add_company$, Page: @1cf_startup_form, Icon: icon-plus)
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){

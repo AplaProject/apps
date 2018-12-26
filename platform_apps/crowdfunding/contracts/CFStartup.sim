@@ -34,7 +34,7 @@ contract CFStartup {
         $REJECTED = 7
 
         if $Id > 0 {
-            $startup = DBFind("@1startups").WhereId($Id).Row()
+            $startup = DBFind("@1cf_startups").WhereId($Id).Row()
             if !$startup{
                 warning "Startup not found"
             }
@@ -49,18 +49,21 @@ contract CFStartup {
         if adminRoleId == 0{
             warning "Admin role not defined in target ecosystem"
         }
-        admin = DBFind("@1roles_particiants").Where({"role->id":adminRoleId, "member->member_id": $key_id, ecosystem:$Ecosystem}).Row()
+        admin = DBFind("@1roles_participants").Where({"role->id":adminRoleId, "member->member_id": $key_id, ecosystem:$Ecosystem}).Row()
         if !admin{
             warning "You must be Admin in target ecosystem"
         }
-
+        
+        $Wallet = AddressToId($Wallet)
         if DBFind("@1keys").Where({ecosystem:$Ecosystem, id:$Wallet, multi:0}).Row(){
             // $Wallet - кошелек с мультиподписями
-            warning "Wallet must be multisigned"
+            warning "Wallet for investment in target ecosystem  must be multisigned"
         }
+        $Wallet = IdToAddress($Wallet)
+        $WalletEscrow = IdToAddress(AddressToId($WalletEscrow))
 
         var eco token map
-        eco = DBFind("@1ecosystem").WhereId($Ecosystem).Row()
+        eco = DBFind("@1ecosystems").WhereId($Ecosystem).Row()
         // токен $Ecosystem - без дополнительной эмиссии и без сжигания
         if eco["type_withdraw"] != 1 {
             warning "Ecosystem token must be with out withdraw"
@@ -84,8 +87,6 @@ contract CFStartup {
         if $dateEnd == 0 {
             warning "Invalid ending date"
         }
-        $Wallet = IdToAddress(AddressToId($Wallet))
-        $WalletEscrow = IdToAddress(AddressToId($WalletEscrow))
     }
 
     action {
@@ -112,10 +113,10 @@ contract CFStartup {
         m["date_finished"] = $dateEndString
 
         if $Id > 0{
-            DBUpdate("@1startups", $Id, m)
+            DBUpdate("@1cf_startups", $Id, m)
         }else{
             m["status"] = $CREATED
-            DBInsert("@1startups", m)
+            DBInsert("@1cf_startups", m)
         }
     }
 }

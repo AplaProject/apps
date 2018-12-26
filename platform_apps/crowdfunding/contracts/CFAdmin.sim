@@ -8,7 +8,32 @@ contract CFAdmin {
         if !$startup{
             warning "Startup not found"
         }
-        // TODO: проверка прав на администрирование (role_id == cf_catalog_admin)
+
+        // проверка прав на администрирование (role_id == cf_catalog_admin) или
+        // если Action==finish проверить что я админ стартапа или владелец кошелька для инвестиций
+        var appId int
+        appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Crowdfunding"}).One("id"))
+        if $Action == "finish"{
+            var adminRoleId int admin map
+            adminRoleId = Int(DBFind("@1parameters").Where({name:"role_admin", ecosystem:$Ecosystem}).One("value"))
+            if adminRoleId == 0{
+                warning "Admin role not defined in target ecosystem"
+            }
+            admin = DBFind("@1roles_participants").Where({"role->id":adminRoleId, "member->member_id": $key_id, ecosystem:$Ecosystem}).Row()
+            if !admin{
+                if $startup["wallet"] != IdToAddress($key_id){
+                    warning "You must be Admin in target ecosystem or owner of wallet investments"
+                }
+            }
+        }else{
+            var adminRoleId int
+            adminRoleId = AppParam(appId, "cf_catalog_admin", 1)
+            if !RoleAccess(adminRoleId){
+                warning "This action allowed only for startup catalog admin role"
+            }
+        }
+
+
         $CREATED = 1
         $PUBLISHED = 2
         $STARTED = 3
@@ -22,15 +47,25 @@ contract CFAdmin {
         if $Action == "stop"{
             $startup["stopped_at"] = $block_time
             $startup["status"] = $STOPPED
+
         }elif $Action == "accept"{
             $startup["published_at"] = $block_time
             $startup["status"] = $PUBLISHED
+
         }elif $Action == "reject"{
             $startup["published_at"] = -1
             $startup["status"] = $REJECTED
+
         }elif $Action == "delete"{
             $startup["deleted_at"] = $block_time
             $startup["status"] = $STOPPED
+
+        }elif $Action == "finish"{
+            // TODO:
+            // если не набрана сумма - возврат токинов (алгоритм надо будет уточнить)
+            // если набрана - переводится комиссия площадки
+            $startup["finished_at"] = $block_time
+            $startup["status"] = $FINISHED
         }
         DBUpdate("@1startups", $Id, $startup)
     }

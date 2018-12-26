@@ -1,1 +1,155 @@
-TODO: this
+SetVar(this_page, @1cf_company).(back_page,@1cf_startups)
+SetVar(startup_id,0)
+
+SetTitle($@1cf_company$)
+SetVar(isAdmin,0).(isWalletOwner,0).(isStartupAdmin,0)
+SetVar(catalogAdmin, AppParam(App:#application_id#, Name:cf_catalog_admin, Ecosystem:1))
+If(#role_id#>0){
+    If(#catalogAdmin#==#role_id#){
+        SetVar(isAdmin,1)
+    }
+}
+If(#Id#!=""){
+    DBFind(@1cf_startups).WhereId(#Id#).Vars(startup)
+    If(#startup_wallet#==Address(#key_id#)){
+        SetVar(isWalletOwner,1)
+    }
+    SetVar(startupAdminRole_id,0)
+    DBFind(@1parameters).Where({name:"role_admin", ecosystem:#startup_ecosystem#}).Columns("id,value").Vars(startupAdminRole)
+    If(#startupAdminRole_id#>0){
+        DBFind(@1roles_participants).Where({"role->id":#startupAdminRole_value#, "member->member_id": #key_id#, ecosystem:#ecosystem#}).Vars(startupAdmin)
+        If(#startupAdmin_id#>0){
+            SetVar(isStartupAdmin,1)
+        }
+    }
+}
+Div(breadcrumb-sm){
+    LinkPage(Body: $@1cf_startups$, Page: @1cf_startups)
+    Span(/, mh)
+    Span($@1cf_company$, text-muted)
+}
+Div(row){
+    Div(col-sm-12 col-lg-6 col-lg-offset-3){
+        Form(panel panel-default){
+            If(#startup_id#>0){
+                Div(panel-body){
+                    Div(row mb-sm){
+                        Div(col-sm-6 text-right){
+                            Label(For: Ecosystem){
+                                $@1ecosystem$
+                            }
+                        }
+                        Div(col-sm-6){
+                            #startup_ecosystem#
+                        }
+                    }
+
+                    Div(row mb-sm){
+                        Div(col-sm-6 text-right){
+                            Label(For: Description){
+                                $@1description$
+                            }
+                        }
+                        Div(col-sm-6){
+                            #startup_description#
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-6 text-right){
+                            Label(For: Wallet){
+                                $@1cf_company_wallet$
+                            }
+                        }
+                        Div(col-sm-6){
+                            #startup_wallet#
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-6 text-right){
+                            Label(For: WalletEscrow){
+                                $@1cf_escrow_wallet$
+                            }
+                        }
+                        Div(col-sm-6){
+                            #startup_escrow_wallet#
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-6 text-right){
+                            Label(For: WebAddress){
+                                $@1web_address$
+                            }
+                        }
+                        Div(col-sm-6){
+                            #startup_web_address#
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-6 text-right){
+                            Label(For: StartDate){
+                                $@1date_start$
+                            }
+                        }
+                        Div(col-sm-6){
+                            DateTime(#startup_started_at#, Format: YYYY-MM-DD)
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-6 text-right){
+                            Label(For: EndDate){
+                                $@1date_end$
+                            }
+                        }
+                        Div(col-sm-6){
+                            DateTime(#startup_finished_at#, Format: YYYY-MM-DD)
+                        }
+                    }
+
+                    Div(row mb-sm){
+                        Div(col-sm-6 text-right){
+                            Label(For: Estimated){
+                                $@1cf_estimated_amount$
+                            }
+                        }
+                        Div(col-sm-6){
+                            Money(#startup_estimated_amount#)
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-6 text-right){
+                            Label(For: Minimal){
+                                $@1cf_minimal_investment$
+                            }
+                        }
+                        Div(col-sm-6){
+                            Money(#startup_minimal_investment#)
+                        }
+                    }
+                    Div(){
+                        LinkPage(Body: $@1cf_investments$, Page: @1cf_investments, PageParams: "Id=#Id#")
+                    }
+                }
+            }
+
+            Div(panel-footer text-right){
+                Button(Body: $@1back$, Class: btn btn-default, Page: #back_page#)
+                If(#startup_id#>0){
+                    If(#isAdmin#==1){
+
+                    }.Else{
+                        If(Or(#isWalletOwner#==1,#isStartupAdmin#==1)){
+                            Button(Body: $@1cf_finish_company$, Class: btn btn-primary, Page: #back_page#, Contract:@1CFAdmin, Params: "Id=#Id#,Action=finish")
+                        }.Else{
+                            TODO:"Инвестировать" - кнопка если нет кошелька в э/с стартапа; поле для суммы, если есть кошелек.
+                        }
+                    }
+                }
+            }
+        }
+    }
+}.Style(
+    .buttons {
+        border: 1px solid #dde6e9;
+        padding: 6px 16px;
+    }
+)
