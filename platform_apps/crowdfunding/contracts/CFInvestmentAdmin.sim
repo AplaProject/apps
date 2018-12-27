@@ -5,8 +5,19 @@ contract CFInvestmentAdmin {
     }
 
     conditions{
-        // TODO: получить стартап из оповещения
-        $startup = DBFind("@1cf_startups").WhereId($Id).Row()
+        var appId int
+        appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Crowdfunding"}).One("id"))
+        if appId == 0{
+            warning "Application not found"
+        }
+        // получить стартап из оповещения
+        var startupId int
+        $note = DBFind("@1notifications").Where({ecosystem:#ecosystem_id#, id:#NotificId#}).Columns("id,page_params->startup_id,page_params->investor,page_params->amount").Row()
+        if !$note{
+            warning "Notification not found"
+        }
+        startupId = Int(note["page_params.startup_id"])
+        $startup = DBFind("@1cf_startups").WhereId(startupId).Row()
         if !$startup{
             warning "Startup not found"
         }
@@ -14,17 +25,43 @@ contract CFInvestmentAdmin {
         if $recipient == 0{
             warning "Startup wallet not found"
         }
-        // TODO: проверить права доступа - админ каталога стартапов
+        // проверить права доступа - админ экосистемы стартапа
+        var ecoAdmin eco int
+        eco = Int($startup["ecosystem"])
+        ecoAdmin = Int(EcosysParam("role_admin"))
+        if !RoleAccess(ecoAdmin){
+            warning "This action allowed only for ecosystem admin role"
+        }
+
     }
 
     action {
-        // TODO: создание кошелька инвенстора в стартап экосистеме и отправка оповещения инвестору для перевода токенов
+        @1NotificationsClose("notific_id", $NotificId)
+
+        var params m map
+        params["startup_id"] = $startup["id"]
+        params["investor"] = $note["page_params.investor"]
+        m["params_map"] = JSONEncode(params)
+        m["member_id"] = Int($note["page_params.investor"])
+        m["closure_type"] = 1
+        m["sender"] = 1
+        m["eco_id"] = 1
+        m["popup"] = "true"
+
         if $Action == "accept"{
             // TODO: создать кошелек в целевой экосистиеме (если нет)
-            // TODO: отправить оповещение с возможностью перевода токенов
+            
+            // оповещение с возможностью перевода токенов
+            m["page_name"] = "@1cf_invest_notification"
+            m["text_header"] = "Accept investment offer"
+            m["text_body"] = Sprintf("Startup #%v, amount: %v", $startup["id"], $startup["amount"])
+
         }elif $Action == "reject"{
-            // TODO: закрыть оповещение
-            // TODO: отправить оповещение об отказе
+            // оповещение об отказе
+            m["page_name"] = "@1notifications_show"
+            m["text_header"] = "Reject investment offer"
+            m["text_body"] = Sprintf("Startup #%v, amount: %v", $startup["id"], $startup["amount"])
         }
+        CallContract("@1NotificationsSend", m)
     }
 }
