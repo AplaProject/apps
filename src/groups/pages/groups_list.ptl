@@ -1,0 +1,149 @@
+SetVar(this_page, @1groups_list).(this_table, @1groups)
+Include(@1pager_header)
+
+SetTitle("Groups")
+Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "This page is used to manage groups"))
+AddToolButton(Page: @1groups_create, Icon: icon-plus, Title: $@1create$).Popup(50, "New group")
+
+If(GetVar(search)){
+    SetVar(where, "{group_name:{$like:#search#}, ecosystem:#ecosystem_id#}")
+}.Else{
+    SetVar(where, "{id:{$neq:0}, ecosystem:#ecosystem_id#}").(search,)
+}
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, LangRes("Groups"))
+    Include(@1search)
+}
+DBFind(@1applications).Columns("id,name").Where({ecosystem:1, "name": "Groups"}).Vars(application)
+
+DBFind(#this_table#, src_groups).Where(#where#).Order({deleted:"1", id:"1"}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,group_name,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,group_access,group_info,group_type").Custom(_id){
+    If(#deleted# == 0){
+        SetVar(style_text,).(style_link,"text-primary")
+    }.Else{
+        SetVar(style_text,"text-muted").(style_link,"text-muted")
+    }
+    Span(Class: #style_text#, Body: #id#)
+}.Custom(_creator){
+    If(And(#creator.member_name#!=NULL,#creator.member_name#!="")){
+        LinkPage(Class: #style_link# text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
+            #creator.member_name#
+        }
+    }
+}.Custom(_name){
+    LinkPage(Class: #style_link# h5 text-bold, Page: @1groups_view, PageParams: "v_group_id=#id#"){
+        If(#image_id#>0){
+            Image(Src: Binary().ById(#image_id#), Class: mr-sm).Style(width: 30px; border: 1px solid #5A5D63;)
+            #group_name#
+        }.Else{
+            Div(Class: text-primary){
+                Span(Class: fa icon-settings fa-2x mr-sm)
+            }.Style(
+                display: inline-block;
+            )
+            Div(Class: text-primary){
+                Span(Class: btn-link text-bold pb-sm, Body: #group_name#)
+            }.Style(
+                display: inline-block;
+                vertical-align: top;
+                padding-top: 7px;
+                padding-left: 4px;
+            )
+        }
+    }
+}.Custom(_date){
+    Div(#style_text# small){
+        Div(text-nowrap){DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI")}
+        If(#deleted# == 1){
+            Div(text-nowrap){DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI")}
+        }
+    }
+}.Custom(_status){
+    Span(Class:#style_text#){
+        If(#deleted# == 0){
+            LangRes(@1active)
+        }.Else{
+            LangRes(@1deleted)
+        }
+    }
+}.Custom(_access){
+    If(#creator.member_id#==#key_id#){
+        SetVar(access,done)
+    }.Else{
+        SetVar(access,)
+    }
+    If(And(#group_access#!="NULL",#group_access#!="",#group_access#!="[]")){
+        DBFind(@1roles,src_access_list).Where({id:{"$in":#group_access#}}).Columns("id,role_name").Count(access_count).Order(role_name)
+        Div(#style_text# breaker){
+            ForList(src_access_list){
+                If(#role_id#==#id#){
+                    SetVar(access,done)
+                }
+
+                If(#access_count#!=#src_access_list_index#){
+                    Span("#role_name#,",mr-sm)
+                }.Else{
+                    #role_name#
+                }
+            }
+        }
+    }
+}.Custom(_actions){
+    Div(text-right button-group text-nowrap){
+        If(#access#=="done"){
+            If(#deleted#==0){
+                Button(Class: fa fa-trash btn btn-danger mh-sm, Contract: @1GroupsDelete, Params: "ops=D,gr_id=#id#", Page: @1groups_list).Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+            }.ElseIf(#deleted#==1){
+                Button(Class: fa fa-recycle btn btn-info mh-sm, Contract: @1GroupsDelete, Params: "ops=R,gr_id=#id#", Page: @1groups_list)
+            }
+            Button(Class: fa fa-edit btn btn-default mh-sm, PageParams: "gr_id=#id#", Page: @1groups_create).Popup(50, $@1edit_group$)
+        }
+    }
+}.Custom(type_group){
+    If(#deleted#==0){
+        Span(Body: AppParam(Ecosystem:1, App: #application_id#, Name: type_groups,Index:#group_type#))
+    }.Else{
+        Span(Body: AppParam(Ecosystem:1, App: #application_id#, Name: type_groups,Index:#group_type#),Class:text-muted)
+    }
+}.Custom(join_group){
+    DBFind("@1groups_participants").Columns("id,groups_info,groups_info->id,deleted,member,member->member_id").Where({"groups_info->id":#id#,"deleted":0,"member->member_id":#key_id#}).Vars(j_l).Count(check_membership)
+    If(And(#group_type# == 1,#check_membership# == 0)){
+        Button(Join the group,Class: btn btn-link pull-right,Contract:@1GroupsAssign,Page: @1groups_view,PageParams: "v_group_id=#id#",Params: "gr_id=#id#,member_id=#key_id#")
+    }.ElseIf(And(#group_type# == 1,#check_membership# == 1)){
+        Button(Leave the group,Class: btn btn-link pull-right,Contract:@1GroupsUnassign,Page: @1groups_list,Params:"row_id=#j_l_id#")
+    }.ElseIf(And(#group_type# == 2,#check_membership# == 0)){
+        Button(Send request,Class: btn btn-link pull-right,Contract:@1GroupRequestMembership,Page: @1groups_view,PageParams:"v_group_id=#id#",Params: "gr_id=#id#")
+    }
+}.Custom(gr_info){
+    If(#deleted#==0){
+        Span(Body:#group_info#)
+    }.Else{
+        Span(Body:#group_info#,Class: text-muted)
+    }
+}.Count(count)
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src_groups, "$@1id$=id,Group=_name,Group Information=gr_info,Type=type_group,$@1creator$=_creator,$@1role_created_deleted$=_date,$@1status$=_status,$@1access$=_access,=join_group,=_actions")
+            }.ElseIf(#all_roles_count# > 0){
+                Div(Class: text-center h4 text-muted){
+                    Div(Class: text-center h4 text-muted, Body: "Groups $@1not_founded$")
+                }
+            }.Else{
+                Div(Class: text-center){
+                    Span(Class:h4 text-muted,Body:"No groups have been created")
+                }
+            }
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
+}

@@ -1,0 +1,63 @@
+contract GroupsAssign {
+    data {
+        gr_id int
+        member_id int
+    }
+    func getMemberInfo(kid int) map {
+        var res member map
+        member = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:kid}).Row()
+        if member {
+            res["member_id"] = member["id"]
+            res["member_name"] = member["member_name"]
+            res["image_id"] = member["image_id"]
+        }else{
+            member = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:kid}).Row()
+            if member {
+                res["member_id"] = member["id"]
+                res["member_name"] = IdToAddress(Int(member["id"]))
+                res["image_id"] = 0
+            }
+        }
+        return res
+    }
+
+    conditions {
+        $group = DBFind("@1groups").Where({id:$gr_id}).Columns("id,deleted,group_type,group_name,image_id,creator->member_id").Row()
+        if !$group {
+            warning LangRes("@1group_not_found", "en")
+        }
+
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$member_id}).Row() {
+            warning LangRes("@1key_not_found", "en")
+        }
+
+        if $group["deleted"] == 1 {
+            warning LangRes("@1group_deleted_request_impossible", "en")
+        }
+        if Int($group["group_type"]) != 1 {
+            @1GroupsAccessCheck("gr_id", $gr_id)
+        }
+    }
+
+    action {
+        if DBFind("@1groups_participants").Where({ecosystem:$ecosystem_id, "groups_info->id":$gr_id, "member->member_id":$member_id, deleted:0}).One("id") {
+            // do not re-assign and do not warning because this contract may be called for other
+            return
+        }
+        var group member appointer map
+        group["id"] = $group["id"]
+        group["type"] = $group["group_type"]
+        group["name"] = $group["group_name"]
+        group["image_id"] = $group["image_id"]
+
+        member = getMemberInfo($member_id)
+        appointer = getMemberInfo($key_id)
+        var m map
+        m["groups_info"] = group
+        m["member"] = member
+        m["appointed"] = appointer
+        m["date_created"] = BlockTime()
+        m["ecosystem"] = $ecosystem_id
+        DBInsert("@1groups_participants", m)
+    }
+}
