@@ -30,7 +30,7 @@ Div(breadcrumb-sm){
 }
 Div(row){
     Div(col-sm-12 col-lg-6 col-lg-offset-3){
-        Form(panel panel-default){
+        Div(panel panel-default){
             If(#startup_id#>0){
                 Div(panel-body){
                     Div(row mb-sm){
@@ -131,16 +131,28 @@ Div(row){
                 }
             }
 
-            Div(panel-footer text-right){
+            Form(panel-footer text-right){
                 Button(Body: $@1back$, Class: btn btn-default, Page: #back_page#)
                 If(#startup_id#>0){
-                    If(#isAdmin#==1){
-
-                    }.Else{
+                    If(#isAdmin#==0){
                         If(Or(#isWalletOwner#==1,#isStartupAdmin#==1)){
                             Button(Body: $@1cf_finish_company$, Class: btn btn-primary, Page: #back_page#, Contract:@1CFAdmin, Params: "Id=#Id#,Action=finish")
                         }.Else{
-                            TODO:"Инвестировать" - кнопка если нет кошелька в э/с стартапа; поле для суммы, если есть кошелек.
+                            SetVar(wallet_id,0)
+                            DBFind(@1keys).Where({id:#key_id#, ecosystem:#startup_ecosystem#}).Vars(wallet)
+                            Div(input-group){
+                                Div(input-group-addon){
+                                    $@1cf_invest$
+                                }
+                                Input(Name: Amount, Type:number, Value: #startup_minimal_investment#)
+                                Div(input-group-btn){
+                                    If(#wallet_id#==0){
+                                        Button(Body: $@1cf_investment_offer$, Class: btn btn-primary, Page: #back_page#, Contract:@1CFInvestmentOffer, Params: "Id=#Id#,Amount=Val(Amount)")
+                                    }.Else{
+                                        Button(Body: $@1send$, Class: btn btn-default, Page: #back_page#, Contract:@1CFInvestment, Params: "Id=#Id#,Amount=Val(Amount)")
+                                    }
+                                }
+                            }
                         }
                     }
                 }
