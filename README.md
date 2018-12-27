@@ -1,13 +1,13 @@
-# Applications for ecosystems on Genesis  blockchain
+# Applications for ecosystems on Apla blockchain platform
+
+Apla is a platform which was developed for building digital ecosystems. Apps is a applications for Apla blockchain platform.
 
 ### Useful links
 
 * [Applications packager](https://github.com/CynepHy6/ap)
 
-* [Applications structure](https://genesiskernel.github.io/apps/)
+* [Apla Backend](https://github.com/AplaProject/go-apla)
 
-* [Genesis Blockchain](https://github.com/GenesisKernel/go-genesis)
+* [Apla Frontend](https://github.com/AplaProject/apla-front)
 
-* [Genesis front](https://github.com/GenesisKernel/genesis-front)
-
-* [Quick-start Genesis demo](https://github.com/GenesisKernel/quick-start)
+* [Quick-start](https://github.com/AplaProject/quick-start)
