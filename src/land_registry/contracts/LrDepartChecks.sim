@@ -1,7 +1,6 @@
 contract LrDepartChecks {
     data {
         ObjectId int
-        NotificId int "optional"
         LegalStatus int "optional"
         EncumbranceCertificate int "optional"
         TaxReceiptAndBills int "optional"
@@ -32,21 +31,40 @@ contract LrDepartChecks {
             if object["status"] {
                 var depart3_status map
                 depart3_status = JSONDecode(object["status"])
-                status["tax_receipt_and_bills"] = depart3_status["tax_receipt_and_bills"]
+                if depart3_status["tax_receipt_and_bills"] {
+                    status["tax_receipt_and_bills"] = depart3_status["tax_receipt_and_bills"]
+                }
             }
             status["legal_status"] = $LegalStatus
             status["encumbrance_certificate"] = $EncumbranceCertificate
             m["modification_date"] = $block_time
             m["status"] = status
             DBUpdate("land_registry", $ObjectId, m)
+            
+            // closing all opened role notifications
+            var opened map i int
+            opened = DBFind("@1notifications").Where({"recipient->role_id": $depart2_role, "page_params->object_id": $ObjectId, "closed": 0, "ecosystem": $ecosystem_id})
+
+            while i < Len(opened){
+                var current map current_id int
+                current = opened[i]
+                current_id = Int(current["id"])
+                @1NotificationsProcess("notific_id", current_id)
+                @1NotificationsClose("notific_id", current_id)
+                i = i + 1
+            }
         }
         if $RoleId == $depart3_role {
             object = DBFind("land_registry").WhereId($ObjectId).Row()
             if object["status"] {
                 var depart2_status map
                 depart2_status = JSONDecode(object["status"])
-                status["legal_status"] = depart2_status["legal_status"]
-                status["encumbrance_certificate"] = depart2_status["encumbrance_certificate"]
+                if depart2_status["legal_status"] {
+                    status["legal_status"] = depart2_status["legal_status"]
+                }
+                if depart2_status["encumbrance_certificate"] {
+                    status["encumbrance_certificate"] = depart2_status["encumbrance_certificate"]
+                }
             }
 
             status["tax_receipt_and_bills"] = $TaxReceiptAndBills
@@ -55,11 +73,24 @@ contract LrDepartChecks {
             m["modification_date"] = $block_time
             m["status"] = status
             DBUpdate("land_registry", $ObjectId, m)
+                        
+            // closing all opened role notifications
+            var opened map i int
+            opened = DBFind("@1notifications").Where({"recipient->role_id": $depart3_role, "page_params->object_id": $ObjectId, "closed": 0, "ecosystem": $ecosystem_id})
+
+            while i < Len(opened){
+                var current map current_id int
+                current = opened[i]
+                current_id = Int(current["id"])
+                @1NotificationsProcess("notific_id", current_id)
+                @1NotificationsClose("notific_id", current_id)
+                i = i + 1
+            }
         }
 
         // checking if the object is ready for sale
         object = DBFind("land_registry").WhereId($ObjectId).Row()
-        if Money(object["price"]) > 0 && Money(object["market_price"]) > 0 && Money(object["government_price"]) > 0  {
+        if Money(object["price"]) > 0 && Money(object["market_price"]) > 0 && Money(object["government_price"]) > 0 && object["deleted"] != 1 {
             var status_map map
             status_map = JSONDecode(object["status"])
             if status_map["legal_status"] == 1 && status_map["encumbrance_certificate"] == 1 && status_map["tax_receipt_and_bills"] == 1 {
@@ -75,17 +106,9 @@ contract LrDepartChecks {
                 n["text_body"] = LangRes("lr_checks_successfull", "en")
                 params["object_id"] = $ObjectId
                 params["info_message"] = 1
+                params["info_status"] = "success"
                 n["params_map"] = params
                 CallContract("@1NotificationsSend", n)
-            }
-        }
-
-        if $NotificId > 0 {
-            var opened int
-            opened = DBFind("@1notifications").Where({"id": $NotificId, "closed": 0, "ecosystem": $ecosystem_id}).One("id")
-            if opened {
-                @1NotificationsProcess("notific_id", $NotificId)
-                @1NotificationsClose("notific_id", $NotificId)
             }
         }
     }

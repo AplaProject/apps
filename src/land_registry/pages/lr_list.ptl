@@ -1,0 +1,183 @@
+SetVar(this_page, lr_list).(this_table, land_registry)
+Include(@1pager_header)
+Include(lr_check_rights)
+
+If(And(#sales_list#=="",#admin#!=1,#bank#!=1,#depart2#!=1,#depart3#!=1)){
+    SetVar(sales_list, 1)
+}
+
+If(#sales_list#==1){
+    SetVar(title, $lr_sales$)
+    Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$lr_sales_desc$"))
+    SetVar(filters, {"price": {$gt: 0}, "government_price": {$gt: 0}, "market_price": {$gt: 0}, "status->legal_status": 1, "status->encumbrance_certificate": 1, "status->tax_receipt_and_bills": 1, "deleted": 0})
+}.Else{
+    SetVar(sales_list, 0)
+    SetVar(title, $lr_land_registry$)
+    Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$lr_list_desc$"))
+    
+    If(And(#admin#!=1,#bank#!=1,#depart2#!=1,#depart3#!=1)){
+        SetVar(filters, {$or: [{"owner_id": #key_id#, "deleted": 0}, {"price": {$gt: 0}, "government_price": {$gt: 0}, "market_price": {$gt: 0}, "status->legal_status": 1, "status->encumbrance_certificate": 1, "status->tax_receipt_and_bills": 1, "deleted": 0}]})
+    }.Else{
+        SetVar(filters, {"deleted": 0})
+    }
+}
+
+If(#admin# == 1){
+    SetTitle(#title# ($lr_admin_role_name$))
+}.ElseIf(#bank# == 1){
+    SetTitle(#title# ($lr_bank_role_name$))
+}.ElseIf(#depart2# == 1){
+    SetTitle(#title# ($lr_depart2_role_name$))
+}.ElseIf(#depart3# == 1){
+    SetTitle(#title# ($lr_depart3_role_name$))
+}.Else{
+    SetTitle(#title#)
+}
+
+AddToolButton(Title: $@1add$, Page: lr_add, PageParams: "back_page=#this_page#,sales_list=#sales_list#", Icon: icon-plus)
+
+Div(btn-group ml-lg){
+    If(#sales_list#==0){
+        Button(Body: Em(Class: fa fa-list) $lr_all_objects$, Page: #this_page#, PageParams: "sales_list=0", Class: btn bg-gray-lighter ml-sm)
+    }.Else{
+        Button(Body: Em(Class: fa fa-list) $lr_all_objects$, Page: #this_page#, PageParams: "sales_list=0", Class: btn bg-gray ml-sm)
+    }
+    If(#sales_list#==1){
+        Button(Body: Em(Class: fa fa-credit-card) $@1sales$, Page: #this_page#, PageParams: "sales_list=1", Class: btn bg-gray-lighter ml-sm)
+    }.Else{
+        Button(Body: Em(Class: fa fa-credit-card) $@1sales$, Page: #this_page#, PageParams: "sales_list=1", Class: btn bg-gray ml-sm)
+    }
+}
+
+If(GetVar(search)!=""){
+    SetVar(where, {GetVar(filters), "specifications->address": {$ilike: #search#}})
+}.Else{
+    SetVar(where, GetVar(filters)).(search,)
+}
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, LangRes(lr_location))
+    Include(@1search)
+}
+
+DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("owner_id,buyer_id,specifications->address,specifications->land_use,specifications->buildings_class,specifications->area,price,status->legal_status,status->encumbrance_certificate,status->tax_receipt_and_bills,step").Custom(location){
+    If(#specifications.address#){
+        SetVar(location_name, #specifications.address#)
+    }.Else{
+        SetVar(location_name, $lr_no_address_found$)
+    }
+    Button(Page: lr_view, PageParams: "object_id=#id#,back_page=#this_page#,sales_list=#sales_list#", Body: #location_name#, Class: btn-link).Popup(50, $lr_object_view$)
+}.Custom(owner_price){
+    If(GetVar(price)){
+        Money(#price#) APLA
+    }.Else{
+        Em(Class: fa fa-question-circle text-muted)
+    }
+}.Custom(owner){
+    SetVar(m_id, 0)
+    DBFind("@1members").Where({"id": #owner_id#, "ecosystem": #ecosystem_id#}).Vars(m)
+    If(Or(#m_id#>0,#m_id#<0)){
+        SetVar(owner_image_id, #m_image_id#)
+        SetVar(owner_member_name, #m_member_name#)
+    }.Else{
+        SetVar(owner_image_id, 0)
+        SetVar(owner_member_name, Address(#owner_id#))
+    }
+    LinkPage(Page: @1profile_view, PageParams: "v_key_id=#owner_id#"){
+        If(#owner_image_id#>0){
+            Image(Src: Binary().ById(#owner_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)
+            Span(Class: ml-sm text-bold, Body: #owner_member_name#)
+        }.Else{
+            Div(){
+                Span(Em(Class: fa icon-user fa-2x))
+                Span(Class: ml-sm text-bold, Body: #owner_member_name#)
+            }.Style(display:flex; align-items:center;)
+        }
+    }
+}.Custom(buyer){
+    If(#owner_id#!=#buyer_id#){
+        SetVar(n_id, 0)
+        DBFind("@1members").Where({"id": #buyer_id#, "ecosystem": #ecosystem_id#}).Vars(n)
+        If(Or(#n_id#>0,#n_id#<0)){
+            SetVar(buyer_image_id, #n_image_id#)
+            SetVar(buyer_member_name, #n_member_name#)
+        }.Else{
+            SetVar(buyer_image_id, 0)
+            SetVar(buyer_member_name, Address(#buyer_id#))
+        }
+        LinkPage(Page: @1profile_view, PageParams: "v_key_id=#buyer_id#"){
+            If(#buyer_image_id#>0){
+                Image(Src: Binary().ById(#buyer_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)
+                Span(Class: ml-sm text-bold, Body: #buyer_member_name#)
+            }.Else{
+                Div(){
+                    Span(Em(Class: fa icon-user fa-2x))
+                    Span(Class: ml-sm text-bold, Body: #buyer_member_name#)
+                }.Style(display:flex; align-items:center;)
+            }
+        }
+    }
+}.Custom(deal_status){
+    If(#step#==-1){
+        Em(Class: fa fa-fw fa-check-circle text-success) $lr_available_for_purchase$
+    }.ElseIf(#step#==0){
+        Em(Class: fa fa-fw fa-hourglass-1 text-primary) $lr_awaiting_owner_accept$
+    }.ElseIf(#step#==1){
+        Em(Class: fa fa-fw fa-hourglass-2 text-primary) $lr_awaiting_buyer_deposit$
+    }.ElseIf(#step#==2){
+        Em(Class: fa fa-fw fa-hourglass-3 text-primary) $lr_awaiting_bank_transfer$
+    }
+}.Custom(legal_status){
+    If(#status.legal_status#==1){
+        Em(Class: fa fa-check-circle text-success)
+    }.ElseIf(#status.legal_status#==2){
+        Em(Class: fa fa-exclamation-circle text-danger)
+    }.Else{
+        Em(Class: fa fa-question-circle text-muted)
+    }
+}.Custom(encumbrance_certificate){
+    If(#status.encumbrance_certificate#==1){
+        Em(Class: fa fa-check-circle text-success)
+    }.ElseIf(#status.encumbrance_certificate#==2){
+        Em(Class: fa fa-exclamation-circle text-danger)
+    }.Else{
+        Em(Class: fa fa-question-circle text-muted)
+    }
+}.Custom(tax_receipt_and_bills){
+    If(#status.tax_receipt_and_bills#==1){
+        Em(Class: fa fa-check-circle text-success)
+    }.ElseIf(#status.tax_receipt_and_bills#==2){
+        Em(Class: fa fa-exclamation-circle text-danger)
+    }.Else{
+        Em(Class: fa fa-question-circle text-muted)
+    }
+}.Custom(actions){
+    If(And(Or(#owner_id#==#key_id#,#admin#==1),#step#<2)){
+        Button(Page: #this_page#, PageParams: "sales_list=#sales_list#", Contract: LrEdit, Params: "ObjectId=#id#,RoleId=#role_id#,DeleteObject=1", Class: btn bg-gray-lighter pull-right ml-sm, Body: Em(Class: text-danger fa fa-trash)).Alert($lr_want_delete_object$, $@1confirm_button$, $@1cancel$)
+        Button(Page: lr_edit, PageParams: "object_id=#id#,back_page=#this_page#,sales_list=#sales_list#", Class: btn bg-gray-lighter pull-right, Body: Em(Class: fa fa-edit)).Popup(50, $lr_object_edit$)
+    }
+}.Count(count)
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                If(#sales_list#==1){
+                    Table(src, "$lr_location$=location,$lr_price$=owner_price,$lr_owner$=owner,$lr_buyer$=buyer,$@1status$=deal_status,=actions")
+                }.Else{
+                    Table(src, "$lr_location$=location,$lr_price$=owner_price,$lr_owner$=owner,$lr_legal_status$=legal_status,$lr_encumbrance_certificate$=encumbrance_certificate,$lr_taxes_and_bills$=tax_receipt_and_bills,=actions")
+                }
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$lr_no_objects_found$")
+            }
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
+}
