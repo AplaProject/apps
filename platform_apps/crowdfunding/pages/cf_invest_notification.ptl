@@ -4,12 +4,10 @@ If(#back_page#==""){
 }
 If(#notific_id#>0){
     SetVar(errand_id,#notific_id#)
-    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("id,page_params->startup_id,page_params->amount,page_params->investment_wallet").Vars(notific)
+    DBFind(@1notifications,n).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("id,page_params->startup_id,page_params->amount,page_params->wallet").Vars(notific)
 }.Else{
     SetVar(norific_id,0)
 }
-
-
 
 DBFind(@1keys).Where({"ecosystem": #ecosystem_id#, "id": #key_id#}).Vars(tokens)
 DBFind(@1ecosystems).Where({"id": #ecosystem_id#}).Vars(eco)
@@ -19,7 +17,7 @@ If(#ecosystem_id# == 1){
     SetVar(token_title, #eco_token_title#)
 }
 
-If(Or(#ecosystem_id# == 1, GetVar(eco_token_title) != "")){
+If(Or(#ecosystem_id#==1,#eco_token_title#!="")){
     Form(){
         Div(row){
             Div(col-sm-3 mt-sm text-right){
@@ -36,7 +34,7 @@ If(Or(#ecosystem_id# == 1, GetVar(eco_token_title) != "")){
                 Label($@1recipient$)
             }
             Div(col-sm-9){
-                SetVar(Recipient, Address(#notific_page_params_investment_wallet#))
+                SetVar(Recipient, #notific_page_params_wallet#)
                 Input(Name: Recipient, Disabled: 1, Value: #Recipient#)
             }
         }
@@ -47,11 +45,12 @@ If(Or(#ecosystem_id# == 1, GetVar(eco_token_title) != "")){
                 }
             }
             Div(col-sm-9){
-                Input(Name: Amount, Type: number, Value: #notific_page_params_amount#)
+                SetVar(money, Money(#notific_page_params_amount#))
+                Input(Name: Amount, Type: number, Value: #money#)
             }
         }
-        Button(Body: LangRes(@1send), Class: btn btn-primary pull-right mt, Page: #back_page#, Contract: @1CFInvestment, Params: "Id=#notific_page_params_startup_id#").Alert(Text: "$@1want_send_tokens$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
-        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: #back_page#)
+        Button(Body: $@1send$, Class: btn btn-primary pull-right mt, Page: #back_page#, Contract: @1CFInvestment, Params: "NotificId=#notific_id#").Alert(Text: "$@1want_send_tokens$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+        Button(Body: $@1back$, Class: btn btn-default pull-right mt, Page: #back_page#)
     }
 }.Else{
     Form(){
@@ -60,6 +59,6 @@ If(Or(#ecosystem_id# == 1, GetVar(eco_token_title) != "")){
                 Span(Body: $@1ecosystem_no_tokens$)
             }
         }
-        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: #back_page#)
+        Button(Body: $@1back$, Class: btn btn-default pull-right mt, Page: #back_page#)
     }
 }

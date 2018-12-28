@@ -1,10 +1,10 @@
 SetVar(this_page, @1cf_startup_form).(back_page,@1cf_startups)
 
 If(#EcosystemId#!=""){
-    DBFind(@1ecosystems, ecosystems).Columns("id,name").Where({id:#EcosystemId#}).Columns("id,name,info->description").Vars(eco)
+    DBFind(@1ecosystems).Columns("id,name").Where({id:#EcosystemId#}).Columns("id,name,info->description").Vars(eco)
 
 }.Else{
-    SetVar(EcosystemId,).(eco_info_description,).(eco_name,)
+    SetVar(EcosystemId,).(eco_info_description,).(eco_name,).(eco_id,1)
 }
 SetTitle($@1cf_startup_form$)
 Div(breadcrumb){
@@ -24,15 +24,16 @@ Div(row){
                         Span(*, text-danger)
                     }
                     Div(col-sm-9){
-                        Input(Name: Ecosystem, Type: hidden, Value: #EcosystemId#)
-                        If(GetVar(EcosystemId)!=""){
-                            Input(Name: Name, Value: #eco_name#, Disabled: true)
-                        }.Else{
-                            Div(input-group){
-                                Input(Name: Name, Value: $@1ecosystem_select$, Disabled: true)
-                                Div(input-group-btn){
-                                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_ecosystem, PageParams:"back_page=@1cf_startup_form,EcosystemId=#Ecosystem#,Type=ALL_LIST").Popup(50, $@1ecosystem$)
+                        Div(input-group){
+                            Div(text-muted mt list-group-item fake-input){
+                                If(#EcosystemId#!=""){
+                                    #eco_name#
+                                }.Else{
+                                    $@1ecosystem_select$
                                 }
+                            }
+                            Div(input-group-btn){
+                                Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1cf_select_ecosystem, PageParams:"back_page=@1cf_startup_form,EcosystemId=#EcosystemId#,MemberId=#MemberId#").Popup(50, $@1ecosystem$)
                             }
                         }
                     }
@@ -67,20 +68,16 @@ Div(row){
                     }
                     Div(col-sm-9){
                         Div(input-group){
-                            Div(text-muted mt){
-                                If(GetVar(MemberId)!=""){
+                            Div(text-muted mt list-group-item fake-input){
+                                If(#MemberId#!=""){
                                     SetVar(AddressMemberId, Address(#MemberId#))
-                                    Div(list-group-item){
-                                        #AddressMemberId#
-                                    }.Style(height: 35px; top: -5px;)
+                                    #AddressMemberId#
                                 }.Else{
-                                    Div(list-group-item){
-                                        xxxx-xxxx-xxxx-xxxx-xxxx
-                                    }.Style(height: 35px; top: -5px;)
+                                    xxxx-xxxx-xxxx-xxxx-xxxx
                                 }
                             }
                             Div(input-group-btn){
-                                Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=#this_page#,EcosystemId=#ecosystem_id#,Id=#Id#").Popup(Header: $@1member$, Width: "50")
+                                Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1cf_select_wallet, PageParams:"back_page=#this_page#,EcoId=#EcosystemId#,EcosystemId=#EcosystemId#,Id=#Id#").Popup(Header: $@1member$, Width: "50")
                             }
                         }
                     }
@@ -153,7 +150,7 @@ Div(row){
             }
             Div(panel-footer text-right){
                 Button(Body: $@1back$, Class: btn btn-default, Page: #back_page#)
-                Button(Body: $@1send$, Class: btn btn-primary, Page: #back_page#, Contract: @1CFStartup, Params: "WalletEscrow=#AddressMemberId#")
+                Button(Body: $@1send$, Class: btn btn-primary, Page: #back_page#, Contract: @1CFStartup, Params: "WalletEscrow=#AddressMemberId#,Ecosystem=#EcosystemId#,Name=#eco_name#")
             }
         }
     }
@@ -161,5 +158,9 @@ Div(row){
     .buttons {
         border: 1px solid #dde6e9;
         padding: 6px 16px;
+    }
+    .fake-input {
+        height: 35px;
+        top: -5px;
     }
 )

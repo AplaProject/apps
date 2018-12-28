@@ -1,0 +1,86 @@
+SetVar(this_page, @1cf_select_wallet).(this_table, @1keys).(current_header, $@1member$).(pager_limit, 10)
+Include(@1pager_header)
+
+If(GetVar(search)){
+    SetVar(where, {ecosystem: 1, id:{"$neq":#guest_key#}, deleted:0, id:AddressToId(#search#)})
+}.Else{
+    SetVar(where, {ecosystem: 1, id:{"$neq":#guest_key#}, deleted:0}).(search,)
+}
+
+Div(){
+    Form(input-group){
+        Div(input-group-addon){
+            LangRes(@1wallet)
+        }
+        Input(Name: search, Value: #search#, Placeholder: $@1text_to_search$)
+        Div(input-group-btn){
+            If(GetVar(search)!=""){
+                Button(Class: btn bg-gray-lighter fa fa-close mtl buttons, Page: #this_page#, PageParams: "back_page=#back_page#,back_header=#back_header#,#,EcoId=#EcoId#,EcosystemId=#EcosystemId#,Id=#Id#").Popup(Header: #current_header#, Width: "50")
+            }
+            Button(Class: btn bg-gray-lighter mtl buttons, Page: #this_page#, PageParams: "back_page=#back_page#,back_header=#back_header#,#,EcoId=#EcoId#,EcosystemId=#EcosystemId#,search=Val(search),Id=#Id#", Body: Em(Class: fa fa-search) $@1search$).Popup(Header: #current_header#, Width: "50")
+        }
+    }
+}.Style(
+    .buttons {
+        border: 1px solid #dde6e9;
+    }
+)
+
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_id){
+    Span(Class: h6 text-muted, Body: #id#)
+    SetVar(m_id, 0)
+    DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#id#}).Vars(m)
+    If(Or(#m_id#>0,#m_id#<0)){
+        SetVar(image_id, #m_image_id#)
+        SetVar(member_name, #m_member_name#)
+    }.Else{
+        SetVar(image_id, 0)
+        SetVar(member_name, Address(#id#))
+    }
+}.Custom(_member_id){
+    If(GetVar(back_header)!=""){
+        Button(Class: btn-xs btn-link pull-right, Page: #back_page#, PageParams: "MemberId=#id#,EcoId=#EcoId#,EcosystemId=#EcosystemId#,Id=#Id#"){
+            Span(Class: h5 text-bold, Body: Address(#id#))
+        }.Popup(Header: #back_header#, Width: 50)
+    }.Else{
+        Button(Class: btn-xs btn-link pull-right, Page: #back_page#, PageParams: "MemberId=#id#,EcoId=#EcoId#,EcosystemId=#EcosystemId#,Id=#Id#"){
+            Span(Class: h5 text-bold, Body: Address(#id#))
+        }
+    }
+}.Custom(_ecosystem){
+    Span(Class: text-muted h5, Body: $@1ecosystem$ #EcoId#)
+}.Custom(_username){
+    If(#image_id#>0){
+        Image(Src: Binary().ById(#image_id#), Class: img-circle).Style(height: 30px;width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
+        Span(Class: h5, Body: #member_name#)
+    }.Else{
+        Div(){
+            Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+            Span(Class: h5, Body: #member_name#)
+        }.Style(display:flex; align-items:center;)
+    }
+}.Count(count)
+
+Div(fullscreen){
+    Div(table-responsive){
+        Div(){
+            If(#count# > 0){
+                Table(src, "=_username,=_ecosystem,=_member_id")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1members$ $@1not_founded$")
+            }
+        }.Style(
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(){
+    Include(@1pager_for_popup)
+    If(GetVar(back_header)!=""){
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: #back_page#, PageParams: "EcoId=#EcoId#,EcosystemId=#EcosystemId#,Id=#Id#").Popup(Header: #back_header#, Width: "50")
+    }.Else{
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: #back_page#, PageParams: "EcoId=#EcoId#,EcosystemId=#EcosystemId#,Id=#Id#")
+    }
+}

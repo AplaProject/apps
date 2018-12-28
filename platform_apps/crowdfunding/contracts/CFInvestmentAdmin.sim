@@ -5,25 +5,26 @@ contract CFInvestmentAdmin {
     }
 
     conditions{
-        var appId int
-        appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Crowdfunding"}).One("id"))
-        if appId == 0{
-            warning "Application not found"
-        }
-        // получить стартап из оповещения
-        var startupId int
-        $note = DBFind("@1notifications").Where({ecosystem:#ecosystem_id#, id:#NotificId#}).Columns("id,page_params->startup_id,page_params->investor,page_params->amount").Row()
+        $CREATED = 1
+        $PUBLISHED = 2
+        $STARTED = 3
+        $FINISHED = 4
+        $FAILED = 5
+        $STOPPED = 6
+        $REJECTED = 7
+       // получить стартап из оповещения
+        $note = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$NotificId}).Columns("id,page_params->startup_id,page_params->investor,page_params->amount").Row()
         if !$note{
             warning "Notification not found"
         }
-        startupId = Int(note["page_params.startup_id"])
-        $startup = DBFind("@1cf_startups").WhereId(startupId).Row()
+        var startupId int
+        startupId = Int($note["page_params.startup_id"])
+        $startup = DBFind("@1cf_startups").Where({id:startupId, deleted_at:0}).Row()
         if !$startup{
             warning "Startup not found"
         }
-        $recipient = AddressToId($startup["wallet"])
-        if $recipient == 0{
-            warning "Startup wallet not found"
+        if !$startup["status"] != $PUBLISHED{
+            warning "Startup is not published"
         }
         // проверить права доступа - админ экосистемы стартапа
         var ecoAdmin eco int
@@ -36,31 +37,36 @@ contract CFInvestmentAdmin {
     }
 
     action {
+        @1NotificationsProcess("notific_id", $NotificId)
         @1NotificationsClose("notific_id", $NotificId)
 
-        var params m map
+        var params m map investor int
+        investor = Int($note["page_params.investor"])
         params["startup_id"] = $startup["id"]
-        params["investor"] = $note["page_params.investor"]
+        params["wallet"] = $startup["wallet"]
+        params["amount"] = $note["page_params.amount"]
         m["params_map"] = JSONEncode(params)
-        m["member_id"] = Int($note["page_params.investor"])
+        m["member_id"] = investor
         m["closure_type"] = 1
         m["sender"] = 1
         m["eco_id"] = 1
         m["popup"] = "true"
+        m["text_body"] = Sprintf("Startup #%v, amount: %v", $startup["id"], $startup["amount"])
 
         if $Action == "accept"{
-            // TODO: создать кошелек в целевой экосистиеме (если нет)
-            
-            // оповещение с возможностью перевода токенов
+            // создать кошелек в целевой экосистеме (если нет)
+            if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:investor}){
+                var pub string
+                pub = PubToHex(DBFind("@1keys").Where({ecosystem:1, id:investor}).One("pub"))
+                Println("pub:", pub)
+                @1MembershipAdd("memberskeys", pub)
+            }
             m["page_name"] = "@1cf_invest_notification"
             m["text_header"] = "Accept investment offer"
-            m["text_body"] = Sprintf("Startup #%v, amount: %v", $startup["id"], $startup["amount"])
 
         }elif $Action == "reject"{
-            // оповещение об отказе
             m["page_name"] = "@1notifications_show"
             m["text_header"] = "Reject investment offer"
-            m["text_body"] = Sprintf("Startup #%v, amount: %v", $startup["id"], $startup["amount"])
         }
         CallContract("@1NotificationsSend", m)
     }

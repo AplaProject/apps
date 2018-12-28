@@ -4,31 +4,30 @@ contract CFAdmin {
         Action string
     }
     conditions{
-        $startup = DBFind("@1startups").WhereId($Id).Row()
+        $startup = DBFind("@1cf_startups").WhereId($Id).Row()
         if !$startup{
             warning "Startup not found"
         }
 
         // проверка прав на администрирование (role_id == cf_catalog_admin) или
         // если Action==finish проверить что я админ стартапа или владелец кошелька для инвестиций
-        var appId int
-        appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Crowdfunding"}).One("id"))
         if $Action == "finish"{
-            var adminRoleId int admin map
-            adminRoleId = Int(DBFind("@1parameters").Where({name:"role_admin", ecosystem:$Ecosystem}).One("value"))
-            if adminRoleId == 0{
+            var ecoAdmin eco int
+            eco = Int($startup["ecosystem"])
+            ecoAdmin = Int(DBFind("@1parameters").Where({name:"role_admin", ecosystem:eco}).One("value"))
+            if ecoAdmin == 0{
                 warning "Admin role not defined in target ecosystem"
             }
-            admin = DBFind("@1roles_participants").Where({"role->id":adminRoleId, "member->member_id": $key_id, ecosystem:$Ecosystem}).Row()
-            if !admin{
+            if !DBFind("@1roles_participants").Where({"role->id":ecoAdmin, "member->member_id": $key_id, ecosystem:eco, deleted:0}).Row(){
                 if $startup["wallet"] != IdToAddress($key_id){
                     warning "You must be Admin in target ecosystem or owner of wallet investments"
                 }
             }
         }else{
-            var adminRoleId int
-            adminRoleId = AppParam(appId, "cf_catalog_admin", 1)
-            if !RoleAccess(adminRoleId){
+            var appId admin int
+            appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Crowdfunding"}).One("id"))
+            admin = Int(AppParam(appId, "cf_catalog_admin", 1))
+            if !RoleAccess(admin){
                 warning "This action allowed only for startup catalog admin role"
             }
         }
@@ -42,28 +41,28 @@ contract CFAdmin {
     }
 
     action {
+        var m map
         if $Action == "stop"{
-            $startup["stopped_at"] = $block_time
-            $startup["status"] = $STOPPED
+            m["stopped_at"] = $block_time
+            m["status"] = $STOPPED
 
         }elif $Action == "accept"{
-            $startup["published_at"] = $block_time
-            $startup["status"] = $PUBLISHED
+            m["published_at"] = $block_time
+            m["status"] = $PUBLISHED
 
         }elif $Action == "reject"{
-            $startup["published_at"] = -1
-            $startup["status"] = $REJECTED
+            m["published_at"] = -1
+            m["status"] = $REJECTED
 
         }elif $Action == "delete"{
-            $startup["deleted_at"] = $block_time
-            $startup["status"] = $STOPPED
+            m["deleted_at"] = $block_time
+            m["status"] = $STOPPED
 
         }elif $Action == "finish"{
             // TODO: если не набрана сумма - возврат токинов (алгоритм надо будет уточнить)
             // TODO: если набрана - переводится комиссия площадки
-            $startup["finished_at"] = $block_time
-            $startup["status"] = $FINISHED
+            m["status"] = $FINISHED
         }
-        DBUpdate("@1startups", $Id, $startup)
+        DBUpdate("@1cf_startups", $Id, m)
     }
 }

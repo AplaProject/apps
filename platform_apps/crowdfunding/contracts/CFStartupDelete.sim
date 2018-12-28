@@ -1,0 +1,45 @@
+contract CFStartupDelete {
+    data {
+        Id int
+    }
+    conditions{
+        $CREATED = 1
+        $PUBLISHED = 2
+        $STARTED = 3
+        $FINISHED = 4
+        $FAILED = 5
+        $STOPPED = 6
+        $REJECTED = 7
+
+
+        $startup = DBFind("@1cf_startups").WhereId($Id).Row()
+        if !$startup{
+            warning "Startup not found"
+        }
+        if Int($startup["status"]) == $PUBLISHED{
+            warning "Editing a published company is not available"
+        }
+
+
+        // $key_id - админ $Ecosystem
+        var ecoAdminRoleId adminRoleId ecoId int admin map
+        ecoId = Int($startup["ecosystem"])
+        ecoAdminRoleId = Int(DBFind("@1parameters").Where({name:"role_admin", ecosystem:ecoId}).One("value"))
+        if ecoAdminRoleId == 0{
+            warning "Admin role not defined in target ecosystem"
+        }
+        admin = DBFind("@1roles_participants").Where({"role->id":ecoAdminRoleId, "member->member_id": $key_id, ecosystem:ecoId, deleted:0}).Row()
+        if !admin{
+            adminRoleId = EcosysParam("role_admin")
+            admin = DBFind("@1roles_participants").Where({"role->id":adminRoleId, "member->member_id": $key_id, ecosystem:$ecosystem_id, deleted:0}).Row()
+            if !admin{
+                warning "Your role must be Admin in target ecosystem or Admin crowdfunding platform"
+            }
+        }
+
+    }
+
+    action {
+        DBUpdate("@1cf_startups", $Id,{deleted_at:$block_time})
+    }
+}

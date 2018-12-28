@@ -5,7 +5,7 @@ contract CFInvestmentOffer {
     }
 
     conditions{
-        $startup = DBFind("@1startups").WhereId($Id).Row()
+        $startup = DBFind("@1cf_startups").WhereId($Id).Row()
         if !$startup{
             warning "Startup not found"
         }
@@ -22,19 +22,19 @@ contract CFInvestmentOffer {
 
     action {
         // оповещение админу целевой экосистемы
-        var closure sender int header body page paramsEnc eco popup string params map
+        var closure sender int header body page params eco popup string m map
         closure = 1
         sender = 1
         header = "Investment offer"
         body = Sprintf("Startup #%v, amount: %v", $Id, $Amount)
         page = "@1cf_admin_notification"
-        params["startup_id"] = $Id
-        params["amount"] = $Amount
-        params["investor"] = $key_id
-        paramsEnc = JSONEncode(params)
+        m["startup_id"] = $Id
+        m["amount"] = $Amount
+        m["investor"] = $key_id
+        params = JSONEncode(m)
         eco = $startup["ecosystem"]
         popup = "true"
 
-        @1NotificationsSend("rid,closure_type,sender,text_header,text_body,page_name,params_map,eco_id,popup", $rid, closure, sender, header, body, page, paramsEnc, eco, popup)
+        @1NotificationsSend("rid,closure_type,sender,text_header,text_body,page_name,params_map,eco_id,popup", $rid, closure, sender, header, body, page, params, eco, popup)
     }
 }

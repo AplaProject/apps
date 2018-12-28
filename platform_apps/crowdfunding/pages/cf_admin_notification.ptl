@@ -1,18 +1,16 @@
 SetVar(back_page,@1cf_startups).(this_page,@1cf_admin_notification)
-TODO: Админ экосистемы стартапа подтверждает заявку, создает кошелек
+
 SetVar(this_page,@1cf_invest_notification)
 If(#back_page#==""){
     SetVar(back_page, @1cf_investments)
 }
-TODO: Инвестор получает оповещение и на странице оповещения переводит токены APLA на кошелек стартапа
+
 If(#notific_id#>0){
     SetVar(errand_id,#notific_id#)
-    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("id,page_params->startup_id,page_params->amount,page_params->investment_wallet").Vars(notific)
+    DBFind(@1notifications,n).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("id,page_params->startup_id,page_params->amount,page_params->investor").Vars(notific)
 }.Else{
     SetVar(norific_id,0)
 }
-
-
 
 DBFind(@1keys).Where({"ecosystem": #ecosystem_id#, "id": #key_id#}).Vars(tokens)
 DBFind(@1ecosystems).Where({"id": #ecosystem_id#}).Vars(eco)
@@ -29,18 +27,8 @@ If(Or(#ecosystem_id# == 1, GetVar(eco_token_title) != "")){
                 Label($@1sender$)
             }
             Div(col-sm-9){
-                SetVar(m_a, Address(#key_id#) (Money(#tokens_amount#) #token_title#))
-                Input(Name: Sender, Disabled: 1, Value: #m_a#)
-                Div(Class: m0 h6 text-muted, Body: $@1send_tokens_my_balance$)
-            }
-        }
-        Div(row mt){
-            Div(col-sm-3 mt-sm text-right){
-                Label($@1recipient$)
-            }
-            Div(col-sm-9){
-                SetVar(Recipient, Address(#notific_page_params_investment_wallet#))
-                Input(Name: Recipient, Disabled: 1, Value: #Recipient#)
+                SetVar(Sender, Address(#notific_page_params_investor#))
+                Input(Name: Sender, Disabled: 1, Value: #Sender#)
             }
         }
         Div(row mt-sm){
@@ -50,13 +38,14 @@ If(Or(#ecosystem_id# == 1, GetVar(eco_token_title) != "")){
                 }
             }
             Div(col-sm-9){
-                Input(Name: Amount, Disabled: 1, Type: number, Value: #notific_page_params_amount#)
+                SetVar(money, Money(#notific_page_params_amount#))
+                Input(Name: Amount, Disabled: 1, Type: number, Value: #money#)
             }
         }
         Div(text-right mt){
             Button(Body: $@1back$, Class: btn btn-default, Page: #back_page#)
-            Button(Body: $@1reject$, Class: btn btn-danger, Page: #back_page#, Contract: @1CFInvestmentAdmin, Params: "NotificId=#notific_id#,Action=reject").
-            Button(Body: $@1confirm$, Class: btn btn-primary, Page: #back_page#, Contract: @1CFInvestmentAdmin, Params: "NotificId=#notific_id#,Action=accept").
+            Button(Body: $@1reject$, Class: btn btn-danger, Page: #back_page#, Contract: @1CFInvestmentAdmin, Params: "NotificId=#notific_id#,Action=reject")
+            Button(Body: $@1confirm$, Class: btn btn-primary, Page: #back_page#, Contract: @1CFInvestmentAdmin, Params: "NotificId=#notific_id#,Action=accept")
         }
     }
 }.Else{

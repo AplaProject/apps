@@ -1,11 +1,18 @@
-contract CFInvestment { // перевод токенов APLA на кошелек стартапа
+contract CFInvestment {
     data {
-        Id int
+        NotificId int
         Amount money
     }
 
     conditions{
-        $startup = DBFind("@1cf_startups").WhereId($Id).Row()
+        // получить стартап из оповещения
+        $note = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$NotificId}).Columns("id,page_params->startup_id").Row()
+        if !$note{
+            warning "Notification not found"
+        }
+        var startupId int
+        startupId = Int($note["page_params.startup_id"])
+        $startup = DBFind("@1cf_startups").WhereId(startupId).Row()
         if !$startup{
             warning "Startup not found"
         }
@@ -17,18 +24,31 @@ contract CFInvestment { // перевод токенов APLA на кошеле�
             warning "Startup wallet not found"
         }
     }
-
+    func updateCurrentInvestment(startupId int){
+        var items array total money i lenItems int item map
+        items = DBFind("@1cf_investments").Where({startup_id:startupId}).Columns("amount").Limit(10000)
+        lenItems = Len(items)
+        while i < lenItems{
+            item = items[i]
+            total = total + Money(item["amount"])
+            i = i + 1
+        }
+        if total > 0{
+            DBUpdate("@1cf_startups", startupId, {current_investment:total})
+        }
+    }
     action {
+        @1NotificationsClose("notific_id", $NotificId)
+
         var m map
-        m["startup_id"] = $Id
+        m["startup_id"] = $startup["id"]
         m["investment_wallet"] = $key_id
         m["amount"] = $Amount
         m["created_at"] = $block_time
         DBInsert("@1cf_investments", m)
 
-        var comment string ecosystem int
-        comment = "startup investment"
-        ecosystem = Int($startup["ecosystem"])
-        @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", $Amount, $key_id, $recipient, comment, ecosystem)
+        updateCurrentInvestment(Int($startup["id"]))
+
+        @1TokensTransfer("Amount,SenderId,RecipientId,Comment", $Amount, $key_id, $recipient, "startup investment")
     }
 }
