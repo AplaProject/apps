@@ -38,6 +38,15 @@ contract CFAdmin {
         $FAILED = 5
         $STOPPED = 6
         $REJECTED = 7
+        $appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Crowdfunding"}).One("id"))
+        $fee = AppParam($appId, "cf_fee", 1)
+        var feeWallet string
+        feeWallet = AppParam($appId, "cf_fee_wallet", 1)
+        $feeKey = AddressToId(feeWallet)
+        if $feeKey == 0{
+            $feeKey = Int(DBFind("@parameters").Where({ecosystem:1, name:founder_account}).One("value"))
+        }
+        $startupKey = AddressToId($startup["wallet"])
     }
 
     action {
@@ -58,9 +67,18 @@ contract CFAdmin {
             m["deleted_at"] = $block_time
             m["status"] = $STOPPED
 
-        }elif $Action == "finish"{
-            // TODO: если не набрана сумма - возврат токинов (алгоритм надо будет уточнить)
-            // TODO: если набрана - переводится комиссия площадки
+        }elif $Action == "finish" && $startup["status"] == $STARTED{
+            var feeAmount currentAmount estimatedAmount money
+            currentAmount = Money($startup["current_investment"])
+            estimatedAmount = Money($startup["estimated_amount"])
+
+            if currentAmount < estimatedAmount {
+                // если не набрана сумма - возврат токенов (TODO: алгоритм уточнить)
+            }else{
+                // переводится комиссия площадки
+                feeAmount = currentAmount / Money(100) * Money($fee)
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment", $feeAmount, $startupKey, $feeKey, "crowdfunding fee")
+            }
             m["status"] = $FINISHED
         }
         DBUpdate("@1cf_startups", $Id, m)

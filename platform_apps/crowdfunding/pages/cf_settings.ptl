@@ -1,12 +1,75 @@
 SetVar(this_page, @1cf_settings)
 DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Crowdfunding"}).Vars(application)
-SetVar(roles_param, cf_roles)
-AppParam(Ecosystem:#ecosystem_id#, App:#application_id#, Name: #roles_param#, Source:app_roles)
+
 SetTitle($@1cf_settings$)
+
+SetVar(row,"row mt-sm").(col_left,"col-sm-4 text-right mt-sm").(col_right,"col-sm-8 text-left")
+SetVar(fee_wallet, AppParam(App:#application_id#, Name:cf_fee_wallet))
+SetVar(catalog_admin, AppParam(App:#application_id#, Name:cf_catalog_admin))
+SetVar(fee, AppParam(App:#application_id#, Name:cf_fee))
+
 Div(content-wrapper){
     Div(row mt-sm){
         Div(col-lg-8 col-lg-offset-2){
-            Include(@1role_settings)
+            DBFind(@1roles,roles).Where({ecosystem:#ecosystem_id#, deleted:0}).Columns("role_name,id").Limit(100).Count(roles_count)
+
+            Form(panel panel-primary){
+                Div(panel-body){
+                    Div(#row#){
+                        Div(#col_left#){
+                            $@1cf_fee_wallet$
+                        }
+                        Div(#col_right#){
+                            Div(input-group text-muted mt-sm){
+                                If(#MemberId#!=""){
+                                    SetVar(AddressMemberId, Address(#MemberId#))
+                                    #AddressMemberId#
+                                }.Else{
+                                    #fee_wallet#
+                                }
+                                Div(input-group-btn){
+                                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=#this_page#,EcosystemId=#ecosystem_id#").Popup(Header: $@1member$, Width: "50")
+                                }
+                            }
+                        }
+                    }
+                    Div(#row#){
+                        Div(#col_left#){
+                            $@1cf_fee$ (%)
+                        }
+                        Div(#col_right#){
+                            Input(Name:Fee, Type:number, Value:#fee#)
+                        }
+                    }
+
+                    Div(#row# mt-lg){
+                        Div(col-sm-12 text-center text-muted){
+                            $@1role_settings_description$
+                        }
+                    }
+                    If(#roles_count#>0){
+                        Div(#row#){
+                            Div(#col_left#){
+                                $@1cf_catalog_admin$
+                            }
+                            Div(#col_right#){
+                                Select(Name:CatalogAdmin, Source:roles, NameColumn: role_name, ValueColumn: id, Value:#catalog_admin#)
+                            }
+                        }
+                    }.Else{
+                        Div(text-center h4 text-muted){
+                            $@1roles$ $@1not_founded$
+                        }
+                    }
+                }
+                Div(panel-footer text-center){
+                    If(#roles_count#>0){
+                        Button(Body: $@1apply_settings$, Class: btn btn-primary, Page: #this_page#, Contract: @1CFSettings, Params: "FeeWallet=#AddressMemberId#")
+                    }
+                }
+            }
         }
     }
-}
+}.Style(
+    .buttons {border: 1px solid #dde6e9;}
+)

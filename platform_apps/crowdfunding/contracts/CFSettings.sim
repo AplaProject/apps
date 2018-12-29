@@ -1,0 +1,30 @@
+contract CFSettings{
+    data {
+        CatalogAdmin int
+        FeeWallet string
+        Fee int
+    }
+
+    conditions{
+        ContractConditions("@1AdminCondition")
+        $appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Crowdfunding"}).One("id"))
+        if $Fee < 0 || $Fee > 100 {
+            warning "Fee: Incorrect value"
+        }
+        var kid int
+        kid = AddressToId($FeeWallet)
+        if kid == 0 {
+            warning "Fee wallet not found"
+        }
+    }
+    func updateAppParam(name, value string){
+        var paramId int
+        paramId = Int(DBFind("@1app_params").Where({app_id:$appId, ecosystem:$ecosystem_id, name:name}).One("id"))
+        @1EditAppParam("Id,Value", paramId, value)
+    }
+    action {
+        updateAppParam("cf_catalog_admin", Str($CatalogAdmin))
+        updateAppParam("cf_fee_wallet", $FeeWallet)
+        updateAppParam("cf_fee", Str($Fee))
+    }
+}
