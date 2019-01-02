@@ -1,53 +1,66 @@
-Include(@1pager_header)
-SetTitle($@1q_poll$)
-If(#role_id#==1){
-    SetVar(permission,1)
-}
-AddToolButton(Title: @1q_new_question, Page: @1q_question_new, Icon: icon-plus).Popup(Header: "test", Width: "50")
-DBFind(@1questionnaire,src_q).Where({"ecosystem":#ecosystem_id#}).Custom(custom_name){
-    LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: "q_id=#id#"){
-        Div(Class: text-primary){
-            Span(#question#).Style({padding-left: 30px;})
+    Include(@1pager_header)
+    SetTitle($@1q_poll$)
+    If(#role_id#==1){
+        SetVar(permission,1)
+    }
+    AddToolButton(Title: @1q_new_question, Page: @1q_question_new, Icon: icon-plus).Popup(Header: "test", Width: "50")
+    DBFind(@1questionnaire,src_q).Where({"ecosystem":#ecosystem_id#}).Columns("id,question,description,answer,ecosystem,init,lastmodified,created_at,status,params->hide,params->change").Custom(custom_name){
+        LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: "q_id=#id#"){
+            Div(Class: text-primary){
+                Span(#question#).Style({padding-left: 30px;})
+            }
         }
-    }
-}.Custom(status){
-    If(#status#==0){
-        Span(Class: text-success, Body: LangRes(@1q_status_created))
-    }
-    If(#status#==1){
-        Span(Class: text-success, Body: LangRes(@1q_status_started))
-    }
-    If(#status#==2){
-        Span(Class: text-primary, Body: LangRes(@1q_status_ended))
-    }
-    If(#status#==3){
-        Span(Class: text-warning, Body: LangRes(@1q_status_admin))
-    }
-    If(#status#==4){
-        Span(Class: text-danger, Body: LangRes(@1q_status_pause))
-    }
-}.Custom(time){
-    DateTime(#lastmodified#,HH:MI DD.MM.YYYY)
-}.Custom(test){
-    DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#init#}).Vars(m)
-    SetVar(member_name, #m_member_name#)
-    #init#
-    #member_name#
-}.Custom(start){
-    Button(Body: Em(Class: fa fa-times), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=T,id=#id#").Style({margin-left: 30px;})
-}.Custom(delete){
-    Button(Body: Em(Class: fa fa-times), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=D,id=#id#").Style({margin-left: 30px;})
-}.Custom(edit){
-    Span(Class: pull-right){
-        LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: @1q_question_edit, PageParams: "q_id=#id#")
-    }
-}.Count(q)
-Div(fullscreen){
-    Div(table-responsive ml-lg mr-lg){
-        If(#q#>0){
-            Div(list-group-item){
-                Table(Source: src_q)
+    }.Custom(custom_status){
+        If(#status#==0){
+            Span(Class: text-success, Body: LangRes(@1q_status_created))
+        }
+        If(#status#==1){
+            Span(Class: text-success, Body: LangRes(@1q_status_started))
+        }
+        If(#status#==2){
+            Span(Class: text-primary, Body: LangRes(@1q_status_ended))
+        }
+        If(#status#==3){
+            Span(Class: text-warning, Body: LangRes(@1q_status_admin))
+        }
+        If(#status#==4){
+            Span(Class: text-danger, Body: LangRes(@1q_status_pause))
+        }
+    }.Custom(time){
+        DateTime(#created_at#,HH:MI DD.MM.YYYY) / DateTime(#lastmodified#,HH:MI DD.MM.YYYY)
+    }.Custom(hidden){
+        If(#params.hide#==true){
+            Span(Class: fa fa-check fa-1x)
+        }.Else{
+            Span(Class:fa fa-times fa-1x)
+        }
+    }.Custom(change){
+        If(#params.change#==true){
+            Span(Class: fa fa-check fa-1x)
+        }.Else{
+            Span(Class:fa fa-times fa-1x)
+        }
+    }.Custom(start){
+        Button(Body: Em(Class: fa fa-hourglass-start), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=T,id=#id#").Style({margin-left: 30px;})
+    }.Custom(delete){
+        Button(Body: Em(Class: fa fa-trash), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=D,id=#id#").Style({margin-left: 30px;})
+    }.Custom(edit){
+        Span(Class: pull-right){
+            LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: @1q_question_edit, PageParams: "q_id=#id#")
+        }
+    }.Count(q)
+    Div(fullscreen){
+        Div(table-responsive ml-lg mr-lg){
+            If(#q#>0){
+                Div(list-group-item){
+                    If(#permission#==1){
+                        Table(Source: src_q, Columns: "$@1q_question$=custom_name,$@1q_date_start$ / $@1q_date_expiration$=time,$@1q_audience$=#audience#,$@1q_status$=custom_status,$@1q_hide$=hidden,$@1q_change$=change,=start,=delete,=edit")
+                    }.Else{
+                        Table(Source: src_q, Columns: "$@1q_question$=custom_name,$@1q_date_start$ / $@1q_date_expiration$=time,$@1q_audience$=#audience#,$@1q_status$=custom_status,$@1q_hide$=hidden,$@1q_change$=change")
+                    }
+                }
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: $@1ex_error_ecosystems$)
             }
         }
     }
-}
