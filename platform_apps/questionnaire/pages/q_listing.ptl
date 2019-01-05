@@ -8,9 +8,9 @@ If(#role_id#==1){
 AddToolButton(Title: @1q_new_question, Page: @1q_question_new, Icon: icon-plus).Popup(Header: "test", Width: "50")
 
 If(GetVar(search)!=""){
-    SetVar(where,"{ecosystem:#ecosystem_id#,{$or:[{question:{$like:#search#}}]}}")
+    SetVar(where,"{ecosystem:#ecosystem_id#,deleted:0,{$or:[{question:{$like:#search#}}]}}")
 }.Else{
-    SetVar(where,"{ecosystem:#ecosystem_id#}").(search,)
+    SetVar(where,"{ecosystem:#ecosystem_id#,deleted:0}").(search,)
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
@@ -54,13 +54,13 @@ DBFind(#this_table#,src_q).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).
     }.Else{
         Span(Class:fa fa-times fa-1x)
     }
-}.Custom(start){
-    Button(Body: Em(Class: fa fa-hourglass-start), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=T,id=#id#").Style({margin-left: 30px;})
-}.Custom(delete){
-    Button(Body: Em(Class: fa fa-trash), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=D,id=#id#").Style({margin-left: 30px;})
-}.Custom(edit){
+}.Custom(ops){
     Span(Class: pull-right){
-        LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: @1q_question_edit, PageParams: "q_id=#id#")
+        If(#status#!=1){
+            Button(Body: Em(Class: fa fa-hourglass-start), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=T,id=#id#")
+        }
+        Button(Body: Em(Class: fa fa-trash), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=D,id=#id#").Style({margin-left: 30px;})
+        LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: @1q_question_edit, PageParams: "q_id=#id#").Style({margin-left: 30px;})
     }
 }.Count(q)
 
@@ -69,7 +69,7 @@ Div(fullscreen){
         If(#q#>0){
             Div(list-group-item){
                 If(#permission#==1){
-                    Table(Source: src_q, Columns: "$@1q_question$=custom_name,$@1q_date_start$ / $@1q_date_lastmodified$ / $@1q_date_expiration$=time,$@1q_audience$=#audience#,$@1q_status$=custom_status,$@1q_hide$=hidden,$@1q_change$=change,=start,=delete,=edit")
+                    Table(Source: src_q, Columns: "$@1q_question$=custom_name,$@1q_date_start$ / $@1q_date_lastmodified$ / $@1q_date_expiration$=time,$@1q_audience$=#audience#,$@1q_status$=custom_status,$@1q_hide$=hidden,$@1q_change$=change,=ops")
                 }.Else{
                     Table(Source: src_q, Columns: "$@1q_question$=custom_name,$@1q_date_start$ / $@1q_date_lastmodified$ / $@1q_date_expiration$=time,$@1q_audience$=#audience#,$@1q_status$=custom_status,$@1q_hide$=hidden,$@1q_change$=change")
                 }

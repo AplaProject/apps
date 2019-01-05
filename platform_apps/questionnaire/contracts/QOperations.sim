@@ -35,20 +35,19 @@ contract QOperations {
         }
     }
     conditions {
+        //check name unqie
         //admin only
         //check deleted
         if $operation == "C" {
             expToTimestamp()
             //check name uniques
             //check function time before real time
-        }
-        if $operation == "T" {
-            //if Status of question is one sorry we can't start q["status"] = 1
-        }
-        
+            if $time > UnixDateTime($ext_string) {
+                warning LangRes("@1q_error_expdate", "en")
+            }
+        }     
     }
     action {
-        //we need time
         //aucditorium
         //notifications when start and changing status
         if $operation == "C" {
@@ -60,7 +59,7 @@ contract QOperations {
             params["change"] = $change
             q["question"] = $question
             q["description"] = $description
-            q["answer"] = JSONEncode(decision) //we need to separate it
+            q["answer"] = JSONEncode(decision)
             q["ecosystem"] = $ecosystem_id
             q["deleted"] = 0
             q["init"] = $key_id
@@ -69,7 +68,6 @@ contract QOperations {
             q["params"] = JSONEncode(params)
             q["lastmodified"] = $time 
             q["expired"] = UnixDateTime($ext_string)
-            //warning Sprintf("%v", q["expired"])
             DBInsert("@1questionnaire", q)
         }
         if $operation == "E" {
@@ -81,7 +79,6 @@ contract QOperations {
             //check status to edit
             q["status"] = $status
             q["lastmodified"] = $time
-            //warning Sprintf("%v", $id)
             DBUpdate("@1questionnaire", $id, q)
         }
         if $operation == "AA" {
@@ -89,11 +86,9 @@ contract QOperations {
             decision = DBFind("@1questionnaire").Columns("answer").Where({"id":$id,ecosystem:$ecosystem_id}).One("answer")
             decision = JSONDecode(decision)
             decision = Append(decision, Str($answer))
-            //warning Sprintf("%s", answer)
             var q map
             q["answer"] = JSONEncode(decision)
             DBUpdate("@1questionnaire", $id, q)
-            //warning Sprintf("%s", q)
         }
         if $operation == "AD" {
             var decision array
@@ -101,7 +96,6 @@ contract QOperations {
             decision = JSONDecode(decision)
             var buffer string
             buffer = Join(decision, ",")
-            //warning Sprintf("%s", $answer)
             if Contains(buffer, Str($answer)) {
                 buffer = Replace(buffer, `,` + Str($answer), ``)
             }
@@ -112,7 +106,6 @@ contract QOperations {
             var q map
             q["answer"] = JSONEncode(decision)
             DBUpdate("@1questionnaire", $id, q)
-            //warning Sprintf("%v", answer)
         }
         if $operation == "T" {
             //notification send
