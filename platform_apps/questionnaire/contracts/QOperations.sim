@@ -9,10 +9,43 @@ contract QOperations {
         notifications bool "optional"
         hide bool "optional"
         change bool "optional"
+        end_date string
+        end_time string
+    }
+    func trimZeroTime(s string) string {
+        if Contains(s, "T00:00:00Z") {
+            s = Replace(s, "T00:00:00Z", "")
+        }
+        return s
+    }
+    func dateAddTime(d, t string) string {
+        var dt string
+        if Size(t) == 5 {
+            dt = Sprintf("%v %v:00", trimZeroTime(d), t)
+        }
+        return dt
+    }
+    func isCalledFromPage() bool {
+        return $stack[0] == Sprintf("@%v%v", $ecosystem_id, $this_contract)
+    }
+    func expToTimestamp() {
+        $ext_string = dateAddTime($end_date, $end_time)
+        if $time > UnixDateTime($ext_string) {
+            warning LangRes("@1ending_date_invalid", "en")
+        }
     }
     conditions {
         //admin only
         //check deleted
+        if $operation == "C" {
+            expToTimestamp()
+            //check name uniques
+            //check function time before real time
+        }
+        if $operation == "T" {
+            //if Status of question is one sorry we can't start q["status"] = 1
+        }
+        
     }
     action {
         //we need time
@@ -27,14 +60,16 @@ contract QOperations {
             params["change"] = $change
             q["question"] = $question
             q["description"] = $description
-            q["answer"] = JSONEncode(decision)
+            q["answer"] = JSONEncode(decision) //we need to separate it
             q["ecosystem"] = $ecosystem_id
             q["deleted"] = 0
             q["init"] = $key_id
             q["status"] = 0
             q["created_at"] = $time
             q["params"] = JSONEncode(params)
-            q["lastmodified"] = $time
+            q["lastmodified"] = $time 
+            q["expired"] = UnixDateTime($ext_string)
+            //warning Sprintf("%v", q["expired"])
             DBInsert("@1questionnaire", q)
         }
         if $operation == "E" {
@@ -46,6 +81,7 @@ contract QOperations {
             //check status to edit
             q["status"] = $status
             q["lastmodified"] = $time
+            //warning Sprintf("%v", $id)
             DBUpdate("@1questionnaire", $id, q)
         }
         if $operation == "AA" {
@@ -53,9 +89,11 @@ contract QOperations {
             decision = DBFind("@1questionnaire").Columns("answer").Where({"id":$id,ecosystem:$ecosystem_id}).One("answer")
             decision = JSONDecode(decision)
             decision = Append(decision, Str($answer))
+            //warning Sprintf("%s", answer)
             var q map
             q["answer"] = JSONEncode(decision)
             DBUpdate("@1questionnaire", $id, q)
+            //warning Sprintf("%s", q)
         }
         if $operation == "AD" {
             var decision array
@@ -63,6 +101,7 @@ contract QOperations {
             decision = JSONDecode(decision)
             var buffer string
             buffer = Join(decision, ",")
+            //warning Sprintf("%s", $answer)
             if Contains(buffer, Str($answer)) {
                 buffer = Replace(buffer, `,` + Str($answer), ``)
             }
@@ -73,6 +112,7 @@ contract QOperations {
             var q map
             q["answer"] = JSONEncode(decision)
             DBUpdate("@1questionnaire", $id, q)
+            //warning Sprintf("%v", answer)
         }
         if $operation == "T" {
             //notification send
