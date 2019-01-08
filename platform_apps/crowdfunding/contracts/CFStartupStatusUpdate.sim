@@ -1,0 +1,37 @@
+contract CFStartupStatusUpdate {
+    data {}
+
+    func changeStatus(from, to map) {
+        var items array i lenItems int it map
+        from["deleted"] = 0
+        items = DBFind($table).Columns("id,started_at,finished_at,name").Where(from).Limit(10000)
+
+        lenItems = Len(items)
+        while i < lenItems{
+            it = items[i]
+            DBUpdate($table, Int(it["id"]), to)
+            i = i + 1
+        }
+    }
+    conditions{
+        var appId admin int
+        appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Crowdfunding"}).One("id"))
+        admin = Int(AppParam(appId, "cf_catalog_admin", 1))
+        if !RoleAccess(admin){
+            warning "This action allowed only for startup catalog admin role"
+        }
+        $CREATED = 1
+        $PUBLISHED = 2
+        $STARTED = 3
+        $FINISHED = 4
+        $FAILED = 5
+        $STOPPED = 6
+        $REJECTED = 7
+        $table = "@1cf_startups"
+    }
+
+    action {
+        changeStatus({status:$PUBLISHED, started_at:{"$lte":$block_time}}, {status:$STARTED})
+        changeStatus({status:$STARTED, finished_at:{"$lte":$block_time}}, {status:$FINISHED})
+    }
+}
