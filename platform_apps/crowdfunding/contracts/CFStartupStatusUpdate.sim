@@ -4,17 +4,30 @@ contract CFStartupStatusUpdate {
     func changeStatus(from, to map) {
         var items array i lenItems int it map
         from["deleted_at"] = 0
-        items = DBFind($table).Columns("id,started_at,finished_at,name").Where(from).Limit(10000)
+        items = DBFind($table).Columns("id,started_at,finished_at,name,current_investment,estimated_amount,wallet").Where(from).Limit(10000)
 
         lenItems = Len(items)
         while i < lenItems{
             it = items[i]
+            if to["status"] == $FINISHED {
+                var feeAmount currentAmount estimatedAmount money
+                currentAmount = Money(it["current_investment"])
+                estimatedAmount = Money(it["estimated_amount"])
+
+                if currentAmount < estimatedAmount {
+                    // если не набрана сумма - возврат токенов (TODO: алгоритм уточнить)
+                }else{
+                    // переводится комиссия площадки
+                    feeAmount = currentAmount / Money(100) * Money($fee)
+                    @1TokensTransfer("Amount,SenderId,RecipientId,Comment", feeAmount, AddressToId(it["wallet"]), $feeKey, "crowdfunding fee")
+                }
+            }
             DBUpdate($table, Int(it["id"]), to)
             i = i + 1
         }
     }
     conditions{
-        var appId admin int
+        var appId admin int feeWallet string
         appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Crowdfunding"}).One("id"))
         admin = Int(AppParam(appId, "cf_catalog_admin", 1))
         if !RoleAccess(admin){
@@ -28,6 +41,13 @@ contract CFStartupStatusUpdate {
         $STOPPED = 6
         $REJECTED = 7
         $table = "@1cf_startups"
+
+        $fee = AppParam(appId, "cf_fee", 1)
+        feeWallet = AppParam(appId, "cf_fee_wallet", 1)
+        $feeKey = AddressToId(feeWallet)
+        if $feeKey == 0{
+            $feeKey = Int(DBFind("@parameters").Where({ecosystem:1, name:"founder_account"}).One("value"))
+        }
     }
 
     action {
