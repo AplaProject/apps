@@ -1,64 +1,57 @@
 contract QSandbox {
     data {
-        kekc string
+        id int //recheck id to normal id
+        au_groups int "optional"
+        au_roles int "optional"
         operation string
     }
+    
     conditions {
-
+        //we place it here because current ver is sucks
     }
     action {
-        if $operation == "C" {            
-            var myarr array
-            myarr[0] = "This is a string"
-            myarr[1] = "This is a line"
-            var json string
-            json = JSONEncode(myarr)
-            var q map
-            q["answer"] = json
-            DBUpdate("@1questionnaire", 1, q)
-            //warning Sprintf("%v", myarr)
+        var q map
+        var audience array
+        var buffer string
+        //warning Sprintf("%v %v", $au_roles, $au_groups)
+        if $operation == "RA" {
+            audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_roles").One("au_roles"))
+            audience = Append(audience, $au_roles)
+            q["au_roles"] = JSONEncode(audience)
+            DBUpdate("@1questionnaire", $id, q)
         }
-        if $operation == "M" {
-            var mydata map
-            mydata["0"] = "test1"
-            mydata["1"] = "test2"
-            var json string
-            json = JSONEncode(mydata)
-            var q map
-            q["answer"] = json
-            DBUpdate("@1questionnaire", 1, q)
-            //warning Sprintf("%v", json)
+        if $operation == "GA" {
+            audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_groups").One("au_groups"))
+            audience = Append(audience, $au_groups)
+            q["au_groups"] = JSONEncode(audience)
+            DBUpdate("@1questionnaire", $id, q)
         }
-        if $operation == "A" {
-            var answer array
-            answer = DBFind("@1questionnaire").Columns("answer").Where({"id":1,ecosystem:$ecosystem_id}).One("answer")
-            answer = JSONDecode(answer)
-            answer = Append(answer, "This is a test")
-            answer = JSONEncode(answer)
-            //warning Sprintf("%s", answer)
-            var q map
-            q["answer"] = answer
-            DBUpdate("@1questionnaire", 1, q)
-            //warning Sprintf("%s", q)
-        }
-        if $operation == "S" {
-            var answer array
-            answer = DBFind("@1questionnaire").Columns("answer").Where({"id":1,ecosystem:$ecosystem_id}).One("answer")
-            answer = JSONDecode(answer)
-            var buffer string
-            buffer = Join(answer, ",")
-            if HasPrefix(buffer, Str($kekc)) {
-                buffer = Replace(buffer, Str($kekc) + `,`, ``)
+        if $operation == "RD" {
+            audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_roles").One("au_roles"))
+            buffer = Join(audience, ",")
+            if Contains(buffer, Str($au_roles)) {
+                buffer = Replace(buffer, `,` + Str($au_roles), ``)
+                audience = Split(buffer, ",")
             }
-            if Contains(buffer, Str($kekc)) {
-                buffer = Replace(buffer, `,` + Str($kekc), ``)
+            if HasPrefix(buffer, Str($au_roles)) {
+                audience[0] = ""
             }
-            answer = Split(buffer, ",")
-            answer = JSONEncode(answer)
-            var q map
-            q["answer"] = answer
-            DBUpdate("@1questionnaire", 1, q)
-            //warning Sprintf("%v", answer)
+            //warning Sprintf("%v", audience)
+            q["au_roles"] = JSONEncode(audience)
+            DBUpdate("@1questionnaire", $id, q)
+        }
+        if $operation == "GD" {
+            audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_groups").One("au_groups"))
+            buffer = Join(audience, ",")
+            if Contains(buffer, Str($au_groups)) {
+                buffer = Replace(buffer, `,` + Str($au_groups), ``)
+                audience = Split(buffer, ",")
+            }
+            if HasPrefix(buffer, Str($au_roles)) {
+                audience[0] = ""
+            }
+            q["au_groups"] = JSONEncode(audience)
+            DBUpdate("@1questionnaire", $id, q)
         }
     }
 }
