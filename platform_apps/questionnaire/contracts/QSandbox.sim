@@ -4,14 +4,13 @@ contract QSandbox {
         au_groups int "optional"
         au_roles int "optional"
         operation string
-    }
-    
+    } 
     conditions {
-        //we place it here because current ver is sucks
+        //unqiue group or role
     }
     action {
         var q map
-        var audience array
+        var audience arNew array
         var buffer string
         //warning Sprintf("%v %v", $au_roles, $au_groups)
         if $operation == "RA" {
@@ -28,14 +27,22 @@ contract QSandbox {
         }
         if $operation == "RD" {
             audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_roles").One("au_roles"))
-            buffer = Join(audience, ",")
-            if Contains(buffer, Str($au_roles)) {
-                buffer = Replace(buffer, `,` + Str($au_roles), ``)
-                audience = Split(buffer, ",")
-            }
-            if HasPrefix(buffer, Str($au_roles)) {
-                audience[0] = ""
-            }
+            //buffer = Join(audience, `,`)
+            var i int
+            while i < Len(audience) {
+                if audience[i] != $au_roles {
+                    arNew = Append(arNew, audience[i])
+                }
+                i = i + 1
+            } 
+            warning Sprintf("%v", arNew)
+            //if Contains(buffer, Str($au_roles)) {
+                //buffer = Replace(buffer, `,` + $au_roles, ``)
+            //}
+            //audience = Split(buffer, `,`)
+            //if HasPrefix(buffer, Str($au_roles)) {
+                //audience[0] = ``
+            //}
             //warning Sprintf("%v", audience)
             q["au_roles"] = JSONEncode(audience)
             DBUpdate("@1questionnaire", $id, q)
@@ -45,10 +52,10 @@ contract QSandbox {
             buffer = Join(audience, ",")
             if Contains(buffer, Str($au_groups)) {
                 buffer = Replace(buffer, `,` + Str($au_groups), ``)
-                audience = Split(buffer, ",")
             }
+            audience = Split(buffer, ",")
             if HasPrefix(buffer, Str($au_roles)) {
-                audience[0] = ""
+                audience[0] = ``
             }
             q["au_groups"] = JSONEncode(audience)
             DBUpdate("@1questionnaire", $id, q)

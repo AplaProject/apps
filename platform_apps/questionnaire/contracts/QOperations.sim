@@ -49,12 +49,13 @@ contract QOperations {
         }     
     }
     action {
-        //aucditorium
+        var q map
+        var audience audience_new array
         //notifications when start and changing status
         if $operation == "C" {
             var decision array
             decision = Split($answer, ",")
-            var q params map
+            var params map
             params["notifications"] = $notifications
             params["hide"] = $hide
             params["change"] = $change
@@ -74,7 +75,6 @@ contract QOperations {
             DBInsert("@1questionnaire", q)
         }
         if $operation == "E" {
-            var q map
             q["description"] = $description
             q["question"] = $question
             q["ecosystem"] = $ecosystem_id
@@ -86,33 +86,62 @@ contract QOperations {
         }
         if $operation == "AA" {
             var decision array
-            decision = DBFind("@1questionnaire").Columns("answer").Where({"id":$id,ecosystem:$ecosystem_id}).One("answer")
-            decision = JSONDecode(decision)
+            decision = JSONDecode(DBFind("@1questionnaire").Columns("answer").Where({"id":$id,ecosystem:$ecosystem_id}).One("answer"))
             decision = Append(decision, Str($answer))
-            var q map
             q["answer"] = JSONEncode(decision)
             DBUpdate("@1questionnaire", $id, q)
         }
         if $operation == "AD" {
-            var decision array
-            decision = DBFind("@1questionnaire").Columns("answer").Where({"id":$id,ecosystem:$ecosystem_id}).One("answer")
-            decision = JSONDecode(decision)
-            var buffer string
-            buffer = Join(decision, ",")
-            if Contains(buffer, Str($answer)) {
-                buffer = Replace(buffer, `,` + Str($answer), ``)
-            }
-            if HasPrefix(buffer, Str($answer)) {
-                buffer = Replace(buffer, Str($answer) + `,`, ``)
-            }
-            decision = Split(buffer, ",")
-            var q map
-            q["answer"] = JSONEncode(decision)
+            var decision decision_new array
+            decision = JSONDecode(DBFind("@1questionnaire").Columns("answer").Where({"id":$id,ecosystem:$ecosystem_id}).One("answer"))
+            var i int
+            while i < Len(decision) {
+                if decision[i] != Str($answer) {
+                    decision_new = Append(decision_new, decision[i])
+                }
+                i = i + 1
+            } 
+            q["answer"] = JSONEncode(decision_new)
             DBUpdate("@1questionnaire", $id, q)
         }
+        if $operation == "RA" {
+            audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_roles").One("au_roles"))
+            audience = Append(audience, $au_roles)
+            q["au_roles"] = JSONEncode(audience)
+            DBUpdate("@1questionnaire", $id, q)
+        }
+        if $operation == "GA" {
+            audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_groups").One("au_groups"))
+            audience = Append(audience, $au_groups)
+            q["au_groups"] = JSONEncode(audience)
+            DBUpdate("@1questionnaire", $id, q)
+        }
+        if $operation == "RD" {
+            audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_roles").One("au_roles"))
+            var i int
+            while i < Len(audience) {
+                if audience[i] != $au_roles {
+                    audience_new = Append(audience_new, audience[i])
+                }
+                i = i + 1
+            } 
+            q["au_roles"] = JSONEncode(audience_new)
+            DBUpdate("@1questionnaire", $id, q)
+        }
+        if $operation == "GD" {
+            audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_groups").One("au_groups"))
+            var i int
+            while i < Len(audience) {
+                if audience[i] != $au_roles {
+                    audience_new = Append(audience_new, audience[i])
+                }
+                i = i + 1
+            } 
+            q["au_groups"] = JSONEncode(audience)
+            DBUpdate("@1questionnaire", $id, q)
+        }        
         if $operation == "T" {
             //notification send
-            var q map
             q["init"] = $key_id
             q["status"] = 1
             q["lastmodified"] = $time
@@ -120,7 +149,6 @@ contract QOperations {
         }
         if $operation == "D" {
             //notifications close
-            var q map
             q["init"] = $key_id
             q["status"] = 3
             q["deleted"] = 1
