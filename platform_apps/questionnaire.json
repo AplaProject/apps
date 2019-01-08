@@ -40,6 +40,10 @@
             "Trans": "{\"en\": \"Hide answer until expiration\", \"ru\": \"Не показывать ответы до окончания\"}"
         },
         {
+            "Name": "q_answer_member",
+            "Trans": "{\"en\": \"Voting member\", \"ru\": \"Участник голосования\"}"
+        },
+        {
             "Name": "q_audience",
             "Trans": "{\"en\": \"Audience\", \"ru\": \"Аудитория\"}"
         },
@@ -147,7 +151,7 @@
         {
             "Name": "default_menu",
             "Conditions": "ContractConditions(\"MainCondition\")",
-            "Value": "MenuItem(Title:$@1q_poll$, Page:@1q_listing, Icon:\"fa fa-question-circle\")"
+            "Value": "MenuItem(Title:$@1q_poll$, Page:@1q_listing, Icon:\"fa fa-question-circle\")\n\n\n                Div(input-group mb-sm){\n                    DBFind(@1roles,src_rid).Where({ecosystem:#ecosystem_id#})\n                    Select(Name: au_roles, Source: src_rid, NameColumn: role_name, ValueColumn: id)\n                    Div(input-group-btn){\n                        Button(Class: btn btn-primary fa fa-plus, Page: @1q_question_edit, PageParams:\"q_id=#question_id#\", Contract: @1QSandbox, Params:\"question_id=#question_id#, operation=R\")\n                    }\n                }"
         }
     ],
     "pages": [
@@ -167,6 +171,18 @@
             "Name": "q_question_edit",
             "Conditions": "ContractConditions(\"MainCondition\")",
             "Value": "DBFind(@1questionnaire).Where({ecosystem:#ecosystem_id#, id:#q_id#}).Vars(question)\nArrayToSource(src, #question_answer#)\nData(src_status,\"status_id,status_name\"){\n    1,$@1q_status_started$\n    3,$@1q_status_admin$\n    4,$@1q_status_pause$\n}\nIf(Or(#question_status#==0, #question_status#==4)){\n    SetVar(editable,1)\n}\nSetVar(time,DateTime(#question_lastmodified#,HH:MI DD.MM.YYYY))\n\nDiv(content-wrapper){\n    SetTitle(#question_question#)\n    Div(Class: breadcrumb){\n        LinkPage($@1q_poll$, @1q_listing)\n        Span(/).Style(margin-right: 10px; margin-left: 10px;)\n        Span(Class: text-muted, Body: #question_question#)\n    }\n    \n    Form(){\n        Div(form-group){\n            Label($@1title$)\n            If(#editable#==1){\n                Input(Name: question, Value: #question_question#)\n            }.Else{\n                Input(Name: question, Value: #question_question#, Disabled: true)\n            }\n        }\n        Div(form-group){\n            Label($@1q_description$)\n            If(#editable#==1){\n                Input(Type: textarea, Name: description, Value: #question_description#).Style(resize: vertical; min-height: 6em;)\n            }.Else{\n                Input(Type: textarea, Name: description, Value: #question_description#, Disabled: true).Style(resize: vertical; min-height: 6em;)\n            }\n        }\n        Div(form-group){\n            Label($@1q_answer_change$)\n            If(#editable#==1){\n                Div(input-group mb-sm){\n                    Input(Name: answer)\n                    Div(input-group-btn){\n                        Button(Class: btn btn-primary fa fa-plus, Page: @1q_question_edit, PageParams:\"q_id=#question_id#\", Contract: @1QOperations, Params:\"id=#question_id#, operation=AA\")\n                    }\n                }\n            }\n            ForList(Source: src, Index:ind){\n                If(#editable#==1){\n                    Button(Body: Span(Class: fa fa-remove) #value#, Page: @1q_question_edit, Class: btn btn-primary ml-sm, Contract: @1QOperations, PageParams: \"q_id=#question_id#\", Params: \"id=#question_id#, answer=#value#, operation=AD\")\n                }.Else{\n                    Button(Body: #value#, Class: btn btn-primary ml-sm)\n                }\n            } \n        }\n        Div(form-group){\n            Label($@1status$)\n            Select(Name: status, Source: src_status, NameColumn: status_name, ValueColumn: status_id)\n        }\n        Div(form-group){\n            Label($@1q_lastmodified$)\n            Input(Name: lastmodified,  Value: #time#, Disabled: true)\n        }\n        Div(form-group){\n            Button(Class: btn btn-primary, Body: $@1save$, Contract: @1QOperations, Page: @1q_listing, PageParams: \"q_id=#question_id#\", Params: \"id=#question_id#,operation=E\")\n        }\n    }\n}",
+            "Menu": "default_menu"
+        },
+        {
+            "Name": "q_question_graph",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "Form(){\n    DBFind(@1questionnaire).Where({id:#q_id#}).Columns(\"id,question,description,answer\").Vars(question)\n    DBFind(@1q_answers).Where({question_id:#question_id#}).Count(answers)\n    Div(row form-group){\n        Div(col-sm-12){\n            ArrayToSource(src, #question_answer#)\n            ForList(Source: src, Index:ind){\n                DBFind(@1q_answers).Where({question_id:#question_id#, decision: #value#}).Count(a)\n                Div(col-sm-3){\n                    Form(panel panel-primary text-center){\n                        Div(panel-heading, Body: #ind# : #value#)\n                        Div(panel-body){\n                            Span(Class: text-primary  ml h1, Body: #a#)\n                        }\n                    }\n                }\n            }\n        }\n    }\n    Div(row mt){\n        Div(col-md-12){\n            Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1q_question, PageParams: \"q_id=#question_id#\")\n        }\n    }\n}",
+            "Menu": "default_menu"
+        },
+        {
+            "Name": "q_question_log",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "Form(){\n    SetVar(this_page, @1q_question_log).(this_table, @1q_answers)\n    Include(@1pager_header)\n    DBFind(@1questionnaire).Where({id:#q_id#}).Columns(\"id\").Vars(q)\n\n    If(#a_id#>0){\n        SetVar(where,\"{question_id:#q_id#,answer_id:#a_id#}\")\n    }.Else{\n        SetVar(where,\"{question_id:#q_id#}\")\n    }\n\n    DBFind(@1q_answers,src_a).Where(#where#).Limit(#pager_limit#).Custom(ans){\n        #answer_id# : #decision#\n    }.Custom(c_m){\n        DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#member#}).Vars(m)\n        If(Or(#m_id#>0,#m_id#<0)){\n            SetVar(member_name, #m_member_name#)\n        }.Else{\n            SetVar(member_name, Address(#id#))\n        }\n        Span(#member_name#)\n    }.Custom(c_ecosystem){\n        DBFind(@1ecosystems).Where({id:#ecosystem#}).Vars(e)\n        If(Or(#e_id#>0,#e_id#<0)){\n            SetVar(eco_name, #e_name#)\n        }.Else{\n            SetVar(eco_name, #ecosystem#)\n        }\n        Span(#eco_name#)\n    }.Custom(time){\n        DateTime(#lastmodified#,HH:MI DD.MM.YYYY)\n    }.Count(a)\n    \n    Div(row form-group){\n        Div(col-sm-12){           \n            Table(Source: src_a, Columns:\"$@1@q_answer_member$=c_m,$@1ecosystem_name$=c_ecosystem,$@1q_date_lastmodified$=time,$@1q_answer$=ans\")\n            Div(mt-sm ml-lg mr-sm mb-sm){\n                Include(@1pager)\n            }\n        }\n    } \n    Div(row mt){\n        Div(col-md-12){\n            Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1q_question, PageParams: \"q_id=#q_id#\")\n        }\n    }\n}",
             "Menu": "default_menu"
         },
         {
