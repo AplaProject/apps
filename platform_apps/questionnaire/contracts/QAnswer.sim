@@ -8,8 +8,32 @@ contract QAnswer {
     }
     conditions {
         //question exist && status && aucditoria
+        //if !DBFind("@1questionnaire").Where({"id":$question_id}) {
+            //question not exist
+        //}
+        var q map
+        q = DBFind("@1questionnaire").Where({"id":$question_id}).Columns("status,au_groups,au_roles").Row()
+        
+        if q["status"]!=1 {
+            
+        }
+        
+        //var groups array
+        //groups = q["au_groups"]
+        if q["au_groups"]!=0 {
+            warning Sprintf("%v", q["au_groups"])
+           // var x array
+            warning Sprintf("%v", q["au_groups"])
+            //x = DBFind("@1groups_participants").Where({"member->member_id":$key_id,"groups_info->id":{"$in":[groups]}}).Row()
+            //if !DBFind("@1groups_participants").Where({"member->member_id":$key_id,"groups_info->id":{"$in":[groups]}}) {
+            
+            //}
+        }
+        if q["au_roles"]!=0 {
+            //DBFind("@1roles").Where({"id":$question_id})
+        }
+        warning Sprintf("%v", q["status"])
         //make sure to revoting upd
-        //check time to close shit questions you know
     }
     action {
         if $time > Int(DBFind("@1questionnaire").Where({"id":$question_id}).Columns("expired").One("expired")) {
@@ -17,26 +41,27 @@ contract QAnswer {
             q["status"] = 2
             q["lastmodified"] = $time
             DBUpdate("@1questionnaire", $question_id, q)
-        }
-        if $operation == "CV" {
-            var a map
-            a["member"] = $key_id
-            a["decision"] = $decision
-            a["answer_id"] = $answer_id
-            a["ecosystem"] = $ecosystem_id
-            a["lastmodified"] = $time
-            a["question_id"] = $question_id
-            DBInsert("@1q_answers", a)
-        }
-        if $operation == "UV" {
-            var a map
-            a["member"] = $key_id
-            a["decision"] = $decision
-            a["answer_id"] = $answer_id
-            a["ecosystem"] = $ecosystem_id
-            a["lastmodified"] = $time
-            a["question_id"] = $question_id
-            DBUpdate("@1q_answers", $id, a)
+        } else {
+            if $operation == "CV" {
+                var a map
+                a["member"] = $key_id
+                a["decision"] = $decision
+                a["answer_id"] = $answer_id
+                a["ecosystem"] = $ecosystem_id
+                a["lastmodified"] = $time
+                a["question_id"] = $question_id
+                DBInsert("@1q_answers", a)
+            }
+            if $operation == "UV" {
+                var a map
+                a["member"] = $key_id
+                a["decision"] = $decision
+                a["answer_id"] = $answer_id
+                a["ecosystem"] = $ecosystem_id
+                a["lastmodified"] = $time
+                a["question_id"] = $question_id
+                DBUpdate("@1q_answers", $id, a)
+            }
         }
     }
 }

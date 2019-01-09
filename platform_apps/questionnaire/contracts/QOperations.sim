@@ -9,6 +9,8 @@ contract QOperations {
         notifications bool "optional"
         hide bool "optional"
         change bool "optional"
+        au_groups int "optional"
+        au_roles int "optional"
         end_date string
         end_time string
     }
@@ -39,6 +41,15 @@ contract QOperations {
         //admin only
         //no answer found
         //check deleted
+
+        //unqiue group or role only One
+        //we can't delete zero
+        if $operation == "RD" && $au_roles==0 {
+            warning
+        }
+        if $operation == "GD" && $au_groups==0 {
+            warning
+        }
         if $operation == "C" {
             expToTimestamp()
             //check name uniques
@@ -66,8 +77,8 @@ contract QOperations {
             q["deleted"] = 0
             q["init"] = $key_id
             q["status"] = 0
-            q["au_roles"] = `[]`
-            q["au_groups"] = `[]`
+            q["au_roles"] = `[0]`
+            q["au_groups"] = `[0]`
             q["created_at"] = $time
             q["params"] = JSONEncode(params)
             q["lastmodified"] = $time 
@@ -106,38 +117,56 @@ contract QOperations {
         }
         if $operation == "RA" {
             audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_roles").One("au_roles"))
-            audience = Append(audience, $au_roles)
+            if audience[0]==0 {
+                audience[0] = $au_roles
+            } else {
+                audience = Append(audience, $au_roles)
+            }
             q["au_roles"] = JSONEncode(audience)
             DBUpdate("@1questionnaire", $id, q)
         }
         if $operation == "GA" {
             audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_groups").One("au_groups"))
-            audience = Append(audience, $au_groups)
+            if audience[0]==0 {
+                audience[0] = $au_groups
+            } else {
+                audience = Append(audience, $au_groups)
+            }
             q["au_groups"] = JSONEncode(audience)
             DBUpdate("@1questionnaire", $id, q)
         }
         if $operation == "RD" {
             audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_roles").One("au_roles"))
             var i int
-            while i < Len(audience) {
-                if audience[i] != $au_roles {
-                    audience_new = Append(audience_new, audience[i])
+            if audience[0]==$au_roles && Len(audience)<2 {
+                audience[0] = 0
+                q["au_roles"] = JSONEncode(audience)
+            } else {
+                while i < Len(audience) {
+                    if audience[i] != $au_roles {
+                        audience_new = Append(audience_new, audience[i])
+                    }
+                    i = i + 1
                 }
-                i = i + 1
-            } 
-            q["au_roles"] = JSONEncode(audience_new)
+                q["au_roles"] = JSONEncode(audience_new)
+            }
             DBUpdate("@1questionnaire", $id, q)
         }
         if $operation == "GD" {
             audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_groups").One("au_groups"))
             var i int
-            while i < Len(audience) {
-                if audience[i] != $au_roles {
-                    audience_new = Append(audience_new, audience[i])
+            if audience[0]==$au_groups && Len(audience)<2 {
+                audience[0] = 0
+                q["au_groups"] = JSONEncode(audience)
+            } else {
+                while i < Len(audience) {
+                    if audience[i] != $au_roles {
+                        audience_new = Append(audience_new, audience[i])
+                    }
+                    i = i + 1
                 }
-                i = i + 1
-            } 
-            q["au_groups"] = JSONEncode(audience)
+                q["au_groups"] = JSONEncode(audience)
+            }
             DBUpdate("@1questionnaire", $id, q)
         }        
         if $operation == "T" {
