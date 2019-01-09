@@ -2,17 +2,19 @@ contract CFInvestment {
     data {
         NotificId int
         Amount money
+        Id int "optional"
     }
 
     conditions{
-        // получить стартап из оповещения
-        $note = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$NotificId}).Columns("id,page_params->startup_id").Row()
-        if !$note{
-            warning "Notification not found"
+        if $Id == 0{
+            // получить стартап из оповещения
+            $note = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$NotificId}).Columns("id,page_params->startup_id").Row()
+            if !$note{
+                warning "Notification not found"
+            }
+            $Id = Int($note["page_params.startup_id"])
         }
-        var startupId int
-        startupId = Int($note["page_params.startup_id"])
-        $startup = DBFind("@1cf_startups").WhereId(startupId).Row()
+        $startup = DBFind("@1cf_startups").WhereId($Id).Row()
         if !$startup{
             warning "Startup not found"
         }
@@ -38,7 +40,9 @@ contract CFInvestment {
         }
     }
     action {
-        @1NotificationsClose("notific_id", $NotificId)
+        if $NotificId > 0{
+            @1NotificationsClose("notific_id", $NotificId)
+        }
 
         var m map
         m["startup_id"] = $startup["id"]
