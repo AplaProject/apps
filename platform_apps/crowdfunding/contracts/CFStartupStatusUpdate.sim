@@ -9,20 +9,21 @@ contract CFStartupStatusUpdate {
         lenItems = Len(items)
         while i < lenItems{
             it = items[i]
+            DBUpdate($table, Int(it["id"]), to)
             if to["status"] == $FINISHED {
                 var feeAmount currentAmount estimatedAmount money
                 currentAmount = Money(it["current_investment"])
                 estimatedAmount = Money(it["estimated_amount"])
 
                 if currentAmount < estimatedAmount {
-                    // если не набрана сумма - возврат токенов (TODO: алгоритм уточнить)
+                    // если не набрана сумма - возврат токенов
+                    @1CFStartupRefund("Id", it["id"])
                 }else{
                     // переводится комиссия площадки
                     feeAmount = currentAmount / Money(100) * Money($fee)
                     @1TokensTransfer("Amount,SenderId,RecipientId,Comment", feeAmount, AddressToId(it["wallet"]), $feeKey, "crowdfunding fee")
                 }
             }
-            DBUpdate($table, Int(it["id"]), to)
             i = i + 1
         }
     }

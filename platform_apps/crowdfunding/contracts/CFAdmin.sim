@@ -68,19 +68,26 @@ contract CFAdmin {
             m["status"] = $STOPPED
 
         }elif $Action == "finish" && $startup["status"] == $STARTED{
+            m["status"] = $FINISHED
+        }
+
+        if m {
+            DBUpdate("@1cf_startups", $Id, m)
+        }
+
+        if m["status"] = $FINISHED{
             var feeAmount currentAmount estimatedAmount money
             currentAmount = Money($startup["current_investment"])
             estimatedAmount = Money($startup["estimated_amount"])
 
             if currentAmount < estimatedAmount {
-                // если не набрана сумма - возврат токенов (TODO: алгоритм уточнить)
+                // если не набрана сумма - возврат токенов
+                @1CFStartupRefund("Id", $Id)
             }else{
                 // переводится комиссия площадки
                 feeAmount = currentAmount / Money(100) * Money($fee)
                 @1TokensTransfer("Amount,SenderId,RecipientId,Comment", feeAmount, $startupKey, $feeKey, "crowdfunding fee")
             }
-            m["status"] = $FINISHED
         }
-        DBUpdate("@1cf_startups", $Id, m)
     }
 }
