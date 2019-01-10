@@ -6,6 +6,13 @@ contract CFInvestment {
     }
 
     conditions{
+        $CREATED = 1
+        $PUBLISHED = 2
+        $STARTED = 3
+        $FINISHED = 4
+        $FAILED = 5
+        $STOPPED = 6
+        $REJECTED = 7
         if $Id == 0{
             // получить стартап из оповещения
             $note = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$NotificId}).Columns("id,page_params->startup_id").Row()
@@ -14,7 +21,7 @@ contract CFInvestment {
             }
             $Id = Int($note["page_params.startup_id"])
         }
-        $startup = DBFind("@1cf_startups").WhereId($Id).Row()
+        $startup = DBFind("@1cf_startups").Where({id:$Id, deleted_at:0, status:$STARTED}).Row()
         if !$startup{
             warning "Startup not found"
         }

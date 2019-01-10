@@ -4,7 +4,7 @@ contract CFAdmin {
         Action string
     }
     conditions{
-        $startup = DBFind("@1cf_startups").WhereId($Id).Row()
+        $startup = DBFind("@1cf_startups").Where({id: $Id, deleted_at:0}).Row()
         if !$startup{
             warning "Startup not found"
         }
@@ -48,27 +48,46 @@ contract CFAdmin {
         }
         $startupKey = AddressToId($startup["wallet"])
     }
-
+    func notify(body string){
+        // оповещение wallet экосистемы стартапа
+        var sender int header page eco popup string params map
+        sender = 1
+        header = Sprintf("Startup (%v, %v) notification", $startup["id"], $startup["name"])
+        page = "@1cf_notification"
+        eco = $startup["ecosystem"]
+        popup = "true"
+        @1NotificationsSend("member_id,sender,text_header,text_body,page_name,params_map,eco_id,popup", $startupKey, sender, header, body, page, params, eco, popup)
+    }
     action {
         var m map
         if $Action == "stop"{
             m["stopped_at"] = $block_time
             m["status"] = $STOPPED
+            notify("Your startup compaign was stopped")
 
         }elif $Action == "accept"{
             m["published_at"] = $block_time
             m["status"] = $PUBLISHED
+            notify("Your request for startup compaign creation was accepted")
 
         }elif $Action == "reject"{
             m["published_at"] = -1
             m["status"] = $REJECTED
+            notify("Your request for startup compaign creation was rejected")
 
         }elif $Action == "delete"{
             m["deleted_at"] = $block_time
             m["status"] = $STOPPED
+            notify("Your startup compaign was deleted")
 
         }elif $Action == "finish" && $startup["status"] == $STARTED{
             m["status"] = $FINISHED
+            notify("Your startup compaign was finished")
+
+        }elif $Action == "start"{
+            m["stopped_at"] = 0
+            m["status"] = $PUBLISHED
+            notify("Your startup compaign was published")
         }
 
         if m {

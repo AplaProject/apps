@@ -3,6 +3,8 @@ SetVar(this_page, @1cf_startups).(this_table, @1cf_startups).(pager_limit,10)
 SetVar(isAdmin,0).(CREATED,1).(PUBLISHED,2).(STARTED,3).(FINISHED,4).(FAILED,5).(STOPPED,6).(REJECTED,7)
 Include(@1pager_header)
 
+SetVar(digits,10000000000000000000)
+
 If(GetVar(StartDate)!=""){
     SetVar(where_started, "{date_started:{$gte:#StartDate#}},")
 }.Else{
@@ -14,12 +16,14 @@ If(GetVar(EndDate)!=""){
     SetVar(where_finished,).(EndDate,)
 }
 If(GetVar(Minimal)!=""){
-    SetVar(where_min, "{minimal_investment:{$lte:#Minimal#}},")
+    SetVar(min,Calculate(#digits#*#Minimal#, Type:money))
+    SetVar(where_min, "{minimal_investment:{$lte:#min#}},")
 }.Else{
     SetVar(where_min,).(Minimal,)
 }
 If(GetVar(Estimated)!=""){
-    SetVar(where_est, "{estimated_amount:{$lte:#Estimated#}},")
+    SetVar(est,Calculate(#digits#*#Estimated#, Type:money))
+    SetVar(where_est, "{estimated_amount:{$lte:#est#}},")
 }.Else{
     SetVar(where_est,).(Estimated,)
 }
@@ -35,6 +39,7 @@ If(#isAdmin#==1){
 }.Else{
     SetVar(where, {published_at:{$gt:0}, deleted_at:0, #where_started# #where_finished# #where_min# #where_est#}).(order,{id: -1})
 }
+
 SetTitle($@1cf_startups$)
 If(#isAdmin#==1){
     Div(btn-group ml-lg){
@@ -68,13 +73,17 @@ DBFind(#this_table#, src).Where(#where#).Order(#order#).Limit(#pager_limit#).Off
                     Button(Body:$@1reject$, Page:#this_page#, Contract: @1CFAdmin, Params: "Id=#id#,Action=reject", Class:btn btn-danger)
                 }
                 If(#published_at#>0){
-                    Button(Body:$@1stop$, Page:#this_page#, Contract: @1CFAdmin, Params: "Id=#id#,Action=stop", Class:btn btn-default)
+                    If(#stopped_at#>0){
+                        Button(Body:$@1start$, Page:#this_page#, Contract: @1CFAdmin, Params: "Id=#id#,Action=start", Class:btn btn-default)
+                    }.Else{
+                        Button(Body:$@1stop$, Page:#this_page#, Contract: @1CFAdmin, Params: "Id=#id#,Action=stop", Class:btn btn-default)
+                    }
                 }
-                Button(Body:$@1delete$, Page:#this_page#, Class:btn btn-default, Contract: @1CFStartupDelete, Params: "Id=#id#")
+                Button(Body:$@1delete$, Page:#this_page#, Class:btn btn-default, Contract: @1CFStartupDelete, Params: "Id=#id#").Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
             }.Else{
                 If(#startupAdmin_id#>0){
-                    Button(Body:$@1delete$, Page:#this_page#, Class:btn btn-default, Contract: @1CFStartupDelete, Params: "Id=#id#")
-                }.Else{
+                    Button(Body:$@1delete$, Page:#this_page#, Class:btn btn-default, Contract: @1CFStartupDelete, Params: "Id=#id#").Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                }.ElseIf(#status#==#STARTED#){
                     Button(Body:$@1cf_invest$, Page:@1cf_investment_form, PageParams: "Id=#id#", Class:btn btn-default).Popup(50, $@1cf_invest$)
                 }
             }
