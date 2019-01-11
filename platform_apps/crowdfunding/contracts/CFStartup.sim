@@ -42,6 +42,9 @@ contract CFStartup {
                 warning "Editing a published company is not available"
             }
         }
+        if DBFind("@1cf_startups").Where({ecosystem:$Ecosystem, deleted_at:0}).Row(){
+            warning "A startup for this ecosystem already exists"
+        }
 
         // $key_id - админ $Ecosystem
         var adminRoleId int admin map
@@ -96,6 +99,11 @@ contract CFStartup {
         if  $Estimated == 0 {
             warning "Estimated amount must be greater then zero"
         }
+        $appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Crowdfunding"}).One("id"))
+        $downpayment = Money(AppParam($appId, "cf_downpayment", 1))
+        var feeWallet string
+        feeWallet = AppParam($appId, "cf_fee_wallet", 1)
+        $feeKey = AddressToId(feeWallet)
     }
 
     action {
@@ -126,6 +134,7 @@ contract CFStartup {
         }else{
             m["status"] = $CREATED
             DBInsert("@1cf_startups", m)
+            @1TokensTransfer("Amount,SenderId,RecipientId,Comment", $downpayment, $key_id, $feeKey, "crowdfunding downpayment")
         }
     }
 }
