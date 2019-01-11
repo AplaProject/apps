@@ -3,14 +3,14 @@ If(#vID# > 0){
         SetVar(back_page,@1voting_view)
     }
     DBFind(@1votings).WhereId(#vID#).Columns("id,voting->name,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params").Vars(instance)
-    DBFind(@1roles,src_roles).Where({ecosystem:#ecosystem_id#, role_type:2, deleted:0}).Columns("id,role_name").Count(elective_roles_count)
     DBFind(@1votings_subject).Where({voting_id:#vID#, "subject->member_id":#key_id#}).Columns("id").Vars(already_candidate)
-
+    DBFind(@1roles,src_roles).Where({ecosystem:#ecosystem_id#, role_type:2, deleted:0}).Columns("id,role_name").Count(elective_roles_count)
     If(#elective_roles_count#>0){
         Form(){
-            SetVar(hidden,)
             If(#already_candidate_id#>0){
                 SetVar(hidden,hidden)
+            }.Else{
+                SetVar(hidden,)
             }
             Div(row mt-sm #hidden#){
                 Div(col-md-3 mt-sm text-right){
@@ -20,28 +20,36 @@ If(#vID# > 0){
                     }
                 }
                 Div(col-md-9 text-left){
-                    Div(input-group){
-                        Input(Name: can_apply_voting, Disabled: 1, Value: $@1can_apply_voting$)
-                        Div(input-group-btn){
-                            Button(Body: LangRes(@1apply), Class: btn btn-primary, Page: @1voting_decision_candidates, PageParams: "vID=#vID#,back_page=#back_page#", Contract: @1VotingSubjectCandidates).Popup(50, $@1subject_voting$)
+                    If(#apply# == 1){
+                        Input(Name: applied, Disabled: 1, Value: $@1applied_already$)
+                    }.Else{
+                        Div(input-group){
+                            Input(Name: can_apply_voting, Disabled: 1, Value: $@1can_apply_voting$)
+                            Div(input-group-btn){
+                                Button(Body: LangRes(@1apply), Class: btn bg-gray-lighter buttons, Page: @1voting_decision_candidates, PageParams: "vID=#vID#,back_page=#back_page#,apply=1", Contract: @1VotingSubjectCandidates).Popup(50, $@1subject_voting$)
+                            }.Style(
+                                .buttons{border: 1px solid #dde6e9;}
+                            )
                         }
                     }
                 }
             }
-            Div(row mt-sm){
-                Div(col-sm-9 col-sm-offset-3){
-                    DBFind(@1votings_subject,src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->member_id,subject->member_name").Custom(_address){
-                        Address(#subject.member_id#)
-                    }.Custom(_member){
-                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#subject.member_id#"){
-                            Span(Body: #subject.member_name#)
-                        }
+            DBFind(@1votings_subject,src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->member_id,subject->member_name").Count(members_count).Custom(_address){
+                Address(#subject.member_id#)
+            }.Custom(_member){
+                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#subject.member_id#"){
+                    Span(Body: #subject.member_name#)
+                }
+            }
+            If(Or(#members_count#>0,#apply#==1)){
+                Div(row){
+                    Div(col-sm-9 col-sm-offset-3){
+                        Table(src_voting_subject, "$@1candidates$=_member,=_address").Style(margin-bottom: 5px;)
                     }
-                    Table(src_voting_subject, "$@1candidates$=_member,=_address")
                 }
             }
             Div(form-group){
-                Div(row mt-sm){
+                Div(row mt-lg){
                     Div(col-md-3 mt-sm text-right){
                         Label(){
                             Span(Body: LangRes(@1role))
@@ -108,16 +116,10 @@ If(#vID# > 0){
                     }
                 }
             }
-            Div(row mt){
-                Div(col-md-12){
-                    Button(Body: LangRes(@1back), Class: btn btn-default, Page: #back_page#, PageParams: "vID=#vID#")
-                    Input(Name: memberID, Type: hidden, Value: 0)
-                    Input(Name: votingID, Type: hidden, Value: #vID#)
-                    Div(pull-right){
-                        Button(Body: LangRes(@1save), Class: btn btn-primary, Page: @1voting_view, PageParams: "vID=#vID#", Contract: @1VotingSubjectSettings)
-                    }
-                }
-            }
+            Input(Name: memberID, Type: hidden, Value: 0)
+            Input(Name: votingID, Type: hidden, Value: #vID#)
+            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: @1voting_view, PageParams: "vID=#vID#", Contract: @1VotingSubjectSettings)
+            Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: #back_page#, PageParams: "vID=#vID#")
         }
     }.Else{
         Div(row){

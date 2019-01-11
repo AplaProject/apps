@@ -3,18 +3,18 @@ Include(@1pager_header)
 
 SetTitle("$@1voting_list$")
 Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1votings_list_desc$"))
-AddToolButton(Title: $@1templates_list$, Page: @1voting_templates_list, Icon: fa icon-pin)
+AddToolButton(Title: $@1templates_list$, Page: @1voting_templates_list, Icon: icon-pin)
 AddToolButton(Title: $@1create$, Page: @1voting_create, Icon: icon-plus).Popup(50, $@1new_voting$)
-If(EcosysParam(Name:founder_account)==#key_id#){
+If(EcosysParam(Ecosystem: #ecosystem_id#, Name: role_admin) == #role_id#){
     Div(btn-group ml-lg){
         Button(Body: Em(Class: fa fa-refresh) $@1update_votings_statuses$, Class: btn bg-gray ml-sm, Page: #this_page#, Contract: @1VotingStatusUpdate)
     }
 }
 
 If(GetVar(search)){
-    SetVar(where, {ecosystem:#ecosystem_id#, "voting->name":{"$like":#search#}, deleted:0})
+    SetVar(where, {ecosystem:#ecosystem_id#, deleted:0, voting->type:{$in:[1,2]}, "voting->name":{"$like":#search#}})
 }.Else{
-    SetVar(where, {ecosystem:#ecosystem_id#, deleted:0}).(search,)
+    SetVar(where, {ecosystem:#ecosystem_id#, deleted:0, voting->type:{$in:[1,2]}}).(search,)
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
@@ -48,7 +48,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
             }.ElseIf(#voting.type_decision# == 5){
                 SetVar(link_page,"@1voting_decision_contract")
             }
-            Button(Body: #decision#, Class: btn btn-link, Page: #link_page#, PageParams: "vID=#id#,back_page=#this_page#").Popup(50, $@1subject_voting$)
+            Button(Body: #decision#, Class: btn btn-link, Page: #link_page#, PageParams: "vID=#id#,back_page=#this_page#").Popup(50, $@1voting_subject$)
         }
     }
 }.Custom(_participants){
@@ -126,7 +126,7 @@ Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){
-                Table(src, "$@1voting$=_name,$@1type$=_type,$@1subject_voting$=_subject,$@1participants$=_participants,$@1date_start$ / $@1date_end$=_date,$@1creator$=_creator,$@1progress$=_progress,$@1decision$=_decision,$@1status$=_status,=_actions")
+                Table(src, "$@1voting$=_name,$@1type$=_type,$@1voting_subject$=_subject,$@1participants$=_participants,$@1date_start$ / $@1date_end$=_date,$@1creator$=_creator,$@1progress$=_progress,$@1decision$=_decision,$@1status$=_status,=_actions")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1votings$ $@1not_founded$")
             }                       

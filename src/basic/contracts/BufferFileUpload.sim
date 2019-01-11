@@ -1,0 +1,29 @@
+contract BufferFileUpload {
+    data {
+        AppId int
+        BufferKey string
+        FileName string "optional"
+        FileData file
+    }
+
+    conditions {
+        var app_id int
+        app_id = DBFind("@1applications").Where({ecosystem:$ecosystem_id, id: $AppId, deleted:0}).One("id")    
+        if !app_id {
+            warning LangRes("@1app_not_found", "en")
+        }
+        if $BufferKey == "" {
+            warning LangRes("@1buffer_key_empty", "en")
+        }
+    }
+
+    action {
+        var buffer_data map
+        if $FileName != "" {
+            buffer_data["binary_id"] = @1UploadFile("Name,Data,ApplicationId", $FileName, $FileData, Int($AppId))
+        } else {
+            buffer_data["binary_id"] = @1UploadFile("Data,ApplicationId", $FileData, Int($AppId))
+        }
+        @1BufferManager("Action,Key,Val", "set", $BufferKey, JSONEncode(buffer_data))
+    }
+}

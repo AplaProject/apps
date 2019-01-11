@@ -1,0 +1,44 @@
+contract EcManageInfo {
+    data {
+        Id int
+        Visibility int
+        Type int
+        Payment int
+        Logo int "optional"
+        Description string "optional"
+        Conditions string "optional"
+        Email string "optional"
+        Phone string "optional"
+        Hardware string "optional"
+        Vde_page string "optional"
+        Vde_form string "optional"
+        Web_page string "optional"
+        Web_form string "optional"
+    }
+    
+    conditions {
+        var access map
+        access = DBFind("@1parameters").Where({"$and": [{"ecosystem": $Id}, {"$or": [{"$and": [{"name": "founder_account"},{"value": $key_id}]},{"$and": [{"name": "delegate_account"},{"value": $key_id}]}]}]}).Row()
+        if !access {
+            warning LangRes("@1ecosystem_cannot_manage_info", "en")
+        }
+    }
+
+    action {
+        var ecosystem_info map
+        ecosystem_info["visibility"] = $Visibility
+        ecosystem_info["type"] = $Type
+        ecosystem_info["payment"] = $Payment
+        ecosystem_info["logo"] = $Logo
+        ecosystem_info["description"] = $Description
+        ecosystem_info["conditions"] = $Conditions
+        ecosystem_info["email"] = $Email
+        ecosystem_info["phone"] = $Phone
+        ecosystem_info["hardware"] = $Hardware
+        ecosystem_info["vde_page"] = $Vde_page
+        ecosystem_info["vde_form"] = $Vde_form
+        ecosystem_info["web_page"] = $Web_page
+        ecosystem_info["web_form"] = $Web_form
+        DBUpdate("@1ecosystems", $Id, {"info": ecosystem_info})
+    }
+}

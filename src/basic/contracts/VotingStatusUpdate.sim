@@ -5,8 +5,13 @@ contract VotingStatusUpdate {
         var title string id i lenVoters int voters array
         var buffer_id int
         buffer_id = Int(voting["id"])
-        $type_p = DBFind("@1votings").Columns("id,voting->type_participants").Where({ecosystem:$ecosystem_id, id: buffer_id}).Row()
-        if($type_p["voting.type_participants"] == 5){
+        $vtng = DBFind("@1votings").Columns("id,voting->type,voting->type_participants").Where({ecosystem:$ecosystem_id, id: buffer_id}).Row()
+        if Int($vtng["voting.type"]) == 3 {
+            $page_name = "@1polls_view"
+        } else {
+            $page_name = "@1voting_view"
+        }
+        if $vtng["voting.type_participants"] == 5 {
             title = voting["voting.name"]
             id = Int(voting["id"])
             voters = DBFind("@1votings_participants").Columns("member->role_id").Where({ecosystem:$ecosystem_id, voting_id:id, decision:0})
@@ -16,21 +21,21 @@ contract VotingStatusUpdate {
                 voter = voters[i]
                 roleId = Int(voter["member.role_id"])
                 params["voting_id"] = id
-                @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type", roleId, 1, "fa-check", LangRes("@1voting", "en"), title, "@1voting_view", params,1)
+                @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type", roleId, 1, "fa-check", LangRes("@1voting", "en"), title, $page_name, params,1)
                 i = i + 1
             }
 
         } else {
             title = voting["voting.name"]
             id = Int(voting["id"])
-            voters = DBFind("@1votings_participants").Columns("member->member_id").Where({ecosystem:$ecosystem_id, voting_id:id, decision:0})
+            voters = DBFind("@1votings_participants").Columns("member->member_id").Limit(250).Where({ecosystem:$ecosystem_id, voting_id:id, decision:0})
             lenVoters = Len(voters)
             while i < lenVoters {
                 var voter memberId params map
                 voter = voters[i]
                 memberId = Int(voter["member.member_id"])
                 params["voting_id"] = id
-                @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", memberId, 1, "fa-check", LangRes("@1voting", "en"), title, "@1voting_view", params)
+                @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", memberId, 1, "fa-check", LangRes("@1voting", "en"), title, $page_name, params)
                 i = i + 1
             }
         }
@@ -54,7 +59,7 @@ contract VotingStatusUpdate {
     }
 
     conditions {
-        MainCondition()
+        @1AdminCondition()
         $WAITING = 1
         $VALID = 2
         $STARTED = 3

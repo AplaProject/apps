@@ -1,0 +1,42 @@
+contract PoaUpdateParams {
+    data {
+        PoaId int
+        ParamsStr string
+    }
+
+    func getPermission(cntr string) {
+        var prevContract string
+        prevContract = $stack[0]
+        if Len($stack) > 2 {
+            prevContract = $stack[Len($stack) - 2]
+        }
+        if cntr != prevContract {
+            warning LangRes("@1contract_chain_distorted", "en")
+        }
+    }
+
+    conditions {
+        var poa_map map
+        poa_map = DBFind("@1poa").Where({"id": $PoaId, "ecosystem":$ecosystem_id, "deleted": 0}).Columns("id,date_expiration,contract,poa_recipient->member_id").Row()
+
+        if !poa_map {
+            warning LangRes("@1poa_not_found", "en")
+        }
+
+        if Int(poa_map["poa_recipient.member_id"]) != $key_id {
+            warning LangRes("@1poa_not_rights_to_change", "en") 
+        }
+
+        if UnixDateTime(BlockTime()) > Int(poa_map["date_expiration"]) {
+            warning LangRes("@1poa_expired", "en")
+        }
+
+        getPermission(Str(poa_map["contract"]))
+    }
+    
+    action {
+        var m map
+        m = JSONDecode($ParamsStr)
+        DBUpdate("@1poa", Int($PoaId), {"params": m})
+    }
+}

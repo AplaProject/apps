@@ -3,12 +3,23 @@ Include(@1pager_header)
 
 SetTitle($@1transactions_history$)
 
+If(#ecosystem_id# == 1){
+    SetVar(token_title, "APLA")
+}.Else{
+    DBFind("@1ecosystems").Where({"id": #ecosystem_id#}).Vars("custom")
+    SetVar(token_title, #custom_token_title#)
+}
+
+If(GetVar(wallet) == ""){
+    SetVar(wallet, 0)
+}
+
 If(GetVar(new_filter)){
     If(#show_fees#!="true"){
         SetVar(filter1, {"type": {$neq: 1}})
     }
-    If(Or(#wallet#<0,#wallet#>0)){
-        SetVar(filter2, {$or: [{$and: [{"sender_id":#key_id#}, {"recipient_id":#wallet#}]}, {$and: [{"sender_id":#wallet#}, {"recipient_id":#key_id#}]}]})
+    If(#wallet# != 0){
+        SetVar(filter2, {$or: [{$and: [{"sender_id": #key_id#}, {"recipient_id": #wallet#}]}, {$and: [{"sender_id": #wallet#}, {"recipient_id": #key_id#}]}]})
     }.Else{
         SetVar(filter2, {$or: [{"sender_id":#key_id#}, {"recipient_id":#key_id#}]})
     }
@@ -36,7 +47,7 @@ If(GetVar(search)!=""){
 }
 
 Div(mr-lg text-right){
-    Button(Page: @1profile_transactions_filter, Class: btn bg-gray-lighter mr-sm, PageParams: "show_fees=#show_fees#,wallet=#wallet#,lower_limit=#lower_limit#,upper_limit=#upper_limit#", Body: Em(Class: fa fa-filter) $@1filter$).Popup(Header: $@1filter$, Width: "45")
+    Button(Page: @1profile_transactions_filter, Class: btn bg-gray-lighter mr-sm, PageParams: "show_fees=#show_fees#,MemberId=#wallet#,lower_limit=#lower_limit#,upper_limit=#upper_limit#", Body: Em(Class: fa fa-filter) $@1filter$).Popup(Header: $@1filter$, Width: "50")
     If(GetVar(page_par)){
         Button(Page: #this_page#, Class: btn bg-gray-lighter mr-sm, Body: Em(Class: fa fa-close))
     }
@@ -46,20 +57,22 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(appication)
+DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
 
 DBFind(@1history, src_history).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(sender_wallet){
-    LinkPage(Page: @1profile_view, PageParams: "v_key_id=#sender_id#"){
-        Address(#sender_id#)
+    If(#sender_id# != 0){
+        LinkPage(Page: @1profile_view, PageParams: "v_key_id=#sender_id#"){
+            Address(#sender_id#)
+        }
     }
 }.Custom(recipient_wallet){
     LinkPage(Page: @1profile_view, PageParams: "v_key_id=#recipient_id#"){
         Address(#recipient_id#)
     }
 }.Custom(amount_apl){
-    Money(#amount#) APLA
+    Span(Money(#amount#) #token_title#)
 }.Custom(_type){
-    AppParam(Ecosystem:1, App:#appication_id#, Name: type_tokens_transfer, Index: #type#)
+    AppParam(Ecosystem:1, App:#application_id#, Name: type_tokens_transfer, Index: #type#)
 }.Count(count)
 
 Div(fullscreen){

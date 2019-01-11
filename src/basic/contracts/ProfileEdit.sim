@@ -6,13 +6,13 @@ contract ProfileEdit {
     }
 
     conditions {
-        $member = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:$key_id}).Row()
-        $app_id = DBFind("@1applications").Where({ecosystem:1, name:"Basic", deleted:0}).One("id")
+        $member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": $key_id}).Row()
+        $app_id = DBFind("@1applications").Where({"ecosystem": 1, "name": "Basic", deleted: 0}).One("id")
         $image_id = Int($image_id)
 
         if !$member {
             // check member_name
-            if DBFind("@1members").Where({ecosystem:$ecosystem_id, member_name:$member_name}).One("id") {
+            if DBFind("@1members").Where({"ecosystem": $ecosystem_id, "member_name": $member_name}).One("id") {
                 warning LangRes("@1member_name_taken", "en")
             }
         }
@@ -20,7 +20,7 @@ contract ProfileEdit {
 
     action {
         if $image_id > 0 {
-            $Data = DBFind("@1binaries").Where({ecosystem:$ecosystem_id, id:$image_id}).One("data")
+            $Data = DBFind("@1binaries").Where({"ecosystem": $ecosystem_id, "id": $image_id}).One("data")
             $image_id = @1UploadBinary("Name,Data,ApplicationId", "avatar", $Data, Int($app_id))
         }
 
@@ -29,12 +29,12 @@ contract ProfileEdit {
         m["image_id"] = $image_id
         
         if $member{
-            DBUpdate("members", $key_id, m)
+            DBUpdateExt("@1members", {"ecosystem": $ecosystem_id, "id": $key_id}, m)
         } else {
             m["id"] = $key_id
             m["member_name"] = $member_name
             m["ecosystem"] = $ecosystem_id
-            DBInsert("members", m)
+            DBInsert("@1members", m)
         }
     }
 }

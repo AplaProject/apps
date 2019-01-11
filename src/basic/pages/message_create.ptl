@@ -1,3 +1,19 @@
+SetVar(this_page,@1message_create)
+
+If(GetVar(EcosystemId) == ""){
+    SetVar(EcosystemId, #ecosystem_id#)
+}
+
+If(GetVar(MemberId) == ""){
+    SetVar(MemberId, 0)
+}
+
+If(Or(#MemberId#>0,#MemberId#<0)){
+    SetVar(AddressMemberId, Address(#MemberId#))
+}.Else{
+    SetVar(AddressMemberId,)
+}
+
 Form(){
     Div(row){
         Div(col-md-3 mt text-right){
@@ -16,15 +32,18 @@ Form(){
             }
         }
         Div(col-md-9 text-left){
-            DBFind(@1keys,src_keys).Where({ecosystem:#ecosystem_id#}).Columns("id").Custom(_name){
-                SetVar(m_member_name, "")
-                DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#id#}).Columns("id,member_name").Vars(m)
-                Address(#id#)
-                If(GetVar(m_member_name)!=""){
-                    " (#m_member_name#)"
-                }
+            Input(Name: member_id, Type:hidden, Value: #MemberId#)
+            Div(input-group){
+                Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #AddressMemberId#)
+                Div(input-group-btn){
+                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=#this_page#,back_header=$@1message_create$,EcosystemId=#EcosystemId#").Popup(Header: $@1member$, Width: "50")
+                }.Style(
+                    .buttons {
+                        border: 1px solid #dde6e9;
+                        padding: 6px 16px;
+                    }
+                )
             }
-            Select(Name: member_id, Source: src_keys, NameColumn: _name, ValueColumn: id)
         }.Show("broadcast=false")
         Div(col-md-9 text-left){
             DBFind(@1roles,source_roles).Where({ecosystem:#ecosystem_id#, deleted:0}).Columns("id,role_name").Count(roles_count)

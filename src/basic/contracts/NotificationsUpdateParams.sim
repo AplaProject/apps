@@ -1,0 +1,36 @@
+contract NotificationsUpdateParams {
+    data {
+        page_params map
+        notific_id int
+    }
+
+    func getPermission() {
+        var array_permissions array result i int prevContract string
+        array_permissions = ["@1ErrandDecision", "@1ErrandStatusUpdate", "@1ErrandeDelete"]
+
+        prevContract = $stack[0]
+        if Len($stack) > 2 {
+            prevContract = $stack[Len($stack) - 2]
+        }
+        while i < Len(array_permissions) {
+            var contract_name string
+            contract_name = array_permissions[i]
+            if contract_name==prevContract {
+                result = 1
+            }
+            i = i + 1
+        }
+
+        if result == 0 {
+            warning LangRes("@1access_denied", "en")
+        }
+    }
+
+    conditions {
+        getPermission()   //getting permission to run
+    }
+
+    action {
+        DBUpdate("@1notifications",$notific_id,$page_params)
+    }
+}
