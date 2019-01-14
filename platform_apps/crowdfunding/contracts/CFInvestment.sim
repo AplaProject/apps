@@ -1,8 +1,7 @@
 contract CFInvestment {
     data {
-        NotificId int
         Amount money
-        Id int "optional"
+        Id int
     }
 
     conditions{
@@ -13,14 +12,7 @@ contract CFInvestment {
         $FAILED = 5
         $STOPPED = 6
         $REJECTED = 7
-        if $Id == 0{
-            // получить стартап из оповещения
-            $note = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$NotificId}).Columns("id,page_params->startup_id").Row()
-            if !$note{
-                warning "Notification not found"
-            }
-            $Id = Int($note["page_params.startup_id"])
-        }
+
         $startup = DBFind("@1cf_startups").Where({id:$Id, deleted_at:0, status:$STARTED}).Row()
         if !$startup{
             warning "Startup not found"
@@ -32,6 +24,15 @@ contract CFInvestment {
         if $recipient == 0{
             warning "Startup wallet not found"
         }
+    }
+    func investorNotify(){
+        var sender int header page eco popup string params map
+        sender = 1
+        header = Sprintf("Investing notification")
+        body = Sprintf("Thank you for investing in a startup (%v, %v)", $startup["id"], $startup["name"])
+        page = "@1cf_notification"
+        popup = "true"
+        @1NotificationsSend("member_id,sender,text_header,text_body,page_name,params_map,popup", $key_id, sender, header, body, page, params, popup)
     }
     func updateCurrentInvestment(startupId int){
         var items array total money i lenItems int item map
@@ -47,10 +48,6 @@ contract CFInvestment {
         }
     }
     action {
-        if $NotificId > 0{
-            @1NotificationsClose("notific_id", $NotificId)
-        }
-
         var m map
         m["startup_id"] = $startup["id"]
         m["investment_wallet"] = $key_id
@@ -61,5 +58,7 @@ contract CFInvestment {
         updateCurrentInvestment(Int($startup["id"]))
 
         @1TokensTransfer("Amount,SenderId,RecipientId,Comment", $Amount, $key_id, $recipient, "startup investment")
+        // TODO: проверить работу - после инвестирования показать попап с поздравлениями и оставшемся временем до завершения кампании
+        investorNotify()
     }
 }

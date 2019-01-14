@@ -57,9 +57,9 @@ contract CFStartup {
         }
         
         $Wallet = AddressToId($Wallet)
-        // if DBFind("@1keys").Where({ecosystem:$Ecosystem, id:$Wallet, multi:0}).Row(){
+        // if DBFind("@1keys").Where({ecosystem:1, id:$Wallet, multi:0}).Row(){
         //     // $Wallet - кошелек с мультиподписями
-        //     warning "Wallet for investment in target ecosystem  must be multisigned"
+        //     warning "Wallet for investment in platform ecosystem  must be multisigned"
         // }
         $Wallet = IdToAddress($Wallet)
         // $WalletEscrow = IdToAddress(AddressToId($WalletEscrow))
@@ -103,13 +103,20 @@ contract CFStartup {
         var feeWallet string
         feeWallet = AppParam($appId, "cf_fee_wallet", 1)
         $feeKey = AddressToId(feeWallet)
+
+        // проверяю, что ожидаемое количество токенов не больше чем баланс стартапа в экосистеме стартапа
+        var balance money
+        balance = Money(DBFind("@1keys").Where({ecosystem:$Ecosystem, id:$Wallet}).One("amount"))
+        if balance < $Estimated {
+            warning "The expected amount of investment should be not less than the amount of emission of dangerous elements in ecosystems IU startup"
+        }
     }
 
     action {
         var escrowName escrowWallet string escrowKey int
         // TODO: escrow получать из мультиподписи
         // escrowKey = 
-        // escrowName = DBFind("@1members").Where({ecosystem:$Ecosystem, id:escrowKey}).Columns("member_name").One("member_name")
+        // escrowName = DBFind("@1members").Where({ecosystem:1, id:escrowKey}).Columns("member_name").One("member_name")
         // if !escrowName{
         //     escrowName = $WalletEscrow
         // }

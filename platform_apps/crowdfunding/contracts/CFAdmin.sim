@@ -9,26 +9,25 @@ contract CFAdmin {
             warning "Startup not found"
         }
 
-        // проверка прав на администрирование (role_id == cf_catalog_admin) или
-        // если Action==finish проверить что я админ стартапа или владелец кошелька для инвестиций
         if $Action == "finish"{
             var ecoAdmin eco int
             eco = Int($startup["ecosystem"])
-            ecoAdmin = Int(DBFind("@1parameters").Where({name:"role_admin", ecosystem:eco}).One("value"))
+            if eco != $ecosystem_id {
+                warning "For this action need run in startup ecosystem"
+            }
+            ecoAdmin = Int(EcosysParam("role_admin"))
             if ecoAdmin == 0{
                 warning "Admin role not defined in target ecosystem"
             }
-            if !DBFind("@1roles_participants").Where({"role->id":ecoAdmin, "member->member_id": $key_id, ecosystem:eco, deleted:0}).Row(){
-                if $startup["wallet"] != IdToAddress($key_id){
-                    warning "You must be Admin in target ecosystem or owner of wallet investments"
-                }
+            if !RoleAccess(ecoAdmin){
+                warning "This action allowed only for startup admin"
             }
         }else{
             var appId admin int
             appId = Int(DBFind("@1applications").Where({ecosystem:1, name:"Crowdfunding"}).One("id"))
             admin = Int(AppParam(appId, "cf_catalog_admin", 1))
             if !RoleAccess(admin){
-                warning "This action allowed only for startup catalog admin role"
+                warning "This action allowed only for startup catalog admin"
             }
         }
         $CREATED = 1
@@ -57,6 +56,47 @@ contract CFAdmin {
         eco = $startup["ecosystem"]
         popup = "true"
         @1NotificationsSend("member_id,sender,text_header,text_body,page_name,params_map,eco_id,popup", $startupKey, sender, header, body, page, params, eco, popup)
+    }
+    func succesfullNotify(investor int){
+        var params m map
+        investor = Int($note["page_params.investor"])
+
+        params["startup_id"] = $startup["id"]
+        params["wallet"] = $startup["wallet"]
+        m["params_map"] = JSONEncode(params)
+        m["member_id"] = investor
+        m["closure_type"] = 1
+        m["sender"] = 1
+        m["eco_id"] = 1
+        m["popup"] = "true"
+        m["text_body"] = Sprintf("Startup #%v, amount: %v was succesfull startup", $startup["id"], $startup["amount"])
+        m["page_name"] = "@1cf_notification"
+        m["text_header"] = "Succesfull startup"
+        CallContract("@1NotificationsSend", m)
+    }
+    func sendTokens(){
+        // на созданные кошельки инвесторов перевести токены с платформенного мультикошелька стартапа курс 1:1 
+        var items array i lenItems limit int it map recipient sender int
+        sender = AddressToId($startup["wallet"])
+        limit = 10000
+        items = DBFind("@1cf_investments").Where({startup_id: $Id, refund_at:0}).Limit(limit)
+        lenItems = Len(items)
+        while i < lenItems{
+            it = items[i]
+            recipient = AddressToId(it["investment_wallet"])
+            if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:recipient}){
+                // создать кошелек в экосистеме если его нет
+                var pub string
+                pub = PubToHex(DBFind("@1keys").Where({ecosystem:1, id:recipient}).One("pub"))
+                @1MembershipAdd("memberskeys", pub)
+            }
+            @1TokensTransfer("Amount,SenderId,RecipientId,Comment", Money(it["amount"]), sender, recipient, "startup investment")
+            DBUpdate("@1cf_investments", Int(it["id"]), {refund_at: - 1})
+            i = i + 1
+        }
+        if lenItems == limit{
+            sendTokens()
+        }
     }
     action {
         var m map
@@ -96,17 +136,23 @@ contract CFAdmin {
         }
 
         if m["status"] == $FINISHED{
-            var feeAmount currentAmount estimatedAmount money
+            var feeAmount currentAmount estimatedAmount balance money w map
             currentAmount = Money($startup["current_investment"])
             estimatedAmount = Money($startup["estimated_amount"])
+            w["ecosystem"] = $startup["ecosystem"]
+            w["id"] = $startup["wallet"]
+            balance = Money(DBFind("@1keys").Where(w).One("amount"))
 
-            if currentAmount < estimatedAmount {
-                // если не набрана сумма - возврат токенов
+            if currentAmount < estimatedAmount || currentAmount > balance {
+                // если не набрана сумма - возврат токенов или если собранно меньше чем баланс экосистемы стартапа - возврат токенов
+                Println("currentAmount:", currentAmount, "estimatedAmount:", estimatedAmount, "balance:", balance)
                 @1CFStartupRefund("Id", $Id)
             }else{
-                // переводится комиссия площадки
+                // переводим комиссию площадки
                 feeAmount = currentAmount / Money(100) * Money($fee)
                 @1TokensTransfer("Amount,SenderId,RecipientId,Comment", feeAmount, $startupKey, $feeKey, "crowdfunding fee")
+                // создаем кошельки инвесторов и переводим им их токены
+                sendTokens()
             }
         }
     }
