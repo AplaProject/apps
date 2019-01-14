@@ -26,7 +26,7 @@ contract CFInvestment {
         }
         var w map balance diff money
         w["ecosystem"] = $startup["ecosystem"]
-        w["id"] = $startup["wallet"]
+        w["id"] = $recipient
         balance = Money(DBFind("@1keys").Where(w).One("amount"))
         diff = balance - Money($startup["current_investment"]) - $Amount
         if diff < 0 {
@@ -34,10 +34,10 @@ contract CFInvestment {
         }
     }
     func investorNotify(){
-        var sender int header page eco popup string params map
+        var sender int header body page eco popup string params map
         sender = 1
-        header = Sprintf("Investing notification")
-        body = Sprintf("Thank you for investing in a startup (%v, %v)", $startup["id"], $startup["name"])
+        header = "Investing notification"
+        body = Sprintf("Thank you for investing %v APLA in a startup %v (%v)", FormatMoney(Str($Amount), 18), $startup["name"], $startup["id"])
         page = "@1cf_notification"
         popup = "true"
         @1NotificationsSend("member_id,sender,text_header,text_body,page_name,params_map,popup", $key_id, sender, header, body, page, params, popup)
@@ -58,7 +58,7 @@ contract CFInvestment {
     action {
         var m map
         m["startup_id"] = $startup["id"]
-        m["investment_wallet"] = $key_id
+        m["investment_wallet"] = IdToAddress($key_id)
         m["amount"] = $Amount
         m["created_at"] = $block_time
         DBInsert("@1cf_investments", m)

@@ -3,16 +3,17 @@ contract CFStartupStatusUpdate {
 
     func notifyStartupAdmin(startup map){
         // оповещение админу в экосистему стартапа для финиша кампании
-        var sender startupAdmin eco int header page eco popup string params map
+        var sender startupAdmin eco int header body page eco popup string params map
         eco = Int(startup["ecosystem"])
         startupAdmin = Int(DBFind("@1parameters").Where({name:"role_admin", ecosystem:eco}).One("value"))
         if startupAdmin == 0{
             warning "Startup admin role not assigned"
         }
         sender = 1
+        // FIXIT: startup["name"] == nil
         header = Sprintf("Startup (%v, %v) notification", startup["id"], startup["name"])
         body = "The campaign has expired. Need finishing campaign"
-        page = "cf_notification_finish"
+        page = "@1cf_notification_finish"
         eco = startup["ecosystem"]
         popup = "true"
         params["startup_id"] = startup["id"]
@@ -28,7 +29,7 @@ contract CFStartupStatusUpdate {
             it = items[i]
             DBUpdate($table, Int(it["id"]), to)
             if to["status"] == $FINISHED {
-                notifyStartupAdmin(item)
+                notifyStartupAdmin(it)
             }
             i = i + 1
         }
@@ -64,11 +65,11 @@ contract CFStartupStatusUpdate {
         lenItems = Len(items)
         while i < lenItems{
             it = items[i]
-            if Money($item["current_investment"]) > Money(item["estimated_amount"]) {
+            if Money(it["current_investment"]) > Money(it["estimated_amount"]) {
                 DBUpdate($table, Int(it["id"]), {status:$FINISHED})
-                notifyStartupAdmin(item)
+                notifyStartupAdmin(it)
             }
-            fromId = Int(item["id"])
+            fromId = Int(it["id"])
             i = i + 1
         }
         if limit == lenItems{

@@ -76,7 +76,7 @@ contract CFAdmin {
     }
     func sendTokens(){
         // на созданные кошельки инвесторов перевести токены с платформенного мультикошелька стартапа курс 1:1 
-        var items array i lenItems limit int it map recipient sender int
+        var items array i lenItems limit recipient sender int it map
         sender = AddressToId($startup["wallet"])
         limit = 10000
         items = DBFind("@1cf_investments").Where({startup_id: $Id, refund_at:0}).Limit(limit)
@@ -84,14 +84,15 @@ contract CFAdmin {
         while i < lenItems{
             it = items[i]
             recipient = AddressToId(it["investment_wallet"])
-            if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:recipient}){
-                // создать кошелек в экосистеме если его нет
+            var exists map
+            exists = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:recipient}).Row()
+            if !exists{
                 var pub string
                 pub = PubToHex(DBFind("@1keys").Where({ecosystem:1, id:recipient}).One("pub"))
                 @1MembershipAdd("memberskeys", pub)
             }
             @1TokensTransfer("Amount,SenderId,RecipientId,Comment", Money(it["amount"]), sender, recipient, "startup investment")
-            DBUpdate("@1cf_investments", Int(it["id"]), {refund_at: - 1})
+            DBUpdate("@1cf_investments", Int(it["id"]), {refund_at: "-1"})
             i = i + 1
         }
         if lenItems == limit{
@@ -121,9 +122,11 @@ contract CFAdmin {
             m["status"] = $STOPPED
             notify("Your startup compaign was deleted")
 
-        }elif $Action == "finish" && $startup["status"] == $STARTED{
+        }elif $Action == "finish" {
             m["status"] = $FINISHED
-            notify("Your startup compaign was finished")
+            if $startup["status"] == $STARTED{
+                notify("Your startup compaign was finished")
+            }
 
         }elif $Action == "start"{
             m["stopped_at"] = 0
@@ -140,17 +143,16 @@ contract CFAdmin {
             currentAmount = Money($startup["current_investment"])
             estimatedAmount = Money($startup["estimated_amount"])
             w["ecosystem"] = $startup["ecosystem"]
-            w["id"] = $startup["wallet"]
+            w["id"] = AddressToId($startup["wallet"])
             balance = Money(DBFind("@1keys").Where(w).One("amount"))
 
             if currentAmount < estimatedAmount || currentAmount > balance {
                 // если не набрана сумма - возврат токенов или если собранно меньше чем баланс экосистемы стартапа - возврат токенов
-                Println("currentAmount:", currentAmount, "estimatedAmount:", estimatedAmount, "balance:", balance)
                 @1CFStartupRefund("Id", $Id)
             }else{
                 // переводим комиссию площадки
                 feeAmount = currentAmount / Money(100) * Money($fee)
-                @1TokensTransfer("Amount,SenderId,RecipientId,Comment", feeAmount, $startupKey, $feeKey, "crowdfunding fee")
+                @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", feeAmount, $startupKey, $feeKey, "crowdfunding fee", 1)
                 // создаем кошельки инвесторов и переводим им их токены
                 sendTokens()
             }
