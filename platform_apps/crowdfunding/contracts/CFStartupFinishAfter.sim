@@ -1,0 +1,16 @@
+contract CFStartupFinishAfter {
+    data {
+        NotificId int
+    }
+    conditions{
+        $id = Int(DBFind("@1notifications").Where({id:$NotificId, closed:0}).Columns("page_params->startup_id").One("page_params.startup_id"))
+        if !DBFind("@1cf_startups").Where({id:$id, status:$FINISHED, deleted_at:0}).Row() {
+            warning "Startup not founded"
+        }
+       
+    }
+  
+    action {
+        @1CFAdmin("Id,Action", $id, "finish")
+    }
+}

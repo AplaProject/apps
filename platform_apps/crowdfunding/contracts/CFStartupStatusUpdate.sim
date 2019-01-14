@@ -1,34 +1,34 @@
 contract CFStartupStatusUpdate {
     data {}
 
-    func notifyStartupAdmin(){
+    func notifyStartupAdmin(startup map){
         // оповещение админу в экосистему стартапа для финиша кампании
         var sender startupAdmin eco int header page eco popup string params map
-        sender = 1
-        header = Sprintf("Startup (%v, %v) notification", $startup["id"], $startup["name"])
-        body = "The campaign has expired. Need finishing campaign"
-        page = "cf_notification_finish"
-        eco = $startup["ecosystem"]
-        popup = "true"
-
-        eco = Int($startup["ecosystem"])
+        eco = Int(startup["ecosystem"])
         startupAdmin = Int(DBFind("@1parameters").Where({name:"role_admin", ecosystem:eco}).One("value"))
         if startupAdmin == 0{
             warning "Startup admin role not assigned"
         }
+        sender = 1
+        header = Sprintf("Startup (%v, %v) notification", startup["id"], startup["name"])
+        body = "The campaign has expired. Need finishing campaign"
+        page = "cf_notification_finish"
+        eco = startup["ecosystem"]
+        popup = "true"
+        params["startup_id"] = startup["id"]
         @1NotificationsSend("rid,sender,text_header,text_body,page_name,params_map,eco_id,popup", startupAdmin, sender, header, body, page, params, eco, popup)
     }
     func changeStatus(from, to map) {
         var items array i lenItems int it map
         from["deleted_at"] = 0
-        items = DBFind($table).Columns("id,started_at,finished_at,name,current_investment,estimated_amount,wallet").Where(from).Limit(10000)
+        items = DBFind($table).Columns("id,ecosystem,started_at,finished_at,name,current_investment,estimated_amount,wallet").Where(from).Limit(10000)
 
         lenItems = Len(items)
         while i < lenItems{
             it = items[i]
             DBUpdate($table, Int(it["id"]), to)
             if to["status"] == $FINISHED {
-                notifyStartupAdmin()
+                notifyStartupAdmin(item)
             }
             i = i + 1
         }
@@ -56,9 +56,28 @@ contract CFStartupStatusUpdate {
             $feeKey = Int(DBFind("@parameters").Where({ecosystem:1, name:"founder_account"}).One("value"))
         }
     }
+    func checkCurrentEstimated(fromId int){
+        var items array i lenItems limit int it map
+        limit = 10000
+        items = DBFind($table).Columns("id,ecosystem,ecosystem,current_investment,estimated_amount").Where({status:$STARTED, id:{"$gt":fromId}}).Limit(limit)
 
+        lenItems = Len(items)
+        while i < lenItems{
+            it = items[i]
+            if Money($item["current_investment"]) > Money(item["estimated_amount"]) {
+                DBUpdate($table, Int(it["id"]), {status:$FINISHED})
+                notifyStartupAdmin(item)
+            }
+            fromId = Int(item["id"])
+            i = i + 1
+        }
+        if limit == lenItems{
+            checkCurrentEstimated(fromId)
+        }
+    }
     action {
         changeStatus({status:$PUBLISHED, started_at:{"$lte":$block_time}}, {status:$STARTED})
         changeStatus({status:$STARTED, finished_at:{"$lte":$block_time}}, {status:$FINISHED})
+        checkCurrentEstimated(0)
     }
 }
