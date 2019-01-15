@@ -47,20 +47,19 @@ contract CFAdmin {
         }
         $startupKey = AddressToId($startup["wallet"])
     }
-    func notify(body string){
+    func notifyStartup(body string){
         // оповещение wallet экосистемы стартапа
         var sender int header page eco popup string params map
         sender = 1
-        header = Sprintf("Startup (%v, %v) notification", $startup["id"], $startup["name"])
+        header = Sprintf("Startup %v (%v) notification", $startup["name"], $startup["id"])
         page = "@1cf_notification"
         eco = $startup["ecosystem"]
         popup = "true"
         @1NotificationsSend("member_id,sender,text_header,text_body,page_name,params_map,eco_id,popup", $startupKey, sender, header, body, page, params, eco, popup)
     }
-    func succesfullNotify(investor int){
+    func notifyInvestor(investor int, head, body string){
+        // оповещение инвестору об успешном окончании кампании стартапа
         var params m map
-        investor = Int($note["page_params.investor"])
-
         params["startup_id"] = $startup["id"]
         params["wallet"] = $startup["wallet"]
         m["params_map"] = JSONEncode(params)
@@ -69,35 +68,63 @@ contract CFAdmin {
         m["sender"] = 1
         m["eco_id"] = 1
         m["popup"] = "true"
-        m["text_body"] = Sprintf("Startup #%v, amount: %v was succesfull startup", $startup["id"], $startup["amount"])
+        m["text_body"] = body
         m["page_name"] = "@1cf_notification"
-        m["text_header"] = "Succesfull startup"
+        m["text_header"] = head
         CallContract("@1NotificationsSend", m)
     }
     func sendTokens(){
-        // на созданные кошельки инвесторов перевести токены с платформенного мультикошелька стартапа курс 1:1 
-        var items array i lenItems limit recipient sender int it map
-        sender = AddressToId($startup["wallet"])
+        var items array i lenItems limit investor startupKey int it map
+        startupKey = AddressToId($startup["wallet"])
         limit = 10000
         items = DBFind("@1cf_investments").Where({startup_id: $Id, refund_at:0}).Limit(limit)
         lenItems = Len(items)
         while i < lenItems{
             it = items[i]
-            recipient = AddressToId(it["investment_wallet"])
+            investor = AddressToId(it["investment_wallet"])
             var exists map
-            exists = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:recipient}).Row()
+            exists = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:investor}).Row()
             if !exists{
+                // создаем кошельки инвесторов в экосистеме стартапа
                 var pub string
-                pub = PubToHex(DBFind("@1keys").Where({ecosystem:1, id:recipient}).One("pub"))
+                pub = PubToHex(DBFind("@1keys").Where({ecosystem:1, id:investor}).One("pub"))
                 @1MembershipAdd("memberskeys", pub)
             }
-            @1TokensTransfer("Amount,SenderId,RecipientId,Comment", Money(it["amount"]), sender, recipient, "startup investment")
+            //  переводим токены с баланса кошелька стартапа в размере инвестирования на кошелек инвестора в экосистеме стартапа, курс 1:1 
+            @1TokensTransfer("Amount,SenderId,RecipientId,Comment", Money(it["amount"]), startupKey, investor, "startup investment")
+            
+            // инвестиция погашена
             DBUpdate("@1cf_investments", Int(it["id"]), {refund_at: "-1"})
-            // TODO: оповещение инвестору об успешном окончании кампании стартапа
+            var body string
+            body = Sprintf("Startup %v (%v) was succesfull. Your funds (%v APLA) have been transferred to the startup ecosystem", $startup["name"],$startup["id"], FormatMoney(Str(it["amount"]), 18))
+            notifyInvestor(investor, "Succesfull startup", body)
             i = i + 1
         }
         if lenItems == limit{
             sendTokens()
+        }
+    }
+    func refundTokens(){
+        var items array i lenItems limit int it map investor startupKey int
+        startupKey = AddressToId($startup["wallet"])
+        limit = 10000
+        items = DBFind("@1cf_investments").Where({startup_id: $Id, refund_at:0}).Limit(limit)
+        lenItems = Len(items)
+        while i < lenItems{
+            it = items[i]
+            investor = AddressToId(it["investment_wallet"])
+            // возвращаю токены APLA с кошелька стартапа на кошельки инвесторов
+            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", Money(it["amount"]), startupKey, investor, "startup investment refund", 1)
+            
+            // время возврата инвестиции
+            DBUpdate("@1cf_investments", Int(it["id"]), {refund_at:$block_time})
+            var body string
+            body = Sprintf("Startup %v (%v) was failed. Your investment (%v APLA) was refunded to you", $startup["name"], $startup["id"], FormatMoney(Str(it["amount"]), 18))
+            notifyInvestor(investor, "Startup failed", body)
+            i = i + 1
+        }
+        if lenItems == limit{
+            refundTokens()
         }
     }
     action {
@@ -105,34 +132,34 @@ contract CFAdmin {
         if $Action == "stop"{
             m["stopped_at"] = $block_time
             m["status"] = $STOPPED
-            notify("Your startup compaign was stopped")
+            notifyStartup("Your startup compaign was stopped")
 
         }elif $Action == "accept"{
             m["published_at"] = $block_time
             m["status"] = $PUBLISHED
-            notify("Your request for startup compaign creation was accepted")
+            notifyStartup("Your request for startup compaign creation was accepted")
 
         }elif $Action == "reject"{
             m["published_at"] = -1
             m["deleted_at"] = $block_time
             m["status"] = $REJECTED
-            notify("Your request for startup compaign creation was rejected")
+            notifyStartup("Your request for startup compaign creation was rejected")
 
         }elif $Action == "delete"{
             m["deleted_at"] = $block_time
             m["status"] = $STOPPED
-            notify("Your startup compaign was deleted")
+            notifyStartup("Your startup compaign was deleted")
 
         }elif $Action == "finish" {
             m["status"] = $FINISHED
             if $startup["status"] == $STARTED{
-                notify("Your startup compaign was finished")
+                notifyStartup("Your startup compaign was finished")
             }
 
         }elif $Action == "start"{
             m["stopped_at"] = 0
             m["status"] = $PUBLISHED
-            notify("Your startup compaign was published")
+            notifyStartup("Your startup compaign was published")
         }
 
         if m {
@@ -148,12 +175,14 @@ contract CFAdmin {
             balance = Money(DBFind("@1keys").Where(w).One("amount"))
 
             if currentAmount < estimatedAmount || currentAmount > balance {
-                // если не набрана сумма - возврат токенов или если собранно меньше чем баланс экосистемы стартапа - возврат токенов
-                @1CFStartupRefund("Id", $Id)
+                // если не набрана сумма или если собранно больше чем баланс кошелька стартапа - возврат токенов
+                refundTokens()
+            
             }else{
                 // переводим комиссию площадки
                 feeAmount = currentAmount / Money(100) * Money($fee)
                 @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", feeAmount, $startupKey, $feeKey, "crowdfunding fee", 1)
+            
                 // создаем кошельки инвесторов и переводим им их токены
                 sendTokens()
             }
