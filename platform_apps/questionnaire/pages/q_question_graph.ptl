@@ -1,16 +1,92 @@
 Form(){
-    DBFind(@1questionnaire).Where({id:#q_id#}).Columns("id,question,description,answer").Vars(question)
+    DBFind(@1questionnaire).Where({id:#q_id#}).Columns("id,question,description,answer,ecosystem,init,lastmodified,created_at,expired,status,params->hide,params->change").Vars(question)
+    DBFind(@1members).Where({ecosystem:#question_ecosystem#}).Count(total)
     DBFind(@1q_answers).Where({question_id:#question_id#}).Count(answers)
-    Div(row form-group){
-        Div(col-sm-12){
-            ArrayToSource(src, #question_answer#)
-            ForList(Source: src, Index:ind){
-                DBFind(@1q_answers).Where({question_id:#question_id#, decision: #value#}).Count(a)
-                Div(col-sm-3){
-                    Form(panel panel-primary text-center){
-                        Div(panel-heading, Body: #ind# : #value#)
-                        Div(panel-body){
-                            Span(Class: text-primary  ml h1, Body: #a#)
+    Div(list-group-item){
+        Div(row){
+            Div(col-md-12 text-center){
+                P(Class: h3, Body: #question_description#)
+            }
+        }
+    }
+    Div(list-group-item){
+        Div(row){
+            Div(col-md-3 text-right){
+                Label(For: Date Start){
+                    Span(Body: LangRes(@1q_date_start):)
+                }
+            }
+            Div(col-md-9 text-left){
+                DateTime(#question_created_at#,HH:MI DD.MM.YYYY)
+            }
+        }
+        Div(row){
+            Div(col-md-3 text-right){
+                Label(For: Last Modified){
+                    Span(Body: LangRes(@1q_lastmodified):)
+                }
+            }
+            Div(col-md-9 text-left){
+                DateTime(#question_lastmodified#,HH:MI DD.MM.YYYY)
+            }
+        }
+        Div(row){
+            Div(col-md-3 text-right){
+                Label(For: Date Ending){
+                    Span(Body: LangRes(@1q_date_expiration):)
+                }
+            }
+            Div(col-md-9 text-left){
+                DateTime(#question_expired#,HH:MI DD.MM.YYYY)
+            }
+        }
+        Div(row){
+            Div(col-md-3 text-right){
+                Label(For: Status){
+                    Span(Body: LangRes(@1status):)
+                }
+            }
+            Div(col-md-9 text-left){
+                If(#question_status#==0){
+                    Span(Class: text-success, Body: LangRes(@1q_status_created))
+                }
+                If(#question_status#==1){
+                    Span(Class: text-success, Body: LangRes(@1q_status_started))
+                }
+                If(#question_status#==2){
+                    Span(Class: text-primary, Body: LangRes(@1q_status_ended))
+                }
+                If(#question_status#==3){
+                    Span(Class: text-warning, Body: LangRes(@1q_status_admin))
+                }
+                If(#question_status#==4){
+                    Span(Class: text-danger, Body: LangRes(@1q_status_pause))
+                }
+            }
+        }
+        Div(row){
+            Div(col-md-3 text-right){
+                Label(For: Stats){
+                    Span(Body: LangRes(@1q_answer_data):)
+                }
+            }
+            Div(col-md-9 text-left){
+                #answers# / #total#
+            }
+        }
+    }
+    Div(list-group-item){
+        Div(row){
+            Div(col-md-12){
+                ArrayToSource(src, #question_answer#)
+                ForList(Source: src, Index:ind){
+                    DBFind(@1q_answers).Where({question_id:#question_id#, decision: #value#}).Count(a)
+                    Div(col-md-2 col-md-offset-1){
+                        Form(panel panel-primary text-center){
+                            Div(panel-heading, Body: #ind# : #value#)
+                            Div(panel-body){
+                                Span(Class: text-primary  ml h1, Body: #a#)
+                            }
                         }
                     }
                 }
@@ -19,7 +95,7 @@ Form(){
     }
     Div(row mt){
         Div(col-md-12){
-            Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1q_question, PageParams: "q_id=#question_id#")
+            Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1q_listing)
         }
     }
 }
