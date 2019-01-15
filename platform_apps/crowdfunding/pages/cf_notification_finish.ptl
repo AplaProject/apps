@@ -2,7 +2,11 @@ DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Basic"}).Var
 SetVar(type,0).(header,).(body,)
 
 If(#notific_id#>0){
-    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("id,sender->type,notification->header,notification->body,date_start_processing,closed").Vars(note)
+    DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("id,sender->type,notification->header,notification->body,closed,page_params->startup_id").Vars(note)
+    DBFind(@1cf_startups).WhereId(#note_page_params_startup_id#).Vars(startup)
+    SetVar(wallet,AddressToId(#startup_wallet#))
+    DBFind(@1keys).Where({id:#wallet#, ecosystem:#ecosystem_id#}).Columns("amount").Vars(wallet)
+
     SetVar(type,#note_sender_type#)
     SetVar(header,#note_notification_header#)
     SetVar(body,#note_notification_body#)
@@ -10,10 +14,16 @@ If(#notific_id#>0){
     Div(text-center){
         #header#
     }
-    Div(){
+    Div(text-center){
         #body#
     }
-    TODO: показывать баланс и собранные средства
+    Div(text-center){
+        $@1current_amount$: Money(#startup_current_investment#)
+    }
+    Div(text-center){
+        $@1balance$: Money(#wallet_amount#)
+    }
+
     Div(text-right){
         If(#note_closed# == 0){
             Button(Body: $@1cf_finish_company$, Class: btn btn-primary, Contract: @1CFStartupFinishAfter, Params: "NotificId=#notific_id#", Page: @1default_page)

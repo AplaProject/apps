@@ -10,7 +10,6 @@ contract CFStartupStatusUpdate {
             warning "Startup admin role not assigned"
         }
         sender = 1
-        // FIXIT: startup["name"] == nil
         header = Sprintf("Startup (%v, %v) notification", startup["id"], startup["name"])
         body = "The campaign has expired. Need finishing campaign"
         page = "@1cf_notification_finish"
@@ -22,7 +21,7 @@ contract CFStartupStatusUpdate {
     func changeStatus(from, to map) {
         var items array i lenItems int it map
         from["deleted_at"] = 0
-        items = DBFind($table).Columns("id,ecosystem,started_at,finished_at,name,current_investment,estimated_amount,wallet").Where(from).Limit(10000)
+        items = DBFind($table).Where(from).Limit(10000)
 
         lenItems = Len(items)
         while i < lenItems{
@@ -32,6 +31,25 @@ contract CFStartupStatusUpdate {
                 notifyStartupAdmin(it)
             }
             i = i + 1
+        }
+    }
+    func checkCurrentEstimated(fromId int){
+        var items array i lenItems limit int it map
+        limit = 10000
+        items = DBFind($table).Where({status:$STARTED, id:{"$gt":fromId}}).Limit(limit)
+
+        lenItems = Len(items)
+        while i < lenItems{
+            it = items[i]
+            if Money(it["current_investment"]) > Money(it["estimated_amount"]) {
+                DBUpdate($table, Int(it["id"]), {status:$FINISHED})
+                notifyStartupAdmin(it)
+            }
+            fromId = Int(it["id"])
+            i = i + 1
+        }
+        if limit == lenItems{
+            checkCurrentEstimated(fromId)
         }
     }
     conditions{
@@ -55,25 +73,6 @@ contract CFStartupStatusUpdate {
         $feeKey = AddressToId(feeWallet)
         if $feeKey == 0{
             $feeKey = Int(DBFind("@parameters").Where({ecosystem:1, name:"founder_account"}).One("value"))
-        }
-    }
-    func checkCurrentEstimated(fromId int){
-        var items array i lenItems limit int it map
-        limit = 10000
-        items = DBFind($table).Columns("id,ecosystem,ecosystem,current_investment,estimated_amount").Where({status:$STARTED, id:{"$gt":fromId}}).Limit(limit)
-
-        lenItems = Len(items)
-        while i < lenItems{
-            it = items[i]
-            if Money(it["current_investment"]) > Money(it["estimated_amount"]) {
-                DBUpdate($table, Int(it["id"]), {status:$FINISHED})
-                notifyStartupAdmin(it)
-            }
-            fromId = Int(it["id"])
-            i = i + 1
-        }
-        if limit == lenItems{
-            checkCurrentEstimated(fromId)
         }
     }
     action {
