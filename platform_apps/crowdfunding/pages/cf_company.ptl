@@ -15,7 +15,7 @@ If(#Id#!=""){
     If(#startup_wallet#==Address(#key_id#)){
         SetVar(isWalletOwner,1)
     }
-    SetVar(startupAdminRole_id,0)
+    SetVar(startupAdminRole_id,0).(startup_key,AddressToId(#startup_wallet#))
     DBFind(@1parameters).Where({name:"role_admin", ecosystem:#startup_ecosystem#}).Columns("id,value").Vars(startupAdminRole)
     If(#startupAdminRole_id#>0){
         DBFind(@1roles_participants).Where({"role->id":#startupAdminRole_value#, "member->member_id": #key_id#, ecosystem:#ecosystem#}).Vars(startupAdmin)
@@ -23,12 +23,15 @@ If(#Id#!=""){
             SetVar(isStartupAdmin,1)
         }
     }
+    DBFind(@1keys).Where({id:#startup_key#, ecosystem:#startup_ecosystem#}).Columns("amount").Vars(balance)
+    DBFind(@1ecosystems).Where({id:#startup_ecosystem#}).Columns("token_title").Vars(eco)
 }
 Div(breadcrumb-sm){
     LinkPage(Body: $@1cf_startups$, Page: @1cf_startups)
     Span(/, mh)
     Span($@1cf_company$, text-muted)
 }
+AddToolButton(Title:$@1cf_investments$, Page:@1cf_investments, PageParams: "Id=#Id#", Icon:icon-credit-card)
 Div(row){
     Div(col-sm-12 col-lg-6 col-lg-offset-3){
         Div(panel panel-default){
@@ -169,6 +172,16 @@ Div(row){
                     Div(row mb-sm){
                         Div(col-sm-6 text-right){
                             Label(For: Minimal){
+                                $@1current_ecosystem_startup_wallet_balance$ (#eco_token_title#)
+                            }
+                        }
+                        Div(col-sm-6){
+                            Money(#balance_amount#)
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-6 text-right){
+                            Label(For: Minimal){
                                 $@1status$
                             }
                         }
@@ -176,9 +189,6 @@ Div(row){
                         Div(col-sm-6 #class#){
                             AppParam(App:#application_id#, Name:cf_status, Index:#startup_status#)
                         }
-                    }
-                    Div(){
-                        LinkPage(Body: $@1cf_investments$, Page: @1cf_investments, PageParams: "Id=#Id#")
                     }
                 }
             }
