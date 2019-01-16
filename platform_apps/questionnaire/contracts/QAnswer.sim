@@ -7,7 +7,17 @@ contract QAnswer {
         answer_id int
     }
     conditions {
-        //check status
+        if JSONDecode(DBFind("@1questionnaire").Where({"id":$question_id}).Columns("deleted").One("deleted")) == 1 {
+            warning LangRes("@1q_error_deleted", "en")
+        }
+        if JSONDecode(DBFind("@1questionnaire").Where({"id":$question_id}).Columns("status").One("status")) != 1 {
+            warning LangRes("@1q_error_deleted", "en")
+        }
+        if $operation == "UV" {
+            if Str(JSONDecode(DBFind("@1questionnaire").Where({"id":$question_id}).Columns("params->change").One("params->change"))) != "true" {
+                warning LangRes("@1q_error_revoting", "en")
+            }
+        }
     }
     action {
         if $time > Int(DBFind("@1questionnaire").Where({"id":$question_id}).Columns("expired").One("expired")) {

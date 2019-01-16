@@ -37,16 +37,30 @@ contract QOperations {
         }
     }
     conditions {
-        //check name unqie
-        //admin only
-        //no answer found
-        //check deleted
-
-        //unqiue group or role only One
-        //we can't delete zero
-
-        //edit only before start
-    
+        //add permission block
+        //check answer not empty
+        if $operation == "GA" {
+            $groups = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_groups").One("au_groups"))
+            var i int
+            i = 0
+            while i < Len($groups) {
+                if $groups[i] == $au_roles {
+                    warning LangRes("@1q_error_groups", "en") 
+                }
+                i = i + 1
+            }
+        }
+        if $operation == "RA" {
+            $roles = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_roles").One("au_roles"))
+            var i int
+            i = 0
+            while i < Len($roles) {
+                if $roles[i] == $au_roles {
+                    warning LangRes("@1_error_roles", "en") 
+                }
+                i = i + 1
+            }
+        }
         if $operation == "RD" && $au_roles==0 {
             warning
         }
@@ -55,7 +69,7 @@ contract QOperations {
         }
         if $operation == "C" {
             expToTimestamp()
-            //check name uniques
+            //check name uniques?
             //check function time before real time
             if $time > UnixDateTime($ext_string) {
                 warning LangRes("@1q_error_expdate", "en")
