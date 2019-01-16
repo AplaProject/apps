@@ -4,25 +4,30 @@ contract TokensSend {
         Recipient string
         Comment string "optional"
     }
-    func checkPermission() {
-        var contracts array i int prev string
-        contracts = ["@1TokensSend", "@1TsKeyApprove", "@1TsTransferSeller"]
+    func getPermission() {
+        var array_permissions array result i int prevContract string
+        array_permissions = ["@1TokensSend", "@1TsKeyApprove", "@1TsTransferSeller"]
 
-        prev = $stack[0]
+        prevContract = $stack[0]
         if Len($stack) > 2 {
-            prev = $stack[Len($stack) - 2]
+            prevContract = $stack[Len($stack) - 2]
         }
-        while i < Len(contracts) {
-            if prev == contracts[i] {
-                return
+        while i < Len(array_permissions) {
+            var contract_name string
+            contract_name = array_permissions[i]
+            if contract_name==prevContract {
+                result = 1
             }
             i = i + 1
         }
-        warning LangRes("@1tokens_transfer_cannot_be_made", "en")
+
+        if result == 0 {
+            warning LangRes("@1tokens_transfer_cannot_be_made", "en")
+        }
     }
 
     conditions {
-        checkPermission()
+        getPermission()
 
         $recipient_id = AddressToId($Recipient)
         if $recipient_id == 0 {
