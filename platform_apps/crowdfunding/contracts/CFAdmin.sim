@@ -5,7 +5,7 @@ contract CFAdmin {
     }
     conditions{
         // для нормальной работы добавить разрешения в @1TokensTransfer
-        
+
         $startup = DBFind("@1cf_startups").Where({id: $Id, deleted_at:0}).Row()
         if !$startup{
             warning "Startup not found"
@@ -93,7 +93,7 @@ contract CFAdmin {
             }
             //  переводим токены с баланса кошелька стартапа в размере инвестирования на кошелек инвестора в экосистеме стартапа, курс 1:1 
             @1TokensTransfer("Amount,SenderId,RecipientId,Comment", Money(it["amount"]), startupKey, investor, "startup investment")
-            
+
             // инвестиция погашена
             DBUpdate("@1cf_investments", Int(it["id"]), {refund_at: "-1"})
             var body string
@@ -116,7 +116,7 @@ contract CFAdmin {
             investor = AddressToId(it["investment_wallet"])
             // возвращаю токены APLA с кошелька стартапа на кошельки инвесторов
             @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", Money(it["amount"]), startupKey, investor, "startup investment refund", 1)
-            
+
             // время возврата инвестиции
             DBUpdate("@1cf_investments", Int(it["id"]), {refund_at:$block_time})
             var body string
@@ -146,11 +146,6 @@ contract CFAdmin {
             m["status"] = $REJECTED
             notifyStartup("Your request for startup compaign creation was rejected")
 
-        }elif $Action == "delete"{
-            m["deleted_at"] = $block_time
-            m["status"] = $STOPPED
-            notifyStartup("Your startup compaign was deleted")
-
         }elif $Action == "finish" {
             m["status"] = $FINISHED
             if $startup["status"] == $STARTED{
@@ -178,12 +173,12 @@ contract CFAdmin {
             if currentAmount < estimatedAmount || currentAmount > balance {
                 // если не набрана сумма или если собранно больше чем баланс кошелька стартапа - возврат токенов
                 refundTokens()
-            
+
             }else{
                 // переводим комиссию площадки
                 feeAmount = currentAmount / Money(100) * Money($fee)
                 @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", feeAmount, $startupKey, $feeKey, "crowdfunding fee", 1)
-            
+
                 // создаем кошельки инвесторов и переводим им их токены
                 sendTokens()
             }

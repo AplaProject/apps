@@ -23,6 +23,17 @@ contract CFStartup {
         }
         return dt
     }
+    func inArray(ar array, val string)bool{
+        var i lenAr int
+        lenAr = Len(ar)
+        while i<lenAr{
+            if Str(ar[i]) == val{
+                return true
+            }
+            i=i+1
+        }
+        return false
+    }
     conditions{
         // для нормальной работы добавить разрешения в @1TokensTransfer
         
@@ -39,8 +50,8 @@ contract CFStartup {
             if !$startup{
                 warning "Startup not found"
             }
-            if Int($startup["status"]) == $PUBLISHED{
-                warning "Editing a published company is not available"
+            if inArray([$PUBLISHED, $STARTED, $FINISHED], $startup["status"]){
+                warning "Editing a company is not available"
             }
         }
         if DBFind("@1cf_startups").Where({ecosystem:$Ecosystem, deleted_at:0}).Row(){
@@ -93,6 +104,9 @@ contract CFStartup {
         }
         if $dateStart >= $dateEnd {
             warning "Invalid starting date. Must be earler then ending date"
+        }
+        if $Minimal <= 0 {
+            warning "Minimal amount less or equal zero"
         }
         if $Estimated < $Minimal {
             warning "Estimated amount less then minimal amount"

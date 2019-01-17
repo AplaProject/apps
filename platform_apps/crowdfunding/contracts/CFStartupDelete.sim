@@ -2,6 +2,26 @@ contract CFStartupDelete {
     data {
         Id int
     }
+    func inArray(ar array, val string)bool{
+        var i lenAr int
+        lenAr = Len(ar)
+        while i < lenAr{
+            if Str(ar[i]) == val{
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+    func notifyStartup(body string){
+        var sender int header page eco popup string params map
+        sender = 1
+        header = Sprintf("Startup %v (%v) notification", $startup["name"], $startup["id"])
+        page = "@1cf_notification"
+        eco = $startup["ecosystem"]
+        popup = "true"
+        @1NotificationsSend("member_id,sender,text_header,text_body,page_name,params_map,eco_id,popup", $startupKey, sender, header, body, page, params, eco, popup)
+    }
     conditions{
         $CREATED = 1
         $PUBLISHED = 2
@@ -16,8 +36,8 @@ contract CFStartupDelete {
         if !$startup{
             warning "Startup not found"
         }
-        if Int($startup["status"]) == $PUBLISHED{
-            warning "Editing a published company is not available"
+        if inArray([$PUBLISHED, $STARTED, $FINISHED], $startup["status"]){
+            warning "Deleting a company is not available"
         }
 
 
@@ -40,6 +60,7 @@ contract CFStartupDelete {
     }
 
     action {
-        DBUpdate("@1cf_startups", $Id,{deleted_at:$block_time})
+        DBUpdate("@1cf_startups", $Id,{deleted_at:$block_time, status:$STOPPED})
+        notifyStartup("Your startup was deleted")
     }
 }
