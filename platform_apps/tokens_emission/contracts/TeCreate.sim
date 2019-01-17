@@ -28,6 +28,10 @@ contract TeCreate {
     }
 
     conditions {
+        if $ecosystem_id == 1 {
+            warning LangRes("@1emission_blocked", "en")
+        }
+
         $founder = Int(EcosysParam("founder_account"))
 
         $item = DBFind("@1ecosystems").WhereId($ecosystem_id).Row()
@@ -57,26 +61,22 @@ contract TeCreate {
         contract_name = getEmissionConditionContract()
         ContractConditions(contract_name)
 
-        var m map
+        var m emission map arr array
+        emission["type"] = "emission"
+        emission["time"] = Str($block_time)
+        emission["val"] = Money($Amount)
         if $SECONDARY_EMISSION {
-            var emission map arr array
-            emission["type"] = "emission"
-            emission["time"] = Str($block_time)
-            emission["val"] = Money($Amount)
-            arr = JSONDecode($item["emission_amount"])
-            arr = Append(arr, emission)
-            m["emission_amount"] = JSONEncode(arr)
+            if $item["emission_amount"]{
+                arr = JSONDecode($item["emission_amount"])
+            }
         } else {
-            var emission map arr array
-            emission["type"] = "emission"
-            emission["time"] = Str($block_time)
-            emission["val"] = Money($Amount)
-            arr = Append(arr, emission)
-            m["emission_amount"] = JSONEncode(arr)
             m["type_emission"] = $TypeEmission
             m["token_title"] = $Title
             m["type_withdraw"] = $TypeWithdraw
         }
+        arr = Append(arr, emission)
+        m["emission_amount"] = JSONEncode(arr)
+        DBUpdate("@1ecosystems", $ecosystem_id, m)
 
         var h map
         h["sender_id"] = 0
@@ -88,9 +88,8 @@ contract TeCreate {
         h["ecosystem"] = $ecosystem_id
         h["type"] = 2
         h["created_at"] = $block_time
-
         DBInsert("@1history", h)
-        DBUpdate("@1ecosystems", $ecosystem_id, m)
+
         DBUpdateExt("@1keys", {"ecosystem": $ecosystem_id, "id": $founder}, {"+amount": $Amount})
     }
 }
