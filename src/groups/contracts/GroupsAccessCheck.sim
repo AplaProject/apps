@@ -1,0 +1,23 @@
+contract GroupsAccessCheck {
+    data {
+        gr_id int
+    }
+
+    conditions {
+        var group map
+        group = DBFind("@1groups").Where({ecosystem:$ecosystem_id, id:$gr_id}).Columns("id,group_name,deleted,group_access,creator->member_id").Row()
+        if !group {
+            warning Sprintf("%v: " + "group not found", $this_contract)
+        }
+       
+        if group["creator.member_id"] == $key_id {
+            return
+        }
+
+        var gr_ids array
+        gr_ids = JSONDecode(group["group_access"])
+        if !DBFind("@1groups_participants").Where({ecosystem:$ecosystem_id, "groups_info->id":{"$in":gr_ids}, "member->member_id":$key_id, deleted:0}).Row() {
+            warning Sprintf("You don't have permissions to change the group %v", group["group_name"])
+        }
+    }
+}

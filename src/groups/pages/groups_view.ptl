@@ -1,0 +1,110 @@
+If(GetVar(page_par)!=""){
+    SetVar(Name: v_group_id, Value: #page_par#)
+}
+If(#v_group_id# > 0){
+    SetVar(this_page, @1groups_view).(this_table, @1groups_participants)
+    Include(@1pager_header)
+
+    DBFind(@1groups).Where({ecosystem:#ecosystem_id#, id:#v_group_id#}).Columns("group_name,group_type,deleted,group_access,creator->member_id").Vars(prefix)
+    SetTitle($@1group$: #prefix_group_name#)
+    If(#prefix_creator_member_id#==#key_id#){
+        SetVar(manager_id,1)
+    }.ElseIf(#prefix_deleted#==0){
+        If(And(#prefix_group_access#!="NULL",#prefix_group_access#!="",#prefix_group_access#!="[]",#group_id#>0)){
+            DBFind(@1groups).Where({ecosystem:#ecosystem_id#, id:[{"$in": #prefix_group_access#}, {"$eq":#group_id#}]}).Columns("id").Vars(manager)
+        }
+    }
+    If(#manager_id#>0){
+        AddToolButton(Page: @1groups_assign, PageParams: "v_group_id=#v_group_id#", Icon: icon-plus, Title: $@1assign$).Popup(50, $@1assign$)
+        AddToolButton(Title: $@1members_add$, Page:@1group_add_members, Icon: icon-plus,PageParams: "v_group_id=#v_group_id#").Popup(50, $@1add_members_to_group$)
+    }
+
+    Span(Class: h5 m0 mb ml-lg){
+        LinkPage(Class: ml-sm, Body: $@1groups$, Page: @1groups_list)
+        Span(Class: text-muted mh-sm, Body: /)
+        Span(Class: text-muted, Body: #prefix_group_name#)
+    }.Style(
+        display: inline-block;
+    )
+
+    If(GetVar(search)){
+        SetVar(where, {"ecosystem":#ecosystem_id#,"groups_info->id":#v_group_id#,"member->member_name":{"$like": #search#}})
+    }.Else{
+        SetVar(where, {"ecosystem":#ecosystem_id#,"groups_info->id":#v_group_id#}).(search,)
+    }
+
+    Div(list-group-item ml-lg mr-lg pt-lg){
+        SetVar(search_name, LangRes(@1member)).(page_par, #v_group_id#)
+        Include(@1search)
+    }
+
+    DBFind(#this_table#, src_participants).Where(#where#).Order({"deleted": 1, "id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,member->member_id,groups_info,groups_info->id,member->member_name,member->image_id,appointed->member_id,appointed->member_name,date_created,date_deleted,deleted").Custom(custom_id){
+        If(#deleted# == 0){
+            SetVar(Name: style_text, Value: "text-normal")
+            SetVar(Name: style_link, Value: "text-primary")
+        }.Else{
+            SetVar(Name: style_text, Value: "text-muted")
+            SetVar(Name: style_link, Value: "text-muted")
+        }
+        Span(Class: #style_text#, Body: #id#)
+    }.Custom(custom_appointed){
+        If(Or(#appointed.member_id#>0,#appointed.member_id#<0)){
+            LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#appointed.member_id#"){
+                Span(Body: #appointed.member_name#)
+            }
+        }
+    }.Custom(custom_member){
+        LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#member.member_id#"){
+            If(#member.image_id#>0){
+                Image(Src: Binary().ById(#member.image_id#), Class: img-circle).Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
+                Span(#member.member_name#)
+            }.Else{
+                Div(){
+                    Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                    Span(#member.member_name#)
+                }.Style(display:flex; align-items:center;)
+            }
+        }
+    }.Custom(custom_address){
+        Span(Class: #style_text#, Body: Address(#member.member_id#))
+    }.Custom(custom_date){
+        Div(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI"))
+        Div(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI"))
+    }.Custom(custom_status){
+        If(#deleted# == 0){
+            Span(Class: #style_text#, Body: LangRes(@1active))
+        }.Else{
+            Span(Class: #style_text#, Body: LangRes(@1deleted))
+        }
+    }.Custom(actions){
+        Div(pull-right){
+            If(#deleted#==0){
+                Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, Contract: @1GroupsUnassign, Params: "row_id=#id#", Page: @1groups_view, PageParams: "v_group_id=#v_group_id#").Alert(Text: "$@1sure_want_delete_member$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+            }
+        }
+    }.Count(count)
+
+    Div(fullscreen){
+        Div(table-responsive ml-lg mr-lg){
+            Div(list-group-item){
+                If(#count# > 0){
+                    Table(src_participants, "$@1member$=custom_member,$@1address$=custom_address,$@1appointed$=custom_appointed,$@1appointed_deleted_member$=custom_date,$@1status$=custom_status,=actions")
+                }.Else{
+                    Div(Class: text-center h4 text-muted, Body: "$@1participants$ $@1not_founded$")
+                }                       
+            }.Style(
+                margin-top:-15px;
+                tbody > tr:nth-of-type(odd) {
+                    background-color: #f8f9fc;
+                }
+            )
+        }
+    }
+    Div(mt-sm ml-lg mr-sm mb-sm){
+        Include(@1pager)
+    }
+}.Else{
+    Div(md-12 alert alert-danger text-center){
+        Span(Body: LangRes(@1attention))
+    }
+}

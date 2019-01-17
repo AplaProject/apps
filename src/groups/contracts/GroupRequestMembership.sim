@@ -1,0 +1,51 @@
+contract GroupRequestMembership {
+    data {
+        gr_id int
+    }
+    conditions {
+        $group = DBFind("@1groups").Where({id:$gr_id}).Columns("id,deleted,group_type,group_name,image_id,creator->member_id,group_access,group_name").Row()
+        if !$group {
+            warning LangRes("@1group_not_found", "en")
+        }
+        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$key_id}).Row() {
+            warning LangRes("@1key_not_found", "en")
+        }
+        if $group["deleted"] == 1 {
+            warning LangRes("@1group_deleted_request_impossible", "en")
+        }
+        $check_join = DBFind("@1groups_participants").Columns("id,deleted,member,member->member_id,groups_info,groups_info->id,ecosystem").Where({"deleted":0,"member->member_id":$key_id,"groups_info->id":$gr_id,"ecosystem":$ecosystem_id}).One("id")
+        if $check_join != nil {
+            error("You are already in this group")
+        }
+        $check_send_notific = DBFind("@1notifications").Columns("id,closed,ecosystem,sender,sender->member_id,page_params->gr_id").Where({"sender->member_id":$key_id,"page_params->gr_id":$gr_id,"closed":0,"ecosystem":$ecosystem_id}).One("id")
+        if $check_send_notific != nil {
+            info("You have already sent a request to this group. Expect a response")
+        }
+    }
+    action {
+        var gr_ids array i int
+
+        var params map
+        params["gr_id"] = $gr_id
+        params["member_id"] = $key_id
+
+        var icon header body page ecoName string
+        icon = "icon icon-user-follow"
+        header = "New request"
+        body = Sprintf("New request to the group %t",$group["group_name"])
+        page = "@1membership_group"
+
+        gr_ids = JSONDecode($group["group_access"])
+        if Len(gr_ids) > 0 {
+            while i < Len(gr_ids) {
+                var id_role int
+                id_role = Int(gr_ids[i])
+                @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,eco_id,closure_type",id_role, 1, icon, header, body, page, params, $ecosystem_id,1)
+                i=i+1
+            }
+        } else{
+            $creator_id = Int($group["creator.member_id"])
+            @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,eco_id",$creator_id, 1, icon, header, body, page, params, $ecosystem_id)
+        }
+    }
+}

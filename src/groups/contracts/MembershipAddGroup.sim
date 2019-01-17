@@ -1,0 +1,58 @@
+contract MembershipAddGroup {
+    data {
+        memberskeys string "optional"
+        gr_id int "optional"
+        cboxmembers string
+    }
+    
+    func addPub(pub_key string) {
+        if HasPrefix(pub_key, "04") {
+            pub_key = Substr(pub_key, 2, Size(pub_key) - 2)
+        }
+        if Size(pub_key) < 128 {
+            error LangRes("@1key_too_short", "en")
+        }
+        if Size(pub_key) > 128 {
+            error LangRes("@1key_too_long", "en")
+        }
+
+        var k_id int
+        k_id = PubToID(pub_key)
+        if k_id == 0 {
+            warning LangRes("@1public_key_invalid", "en")
+        }
+        $check_user = DBFind("@1keys").Where({id:k_id, ecosystem:$ecosystem_id})
+        if !$check_user {
+            warning Sprintf("%v: " + "key not found", pub_key)
+        }
+
+        @1GroupsAssign("gr_id,member_id",$gr_id,k_id)
+    }
+
+    conditions {
+        info($cboxmembers)
+        if $memberskeys == "" {
+            warning LangRes("@1public_key_empty", "en")
+        }
+        $memberskeys = Replace($memberskeys, " ", "")
+        $memberskeys = Replace($memberskeys, "\n", "")
+        $memberskeys = Replace($memberskeys, "\r", "")
+    }
+
+    action {
+        if Contains($memberskeys, ",") {
+            var pub_array array
+            pub_array = Split($memberskeys, ",")
+
+            var i int
+            while i < Len(pub_array) {
+                var pub_key string
+                pub_key = Str(pub_array[i])
+                addPub(pub_key)
+                i = i + 1
+            }
+        } else {
+            addPub($memberskeys)
+        }
+    }
+}

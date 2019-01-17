@@ -1,0 +1,45 @@
+If(GetVar(type_add)==""){
+    SetVar(type_add,0)
+}
+Div(mt-sm col-md-12 pb-xl pl0){
+    If(#type_add# == 0){
+        Button($@1add_user_by_pubkey$, Class: btn btn-primary disabled)
+        Button($@1add_user_by_list$, Class: btn btn-primary,Page:@1group_add_members,PageParams:"type_add=1,v_group_id=#v_group_id#").Popup(50, $@1add_members_to_group$)
+    }.Else{
+        Button($@1add_user_by_pubkey$, Class: btn btn-primary,Page:@1group_add_members,PageParams:"type_add=0,v_group_id=#v_group_id#").Popup(50, $@1add_members_to_group$)
+        Button($@1add_user_by_list$, Class: btn btn-primary disabled)
+    }
+}
+If(#type_add# == 0){
+    Form(){
+        Div(){
+            P(Class: text-muted h6 m0, Body: "$@1keys_must_be_separated$")
+        }.Style(padding-bottom:5px;)
+        Input(Name: memberskeys, Type: textarea)
+        Button(Contract: @1MembershipAddGroup, Class: btn btn-primary pull-right mt, Page:@1groups_view, Body: $@1members_add$,Params: "gr_id=#v_group_id#",PageParams: "v_group_id=#v_group_id#")
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1groups_view,PageParams:"v_group_id=#v_group_id#")
+    }
+}.Else{
+    Form(){
+        DBFind(@1keys,src_keys).Where({ecosystem:#ecosystem_id#}).Columns("id").Custom(_name){
+            SetVar(m_id, 0)
+            DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#id#}).Columns("id,member_name").Vars(m)
+            Address(#id#)
+            If(Or(#m_id#>0,#m_id#<0)){
+                " (#m_member_name#)"
+            }
+        }.Custom(_cbox){
+            Input(Name:cboxmembers,Type:checkbox,Value: id)
+        }
+        Table(Source: src_keys,"$@1id$=id,$@1name$=_name,=_cbox").Style(
+            tr > *:last-child {
+                padding-right:20px;
+                text-align:right;
+            }
+        )
+        Div(Class: mt-sm){
+            Button(Contract: @1MembershipAddGroup, Class: btn btn-primary pull-right mt, Page:@1groups_view, Body: $@1members_add$,Params: "gr_id=#v_group_id#",PageParams: "v_group_id=#v_group_id#")
+            Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1groups_view,PageParams:"v_group_id=#v_group_id#")
+        }
+    }
+}
