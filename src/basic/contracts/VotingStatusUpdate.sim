@@ -60,21 +60,25 @@ contract VotingStatusUpdate {
 
     conditions {
         @1AdminCondition()
-        $WAITING = 1
-        $VALID = 2
+        $INVALID = 1
+        $WAITING = 2
         $STARTED = 3
         $FINISHED = 4
-        $INVALID = 5
     }
     
     action {
         var bt string
         bt = BlockTime()
-        changeVotings({status:$WAITING, "flags->full_data":0}, {status:$INVALID})
-        changeVotings({status:$INVALID, "flags->full_data":1, "progress->number_participants":{"$gt":0}}, {status:$VALID})
-        changeVotings({status:$WAITING, "flags->full_data":1, "progress->number_participants":{"$gt":0}}, {status:$VALID})
-        changeVotings({status:$VALID, date_started:{"$lte":bt}}, {status:$STARTED})
-        changeVotings({status:$STARTED, date_ended:{"$lte":bt}}, {status:$FINISHED})
-        //changeVotings({status:$STARTED, date_ended:{"$lte":bt}, "flags->decision":1}, {status:$FINISHED})
+
+        //setting status INVALID
+        changeVotings({status:$WAITING, "flags->full_data":0}, {"status":$INVALID})
+        changeVotings({status:$WAITING, "progress->number_participants":0}, {"status":$INVALID})
+        //setting status WAITING
+        changeVotings({status:$INVALID, "flags->full_data":1, "progress->number_participants":{"$gt":0}}, {"status":$WAITING})
+        //setting status STARTED
+        changeVotings({status:$INVALID, "date_started":{"$lte":bt}, "flags->full_data":1, "progress->number_participants":{"$gt":0}}, {"status":$STARTED})
+        changeVotings({status:$WAITING, "date_started":{"$lte":bt}}, {status:$STARTED})
+        //setting status FINISHED
+        changeVotings({status:$STARTED, "date_ended":{"$lte":bt}}, {"status":$FINISHED})
     }
 }
