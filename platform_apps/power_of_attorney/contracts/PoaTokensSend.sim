@@ -1,7 +1,7 @@
 contract PoaTokensSend {
     data {
+        PoaId int
         Amount money
-        Sender string
         Recipient string
         Comment string "optional"
     }
@@ -17,7 +17,7 @@ contract PoaTokensSend {
         while i < Len(array_permissions) {
             var contract_name string
             contract_name = array_permissions[i]
-            if contract_name==prevContract {
+            if contract_name == prevContract {
                 result = 1
             }
             i = i + 1
@@ -32,44 +32,46 @@ contract PoaTokensSend {
         $sender_id = AddressToId($Sender)
         $recipient_id = AddressToId($Recipient)
 
-        //check the sender key
         if $sender_id == 0 {
             warning Sprintf(LangRes("@1sender_x_invalid", "en"), $Sender)
         }
-        //check the recipient key
         if $recipient_id == 0 {
             warning Sprintf(LangRes("@1recipient_x_invalid", "en"), $Recipient)
         }
     }
 
     func checkPoa() {
-        var poa_map map
-        poa_map = DBFind("@1poa").Where({"contract":"@1PoaTokensSend", "poa_sender->member_id": $sender_id, "poa_recipient->member_id":$key_id, "ecosystem":$ecosystem_id, "deleted": 0}).Columns("id,date_expiration,params->amount_max,params->amount_max_day,params->amount_max_month,params->amount_day,params->amount_month,params->date_day,params->date_month,params->role_ids").Row()
-        if !poa_map {
+        var poa map
+
+        poa = DBFind("@1poa").Where({"id":$PoaId, "contract":"@1PoaTokensSend", "ecosystem":$ecosystem_id, "deleted": 0}).Columns("id,date_expiration,params->amount_max,params->amount_max_day,params->amount_max_month,params->amount_day,params->amount_month,params->date_day,params->date_month,params->role_id,poa_recipient->member_id,poa_sender->member_id").Row()
+        if !poa {
             warning LangRes("@1poa_not_found", "en")
         }
-
-        if $block_time > Int(poa_map["date_expiration"]) {
-            warning LangRes("@1poa_expired", "en")
-        }
-        if poa_map["params.role_ids"] {
-            var rids array
-            rids = JSONDecode(poa_map["params.role_ids"])
-            if Len(rids) > 0{
-                if !RoleAccess(rids){
+        if Int(poa["poa_recipient.member_id"]) != $key_id{
+            $poa_role_id = Int(poa["params.role_id"])
+            if $poa_role_id > 0 {
+                if !RoleAccess($poa_role_id){
                     warning LangRes("@1tokens_transfer_cannot_be_made", "en")
                 }
+            }else{
+                warning LangRes("@1tokens_transfer_cannot_be_made", "en")
             }
         }
 
-        $poa_id = poa_map["id"]
-        $amount_max = poa_map["params.amount_max"]
-        $amount_max_day = poa_map["params.amount_max_day"]
-        $amount_max_month = poa_map["params.amount_max_month"]
-        $amount_day = poa_map["params.amount_day"]
-        $amount_month = poa_map["params.amount_month"]
-        $date_day = poa_map["params.date_day"]       // 2018-10-19 00:00:00
-        $date_month = poa_map["params.date_month"]   // 2018-10-01 00:00:00
+        if $block_time > Int(poa["date_expiration"]) {
+            warning LangRes("@1poa_expired", "en")
+        }
+
+        $Sender = poa["poa_sender.member_id"]
+
+        $poa_id = poa["id"]
+        $amount_max = poa["params.amount_max"]
+        $amount_max_day = poa["params.amount_max_day"]
+        $amount_max_month = poa["params.amount_max_month"]
+        $amount_day = poa["params.amount_day"]
+        $amount_month = poa["params.amount_month"]
+        $date_day = poa["params.date_day"]       // 2018 - 10 - 19 00:00:00
+        $date_month = poa["params.date_month"]   // 2018 - 10 - 01 00:00:00
 
         $cur_date_day = UnixDateTime(Substr(BlockTime(), 0, 10) + " 00:00:00")
         $cur_date_month = UnixDateTime(Substr(BlockTime(), 0, 8) + "01 00:00:00")
@@ -108,14 +110,15 @@ contract PoaTokensSend {
         m["amount_month"] = Str($amount_month)
         m["date_day"] = Str($date_day)
         m["date_month"] = Str($date_month)
+        m["role_id"] = Str($poa_role_id)
 
-        @1PoaUpdateParams("PoaId,ParamsStr", Int($poa_id), JSONEncode(m))  
+        @1PoaUpdateParams("PoaId,ParamsStr", Int($poa_id), JSONEncode(m))
     }
 
     conditions {
         getPermission()
-        checkKeys()
         checkPoa()
+        checkKeys()
         checkLimit()
     }
 

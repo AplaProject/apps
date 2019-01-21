@@ -26,19 +26,17 @@ contract MSCreate {
     }
 
     conditions {
-        $GROUP_SINGLE = 1
-        $GROUP_VOTING = 2
-        $ROLE_SINGLE = 3
-        $ROLE_VOTING = 4
+        $ROLE_SINGLE = 1
+        $ROLE_VOTING = 2
         $NO_LIMIT = 1
         $ONE_SIGN = 1
 
         $buf = DBFind("@1buffer_data").Where({id:$BufferId, ecosystem:$ecosystem_id}).Columns("value->type,value->units").Row()
         if !$buf {
-            warning "not assigned group"
+            warning "Not set roles"
         }
         if Int($buf["value.type"]) == 0 {
-            warning "not assigned group"
+            warning "Not set roles"
         }
         $units = JSONDecode($buf["value.units"])
 
@@ -49,25 +47,18 @@ contract MSCreate {
             }
         }
 
-        if $Sign != $ONE_SIGN{
+        if $Sign == $ONE_SIGN{
+            $multi = -1
+        }else{
+            // перевод голосованием
             if $Duration == 0 || $Quorum == 0|| $Volume == 0 {
                 warning "Invalid parameters of voting"
             }
             $multi = 1
-        }else{
-            // -1 if the selected "one signature"
-            $multi = -1
         }
-        var amountDay amountMonth dateDay dateMonth int roleIds groupIds array
-        if $buf["value.type"] == $ROLE_SINGLE || $buf["value.type"] == $ROLE_VOTING{
-            roleIds = $units
-            $isGroup = false
-        }else{
-            groupIds = $units
-            $isGroup = true
-        }
-        $PARAMS = ["amount_max", "amount_max_day", "amount_max_month", "amount_day", "amount_month", "date_day", "date_month", "voting_duration", "voting_quorum", "voting_volume", "role_ids", "group_ids"]
-        $VALUES = [$AmountMax, $AmountMaxDay, $AmountMaxMonth, amountDay, amountMonth, dateDay, dateMonth, $Duration, $Quorum, $Volume, roleIds, groupIds]
+
+        $PARAMS = ["amount_max", "amount_max_day", "amount_max_month", "voting_duration", "voting_quorum", "voting_volume", "amount_day", "amount_month", "date_day", "date_month", "role_id"]
+        $VALUES = [$AmountMax, $AmountMaxDay, $AmountMaxMonth, $Duration, $Quorum, $Volume, 0, 0, 0, 0]
     }
 
     action {
@@ -75,15 +66,19 @@ contract MSCreate {
         table = Sprintf("@%vkeys", $ecosystem_id)
         DBUpdate(table, $key_id, {multi:$multi})
 
-        // лимиты групп и ролей пишу в таблицу доверенностей
-        var params map i lenUnits kid int
+        // лимиты ролей пишу в таблицу доверенностей
+        var params map i lenUnits int
+        lenUnits = Len($units)
         params["DateExpiration"] = $LimitDate
         params["TimeExpiration"] = $LimitTime
         params["TemplateId"] = $PoaTemplateId
         params["ParamArr"] = $PARAMS
-        params["ValueArr"] = $VALUES
         params["Recipient"] = IdToAddress($key_id)
-        Println(params)
-        CallContract("@1PoaAdd", params)
+        
+        while i < lenUnits{
+            params["ValueArr"] = Append($VALUES, $units[i])
+            CallContract("@1PoaAdd", params)
+            i = i + 1
+        }
     }
 }
