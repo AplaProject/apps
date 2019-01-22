@@ -89,6 +89,7 @@ contract QOperations {
             params["change"] = $change
             q["question"] = $question
             q["description"] = $description
+            //fix this on CC
             q["answer"] = JSONEncode(decision)
             q["ecosystem"] = $ecosystem_id
             q["deleted"] = 0
@@ -113,24 +114,60 @@ contract QOperations {
             DBUpdate("@1questionnaire", $id, q)
         }
         if $operation == "AA" {
-            var decision array
-            decision = JSONDecode(DBFind("@1questionnaire").Columns("answer").Where({"id":$id,ecosystem:$ecosystem_id}).One("answer"))
-            decision = Append(decision, Str($answer))
-            q["answer"] = JSONEncode(decision)
-            DBUpdate("@1questionnaire", $id, q)
+            if $id==0 {
+                if !DBFind("@1buffer_data").Where({"key":"q_answers","member_id":$key_id}).One("value") {
+                    var decision array
+                    decision = Append(decision, Str($answer))
+                    q["value"] = JSONEncode(decision)
+                    q["member_id"] = $key_id
+                    q["key"] = "q_answers"
+                    q["ecosystem"] = $ecosystem_id
+                    DBInsert("@1buffer_data", q)
+                } else {
+                    var decision array
+                    $id_upd = JSONEncode(DBFind("@1buffer_data").Where({"key":"q_answers","member_id":$key_id}).One("id"))
+                    decision = JSONDecode(DBFind("@1buffer_data").Where({"key":"q_answers","member_id":$key_id}).One("value"))
+                    decision = Append(decision, Str($answer))
+                    warning Sprintf("%v", decision)
+                    q["value"] = JSONEncode(decision)
+                    DBUpdate("@1buffer_data", $id_upd, q)
+                }
+                
+            } else {
+                var decision array
+                decision = JSONDecode(DBFind("@1questionnaire").Columns("answer").Where({"id":$id,ecosystem:$ecosystem_id}).One("answer"))
+                decision = Append(decision, Str($answer))
+                q["answer"] = JSONEncode(decision)
+                DBUpdate("@1questionnaire", $id, q)
+            }
         }
         if $operation == "AD" {
-            var decision decision_new array
-            decision = JSONDecode(DBFind("@1questionnaire").Columns("answer").Where({"id":$id,ecosystem:$ecosystem_id}).One("answer"))
-            var i int
-            while i < Len(decision) {
-                if decision[i] != Str($answer) {
-                    decision_new = Append(decision_new, decision[i])
+            if $id==0 {
+                var decision decision_new array
+                decision = JSONDecode(DBFind("@1buffer_data").Where({"key":"q_answers","member_id":$key_id}).One("value"))
+                $id_upd = Int(DBFind("@1buffer_data").Where({"key":"q_answers","member_id":$key_id}).One("id"))
+                var i int
+                while i < Len(decision) {
+                    if decision[i] != Str($answer) {
+                        decision_new = Append(decision_new, decision[i])
+                    }
+                    i = i + 1
                 }
-                i = i + 1
-            } 
-            q["answer"] = JSONEncode(decision_new)
-            DBUpdate("@1questionnaire", $id, q)
+                q["value"] = JSONEncode(decision_new)
+                DBUpdate("@1buffer_data", $id_upd, q)
+            } else {
+                var decision decision_new array
+                decision = JSONDecode(DBFind("@1questionnaire").Columns("answer").Where({"id":$id,ecosystem:$ecosystem_id}).One("answer"))
+                var i int
+                while i < Len(decision) {
+                    if decision[i] != Str($answer) {
+                        decision_new = Append(decision_new, decision[i])
+                    }
+                    i = i + 1
+                } 
+                q["answer"] = JSONEncode(decision_new)
+                DBUpdate("@1questionnaire", $id, q)
+            }
         }
         if $operation == "RA" {
             audience = JSONDecode(DBFind("@1questionnaire").Where({"id":$id}).Columns("au_roles").One("au_roles"))
