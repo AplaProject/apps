@@ -52,13 +52,16 @@ contract VotingStatusUpdate {
                 where["ecosystem"] = $ecosystem_id
                 rating = DBFind($rating_table).Columns($request_columns).Where(where).Row()
 
-                var rating_amount int
-                rating_amount = Int(rating[$rating_amount])
-                if rating_amount > 1 {
-                    rating_amount = $rating_weight * rating_amount
-                    DBUpdate("@1votings_participants", Int(voter["id"]), {rating: rating_amount})
+                var rating_amount_i rating_amount_f int
+                rating_amount_f = Float(rating[$rating_amount]) * Float($rating_weight)
+                if rating_amount_f < 1.0 {
+                    rating_amount_f = 1.0    
                 }
+                rating_amount_f = 1 + Log(rating_amount_f)
+                rating_amount_i = Int(rating_amount_f * 1000)
 
+                //Println("wallet: " + Str(IdToAddress(memberId)) + "  rating_f: " + Str(rating_amount_f) + "  rating_i: " + Str(rating_amount_i))
+                DBUpdate("@1votings_participants", Int(voter["id"]), {rating: rating_amount_i})
                 i = i + 1
             }
         }

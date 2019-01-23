@@ -19,17 +19,23 @@ contract VotingCandidateAccept {
         }
     }
 
+    func getUnixDataEnd(d string) int {
+        d = Replace(d, "T", " ")
+        d = Replace(d, "Z", "")
+        return UnixDateTime(d)
+    }
+
     conditions {
         $INVALID = 1
         $WAITING = 2
         $STARTED = 3
         $FINISHED = 4
 
-        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id: $votingID}).Columns("id,flags->decision,flags->notifics,voting->type_participants,voting->role_id,status").Row()
+        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id: $votingID}).Columns("id,flags->decision,flags->notifics,voting->type_participants,voting->role_id,status,date_ended").Row()
         if !$voting {
             warning LangRes("@1voting_not_found", "en")
         }
-        if $voting["status"] == $FINISHED {
+        if $voting["status"] == $FINISHED || $block_time > getUnixDataEnd($voting["date_ended"]) {
             warning LangRes("@1voting_expired_can_not_vote", "en")
         }
         if $voting["status"] != $STARTED {
