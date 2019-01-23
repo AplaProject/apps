@@ -6,29 +6,23 @@ contract PoaTokensSend {
         Comment string "optional"
     }
 
-    func getPermission() {
-        var array_permissions array result i int prevContract string
-        array_permissions = ["@1PoaTokensSend"]
-
-        prevContract = $stack[0]
+    func checkPrev(contracts array) {
+        var i int
+        $prevContract = $stack[0]
         if Len($stack) > 2 {
-            prevContract = $stack[Len($stack) - 2]
+            $prevContract = $stack[Len($stack) - 2]
         }
-        while i < Len(array_permissions) {
-            var contract_name string
-            contract_name = array_permissions[i]
-            if contract_name == prevContract {
-                result = 1
+        while i < Len(contracts) {
+            if $prevContract == contracts[i] {
+                return
             }
             i = i + 1
         }
-
-        if result == 0 {
-            warning LangRes("@1tokens_transfer_cannot_be_made", "en")
-        }
+        warning LangRes("@1tokens_transfer_cannot_be_made", "en")
     }
 
     func checkKeys() {
+        $Sender = $poa["poa_sender.member_id"]
         $sender_id = AddressToId($Sender)
         $recipient_id = AddressToId($Recipient)
 
@@ -41,14 +35,13 @@ contract PoaTokensSend {
     }
 
     func checkPoa() {
-        var poa map
-
-        poa = DBFind("@1poa").Where({"id":$PoaId, "contract":"@1PoaTokensSend", "ecosystem":$ecosystem_id, "deleted": 0}).Columns("id,date_expiration,params->amount_max,params->amount_max_day,params->amount_max_month,params->amount_day,params->amount_month,params->date_day,params->date_month,params->role_id,poa_recipient->member_id,poa_sender->member_id").Row()
-        if !poa {
+        $poa = DBFind("@1poa").Where({"id":$PoaId, "contract":"@1PoaTokensSend", "ecosystem":$ecosystem_id, "deleted": 0}).Columns("id,date_expiration,params,poa_recipient->member_id,poa_sender->member_id").Row()
+        if !$poa {
             warning LangRes("@1poa_not_found", "en")
         }
-        if Int(poa["poa_recipient.member_id"]) != $key_id{
-            $poa_role_id = Int(poa["params.role_id"])
+        $params = JSONDecode($poa["params"])
+        if Int($poa["poa_recipient.member_id"]) != $key_id{
+            $poa_role_id = Int($params["role_id"])
             if $poa_role_id > 0 {
                 if !RoleAccess($poa_role_id){
                     warning LangRes("@1tokens_transfer_cannot_be_made", "en")
@@ -58,72 +51,82 @@ contract PoaTokensSend {
             }
         }
 
-        if $block_time > Int(poa["date_expiration"]) {
+        if $block_time > Int($poa["date_expiration"]) {
             warning LangRes("@1poa_expired", "en")
         }
-
-        $Sender = poa["poa_sender.member_id"]
-
-        $poa_id = poa["id"]
-        $amount_max = poa["params.amount_max"]
-        $amount_max_day = poa["params.amount_max_day"]
-        $amount_max_month = poa["params.amount_max_month"]
-        $amount_day = poa["params.amount_day"]
-        $amount_month = poa["params.amount_month"]
-        $date_day = poa["params.date_day"]       // 2018 - 10 - 19 00:00:00
-        $date_month = poa["params.date_month"]   // 2018 - 10 - 01 00:00:00
-
         $cur_date_day = UnixDateTime(Substr(BlockTime(), 0, 10) + " 00:00:00")
         $cur_date_month = UnixDateTime(Substr(BlockTime(), 0, 8) + "01 00:00:00")
     }
 
     func checkLimit() {
-        if Int($cur_date_day) > Int($date_day) {
-            $date_day = $cur_date_day
-            $amount_day = 0
+        if $cur_date_day > Int($params["date_day"]) {
+            $params["date_day"] = $cur_date_day
+            $params["amount_day"] = 0
         }
-        if Int($cur_date_month) > Int($date_month) {
-            $date_month = $cur_date_month
-            $amount_month = 0
+        if $cur_date_month > Int($params["date_month"]) {
+            $params["date_month"] = $cur_date_month
+            $params["amount_month"] = 0
         }
 
-        if Money($amount_max) < Money($Amount) {
+        if Money($params["amount_max"]) < Money($Amount) {
             warning LangRes("poa_exceeded_single_limit", "en")
         }
-        if Money($amount_max_day) < Money($amount_day) + Money($Amount) {
+        if Money($params["amount_max_day"]) < Money($params["amount_day"]) + Money($Amount) {
             warning LangRes("poa_exceeded_daily_limit", "en")
         }
-        if Money($amount_max_month) < Money($amount_month) + Money($Amount) {
+        if Money($params["amount_max_month"]) < Money($params["amount_month"]) + Money($Amount) {
             warning LangRes("poa_exceeded_monthly_limit", "en")
         }
     }
 
     func updateParams() {
-        $amount_day = Money($amount_day) + Money($Amount)
-        $amount_month = Money($amount_month) + Money($Amount)
+        $params["amount_day"] = Money($params["amount_day"]) + Money($Amount)
+        $params["amount_month"] = Money($params["amount_month"]) + Money($Amount)
+        @1PoaUpdateParams("PoaId,ParamsStr", $PoaId, JSONEncode($params))
+    }
 
-        var m map
-        m["amount_max"] = Str($amount_max)
-        m["amount_max_day"] = Str($amount_max_day)
-        m["amount_max_month"] = Str($amount_max_month)
-        m["amount_day"] = Str($amount_day)
-        m["amount_month"] = Str($amount_month)
-        m["date_day"] = Str($date_day)
-        m["date_month"] = Str($date_month)
-        m["role_id"] = Str($poa_role_id)
+    func createVotingTransfer(){
+        var votingId voters duration volume quorum type typeCount decision participants int title desc contractAccept string contractParams map
+        voters = Int($params["role_id"])
+        title = Sprintf("Multisigned transfer. %v", BlockTime())
+        desc = Sprintf("PoA %v. Amount: %v. Sender: %v. Recipient: %v. Creator: %v", $PoaId, $Amount, $Sender, $Recipient, $key_id)
+        volume = Int($params["voting_volume"])
+        quorum = Int($params["voting_quorum"])
+        duration = Int($params["voting_duration"])
+        type = 1
+        decision = 5 // выполнение контракта
+        participants = 3 // ролевое
+        typeCount = 0 // процентное
 
-        @1PoaUpdateParams("PoaId,ParamsStr", Int($poa_id), JSONEncode(m))
+        votingId = @1VotingCreate("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval,count_type_voters", title, type, desc, participants, decision, volume, quorum, duration, typeCount)
+        if votingId == 0 {
+            warning LangRes("@1voting_creation_error", "en")
+        }
+        contractAccept = "@1PoaVotingAccept"
+        contractParams["VotingId"] = votingId
+        contractParams["PoaId"] = $PoaId
+        contractParams["Amount"] = $Amount
+        contractParams["Recipient"] = $Recipient
+        contractParams["Comment"] = $Comment
+        @1VotingSubjectContract("votingID,contract_accept,contract_accept_params,contract_reject", votingId, contractAccept, JSONEncode(contractParams), "")
     }
 
     conditions {
-        getPermission()
+        checkPrev(["@1PoaTokensSend", "@1PoaVotingAccept"])
         checkPoa()
         checkKeys()
         checkLimit()
     }
 
     action {
-        @1TokensTransfer("Amount,SenderId,RecipientId,Comment", $Amount, $sender_id, $recipient_id, $Comment)
-        updateParams()
+        var wallet map
+        wallet = DBFind("@1keys").Columns("id,multi").Where({id:$sender_id, ecosystem:$ecosystem_id}).Row()
+        if wallet["multi"] == 1 && $prevContract != "@1PoaVotingAccept"{
+            // голосованием
+            createVotingTransfer()
+        }else{
+            @1TokensTransfer("Amount,SenderId,RecipientId,Comment", $Amount, $sender_id, $recipient_id, $Comment)
+            updateParams()
+        }
     }
 }

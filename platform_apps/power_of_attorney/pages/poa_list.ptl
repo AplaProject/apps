@@ -15,7 +15,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,contract,params,date_created,date_expiration,poa_recipient->member_id,poa_recipient->member_name,poa_recipient->image_id,poa_sender->member_id,poa_sender->member_name,poa_sender->image_id,deleted").Count(poa_count).Custom(_contract){
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,contract,params,date_created,date_expiration,poa_recipient->member_id,poa_recipient->member_name,poa_recipient->image_id,poa_sender->member_id,poa_sender->member_name,poa_sender->image_id,deleted,params->role_id").Count(poa_count).Custom(_contract){
     Span(Class: h5 text-bold, Body: #contract#)
 }.Custom(_creator){
     If(And(#creator.member_name#!=NULL,#creator.member_name#!="")){
@@ -32,15 +32,23 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
         Div(text-nowrap){DateTime(DateTime: #date_expiration#, Format: "DD.MM.YYYY HH:MI")}
     }
 }.Custom(custom_recipient){
-    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#poa_recipient.member_id#"){
-        If(#poa_recipient.image_id#>0){
-            Image(Src: Binary().ById(#poa_recipient.image_id#), Class: img-circle).Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
-            Span(#poa_recipient.member_name#)
-        }.Else{
-            Div(){
-                Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+    If(And(#params.role_id#>0,#poa_recipient.member_id#==#poa_sender.member_id#)){
+        SetVar(role_role_name,)
+        DBFind(@1roles).WhereId(#params.role_id#).Columns("role_name").Vars(role)
+        LinkPage(Class: text-primary h5 text-bold, Page: @1roles_view, PageParams: "v_role_id=#params.role_id#"){
+            $@1role$: #role_role_name#
+        }
+    }.Else{
+        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#poa_recipient.member_id#"){
+            If(#poa_recipient.image_id#>0){
+                Image(Src: Binary().ById(#poa_recipient.image_id#), Class: img-circle).Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
                 Span(#poa_recipient.member_name#)
-            }.Style(display:flex; align-items:center;)
+            }.Else{
+                Div(){
+                    Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                    Span(#poa_recipient.member_name#)
+                }.Style(display:flex; align-items:center;)
+            }
         }
     }
 }.Custom(custom_arrow){
@@ -85,7 +93,7 @@ Div(fullscreen){
                 Table(src, "$@1contract$=_contract,$@1sender$=custom_sender,=custom_arrow,$@1recipient$=custom_recipient,$@1params$=_params,$@1date_created$=_date_created,$@1expiration_date$=_date_expiration,=_action")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1poa_list$ $@1not_founded$")
-            }                       
+            }
         }.Style(
             margin-top:-15px;
             tbody > tr:nth-of-type(odd) {

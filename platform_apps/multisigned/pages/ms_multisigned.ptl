@@ -4,21 +4,21 @@ AppParam(App: #application_id#, Name:ms_limits_date, Source:limits_date)
 AppParam(App: #application_id#, Name:ms_limits_sign, Source:limits_sign)
 DBFind(@1keys).WhereId(#key_id#).Columns("multi").Vars(k)
 
-SetVar(this_page,@1ms_multisigned).(back_page,@1profile_edit)
+SetVar(this_page,@1ms_multisigned).(back_page,@1profile_view)
 DBFind(@1buffer_data).Where({member_id:#key_id#, key:multisigned_units, ecosystem:#ecosystem_id#}).Columns("id,value->type,value->units").Vars(buf)
 DBFind(@1roles,src_roles).Where({ecosystem:#ecosystem_id#, deleted:0}).Columns("id,role_name")
 
-SetVar(button_title,$@1ms_assign_roles$)
-
-If(GetVar(TemplateId)==""){
-    SetVar(TemplateId,)
+SetVar(TYPE_ROLE_SINGLE,1).(TYPE_ROLE_VOTING,2).(TYPE_MEMBER,3)
+SetVar(button_title,$@1ms_assign_role$)
+If(#Type#==#TYPE_MEMBER#){
+    SetVar(button_title,$@1ms_assign_member$)
 }
+
 If(GetVar(PoaTemplateId)==""){
     SetVar(PoaTemplateId,)
 }
 Div(content-wrapper){
-
-    If(GetVar(Type)!=""){
+    If(#Type#!=""){
         SetTitle($@1ms_create$)
         Div(breadcrumb){
             LinkPage(Body: $@1profile$, Page: #back_page#)
@@ -37,7 +37,7 @@ Div(content-wrapper){
                         Div(list-group-item){
                             Label($@1poa$)
                             Div(mb input-group){
-                                If(GetVar(PoaTemplateId)==""){
+                                If(#PoaTemplateId#==""){
                                     Div(text-center text-muted mt){
                                         $@1ms_not_assigned$
                                     }
@@ -54,10 +54,10 @@ Div(content-wrapper){
                                     }
                                 }
                                 Div(input-group-btn){
-                                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1ms_select_poa, PageParams:"back_page=#this_page#,back_header=$@1ms_poa_template$,Type=#Type#,TemplateId=#TemplateId#").Popup(50, $@1ms_poa_template$)
+                                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1ms_select_poa, PageParams:"back_page=#this_page#,back_header=$@1ms_poa_template$,Type=#Type#").Popup(50, $@1ms_poa_template$)
                                 }
                             }
-                            If(GetVar(PoaTemplateId)!=""){
+                            If(#PoaTemplateId#!=""){
                                 Div(mb){
                                     Label($@1ms_limits_date$)
                                     Input(Name:Limit, Value: 2, Type: hidden)
@@ -84,7 +84,7 @@ Div(content-wrapper){
                                 }
                             }
                         }
-                        If(#Type#==1){
+                        If(Or(#Type#==1,#Type#==3)){
                             SetVar(Sign,1)
                         }.Else{
                             Div(list-group-item){
@@ -134,21 +134,25 @@ Div(content-wrapper){
                                 If(#buf_value_type#==#Type#){
                                     ArrayToSource(buf_units, #buf_value_units#)
                                     ForList(buf_units){
-                                        ForList(src_roles){
-                                            If(#id#==#value#){
-                                                Span(#role_name#, mr)
+                                        If(#Type#!=#TYPE_MEMBER#){
+                                            ForList(src_roles){
+                                                If(#id#==#value#){
+                                                    Span(#role_name#, mr)
+                                                }
                                             }
+                                        }.Else{
+                                            #value#
                                         }
                                     }
                                     Div(text-center){
-                                        Button(Body: #button_title#, Page: @1ms_select_units, Class: btn btn-default, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#,TemplateId=#TemplateId#").Popup(50, $@1ms_edit_group$)
+                                        Button(Body: #button_title#, Page: @1ms_select_units, Class: btn btn-default, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#").Popup(50, $@1ms_edit_group$)
                                     }
                                 }.Else{
                                     Div(text-center text-muted){
                                         $@1ms_not_assigned$
                                     }
                                     Div(text-center){
-                                        Button(Body: #button_title#, Page: @1ms_select_units, Class: btn btn-default, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#,TemplateId=#TemplateId#").Popup(50, $@1ms_assign_group$)
+                                        Button(Body: #button_title#, Page: @1ms_select_units, Class: btn btn-default, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#").Popup(50, $@1ms_assign_group$)
                                     }
                                 }
                             }
@@ -157,7 +161,7 @@ Div(content-wrapper){
                     Div(panel-footer text-left){
                         Button(Body: $@1back$, Class: btn btn-default, Page: #this_page#).Popup(50, $@1ms_select_type$)
                         If(#PoaTemplateId#>0){
-                            Button(Body: $@1send$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: MSCreate, Params: "BufferId=#buf_id#,TemplateId=#TemplateId#,PoaTemplateId=#PoaTemplateId#,Sign=#Sign#").Alert(Text: $@1ms_want_multisigned_this$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                            Button(Body: $@1send$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: MSCreate, Params: "BufferId=#buf_id#,PoaTemplateId=#PoaTemplateId#,Sign=#Sign#").Alert(Text: $@1ms_want_multisigned_this$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
                         }
                     }
                 }

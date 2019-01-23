@@ -26,17 +26,19 @@ contract MSCreate {
     }
 
     conditions {
-        $ROLE_SINGLE = 1
-        $ROLE_VOTING = 2
+        $TYPE_ROLE_SINGLE = 1
+        $TYPE_ROLE_VOTING = 2
+        $TYPE_MEMBER = 3
+
         $NO_LIMIT = 1
         $ONE_SIGN = 1
 
         $buf = DBFind("@1buffer_data").Where({id:$BufferId, ecosystem:$ecosystem_id}).Columns("value->type,value->units").Row()
         if !$buf {
-            warning "Not set roles"
+            warning "Not set subjects"
         }
         if Int($buf["value.type"]) == 0 {
-            warning "Not set roles"
+            warning "Not found type"
         }
         $units = JSONDecode($buf["value.units"])
 
@@ -47,6 +49,8 @@ contract MSCreate {
             }
         }
 
+        $params = ["amount_max", "amount_max_day", "amount_max_month", "amount_day", "amount_month", "date_day", "date_month"]
+        $values = [$AmountMax, $AmountMaxDay, $AmountMaxMonth, 0, 0, 0, 0]
         if $Sign == $ONE_SIGN{
             $multi = -1
         }else{
@@ -54,11 +58,18 @@ contract MSCreate {
             if $Duration == 0 || $Quorum == 0|| $Volume == 0 {
                 warning "Invalid parameters of voting"
             }
+            $params = Append($params, "voting_duration")
+            $params = Append($params, "voting_quorum")
+            $params = Append($params, "voting_volume")
+            $values = Append($values, $Duration)
+            $values = Append($values, $Quorum)
+            $values = Append($values, $Volume)
+
             $multi = 1
         }
-
-        $PARAMS = ["amount_max", "amount_max_day", "amount_max_month", "voting_duration", "voting_quorum", "voting_volume", "amount_day", "amount_month", "date_day", "date_month", "role_id"]
-        $VALUES = [$AmountMax, $AmountMaxDay, $AmountMaxMonth, $Duration, $Quorum, $Volume, 0, 0, 0, 0]
+        if Int($buf["value.type"]) != $TYPE_MEMBER {
+            $params = Append($params, "role_id")
+        }
     }
 
     action {
@@ -67,17 +78,22 @@ contract MSCreate {
         DBUpdate(table, $key_id, {multi:$multi})
 
         // лимиты ролей пишу в таблицу доверенностей
-        var params map i lenUnits int
+        var m map i lenUnits int
         lenUnits = Len($units)
-        params["DateExpiration"] = $LimitDate
-        params["TimeExpiration"] = $LimitTime
-        params["TemplateId"] = $PoaTemplateId
-        params["ParamArr"] = $PARAMS
-        params["Recipient"] = IdToAddress($key_id)
-        
+        m["DateExpiration"] = $LimitDate
+        m["TimeExpiration"] = $LimitTime
+        m["TemplateId"] = $PoaTemplateId
+        m["ParamArr"] = $params
+        m["Recipient"] = IdToAddress($key_id)
+        m["ValueArr"] = $values
+
         while i < lenUnits{
-            params["ValueArr"] = Append($VALUES, $units[i])
-            CallContract("@1PoaAdd", params)
+            if Int($buf["value.type"]) == $TYPE_MEMBER {
+                m["Recipient"] = IdToAddress(AddressToId($units[i]))
+            }else{
+                m["ValueArr"] = Append($values, $units[i])
+            }
+            CallContract("@1PoaAdd", m)
             i = i + 1
         }
     }

@@ -2,13 +2,12 @@ DBFind(@1applications).Columns("id").Where({name:"Multisigned", ecosystem:1}).Va
 AppParam(App: #application_id#, Name:ms_types, Source:types)
 DBFind(@1keys).WhereId(#key_id#).Columns("multi").Vars(k)
 
+SetVar(TYPE_ROLE_SINGLE,1).(TYPE_ROLE_VOTING,2).(TYPE_MEMBER,3)
+
 SetVar(this_page,@1ms_select_units).(back_page,@1ms_multisigned)
 DBFind(@1buffer_data).Where({member_id:#key_id#, key:multisigned_units, ecosystem:#ecosystem_id#}).Columns("id,value->type,value->units").Vars(buf)
 
-If(GetVar(TemplateId)==""){
-    SetVar(TemplateId,0)
-}
-If(GetVar(PoaTemplateId)==""){
+If(#PoaTemplateId#==""){
     SetVar(PoaTemplateId,)
 }
 
@@ -20,35 +19,59 @@ Div(content-wrapper){
         }
         DBFind(@1roles,units).Where({ecosystem:#ecosystem_id#, deleted:0}).Columns("id,role_name").Count(units_count)
         Div(row){
-            If(#units_count#>0){
-                ForList(units){
-                    SetVar(checked,false)
-                    ForList(buf_units){
-                        If(#id#==#value#){
-                            SetVar(checked,true)
+            If(#Type#!=#TYPE_MEMBER#){
+                If(#units_count#>0){
+                    ForList(units){
+                        SetVar(checked,false)
+                        ForList(buf_units){
+                            If(#id#==#value#){
+                                SetVar(checked,true)
+                            }
                         }
-                    }
-                    Div(col-sm-6 text-nowrap){
-                        Label(Class: form-inline){
-                            Input(Name: Vals, Type: checkbox, Value: #checked#)
-                            Input(Name: Units, Type: hidden, Value: #id#)
-                            If(#role_name#!=""){
-                                #role_name#
+                        Div(col-sm-6 text-nowrap){
+                            Label(Class: form-inline){
+                                Input(Name: Vals, Type: checkbox, Value: #checked#)
+                                Input(Name: Units, Type: hidden, Value: #id#)
+                                If(#role_name#!=""){
+                                    #role_name#
+                                }
                             }
                         }
                     }
+                }.Else{
+                    Div(h4 text-center text-muted){
+                        $@1roles$ $@1not_founded$
+                    }
                 }
             }.Else{
-                Div(h4 text-center text-muted){
-                    $@1roles$ $@1not_founded$
+                Div(col-sm-12){
+                    Input(Name: Vals, Type: hidden, Value: true)
+                    Input(Name: Units, Type:hidden, Value: #MemberId#)
+                    Div(input-group mb){
+                        If(#MemberId#!=""){
+                            SetVar(AddressMemberId, Address(#MemberId#))
+                            Input(Name: m_name, Disabled: 1, Value: #AddressMemberId#)
+                        }.Else{
+                            Input(Name: m_name, Disabled: 1, Value: "xxxx-xxxx-xxxx-xxxx-xxxx")
+                        }
+                        Div(input-group-btn){
+                            Button(Class: btn bg-gray-lighter fa fa-caret-down mtl buttons, Page: @1ms_select_wallet, PageParams:"back_page=#this_page#,back_header=$@1send$,EcosystemId=#ecosystem_id#,Type=#Type#").Popup(Header: $@1member$, Width: "50")
+                        }
+                    }
                 }
             }
         }
-        Div(text-right){
-            Button(Body: $@1back$, Class: btn btn-default, Page: #back_page#, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#,TemplateId=#TemplateId#")
-            If(#units_count#>0){
-                Button(Body: $@1send$, Class: btn btn-primary, Contract: MSUnits, Params:"Action=set,Type=#Type#,Vals=Val(Vals),Units=Val(Units)", Page: #back_page#, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#,TemplateId=#TemplateId#")
+        Div(row){
+            Div(col-sm-12 text-right){
+                Button(Body: $@1back$, Class: btn btn-default, Page: #back_page#, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#")
+                If(#units_count#>0){
+                    Button(Body: $@1send$, Class: btn btn-primary, Contract: MSUnits, Params:"Action=set,Type=#Type#,Vals=Val(Vals),Units=Val(Units)", Page: #back_page#, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#")
+                }
             }
         }
     }
-}
+}.Style(
+    .buttons {
+        border: 1px solid #dde6e9;
+    }
+)

@@ -1,0 +1,38 @@
+contract PoaVotingAccept {
+    data {
+        VotingId string
+        PoaId string
+        Amount string
+        Recipient string
+        Comment string "optional"
+    }
+    func checkDecisionVoting(){
+        var prev string voting map
+        prev = $stack[0]
+        if Len($stack) > 2{
+            prev = $stack[Len($stack) - 2]
+        }
+        if prev != "@1VotingDecisionCheck" {
+            warning LangRes("@1contract_start_votingdecisioncheck_only", "en")
+        }
+        voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id: $VotingId }).Columns("voting->type_decision,flags->success,voting->type").Row()
+
+        if Int(voting["voting.type"]) != 1 {
+            warning LangRes("@1voting_type_invalid", "en")
+        }
+        if Int(voting["voting.type_decision"]) != 5 {
+            warning LangRes("@1voting_error_decision", "en")
+        }
+        if Int(voting["flags.success"]) != 1 {
+            warning LangRes("@1voting_error_success", "en")
+        }
+
+    }
+    conditions {
+        checkDecisionVoting()
+    }
+
+    action {
+        @1PoaTokensSend("PoaId,Amount,Recipient,Comment", Int($PoaId), Money($Amount), $Recipient, $Comment)
+    }
+}
