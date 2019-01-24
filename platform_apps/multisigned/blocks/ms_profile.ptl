@@ -1,0 +1,85 @@
+DBFind(@1keys).WhereId(#key_id#).Columns("id,multi").Vars(k)
+If(#k_multi#==0){
+    SetTitle($@1profile$)
+    AddToolButton(Title:$@1ms_create$, Icon:icon-wallet, Page:@1ms_multisigned).Popup(50, $@1ms_create$)
+}.Else{
+    If(#k_multi#==-1){
+        SetTitle("$@1ms_multisigned_account$: $@1ms_one_sign_transfer$")
+    }.Else{
+        SetTitle($@1ms_multisigned_account$)
+    }
+    AddToolButton(Title:$@1ms_edit$, Icon:icon-wallet, Page:@1ms_multisigned).Popup(50, $@1ms_edit$)
+}
+SetVar(this_page, @profile_view).(this_table, @1poa)
+Include(@1pager_header)
+
+DBFind(#this_table#, src).Where({ecosystem:#ecosystem_id#, deleted:0, "poa_sender->member_id":#key_id#}).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,contract,params,date_created,date_expiration,poa_recipient->member_id,poa_recipient->member_name,poa_recipient->image_id,poa_sender->member_name,poa_sender->image_id,deleted,params->role_id,poa_sender->member_id#").Count(poa_count).Custom(_contract){
+    Span(Class: h5 text-bold, Body: #contract#)
+}.Custom(_date_created){
+    Div(h6){
+        Div(text-nowrap){DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI")}
+    }
+}.Custom(_date_expiration){
+    Div(h6){
+        Div(text-nowrap){DateTime(DateTime: #date_expiration#, Format: "DD.MM.YYYY HH:MI")}
+    }
+}.Custom(_recipient){
+    If(And(#params.role_id#>0,#poa_recipient.member_id#==#poa_sender.member_id#)){
+        SetVar(role_role_name,)
+        DBFind(@1roles).WhereId(#params.role_id#).Columns("role_name").Vars(role)
+        LinkPage(Class: text-primary h5 text-bold, Page: @1roles_view, PageParams: "v_role_id=#params.role_id#"){
+            $@1role$: #role_role_name#
+        }
+    }.Else{
+        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#poa_recipient.member_id#"){
+            If(#poa_recipient.image_id#>0){
+                Image(Src: Binary().ById(#poa_recipient.image_id#), Class: img-circle).Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
+                Span(#poa_recipient.member_name#)
+            }.Else{
+                Div(){
+                    Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                    Span(#poa_recipient.member_name#)
+                }.Style(display:flex; align-items:center;)
+            }
+        }
+    }
+}.Custom(_params){
+    Span(Class: text-muted h6){
+        JsonToSource(pv, #params#)
+        ForList(Source: pv, Index:s_ind){
+            If(#s_ind#>1){
+                Span(",").Style(margin-right: 5px;)
+            }
+            "#key#"
+        }
+    }
+}.Custom(_action){
+    Div(text-right button-group text-nowrap){
+        If(#deleted# == 0){
+            Button(Class: fa fa-trash btn btn-danger mh-sm, Contract: @1PoaDelete, Params: "PoaeId=#id#", Page: #this_page#).Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+        }
+        Button(Class: icon-eye btn btn-default mh-sm, PageParams: "poa_id=#id#", Page: @1poa_view).Popup(50, $@1poa_list$)
+    }
+}.Count(count)
+Div(ml text-muted){
+    $@1poa_list$
+}
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src, "$@1contract$=_contract,$@1recipient$=_recipient,$@1params$=_params,$@1date_created$=_date_created,$@1expiration_date$=_date_expiration,=_action")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1poa_list$ $@1not_founded$")
+            }
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
+}
