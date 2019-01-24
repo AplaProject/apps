@@ -62,10 +62,10 @@ contract QOperations {
             }
         }
         if $operation == "RD" && $au_roles==0 {
-            warning
+            //warning
         }
         if $operation == "GD" && $au_groups==0 {
-            warning
+            //warning
         }
         if $operation == "C" {
             expToTimestamp()
@@ -82,14 +82,13 @@ contract QOperations {
         //notifications when start and changing status
         if $operation == "C" {
             var decision array
-            decision = Split($answer, ";")
+            decision = JSONDecode(DBFind("@1buffer_data").Where({"key":"q_answers","member_id":$key_id,"ecosystem":$ecosystem_id}).One("value"))
             var params map
             params["notifications"] = $notifications
             params["hide"] = $hide
             params["change"] = $change
             q["question"] = $question
             q["description"] = $description
-            //fix this on CC
             q["answer"] = JSONEncode(decision)
             q["ecosystem"] = $ecosystem_id
             q["deleted"] = 0
@@ -115,7 +114,7 @@ contract QOperations {
         }
         if $operation == "AA" {
             if $id==0 {
-                if !DBFind("@1buffer_data").Where({"key":"q_answers","member_id":$key_id}).One("value") {
+                if !DBFind("@1buffer_data").Where({"key":"q_answers","member_id":$key_id,"ecosystem":$ecosystem_id}).One("value") {
                     var decision array
                     decision = Append(decision, Str($answer))
                     q["value"] = JSONEncode(decision)
@@ -125,10 +124,9 @@ contract QOperations {
                     DBInsert("@1buffer_data", q)
                 } else {
                     var decision array
-                    $id_upd = JSONEncode(DBFind("@1buffer_data").Where({"key":"q_answers","member_id":$key_id}).One("id"))
-                    decision = JSONDecode(DBFind("@1buffer_data").Where({"key":"q_answers","member_id":$key_id}).One("value"))
+                    $id_upd = Int(DBFind("@1buffer_data").Where({"key":"q_answers","member_id":$key_id,"ecosystem":$ecosystem_id}).One("id"))
+                    decision = JSONDecode(DBFind("@1buffer_data").Where({"key":"q_answers","member_id":$key_id,"ecosystem":$ecosystem_id}).One("value"))
                     decision = Append(decision, Str($answer))
-                    warning Sprintf("%v", decision)
                     q["value"] = JSONEncode(decision)
                     DBUpdate("@1buffer_data", $id_upd, q)
                 }
@@ -227,6 +225,13 @@ contract QOperations {
             //notification send
             q["init"] = $key_id
             q["status"] = 1
+            q["lastmodified"] = $time
+            DBUpdate("@1questionnaire", $id, q)
+        }
+        if $operation == "Z" {
+            //notifications close
+            q["init"] = $key_id
+            q["status"] = 3
             q["lastmodified"] = $time
             DBUpdate("@1questionnaire", $id, q)
         }
