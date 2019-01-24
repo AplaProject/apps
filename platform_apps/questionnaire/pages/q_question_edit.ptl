@@ -1,9 +1,18 @@
 DBFind(@1questionnaire).Where({ecosystem:#ecosystem_id#, id:#q_id#}).Vars(question)
+DBFind(@1roles,src_rid).Where({ecosystem:#ecosystem_id#}).Count(r)
+DBFind(@1groups,src_gp).Where({ecosystem:#ecosystem_id#}).Count(g)
 ArrayToSource(src, #question_answer#)
 Data(src_status,"status_id,status_name"){
     1,$@1q_status_started$
     3,$@1q_status_admin$
 }
+
+If(And(#question_au_groups#==[0],#question_au_roles#==[0])){
+    SetVar(access,$@1q_question_everyone$)
+}.Else{
+    SetVar(access,$@1q_question_nobody$)
+}
+
 If(#question_status#==0){
     SetVar(editable,1)
 }
@@ -32,7 +41,6 @@ Div(content-wrapper){
                 Input(Type: textarea, Name: description, Value: #question_description#).Style(resize: vertical; min-height: 6em;)
             }
         }
-        DBFind(@1groups,src_gp).Where({ecosystem:#ecosystem_id#}).Count(g)
         If(#g#>0){
             Div(form-group){
             Label($@1q_question_groups$)
@@ -49,13 +57,13 @@ Div(content-wrapper){
                 DBFind(@1groups).Where({id:#value#}).Vars(gn)
                     If(#editable#==1){
                         If(#value#==0){
-                            Button(Body: $@1q_question_everyone$, Class: btn btn-success ml-sm)
+                            Button(Body: #access#, Class: btn btn-basic ml-sm)
                         }.Else{
                             Button(Body: Span(Class: fa fa-remove) #gn_group_name#, Page: @1q_question_edit, Class: btn btn-danger ml-sm, Contract: @1QOperations, PageParams: "q_id=#question_id#", Params: "id=#question_id#, au_groups=#value#, operation=GD")
                         }
                     }.Else{
                         If(#value#==0){
-                            Button(Body: $@1q_question_everyone$, Class: btn btn-success ml-sm)
+                            Button(Body: #access#, Class: btn btn-basic ml-sm)
                         }.Else{
                             Button(Body: #gn_group_name#, Class: btn btn-primary ml-sm)
                         }
@@ -63,7 +71,6 @@ Div(content-wrapper){
                 }
             }
         }
-        DBFind(@1roles,src_rid).Where({ecosystem:#ecosystem_id#}).Count(r)
         If(#r#>0){
             Div(form-group){
             Label($@1q_question_roles$)
@@ -80,13 +87,13 @@ Div(content-wrapper){
                 DBFind(@1roles).Where({id:#value#}).Vars(rn)
                     If(#editable#==1){
                         If(#value#==0){
-                            Button(Body: $@1q_question_everyone$, Class: btn btn-success ml-sm)
+                            Button(Body: #access#, Class: btn btn-basic ml-sm)
                         }.Else{
                             Button(Body: Span(Class: fa fa-remove) #rn_role_name#, Page: @1q_question_edit, Class: btn btn-danger ml-sm, Contract: @1QOperations, PageParams: "q_id=#question_id#", Params: "id=#question_id#, au_roles=#value#, operation=RD")
                         }
                     }.Else{
                         If(#value#==0){
-                            Button(Body: $@1q_question_everyone$, Class: btn btn-success ml-sm)
+                            Button(Body: #access#, Class: btn btn-basic ml-sm)
                         }.Else{
                             Button(Body: #rn_role_name#, Class: btn btn-primary ml-sm)
                         }
