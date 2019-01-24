@@ -65,19 +65,23 @@ DBFind(#this_table#,src_q).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).
         Span(Class:fa fa-times fa-1x)
     }
 }.Custom(ops){
-    If(#permission#==1){
-        Span(Class: pull-right){
+    Span(Class: pull-right){
+        If(#permission#==1){
             If(#status#!=1){
                 Button(Body: Em(Class: fa fa-hourglass-start), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=T,id=#id#")
             }
             Button(Body: Em(Class: fa fa-trash), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=D,id=#id#").Style({margin-left: 30px;})
-            LinkPage(Body: Em(Class: fa fa-edit), Class: btn-xs btn-link, Page: @1q_question_edit, PageParams: "q_id=#id#").Style({margin-left: 30px;})
+            If(#status#==0){
+                LinkPage(Body: Em(Class: fa fa-edit), Class: btn-xs btn-link, Page: @1q_question_edit, PageParams: "q_id=#id#").Style({margin-left: 30px;})
+            }
             DBFind(@1q_answers).Where({question_id:#id#}).Count(answers)
             If(#answers#>0){
                 Button(Body: Em(Class: fa fa-book), Class: btn-xs btn-link, Page: @1q_question_log, PageParams: "q_id=#id#").Style({margin-left: 30px;}).Popup(Header: #question#, Width: "50")
             }.Else{
                 Span(Class:btn-xs fa fa-book).Style({margin-left: 35px;})
             }
+        }
+        If(Or(#permission#==1,#params.hide#==true)){
             Button(Body: Em(Class: fa fa-comment), Class: btn-xs btn-link, Page: @1q_question_graph, PageParams: "q_id=#id#").Style({margin-left: 30px;}).Popup(Header: $@1q_answer_graph$ / #question#, Width: "50")
         }
     }
@@ -86,11 +90,12 @@ DBFind(#this_table#,src_q).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).
 Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         If(#q#>0){
+        #key_id#
             Div(list-group-item){
                 If(#permission#==1){
-                    Table(Source: src_q, Columns: "$@1q_question$=custom_name,$@1q_date_start$ / $@1q_date_expiration$=time,$@1q_initiator$=initiator,$@1q_audience$=audience,$@1q_status$=custom_status,$@1q_hide$=hidden,$@1q_change$=change,=ops")
+                    Table(Source: src_q, Columns: "$@1q_question$=custom_name,$@1q_date_start$ / $@1q_date_expiration$=time,$@1q_initiator$=initiator,$@1q_status$=custom_status,$@1q_change$=change,=ops")
                 }.Else{
-                    Table(Source: src_q, Columns: "$@1q_question$=custom_name,$@1q_date_start$ / $@1q_date_expiration$=time,$@1q_initiator$=initiator,$@1q_audience$=audience,$@1q_status$=custom_status,$@1q_hide$=hidden,$@1q_change$=change")
+                    Table(Source: src_q, Columns: "$@1q_question$=custom_name,$@1q_date_start$ / $@1q_date_expiration$=time,$@1q_initiator$=initiator,$@1q_status$=custom_status,$@1q_change$=change")
                 }
             }
         }.Else{
