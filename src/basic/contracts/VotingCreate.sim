@@ -5,8 +5,9 @@ contract VotingCreate {
         type_participants int
         type_decision int
 
-        volume int
-        quorum int "optional"
+        quorum int
+        rating string "optional"
+        volume int "optional"
 
         count_type_voters string "optional"
         description string "optional"
@@ -76,22 +77,27 @@ contract VotingCreate {
     }
 
     conditions {
+        $INVALID = 1
+        $WAITING = 2
+        $STARTED = 3
+        $FINISHED = 4
+
         if (($type_decision == 1 || $type_decision == 2) && $count_type_voters == 1){
             info LangRes("@1voting_type_not_suitable", "en")
         }
-        if $count_type_voters == 0 {
-            if ($quorum < 5) || ($quorum > 100) {
-                warning Sprintf(LangRes("@1quorum_range_must_be", "en"), $quorum)
-            }
-            if ($volume < 50) || ($volume > 100) {
+        if ($quorum < 1) || ($quorum > 100) {
+            warning Sprintf(LangRes("@1quorum_range_must_be", "en"), $quorum)
+        }
+        if $count_type_voters == 0 && $type_decision != 1 && $type_decision != 2 {
+            if ($volume < 1) || ($volume > 100) {
                 warning Sprintf(LangRes("@1volume_range_must_be", "en"), $volume)
             }
         }
         if $count_type_voters == 1 {
-            if $volume <= 0 {
+            if $quorum < 1 {
                 info LangRes("@1voters_number_less_one", "en")
             }
-            $quorum = 0
+            $volume = 0
         }
         if $voting_type == 2 {
             var specRules map
@@ -127,6 +133,11 @@ contract VotingCreate {
         voting["volume"] = $volume
         voting["quorum"] = $quorum
         voting["count_type_voters"] = $count_type_voters
+        if $rating == "true" {
+            voting["rating"] = 1
+        } else {
+            voting["rating"] = 0
+        }
 
         progress["number_participants"] = "0"
         progress["number_voters"] = "0"
@@ -145,7 +156,7 @@ contract VotingCreate {
         m["progress"] = progress
         m["flags"] = flags
         m["creator"] = creator
-        m["status"] = 1
+        m["status"] = $INVALID
         m["date_started"] = $date_started
         m["date_ended"] = $date_ended
         m["ecosystem"] = $ecosystem_id,
@@ -156,6 +167,11 @@ contract VotingCreate {
         if $type_participants == 1 {
             @1VotingInvite("votingID,var_id", votingId, 0)
         }
+
+        var buffer_data map
+        buffer_data["voting_id"] = votingId
+        @1BufferManager("Action,Key,Val", "set", "voting", JSONEncode(buffer_data))
+
         $result = votingId
     }
 }

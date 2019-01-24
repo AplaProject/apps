@@ -3,7 +3,7 @@ contract VotingDecisionReject {
         votingID int
         RoleId int
     }
-    
+
     func closeNotification() {
         var role_id_search int
         role_id_search = Int(DBFind("@1notifications").Where({ecosystem:$ecosystem_id, "recipient->role_id":$RoleId, "page_params->voting_id":$votingID, closed:0}).One("id"))
@@ -17,73 +17,89 @@ contract VotingDecisionReject {
             }
         }
     }
-    
+
+    func getUnixDataEnd(d string) int {
+        d = Replace(d, "T", " ")
+        d = Replace(d, "Z", "")
+        return UnixDateTime(d)
+    }
+
     conditions {
-        $WAITING = 1
-        $VALID = 2
+        $INVALID = 1
+        $WAITING = 2
         $STARTED = 3
         $FINISHED = 4
-        $INVALID = 5
-        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id: $votingID}).Columns("voting->type_participants,voting->role_id,flags->decision,flags->notifics,status").Row()
+
+        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id: $votingID}).Columns("id,flags->decision,flags->notifics,voting->type_participants,voting->role_id,status,date_ended").Row()
         if !$voting {
             warning LangRes("@1voting_not_found", "en")
         }
-        if $voting["voting.type_participants"] == 3{
+        if $voting["voting.type_participants"] == 3 {
             if $voting["voting.role_id"] != $RoleId{
                 warning LangRes("@1voting_role_incorrect", "en")
             }
         }
-        if $voting["status"] == $FINISHED {
+        if $voting["status"] == $FINISHED || $block_time > getUnixDataEnd($voting["date_ended"]) {
             warning LangRes("@1voting_expired_can_not_vote", "en")
         }
         if $voting["status"] != $STARTED {
             warning LangRes("@1voting_not_started", "en")
         }
-        $participant_role_id = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID, "member->role_id":$RoleId,"member->member_id":0}).One("id")
+        $subject = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID}).Columns("id,number_accept,results->rating_accepted,results->rating_rejected").Row()
+        if !$subject {
+            warning LangRes("@1voting_subject_not_found", "en")
+        }
 
-        $check_type = DBFind("@1votings").Columns("id,voting,voting->type_participants").Where({ecosystem:$ecosystem_id, id: $votingID}).Row()
-        if (Int($check_type["voting.type_participants"]) < 5){
-            $participant_id = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID, "member->member_id":$key_id,decision:0}).One("id")
-            if !$participant_id {
-                warning LangRes("@1voting_not_participant", "en")
-            }
+        if Int($voting["voting.type_participants"]) != 5 {
+            $participant = DBFind("@1votings_participants").Where({"ecosystem":$ecosystem_id, "voting_id":$votingID, "member->member_id":$key_id, "decision":0}).Columns("id,rating").Row()
+        }
+        if Int($voting["voting.type_participants"]) == 5 {
+            $participant = DBFind("@1votings_participants").Where({"ecosystem":$ecosystem_id, "voting_id":$votingID, "member->member_id":0, "member->role_id":$RoleId, "decision":0}).Columns("id,rating").Row()
+        }
+        if !$participant {
+            warning LangRes("@1voting_not_participant", "en")
         }
     }
 
     action {
-        if $participant_role_id {
-            $rid = DBFind("@1votings_participants").Columns("id,voting_id,member->role_id").Where({ecosystem:$ecosystem_id, voting_id:$votingID, "member->role_id":$RoleId}).Row()
-            if $rid {
-                var mem_role int
-                mem_role = Int($rid["member.role_id"])
-                $participant_id = DBFind("@1roles_participants").Columns("id,role,role->id,member,member->member_id").Where({ecosystem:$ecosystem_id, "member->member_id":$key_id,"role->id":mem_role,"deleted":0}).One("member.member_id")
-                if !$participant_id{
-                    warning LangRes("@1voting_not_participant", "en")
-                } else {
-                    var solo_role_vot map
-                    $membership_role_name = DBFind("@1members").Where({ecosystem:$ecosystem_id, id: $key_id}).Row()
-                    solo_role_vot["role_id"] = Int($rid["member.role_id"])
-                    solo_role_vot["member_id"] = $key_id
-                    solo_role_vot["member_name"] = $membership_role_name["member_name"]
-                    solo_role_vot["image_id"] = $membership_role_name["image_id"]
-                    var json string
-                    json = JSONEncode(solo_role_vot)
-                    DBUpdate("@1votings_participants",Int($rid["id"]),{"member":json})
-                    $participant_id = Int($rid["id"])
-                }
-            } else {
+        if Int($voting["voting.type_participants"]) == 5 {
+            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "member->member_id": $key_id, "role->id": $RoleId, "deleted": 0}).One("id") {
                 warning LangRes("@1voting_not_participant", "en")
+            } else {
+                var member map
+                member["member_id"] = $key_id
+                member["member_name"] = IdToAddress($key_id)
+                member["role_id"] = $RoleId
+                var member_json string
+                member_json = JSONEncode(member)
+                DBUpdate("@1votings_participants", Int($participant["id"]), {"member":member_json})
             }
         }
         
         if $voting["flags.notifics"] == 1 {
             closeNotification()
         }
-        if $voting["flags.decision"] != 1 {
-            var bt string
-            bt = BlockTime()
 
-            DBUpdate("@1votings_participants", Int($participant_id), {decision_date:bt, decision:"-1"})
+        if $voting["flags.decision"] != 1 {
+            var m map
+            m["decision_date"] = BlockTime()
+            m["decision"] = -1
+            DBUpdate("@1votings_participants", Int($participant["id"]), m)
+
+            var p map
+            var rating_accepted rating_rejected summ_rating int
+            rating_accepted = Int($subject["results.rating_accepted"])
+            rating_rejected = Int($subject["results.rating_rejected"]) + Int($participant["rating"]) 
+            summ_rating = rating_accepted + rating_rejected
+            var percent_accepted percent_rejected int
+            percent_accepted = (Float(rating_accepted)*Float(100))/Float(summ_rating)
+            percent_rejected = (Float(rating_rejected)*Float(100))/Float(summ_rating)
+            p["results->rating_accepted"] = rating_accepted
+            p["results->rating_rejected"] = rating_rejected
+            p["results->percent_accepted"] = percent_accepted
+            p["results->percent_rejected"] = percent_rejected
+            DBUpdate("@1votings_subject", Int($subject["id"]), p)
+
             @1VotingUpdate("votingID", $votingID)
         }
     }
