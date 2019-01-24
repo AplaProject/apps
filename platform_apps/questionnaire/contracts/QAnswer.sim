@@ -18,6 +18,22 @@ contract QAnswer {
                 warning LangRes("@1q_error_revoting", "en")
             }
         }
+        var rid_array array
+        rid_array = JSONDecode(DBFind("@1questionnaire").Where({"id":$question_id}).One("au_roles"))
+        if rid_array[0] != 0 {
+            $role_access = DBFind("@1roles_participants").Where({"member->member_id":$key_id,"deleted":0,"ecosystem":$ecosystem_id,"role->id":{"$in":rid_array}}).Columns("role->id")
+            if Len($role_access) == 0 {
+                warning LangRes("@1q_error_cannot", "en")
+            }
+        }
+        var grp_array array
+        grp_array = JSONDecode(DBFind("@1questionnaire").Where({"id":$question_id}).One("au_groups"))
+        if grp_array[0] != 0 {
+            $group_access = DBFind("@1groups_participants").Where({"member->member_id":$key_id,"deleted":0,"ecosystem":$ecosystem_id,"groups_info->id":{"$in":grp_array}}).Columns("groups_info->id")
+            if Len($group_access) == 0 {
+                warning LangRes("@1q_error_cannot", "en")
+            }
+        }
     }
     action {
         if $time > Int(DBFind("@1questionnaire").Where({"id":$question_id}).Columns("expired").One("expired")) {
