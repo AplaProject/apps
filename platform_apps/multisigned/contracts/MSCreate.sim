@@ -1,13 +1,13 @@
 contract MSCreate {
     data {
         BufferId int
-        Limit int
         LimitDate string
         LimitTime string
         AmountMax money
         AmountMaxDay money
         AmountMaxMonth money
         Sign int
+        TypeCount int
         Duration int "optional"
         Quorum int "optional"
         Volume int "optional"
@@ -30,7 +30,6 @@ contract MSCreate {
         $TYPE_ROLE_VOTING = 2
         $TYPE_MEMBER = 3
 
-        $NO_LIMIT = 1
         $ONE_SIGN = 1
 
         $buf = DBFind("@1buffer_data").Where({id:$BufferId, ecosystem:$ecosystem_id}).Columns("value->type,value->units").Row()
@@ -42,11 +41,9 @@ contract MSCreate {
         }
         $units = JSONDecode($buf["value.units"])
 
-        if $Limit != $NO_LIMIT{
-            $limit = UnixDateTime(dateAddTime($LimitDate, $LimitTime))
-            if $limit == 0 {
-                warning "Invalid Date or Time"
-            }
+        $limit = UnixDateTime(dateAddTime($LimitDate, $LimitTime))
+        if $limit == 0 {
+            warning "Invalid Date or Time"
         }
 
         $params = ["amount_max", "amount_max_day", "amount_max_month", "amount_day", "amount_month", "date_day", "date_month"]
@@ -61,9 +58,11 @@ contract MSCreate {
             $params = Append($params, "voting_duration")
             $params = Append($params, "voting_quorum")
             $params = Append($params, "voting_volume")
+            $params = Append($params, "voting_type_count")
             $values = Append($values, $Duration)
             $values = Append($values, $Quorum)
             $values = Append($values, $Volume)
+            $values = Append($values, $TypeCount)
 
             $multi = 1
         }

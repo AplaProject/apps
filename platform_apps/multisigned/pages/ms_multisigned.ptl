@@ -1,6 +1,5 @@
 DBFind(@1applications).Columns("id").Where({name:"Multisigned", ecosystem:1}).Vars(application)
 AppParam(App: #application_id#, Name:ms_types, Source:types)
-AppParam(App: #application_id#, Name:ms_limits_date, Source:limits_date)
 AppParam(App: #application_id#, Name:ms_limits_sign, Source:limits_sign)
 DBFind(@1keys).WhereId(#key_id#).Columns("multi").Vars(k)
 
@@ -16,6 +15,9 @@ If(#Type#==#TYPE_MEMBER#){
 
 If(GetVar(PoaTemplateId)==""){
     SetVar(PoaTemplateId,)
+}
+If(#TypeCount#==""){
+    SetVar(TypeCount,0)
 }
 Div(content-wrapper){
     If(#Type#!=""){
@@ -54,13 +56,12 @@ Div(content-wrapper){
                                     }
                                 }
                                 Div(input-group-btn){
-                                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1ms_select_poa, PageParams:"back_page=#this_page#,back_header=$@1ms_poa_template$,Type=#Type#").Popup(50, $@1ms_poa_template$)
+                                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1ms_select_poa, PageParams:"back_page=#this_page#,back_header=$@1ms_poa_template$,Type=#Type#,TypeCount=#TypeCount#").Popup(50, $@1ms_poa_template$)
                                 }
                             }
                             If(#PoaTemplateId#!=""){
                                 Div(mb){
                                     Label($@1ms_limits_date$)
-                                    Input(Name:Limit, Value: 2, Type: hidden)
                                 }
                                 Div(row mb){
                                     Div(col-md-6){
@@ -87,11 +88,35 @@ Div(content-wrapper){
                         If(Or(#Type#==1,#Type#==3)){
                             SetVar(Sign,1)
                         }.Else{
+                            SetVar(Sign,2)
                             Div(list-group-item){
-                                SetVar(Sign,2)
                                 Div(){
                                     Div(text-muted){
                                         $@1ms_voting_params$
+                                    }
+                                    Div(row mb-sm){
+                                        Div(col-sm-6){
+                                            Label(For:Duration){
+                                                $@1vote_count_type$
+                                            }
+                                        }
+                                        Div(col-sm-6){
+                                            If(#TypeCount#==0){
+                                                SetVar(parts,"%")
+                                                SetVar(volume_desc,"$@1voting_volume_desc$")
+                                                SetVar(quorum_desc,"$@1voting_quorum_desc$")
+
+                                                Button(Body: $@1percent_votes$, Page: #this_page#, PageParams: "TypeCount=0,Type=#Type#,PoaTemplateId=#PoaTemplateId#", Class: btn btn-default disabled mr-lg)
+                                                Button(Body: $@1number_votes$, Page: #this_page#, PageParams: "TypeCount=1,Type=#Type#,PoaTemplateId=#PoaTemplateId#", Class: btn btn-default)
+
+                                            }.ElseIf(#TypeCount#==1){
+                                                SetVar(parts,"$@1participants$")
+                                                SetVar(volume_desc,"$@1voting_volume_number_desc$")
+                                                SetVar(hide_quorum,"hidden")
+                                                Button(Body: $@1percent_votes$, Page: #this_page#, PageParams: "TypeCount=0,Type=#Type#,PoaTemplateId=#PoaTemplateId#", Class: btn btn-default mr-lg)
+                                                Button(Body: $@1number_votes$, Page: #this_page#, PageParams: "TypeCount=1,Type=#Type#,PoaTemplateId=#PoaTemplateId#", Class: btn btn-default disabled)
+                                            }
+                                        }
                                     }
                                     Div(row mb-sm){
                                         Div(col-sm-6){
@@ -103,10 +128,14 @@ Div(content-wrapper){
                                             Input(Name:Duration, Type:number, Value: 3)
                                         }
                                     }
-                                    Div(row mb-sm){
+
+                                    Div(row mb-sm #hide_quorum#){
                                         Div(col-sm-6){
                                             Label(For:Quorum){
-                                                $@1voting_quorum$ (%)
+                                                $@1voting_quorum$ (#parts#)
+                                            }
+                                            Div(m0 h6 text-muted){
+                                                #quorum_desc#
                                             }
                                         }
                                         Div(col-sm-6){
@@ -116,7 +145,10 @@ Div(content-wrapper){
                                     Div(row mb-sm){
                                         Div(col-sm-6){
                                             Label(For:Volume){
-                                                $@1voting_volume$ (%)
+                                                $@1voting_volume$ (#parts#)
+                                            }
+                                            Div(m0 h6 text-muted){
+                                                #volume_desc#
                                             }
                                         }
                                         Div(col-sm-6){
@@ -145,14 +177,14 @@ Div(content-wrapper){
                                         }
                                     }
                                     Div(text-center){
-                                        Button(Body: #button_title#, Page: @1ms_select_units, Class: btn btn-default, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#").Popup(50, $@1ms_edit_group$)
+                                        Button(Body: #button_title#, Page: @1ms_select_units, Class: btn btn-default, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#,TypeCount=#TypeCount#").Popup(50, $@1ms_edit_group$)
                                     }
                                 }.Else{
                                     Div(text-center text-muted){
                                         $@1ms_not_assigned$
                                     }
                                     Div(text-center){
-                                        Button(Body: #button_title#, Page: @1ms_select_units, Class: btn btn-default, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#").Popup(50, $@1ms_assign_group$)
+                                        Button(Body: #button_title#, Page: @1ms_select_units, Class: btn btn-default, PageParams: "Type=#Type#,PoaTemplateId=#PoaTemplateId#,TypeCount=#TypeCount#").Popup(50, $@1ms_assign_group$)
                                     }
                                 }
                             }
@@ -161,7 +193,7 @@ Div(content-wrapper){
                     Div(panel-footer text-left){
                         Button(Body: $@1back$, Class: btn btn-default, Page: #this_page#).Popup(50, $@1ms_select_type$)
                         If(#PoaTemplateId#>0){
-                            Button(Body: $@1send$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: MSCreate, Params: "BufferId=#buf_id#,PoaTemplateId=#PoaTemplateId#,Sign=#Sign#").Alert(Text: $@1ms_want_multisigned_this$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
+                            Button(Body: $@1send$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: MSCreate, Params: "BufferId=#buf_id#,PoaTemplateId=#PoaTemplateId#,Sign=#Sign#,TypeCount=#TypeCount#").Alert(Text: $@1ms_want_multisigned_this$, ConfirmButton: $yes$, CancelButton: $no$, Icon: question)
                         }
                     }
                 }

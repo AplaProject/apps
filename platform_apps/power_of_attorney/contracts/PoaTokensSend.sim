@@ -86,17 +86,18 @@ contract PoaTokensSend {
     }
 
     func createVotingTransfer(){
-        var votingId voters duration volume quorum type typeCount decision participants int title desc contractAccept string contractParams map
+        var votingId voters duration volume quorum type typeCount decision participants roleId int title desc contractAccept string contractParams map
         voters = Int($params["role_id"])
         title = Sprintf("Multisigned transfer. %v", BlockTime())
         desc = Sprintf("PoA %v. Amount: %v. Sender: %v. Recipient: %v. Creator: %v", $PoaId, $Amount, $Sender, $Recipient, $key_id)
         volume = Int($params["voting_volume"])
         quorum = Int($params["voting_quorum"])
         duration = Int($params["voting_duration"])
-        type = 1
+        typeCount = Int($params["voting_type_count"])
+        roleId = Int($params["role_id"])
+        type = 1 // пользовательское
         decision = 5 // выполнение контракта
         participants = 3 // ролевое
-        typeCount = 0 // процентное
 
         votingId = @1VotingCreate("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval,count_type_voters", title, type, desc, participants, decision, volume, quorum, duration, typeCount)
         if votingId == 0 {
@@ -109,6 +110,8 @@ contract PoaTokensSend {
         contractParams["Recipient"] = $Recipient
         contractParams["Comment"] = $Comment
         @1VotingSubjectContract("votingID,contract_accept,contract_accept_params,contract_reject", votingId, contractAccept, JSONEncode(contractParams), "")
+        
+        @1VotingInvite("votingID,var_id", votingId, roleId)
     }
 
     conditions {
