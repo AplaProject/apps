@@ -1,8 +1,13 @@
-If(#candidates#==""){
-    SetVar(candidates,0)
+If(#vID# == ""){
+    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "member_id" :#key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
+    If(#buffer_value_voting_id#>0){
+        SetVar(vID, #buffer_value_voting_id#)
+    }
 }
-
 If(#vID# > 0){
+    If(#candidates#==""){
+        SetVar(candidates,0)
+    }
     If(GetVar(back_page)){}.Else{
         SetVar(back_page,@1voting_view)
     }
@@ -128,7 +133,11 @@ If(#vID# > 0){
                 } 
             }
             Input(Name: votingID, Type: hidden, Value: #vID#)
-            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: #back_page#, PageParams: "vID=#vID#", Contract: @1VotingSubjectSettings)
+            If(#toPageInvite#==1){
+                Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: @1voting_invite, PageParams: "vID=#vID#", Contract: @1VotingSubjectSettings).Popup(60, $@1participants_add$)
+            }.Else{
+                Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: #back_page#, PageParams: "vID=#vID#", Contract: @1VotingSubjectSettings)
+            }
             Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: #back_page#, PageParams: "vID=#vID#")
         }
     }.Else{

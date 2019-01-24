@@ -85,10 +85,10 @@ contract VotingCreate {
         if (($type_decision == 1 || $type_decision == 2) && $count_type_voters == 1){
             info LangRes("@1voting_type_not_suitable", "en")
         }
-        if $count_type_voters == 0 {
-            if ($quorum < 1) || ($quorum > 100) {
-                warning Sprintf(LangRes("@1quorum_range_must_be", "en"), $quorum)
-            }
+        if ($quorum < 1) || ($quorum > 100) {
+            warning Sprintf(LangRes("@1quorum_range_must_be", "en"), $quorum)
+        }
+        if $count_type_voters == 0 && $type_decision != 1 && $type_decision != 2 {
             if ($volume < 1) || ($volume > 100) {
                 warning Sprintf(LangRes("@1volume_range_must_be", "en"), $volume)
             }
@@ -167,6 +167,11 @@ contract VotingCreate {
         if $type_participants == 1 {
             @1VotingInvite("votingID,var_id", votingId, 0)
         }
+
+        var buffer_data map
+        buffer_data["voting_id"] = votingId
+        @1BufferManager("Action,Key,Val", "set", "voting", JSONEncode(buffer_data))
+
         $result = votingId
     }
 }
