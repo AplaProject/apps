@@ -1,0 +1,294 @@
+{
+    "name": "Questionnaire",
+    "conditions": "ContractConditions(\"@1DeveloperCondition\")",
+    "data": [
+        {
+            "Name": "q_profile_top",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "DBFind(@1questionnaire,src_q).Where({ecosystem:#ecosystem_id#,deleted:0,status:1}).Order({\"created_at\": 1}).Limit(5).Columns(\"id,question,description,answer,ecosystem,init,lastmodified,created_at,expired,status,params->hide,params->change,au_groups,au_roles\").Custom(custom_name){\n   If(#permission#==1){\n        LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: \"q_id=#id#\"){\n            Div(Class: text-primary){\n                Span(#question#).Style({padding-left: 30px;})\n            }\n        }\n    }.Else{\n        If(#status#==1){\n            If(And(#au_groups#==[0],#au_roles#==[0])){\n                LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: \"q_id=#id#\"){\n                    Div(Class: text-primary){\n                        Span(#question#).Style({padding-left: 30px;})\n                    }\n                }\n            }.Else{\n                DBFind(@1groups_participants).Where({\"member->member_id\":#key_id#,\"deleted\":0,\"ecosystem\":#ecosystem_id#,\"groups_info->id\":{$in:#au_groups#}}).Count(gp)\n                DBFind(@1roles_participants).Where({\"member->member_id\":#key_id#,\"deleted\":0,\"ecosystem\":#ecosystem_id#,\"role->id\":{$in:#au_roles#}}).Count(rl)\n                If(Or(#gp#>0,#rl#>0)){\n                    LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: \"q_id=#id#\"){\n                        Div(Class: text-primary){\n                            Span(#question#).Style({padding-left: 30px;})\n                        }\n                    }\n                }.Else{\n                    Span(#question#.Style({padding-left: 30px;})\n                }\n            }\n        }.Else{\n            Span(#question#).Style({padding-left: 30px;})\n        }\n    }\n}.Custom(initiator){\n    DBFind(@1members).Where({ecosystem:#ecosystem#, id:#init#}).Vars(m)\n    If(Or(#m_id#>0,#m_id#<0)){\n        SetVar(member_name, #m_member_name#)\n    }.Else{\n        SetVar(member_name, Address(#id#))\n    }\n    Span(#member_name#)\n}.Custom(stats){\n    Span(Class: pull-right){\n        If(Or(#role_id#==1,#params.hide#==true)){\n            Button(Body: Em(Class: fa fa-comment), Class: btn-xs btn-link, Page: @1q_question_graph, PageParams: \"q_id=#id#\").Style({margin-left: 30px;}).Popup(Header: $@1q_answer_graph$ / #question#, Width: \"50\")\n        }\n    }\n}.Count(que)\n\nIf(#que#>0){\n    Table(Source: src_q, Columns: \"$@1q_question$=custom_name,$@1q_initiator$=initiators,=stats\")\n}",
+            "Type": "blocks"
+        },
+        {
+            "Name": "default_menu",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "MenuItem(Title:$@1q_poll$, Page:@1q_listing, Icon:\"fa fa-question-circle\")",
+            "Type": "menu"
+        },
+        {
+            "Name": "q_answer",
+            "Trans": "{\"en\": \"Answer\", \"ru\": \"Ответ\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_answer_change",
+            "Trans": "{\"en\": \"Edit answer options\", \"ru\": \"Редактирование блока ответов\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_answer_data",
+            "Trans": "{\"en\": \"Voted\", \"ru\": \"Проголосовало\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_answer_graph",
+            "Trans": "{\"en\": \"Show data summary\", \"ru\": \"Отобразить статистику\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_answer_hide",
+            "Trans": "{\"en\": \"Hide answer until expiration\", \"ru\": \"Не показывать ответы до окончания\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_answer_member",
+            "Trans": "{\"en\": \"Voting member\", \"ru\": \"Участник голосования\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_audience",
+            "Trans": "{\"en\": \"Audience\", \"ru\": \"Аудитория\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_change",
+            "Trans": "{\"en\": \"Revoting\", \"ru\": \"Измененить ответ\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_date_expiration",
+            "Trans": "{\"en\": \"Ending date\", \"ru\": \"Дата окончания\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_date_lastmodified",
+            "Trans": "{\"en\": \"Last Modified\", \"ru\": \"Последнее изменение\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_date_start",
+            "Trans": "{\"en\": \"Created at\", \"ru\": \"Дата создания\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_description",
+            "Trans": "{\"en\": \"Question\", \"ru\": \"Вопрос\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_error_blank",
+            "Trans": "{\"en\": \"This value can't be blank\", \"ru\": \"Это значение не может быть пустым\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_error_cannot",
+            "Trans": "{\"en\": \"You can't interact with this question. You don't have access or question is already deleted\", \"ru\": \"Вы не можете взаимодействовать с этим опросом. Возможно у вас нет доступа или опрос уже удален\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_error_expdate",
+            "Trans": "{\"en\": \"Incorrect expiration date\", \"ru\": \"Неверная дата окончания опроса\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_error_global_d",
+            "Trans": "{\"en\": \"You can't manage global permissions\", \"ru\": \"Вы не можете удалить глобальную роль\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_error_groups",
+            "Trans": "{\"en\": \"This group already added\", \"ru\": \"Эта группа уже имеет доступ\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_error_revoting",
+            "Trans": "{\"en\": \"You're unable to change your vote during this poll\", \"ru\": \"Вы не можете изменить свой вариант ответа в рамках этого опроса\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_error_roles",
+            "Trans": "{\"en\": \"This role already added\", \"ru\": \"Эта роль уже получила доступ\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_hide",
+            "Trans": "{\"en\": \"Hidden answers\", \"ru\": \"Показывать результаты\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_hint_answer",
+            "Trans": "{\"en\": \"Please create at least one unique answer for your question. Check placeholder if you want to add more. You could always change your answers at edit stage, before bpting not published.\", \"ru\": \"Пожалуйста, создайте хотя бы один вариант ответ. Если вы хотите добавить больше вариантов, то руководствуйтесь шаблоном на этапе создания. Вы всегда можете отредактировать ваши варианты ответов, до того как вопрос будет опубликован.\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_hint_answer_change",
+            "Trans": "{\"en\": \"If you want to add another answer just type it inside input field and click on plus button\", \"ru\": \"Что бы добавить дополнительные варианты ответов, просто впишите их в текстовое поле через запятую\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_hint_answer_placeholder",
+            "Trans": "{\"en\": \"Answer One; Answer Two; Answer Three\", \"ru\": \"Первый вариант; Второй вариант; Третий вариант\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_hint_answer_revoting",
+            "Trans": "{\"en\": \"You are able to vote once again\", \"ru\": \"Вы в праве изменить свой вариант ответа\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_initiator",
+            "Trans": "{\"en\": \"Initiator\", \"ru\": \"Инициатор\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_lastmodified",
+            "Trans": "{\"en\": \"Last Modified\", \"ru\": \"Время последнего изменения\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_new_question",
+            "Trans": "{\"en\": \"New Question\", \"ru\": \"Новый вопрос\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_no_questions",
+            "Trans": "{\"en\": \"There are no questions here yet!\", \"ru\": \"Доступных для участия опросов не найдено\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_notifications_send",
+            "Trans": "{\"en\": \"Send notifications\", \"ru\": \"Отправить уведомления\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_poll",
+            "Trans": "{\"en\": \"Questionnaire\", \"ru\": \"Опросы\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_question",
+            "Trans": "{\"en\": \"Title\", \"ru\": \"Заголовок\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_question_everyone",
+            "Trans": "{\"en\": \"Everyone\", \"ru\": \"Доступно всем\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_question_groups",
+            "Trans": "{\"en\": \"Audience: Groups Access\", \"ru\": \"Аудитория: доступ по группам\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_question_logs",
+            "Trans": "{\"en\": \"Full Detailed Answer Log\", \"ru\": \"Полная статистика ответов\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_question_nobody",
+            "Trans": "{\"en\": \"Noone from the list\", \"ru\": \"Никто из списка\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_question_roles",
+            "Trans": "{\"en\": \"Audience: Roles Access\", \"ru\": \"Аудитория: доступ по ролям\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_status",
+            "Trans": "{\"en\": \"Status\", \"ru\": \"Статус опроса\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_status_admin",
+            "Trans": "{\"en\": \"Poll cancelled by admin\", \"ru\": \"Опрос досрочно закончен администратором\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_status_created",
+            "Trans": "{\"en\": \"Successfully created\", \"ru\": \"Успешно создан\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_status_ended",
+            "Trans": "{\"en\": \"Poll ended\", \"ru\": \"Опрос закончен\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_status_pause",
+            "Trans": "{\"en\": \"Poll paused by admin\", \"ru\": \"Опрос приостановлен администратором\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_status_started",
+            "Trans": "{\"en\": \"Poll in progress\", \"ru\": \"Идет опрос\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "q_answers",
+            "Columns": "[\n    {\n        \"name\":\"answer_id\",\n        \"type\":\"number\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"decision\",\n        \"type\":\"text\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"ecosystem\",\n        \"type\":\"number\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"lastmodified\",\n        \"type\":\"number\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"member\",\n        \"type\":\"number\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"question_id\",\n        \"type\":\"number\",\n        \"conditions\":\"true\"\n    }\n]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}",
+            "Type": "tables"
+        },
+        {
+            "Name": "q_list",
+            "Columns": "[\n    {\n        \"name\":\"answer\",\n        \"type\":\"json\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"au_groups\",\n        \"type\":\"json\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"au_roles\",\n        \"type\":\"json\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"created_at\",\n        \"type\":\"number\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"deleted\",\n        \"type\":\"number\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"description\",\n        \"type\":\"text\",\n        \"conditions\":\"true\"\n    },    \n    {\n        \"name\":\"ecosystem\",\n        \"type\":\"number\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"expired\",\n        \"type\":\"number\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"init\",\n        \"type\":\"number\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"lastmodified\",\n        \"type\":\"number\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"params\",\n        \"type\":\"json\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"question\",\n        \"type\":\"text\",\n        \"conditions\":\"true\"\n    },\n    {\n        \"name\":\"status\",\n        \"type\":\"number\",\n        \"conditions\":\"true\"\n    }\n]",
+            "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}",
+            "Type": "tables"
+        },
+        {
+            "Name": "q_listing",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "SetVar(this_page, @1q_listing).(this_table, @1q_list)\nInclude(@1pager_header)\n\nSetTitle($@1q_poll$)\nIf(#role_id#==1){\n    SetVar(permission,1)\n}\nIf(#permission#==1){\n    AddToolButton(Title: $@1q_new_question$, Page: @1q_question_new, Icon: icon-plus).Popup(Header: $@1q_new_question$, Width: \"60\")\n}\n\nIf(GetVar(search)!=\"\"){\n    SetVar(where,\"{ecosystem:#ecosystem_id#,deleted:0,{$or:[{question:{$like:#search#}}]}}\")\n}.Else{\n    SetVar(where,\"{ecosystem:#ecosystem_id#,deleted:0}\").(search,)\n}\n\nDiv(list-group-item ml-lg mr-lg pt-lg){\n    SetVar(search_name, LangRes(@1q_question))\n    Include(@1search)\n}\n\nDBFind(#this_table#,src_q).Where(#where#).Order({\"id\": 1}).Limit(#pager_limit#).Columns(\"id,question,description,answer,ecosystem,init,lastmodified,created_at,expired,status,params->hide,params->change,au_groups,au_roles\").Custom(custom_name){\n    If(#permission#==1){\n        LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: \"q_id=#id#\"){\n            Div(Class: text-primary){\n                Span(#question#)\n            }\n        }\n    }.Else{\n        If(#status#==1){\n            If(And(#au_groups#==[0],#au_roles#==[0])){\n                LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: \"q_id=#id#\"){\n                    Div(Class: text-primary){\n                        Span(#question#)\n                    }\n                }\n            }.Else{\n                DBFind(@1groups_participants).Where({\"member->member_id\":#key_id#,\"deleted\":0,\"ecosystem\":#ecosystem_id#,\"groups_info->id\":{$in:#au_groups#}}).Count(gp)\n                DBFind(@1roles_participants).Where({\"member->member_id\":#key_id#,\"deleted\":0,\"ecosystem\":#ecosystem_id#,\"role->id\":{$in:#au_roles#}}).Count(rl)\n                If(And(#gp#>0,#rl#>0)){\n                    LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: \"q_id=#id#\"){\n                        Div(Class: text-primary){\n                            Span(#question#)\n                        }\n                    }\n                }.Else{\n                    Span(#question#)\n                }\n            }\n        }.Else{\n            Span(#question#)\n        }\n    }\n}.Custom(custom_status){\n    If(#status#==0){\n        Span(Class: text-success, Body: LangRes(@1q_status_created))\n    }\n    If(#status#==1){\n        Span(Class: text-success, Body: LangRes(@1q_status_started))\n    }\n    If(#status#==2){\n        Span(Class: text-primary, Body: LangRes(@1q_status_ended))\n    }\n    If(#status#==3){\n        Span(Class: text-warning, Body: LangRes(@1q_status_admin))\n    }\n}.Custom(time){\n    P(Class:h6 m0, Body: DateTime(#created_at#,HH:MI DD.MM.YYYY))\n    P(Class:h6 m0, Body: DateTime(#expired#,HH:MI DD.MM.YYYY))\n}.Custom(initiator){\n    DBFind(@1members).Where({ecosystem:#ecosystem#, id:#init#}).Vars(m)\n    If(Or(#m_id#>0,#m_id#<0)){\n        SetVar(member_name, #m_member_name#)\n    }.Else{\n        SetVar(member_name, Address(#id#))\n    }\n    Span(#member_name#)\n}.Custom(hidden){\n    If(#params.hide#==true){\n        Span(Class: fa fa-check fa-1x)\n    }.Else{\n        Span(Class:fa fa-times fa-1x)\n    }\n}.Custom(change){\n    If(#params.change#==true){\n        Span(Class: fa fa-check fa-1x)\n    }.Else{\n        Span(Class:fa fa-times fa-1x)\n    }\n}.Custom(ops){\n    Span(Class: pull-right){\n        If(#permission#==1){\n            If(#status#==0){\n                Button(Body: Em(Class: fa fa-hourglass-start), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: \"operation=T,id=#id#\")\n            }\n            If(#status#==1){\n                Button(Body: Em(Class: fa fa-pause), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: \"operation=Z,id=#id#\")\n            }           \n            Button(Body: Em(Class: fa fa-trash), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: \"operation=D,id=#id#\").Style({margin-left: 30px;})\n            If(#status#==0){\n                LinkPage(Body: Em(Class: fa fa-edit), Class: btn-xs btn-link, Page: @1q_question_edit, PageParams: \"q_id=#id#\").Style({margin-left: 30px;})\n            }\n            DBFind(@1q_answers).Where({question_id:#id#}).Count(answers)\n            If(#answers#>0){\n                Button(Body: Em(Class: fa fa-book), Class: btn-xs btn-link, Page: @1q_question_log, PageParams: \"q_id=#id#\").Style({margin-left: 30px;}).Popup(Header: #question#, Width: \"50\")\n            }.Else{\n                Span(Class:btn-xs fa fa-book).Style({margin-left: 35px;})\n            }\n        }\n        If(Or(#permission#==1,#params.hide#==true)){\n            Button(Body: Em(Class: fa fa-comment), Class: btn-xs btn-link, Page: @1q_question_graph, PageParams: \"q_id=#id#\").Style({margin-left: 30px;}).Popup(Header: $@1q_answer_graph$ / #question#, Width: \"50\")\n        }\n    }\n}.Count(q)\n\nDiv(fullscreen){\n    Div(table-responsive ml-lg mr-lg){\n        Div(list-group-item){\n            If(#q#>0){\n                Table(Source: src_q, Columns: \"$@1q_question$=custom_name,$@1q_initiator$=initiator,$@1q_status$=custom_status,$@1q_change$=change,$@1q_date_start$/$@1q_date_expiration$=time,=ops\")\n            }.Else{\n                Div(Class: text-center h4 text-muted, Body: $@1q_no_questions$)\n            }\n        }.Style(\n            margin-top:-15px;\n            tbody > tr:nth-of-type(odd) {\n                background-color: #f8f9fc;\n            }\n        )\n    }\n}\nDiv(mt-sm ml-lg mr-sm mb-sm){\n    Include(@1pager)\n}",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "q_question",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "DBFind(@1q_list).Where({id:#q_id#}).Columns(\"id,question,description,answer,ecosystem,init,lastmodified,created_at,expired,status,params->hide,params->change\").Vars(question)\nDBFind(@1q_answers).Where({question_id:#question_id#}).Count(answers)\nDBFind(@1q_answers).Where({question_id:#question_id#, member:#key_id#}).Vars(your_answer).Count(a)\nDBFind(@1members).Where({ecosystem:#question_ecosystem#}).Count(total)\n\nIf(#role_id#==1){\n    SetVar(permission,1)\n}\n\nDiv(content-wrapper){  \n    Div(row mt-sm){\n        Div(col-lg-10 col-lg-offset-1){\n            Form(panel panel-primary){\n                Div(list-group-item text-center){\n                    P(Class: h3 text-bold m0, Body: #question_description#)\n                }\n                Div(list-group-item){\n                    Div(row){\n                        Div(col-md-6 text-right){\n                            Label(For: Date Start){\n                                Span(Body: LangRes(@1q_date_start):)\n                            }\n                        }\n                        Div(col-md-6 text-left){\n                            DateTime(#question_created_at#,HH:MI DD.MM.YYYY)\n                        }\n                    }\n                    Div(row){\n                        Div(col-md-6 text-right){\n                            Label(For: Last Modified){\n                                Span(Body: LangRes(@1q_lastmodified):)\n                            }\n                        }\n                        Div(col-md-6 text-left){\n                            DateTime(#question_lastmodified#,HH:MI DD.MM.YYYY)\n                        }\n                    }\n                    Div(row){\n                        Div(col-md-6 text-right){\n                            Label(For: Date Ending){\n                                Span(Body: LangRes(@1q_date_expiration):)\n                            }\n                        }\n                        Div(col-md-6 text-left){\n                            DateTime(#question_expired#,HH:MI DD.MM.YYYY)\n                        }\n                    }\n                    Div(row){\n                        Div(col-md-6 text-right){\n                            Label(For: Status){\n                                Span(Body: LangRes(@1status):)\n                            }\n                        }\n                        Div(col-md-6 text-left){\n                            If(#question_status#==0){\n                                Span(Class: text-success, Body: LangRes(@1q_status_created))\n                            }\n                            If(#question_status#==1){\n                                Span(Class: text-success, Body: LangRes(@1q_status_started))\n                            }\n                            If(#question_status#==2){\n                                Span(Class: text-primary, Body: LangRes(@1q_status_ended))\n                            }\n                            If(#question_status#==3){\n                                Span(Class: text-warning, Body: LangRes(@1q_status_admin))\n                            }   \n                        }\n                    }\n                }\n                If(#question_status#!=0){\n                    Div(list-group-item text-center t5){\n                        If(#a#>0){\n                             Div(row mb){\n                                Div(col-sm-6 mt-sm text-right){\n                                    Label(For: Notifications){\n                                        Span(Body: LangRes(@1q_answer)\n                                    }      \n                                }\n                                Div(col-sm-6 mt-sm text-left){\n                                    Input(Name: change, Type: checkbox, Value: true, Disabled: true, Class: m0, Placeholder: #your_answer_decision#)\n                                }\n                            }\n                        }\n                        If(And(#question_params_change#==true,#a#>0,#question_status#==1)){\n                            Div(row mb-sm){\n                                Div(col-md-12 text-center){\n                                    Span(Class: h6, Body: LangRes(@1q_hint_answer_revoting))\n                                }\n                            }\n                        }\n                        If(#question_status#==1){\n                            Div(row){\n                                Div(col-md-12 text-center){\n                                    ArrayToSource(src, #question_answer#)\n                                    ForList(Source: src, Index:ind){\n                                        If(#a#==0){\n                                            Button(Body: #value#, Page: @1q_question, Class: btn btn-primary ml-sm mr-sm, Contract: @1QAnswer, PageParams: \"q_id=#question_id#\", Params: \"question_id=#question_id#, answer_id=#ind#, decision=#value#, operation=CV\")\n                                        }\n                                        If(And(#question_params_change#==true,#a#>0)){\n                                            Button(Body: #value#, Page: @1q_question, Class: btn btn-primary ml-sm mr-sm, Contract: @1QAnswer, PageParams: \"q_id=#question_id#\", Params: \"id=#your_answer_id#, question_id=#question_id#, answer_id=#ind#, decision=#value#, operation=UV\")\n                                        }\n                                    }     \n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n}",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "q_question_edit",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "DBFind(@1q_list).Where({ecosystem:#ecosystem_id#, id:#q_id#}).Vars(question)\nDBFind(@1roles,src_rid).Where({ecosystem:#ecosystem_id#}).Count(r)\nDBFind(@1groups,src_gp).Where({ecosystem:#ecosystem_id#}).Count(g)\nArrayToSource(src, #question_answer#)\n\nIf(And(#question_au_groups#==[0],#question_au_roles#==[0])){\n    SetVar(access,$@1q_question_everyone$)\n}.Else{\n    SetVar(access,$@1q_question_nobody$)\n}\n\nIf(#question_status#==0){\n    SetVar(editable,1)\n}\nSetVar(time,DateTime(#question_lastmodified#,HH:MI DD.MM.YYYY))\n\nSetTitle(#question_question#)\nSpan(Class: h5 m0 mb ml-lg){\n    LinkPage(Class: ml-sm, Body: $@1q_poll$, Page: @1q_listing)\n    Span(Class: text-muted mh-sm, Body: /)\n    Span(Class: text-muted, Body: #question_question#)\n}.Style(\n    display: inline-block;\n)\n\nDiv(content-wrapper){\n    Form(){\n        Div(form-group){\n            Label($@1title$)\n            If(#editable#==1){\n                Input(Name: question, Value: #question_question#)\n            }.Else{\n                Input(Name: question, Value: #question_question#, Disabled: true)\n            }\n        }\n        Div(form-group){\n            If(#editable#==1){\n            Label($@1q_description$)\n                Input(Type: textarea, Name: description, Value: #question_description#).Style(resize: vertical; min-height: 6em;)\n            }\n        }\n        If(#g#>0){\n            Div(form-group){\n            Label($@1q_question_groups$)\n                If(#editable#==1){\n                    Div(input-group mb-sm){\n                        Select(Name: au_groups, Source: src_gp, NameColumn: group_name, ValueColumn: id)\n                        Div(input-group-btn){\n                            Button(Class: btn bg-gray-lighter fa fa-plus mtl buttons, Page: @1q_question_edit, PageParams:\"q_id=#question_id#\", Contract: @1QOperations, Params:\"id=#question_id#, operation=GA\")\n                        }\n                    }\n                } \n                ArrayToSource(au_g_src, #question_au_groups#)\n                ForList(Source: au_g_src, Index:ind){\n                DBFind(@1groups).Where({id:#value#}).Vars(gn)\n                    If(#editable#==1){\n                        If(#value#==0){\n                            Button(Body: #access#, Class: btn-xs bg-gray-lighter ml-sm)\n                        }.Else{\n                            Button(Body: Span(Class: fa fa-remove) #gn_group_name#, Page: @1q_question_edit, Class: btn btn-danger ml-sm, Contract: @1QOperations, PageParams: \"q_id=#question_id#\", Params: \"id=#question_id#, au_groups=#value#, operation=GD\")\n                        }\n                    }.Else{\n                        If(#value#==0){\n                            Button(Body: #access#, Class: btn-xs bg-gray-lighter ml-sm)\n                        }.Else{\n                            Button(Body: #gn_group_name#, Class: btn-xs bg-gray-lighter ml-sm)\n                        }\n                    }\n                }\n            }\n        }\n        If(#r#>0){\n            Div(form-group){\n            Label($@1q_question_roles$)\n                If(#editable#==1){\n                    Div(input-group mb-sm){\n                        Select(Name: au_roles, Source: src_rid, NameColumn: role_name, ValueColumn: id)\n                        Div(input-group-btn){\n                            Button(Class: btn bg-gray-lighter fa fa-plus mtl buttons, Page: @1q_question_edit, PageParams:\"q_id=#question_id#\", Contract: @1QOperations, Params:\"id=#question_id#, operation=RA\")\n                        }\n                    }\n                }\n                ArrayToSource(au_r_src, #question_au_roles#)\n                ForList(Source: au_r_src, Index:ind){\n                DBFind(@1roles).Where({id:#value#}).Vars(rn)\n                    If(#editable#==1){\n                        If(#value#==0){\n                            Button(Body: #access#, Class: btn-xs bg-gray-lighter ml-sm)\n                        }.Else{\n                            Button(Body: Span(Class: fa fa-remove) #rn_role_name#, Page: @1q_question_edit, Class: btn-xs bg-gray-lighter ml-sm, Contract: @1QOperations, PageParams: \"q_id=#question_id#\", Params: \"id=#question_id#, au_roles=#value#, operation=RD\")\n                        }\n                    }.Else{\n                        If(#value#==0){\n                            Button(Body: #access#, Class: btn-xs bg-gray-lighter ml-sm)\n                        }.Else{\n                            Button(Body: #rn_role_name#, Class: btn-xs bg-gray-lighter ml-sm)\n                        }\n                    }\n                }\n            }\n        }\n        Div(form-group){\n            Label($@1q_answer_change$)\n            If(#editable#==1){\n                Div(input-group mb-sm){\n                    Input(Name: answer)\n                    Div(input-group-btn){\n                        Button(Class: btn bg-gray-lighter fa fa-plus mtl buttons, Page: @1q_question_edit, PageParams:\"q_id=#question_id#\", Contract: @1QOperations, Params:\"id=#question_id#, operation=AA\")\n                    }\n                }\n            }\n            ForList(Source: src, Index:ind){\n                If(#editable#==1){\n                    Button(Body: Span(Class: fa fa-remove) #value#, Page: @1q_question_edit, Class: btn-xs bg-gray-lighter ml-sm, Contract: @1QOperations, PageParams: \"q_id=#question_id#\", Params: \"id=#question_id#, answer=#value#, operation=AD\")\n                }.Else{\n                    Button(Body: #value#, Class: btn-xs bg-gray-lighter ml-sm)\n                }\n            } \n        }\n        Div(form-group){\n            Label($@1q_lastmodified$)\n            Input(Name: lastmodified,  Value: #time#, Disabled: true)\n        }   \n        Div(form-group){\n            Button(Class: btn btn-primary pull-right mt sm, Body: $@1save$, Contract: @1QOperations, Page: @1q_listing, Params: \"id=#question_id#,operation=E\")\n            Button(Class: btn btn-default pull-right mt sm, Body: LangRes(@1back), Page: @1q_listing)\n        }\n    }\n}.Style(\n    .buttons{border: 1px solid #dde6e9;}\n)",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "q_question_graph",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "Form(){\n    DBFind(@1q_list).Where({id:#q_id#}).Columns(\"id,question,description,answer,ecosystem,init,lastmodified,created_at,expired,status,params->hide,params->change\").Vars(question)\n    DBFind(@1q_answers).Where({question_id:#question_id#}).Count(answers)\n    Div(list-group-item){\n        Div(row){\n            Div(col-md-12 text-center){\n                P(Class: h3 m0, Body: #question_description#)\n            }\n        }\n    }\n    Div(list-group-item){\n        Div(row){\n            Div(col-md-6 text-right){\n                Label(For: Date Start){\n                    Span(Body: LangRes(@1q_date_start):)\n                }\n            }\n            Div(col-md-6 text-left){\n                DateTime(#question_created_at#,HH:MI DD.MM.YYYY)\n            }\n        }\n        Div(row){\n            Div(col-md-6 text-right){\n                Label(For: Last Modified){\n                    Span(Body: LangRes(@1q_lastmodified):)\n                }\n            }\n            Div(col-md-6 text-left){\n                DateTime(#question_lastmodified#,HH:MI DD.MM.YYYY)\n            }\n        }\n        Div(row){\n            Div(col-md-6 text-right){\n                Label(For: Date Ending){\n                    Span(Body: LangRes(@1q_date_expiration):)\n                }\n            }\n            Div(col-md-6 text-left){\n                DateTime(#question_expired#,HH:MI DD.MM.YYYY)\n            }\n        }\n        Div(row){\n            Div(col-md-6 text-right){\n                Label(For: Status){\n                    Span(Body: LangRes(@1status):)\n                }\n            }\n            Div(col-md-6 text-left){\n                If(#question_status#==0){\n                    Span(Class: text-success, Body: LangRes(@1q_status_created))\n                }\n                If(#question_status#==1){\n                    Span(Class: text-success, Body: LangRes(@1q_status_started))\n                }\n                If(#question_status#==2){\n                    Span(Class: text-primary, Body: LangRes(@1q_status_ended))\n                }\n                If(#question_status#==3){\n                    Span(Class: text-warning, Body: LangRes(@1q_status_admin))\n                }   \n            }\n        }\n        Div(row){\n            Div(col-md-6 text-right){\n                Label(For: Stats){\n                    Span(Body: LangRes(@1q_answer_data):)\n                }\n            }\n            Div(col-md-6 text-left){\n                #answers#\n            }\n        }\n    }\n    Div(list-group-item text-center){\n        ArrayToSource(src, #question_answer#)\n        ForList(Source: src, Index:ind){\n            DBFind(@1q_answers).Where({question_id:#question_id#, decision: #value#}).Count(a)\n            Span(){\n                Span(Class: h4 m0 text-primary, Body: #value#:#a#)\n            }.Style(margin-right: 15px; margin-left: 15px;)\n        }\n    }\n    Div(row mt){\n        Div(col-md-12 text-center){\n            Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1q_listing)\n        }\n    }\n}",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "q_question_log",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "Form(){\n    SetVar(this_page, @1q_question_log).(this_table, @1q_answers)\n    Include(@1pager_header)\n    DBFind(@1q_list).Where({id:#q_id#}).Columns(\"id\").Vars(q)\n\n    If(#a_id#>0){\n        SetVar(where,\"{question_id:#q_id#,answer_id:#a_id#}\")\n    }.Else{\n        SetVar(where,\"{question_id:#q_id#}\")\n    }\n\n    DBFind(@1q_answers,src_a).Where(#where#).Limit(#pager_limit#).Custom(ans){\n        #answer_id# : #decision#\n    }.Custom(c_m){\n        Address(#member#)\n    }.Custom(time){\n        DateTime(#lastmodified#,HH:MI DD.MM.YYYY)\n    }.Count(a)\n    \n    Div(row form-group){\n        Div(col-sm-12){           \n            Table(Source: src_a, Columns:\"$@1q_answer_member$=c_m,$@1q_date_lastmodified$=time,$@1q_answer$=ans\")\n            Div(mt-sm ml-lg mr-sm mb-sm){\n                Include(@1pager)\n            }\n        }\n    } \n    Div(row mt){\n        Div(col-md-12 text-center){\n            Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1q_listing)\n        }\n    }\n}",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "q_question_new",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "Form(){\n    Data(bool,\"value,name\"){\n        0,$@1ex_unavaliable$\n        1,$@1ex_avaliable$\n    }\n    Div(row){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: Title){\n                Span(Body: LangRes(@1title)\n                Span(*,text-danger)\n            }\n        }\n        Div(col-sm-9){\n            Input(Name: question, Type: text)\n        }\n    }\n    Div(row mt-sm){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: Description){\n                Span(Body: LangRes(@1q_description)\n                Span(*,text-danger)\n            }\n        }\n        Div(col-sm-9){\n            Input(Type: textarea, Name: description, Value: \"\", Placeholder: $@1message_type_here$).Style(resize: vertical; min-height: 6em;)\n        }\n    }\n    Div(row mt-sm){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: Answer){\n                Span(Body: LangRes(@1q_answer)\n                Span(*,text-danger)\n            }\n        }\n        Div(col-sm-9){\n            Div(input-group mb-sm){\n                Input(Name: answer)\n                Div(input-group-btn){\n                    Button(Class: btn bg-gray-lighter fa fa-plus mtl buttons, Page: @1q_question_new, Contract: @1QOperations, Params:\"id=#question_id#, operation=AA\").Popup(60, $@1message_type_here$)\n                }\n            }\n            DBFind(@1buffer_data).Where({\"key\":\"q_answers\",\"member_id\":#key_id#}).Vars(ans)\n            ArrayToSource(src, #ans_value#)\n            ForList(Source: src, Index:ind){\n                Button(Body: Span(Class: fa fa-remove) #value#, Class: btn-xs bg-gray-lighter mr-sm mb-sm, Page: @1q_question_new,Contract: @1QOperations, Params: \"id=#question_id#, answer=#value#, operation=AD\").Popup(60, $@1message_type_here$)\n            }\n        }\n    }\n    Div(row mt-lg){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: end_date){\n                LangRes(@1date_end)\n                Span(*,text-danger)\n            }\n        }\n        Div(col-md-9 text-left){\n            Div(row){\n                Div(col-md-6){\n                    Input(Name: end_date, Type: date)\n                }\n                Div(col-md-6){\n                    Input(Name: end_time, Type: time, Value: \"00:00\")\n                }\n            }\n        }\n    }\n    Div(row mt){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: Notifications){\n                Span(Body: LangRes(@1notifications)\n            }      \n        }\n        Div(col-sm-9 mt-sm){\n            Input(Name: notifications, Type: checkbox, Value: false, Class: m0, Placeholder: $@1q_notifications_send$)\n        }\n    }\n    Div(row mt-sm){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: AnswerHide){\n                Span(Body: LangRes(@1result)\n            }\n        }\n        Div(col-sm-9 mt-sm){\n            Input(Name: hide, Type: checkbox, Value: false, Class: m0, Placeholder: $@1q_hide$)\n        }\n    }\n    Div(row mt-sm){\n        Div(col-sm-3 mt-sm text-right){\n            Label(For: AnswerChange){\n                Span(Body: LangRes(@1answer)\n            }\n            \n        }\n        Div(col-sm-9 mt-sm){\n            Input(Name: change, Type: checkbox, Value: false, Class: m0, Placeholder: $@1q_answer_change$)\n        }\n    }\n    Div(row mt){\n        Div(col-md-12){\n            Button(Body: LangRes(@1create), Page: @1q_listing, Class: btn btn-primary pull-right mt-sm, Contract: @1QOperations, Params: \"operation=C\")\n            Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt-sm, Page: @1q_listing)\n        }\n    }\n}.Style(\n    .buttons{border: 1px solid #dde6e9;}\n)",
+            "Menu": "default_menu",
+            "Type": "pages"
+        },
+        {
+            "Name": "QAnswer",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "contract QAnswer {\n    data {\n        id int \"optional\"\n        operation string\n        question_id int\n        decision string\n        answer_id int\n    }\n    conditions {\n        if JSONDecode(DBFind(\"@1q_list\").Where({\"id\":$question_id}).Columns(\"deleted\").One(\"deleted\")) == 1 {\n            warning LangRes(\"@1q_error_cannot\", \"en\")\n        }\n        if JSONDecode(DBFind(\"@1q_list\").Where({\"id\":$question_id}).Columns(\"status\").One(\"status\")) != 1 {\n            warning LangRes(\"@1q_error_cannot\", \"en\")\n        }\n        if $operation == \"UV\" {\n            if Str(JSONDecode(DBFind(\"@1q_list\").Where({\"id\":$question_id}).Columns(\"params->change\").One(\"params->change\"))) != \"true\" {\n                warning LangRes(\"@1q_error_revoting\", \"en\")\n            }\n        }\n        var rid_array array\n        rid_array = JSONDecode(DBFind(\"@1q_list\").Where({\"id\":$question_id}).One(\"au_roles\"))\n        if rid_array[0] != 0 {\n            $role_access = DBFind(\"@1roles_participants\").Where({\"member->member_id\":$key_id,\"deleted\":0,\"ecosystem\":$ecosystem_id,\"role->id\":{\"$in\":rid_array}}).Columns(\"role->id\")\n            if Len($role_access) == 0 {\n                warning LangRes(\"@1q_error_cannot\", \"en\")\n            }\n        }\n        var grp_array array\n        grp_array = JSONDecode(DBFind(\"@1q_list\").Where({\"id\":$question_id}).One(\"au_groups\"))\n        if grp_array[0] != 0 {\n            $group_access = DBFind(\"@1groups_participants\").Where({\"member->member_id\":$key_id,\"deleted\":0,\"ecosystem\":$ecosystem_id,\"groups_info->id\":{\"$in\":grp_array}}).Columns(\"groups_info->id\")\n            if Len($group_access) == 0 {\n                warning LangRes(\"@1q_error_cannot\", \"en\")\n            }\n        }\n    }\n    action {\n        if $time > Int(DBFind(\"@1q_list\").Where({\"id\":$question_id}).Columns(\"expired\").One(\"expired\")) {\n            var q map\n            q[\"expired\"] = $time\n            q[\"status\"] = 2\n            q[\"lastmodified\"] = $time\n            DBUpdate(\"@1q_list\", $question_id, q)\n        } else {\n            if $operation == \"CV\" {\n                var a map\n                a[\"member\"] = $key_id\n                a[\"decision\"] = $decision\n                a[\"answer_id\"] = $answer_id\n                a[\"ecosystem\"] = $ecosystem_id\n                a[\"lastmodified\"] = $time\n                a[\"question_id\"] = $question_id\n                DBInsert(\"@1q_answers\", a)\n            }\n            if $operation == \"UV\" {\n                var a map\n                a[\"member\"] = $key_id\n                a[\"decision\"] = $decision\n                a[\"answer_id\"] = $answer_id\n                a[\"ecosystem\"] = $ecosystem_id\n                a[\"lastmodified\"] = $time\n                a[\"question_id\"] = $question_id\n                DBUpdate(\"@1q_answers\", $id, a)\n            }\n        }\n    }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "QOperations",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "contract QOperations {\n    data {\n        id int \"optional\"\n        description string\n        question string\n        answer string\n        operation string\n        status int\n        notifications bool \"optional\"\n        hide bool \"optional\"\n        change bool \"optional\"\n        au_groups int \"optional\"\n        au_roles int \"optional\"\n        end_date string\n        end_time string\n    }\n    func trimZeroTime(s string) string {\n        if Contains(s, \"T00:00:00Z\") {\n            s = Replace(s, \"T00:00:00Z\", \"\")\n        }\n        return s\n    }\n    func dateAddTime(d, t string) string {\n        var dt string\n        if Size(t) == 5 {\n            dt = Sprintf(\"%v %v:00\", trimZeroTime(d), t)\n        }\n        return dt\n    }\n    func isCalledFromPage() bool {\n        return $stack[0] == Sprintf(\"@%v%v\", $ecosystem_id, $this_contract)\n    }\n    func expToTimestamp() {\n        $ext_string = dateAddTime($end_date, $end_time)\n        if $time > UnixDateTime($ext_string) {\n            warning LangRes(\"@1ending_date_invalid\", \"en\")\n        }\n    }\n    conditions {\n        AdminCondition()\n        if $operation == \"GA\" {\n            $groups = JSONDecode(DBFind(\"@1q_list\").Where({\"id\":$id}).Columns(\"au_groups\").One(\"au_groups\"))\n            var i int\n            i = 0\n            while i < Len($groups) {\n                if $groups[i] == $au_roles {\n                    warning LangRes(\"@1q_error_groups\", \"en\") \n                }\n                i = i + 1\n            }\n        }\n        if $operation == \"RA\" {\n            $roles = JSONDecode(DBFind(\"@1q_list\").Where({\"id\":$id}).Columns(\"au_roles\").One(\"au_roles\"))\n            var i int\n            i = 0\n            while i < Len($roles) {\n                if $roles[i] == $au_roles {\n                    warning LangRes(\"@1q_error_roles\", \"en\") \n                }\n                i = i + 1\n            }\n        } \n        if $operation == \"AA\" {\n            if $answer == \"\" {\n                warning LangRes(\"@1q_error_blank\", \"en\") \n            }\n        }\n        if $operation == \"C\" {\n            if $description == \"\" {\n                warning LangRes(\"@1q_error_blank\", \"en\") \n            }\n            if $question == \"\" {\n                warning LangRes(\"@1q_error_blank\", \"en\") \n            }\n            expToTimestamp()\n            if $time > UnixDateTime($ext_string) {\n                warning LangRes(\"@1q_error_expdate\", \"en\")\n            }\n        }     \n    }\n    action {\n        var q map\n        var audience audience_new array\n        //notifications when start and changing status\n        if $operation == \"C\" {\n            var decision array\n            decision = JSONDecode(DBFind(\"@1buffer_data\").Where({\"key\":\"q_answers\",\"member_id\":$key_id,\"ecosystem\":$ecosystem_id}).One(\"value\"))\n            var params map\n            params[\"notifications\"] = $notifications\n            params[\"hide\"] = $hide\n            params[\"change\"] = $change\n            q[\"question\"] = $question\n            q[\"description\"] = $description\n            q[\"answer\"] = JSONEncode(decision)\n            q[\"ecosystem\"] = $ecosystem_id\n            q[\"deleted\"] = 0\n            q[\"init\"] = $key_id\n            q[\"status\"] = 0\n            q[\"au_roles\"] = `[0]`\n            q[\"au_groups\"] = `[0]`\n            q[\"created_at\"] = $time\n            q[\"params\"] = JSONEncode(params)\n            q[\"lastmodified\"] = $time \n            q[\"expired\"] = UnixDateTime($ext_string)\n            DBInsert(\"@1q_list\", q)\n        }\n        if $operation == \"E\" {\n            q[\"description\"] = $description\n            q[\"question\"] = $question\n            q[\"ecosystem\"] = $ecosystem_id\n            q[\"init\"] = $key_id\n            q[\"lastmodified\"] = $time\n            DBUpdate(\"@1q_list\", $id, q)\n        }\n        if $operation == \"AA\" {\n            if $id==0 {\n                if !DBFind(\"@1buffer_data\").Where({\"key\":\"q_answers\",\"member_id\":$key_id,\"ecosystem\":$ecosystem_id}).One(\"value\") {\n                    var decision array\n                    decision = Append(decision, Str($answer))\n                    q[\"value\"] = JSONEncode(decision)\n                    q[\"member_id\"] = $key_id\n                    q[\"key\"] = \"q_answers\"\n                    q[\"ecosystem\"] = $ecosystem_id\n                    DBInsert(\"@1buffer_data\", q)\n                } else {\n                    var decision array\n                    $id_upd = Int(DBFind(\"@1buffer_data\").Where({\"key\":\"q_answers\",\"member_id\":$key_id,\"ecosystem\":$ecosystem_id}).One(\"id\"))\n                    decision = JSONDecode(DBFind(\"@1buffer_data\").Where({\"key\":\"q_answers\",\"member_id\":$key_id,\"ecosystem\":$ecosystem_id}).One(\"value\"))\n                    decision = Append(decision, Str($answer))\n                    q[\"value\"] = JSONEncode(decision)\n                    DBUpdate(\"@1buffer_data\", $id_upd, q)\n                }\n                \n            } else {\n                var decision array\n                decision = JSONDecode(DBFind(\"@1q_list\").Columns(\"answer\").Where({\"id\":$id,ecosystem:$ecosystem_id}).One(\"answer\"))\n                decision = Append(decision, Str($answer))\n                q[\"answer\"] = JSONEncode(decision)\n                DBUpdate(\"@1q_list\", $id, q)\n            }\n        }\n        if $operation == \"AD\" {\n            if $id==0 {\n                var decision decision_new array\n                decision = JSONDecode(DBFind(\"@1buffer_data\").Where({\"key\":\"q_answers\",\"member_id\":$key_id}).One(\"value\"))\n                $id_upd = Int(DBFind(\"@1buffer_data\").Where({\"key\":\"q_answers\",\"member_id\":$key_id}).One(\"id\"))\n                var i int\n                while i < Len(decision) {\n                    if decision[i] != Str($answer) {\n                        decision_new = Append(decision_new, decision[i])\n                    }\n                    i = i + 1\n                }\n                q[\"value\"] = JSONEncode(decision_new)\n                DBUpdate(\"@1buffer_data\", $id_upd, q)\n            } else {\n                var decision decision_new array\n                decision = JSONDecode(DBFind(\"@1q_list\").Columns(\"answer\").Where({\"id\":$id,ecosystem:$ecosystem_id}).One(\"answer\"))\n                var i int\n                while i < Len(decision) {\n                    if decision[i] != Str($answer) {\n                        decision_new = Append(decision_new, decision[i])\n                    }\n                    i = i + 1\n                } \n                q[\"answer\"] = JSONEncode(decision_new)\n                DBUpdate(\"@1q_list\", $id, q)\n            }\n        }\n        if $operation == \"RA\" {\n            audience = JSONDecode(DBFind(\"@1q_list\").Where({\"id\":$id}).Columns(\"au_roles\").One(\"au_roles\"))\n            if audience[0]==0 {\n                audience[0] = $au_roles\n            } else {\n                audience = Append(audience, $au_roles)\n            }\n            q[\"au_roles\"] = JSONEncode(audience)\n            DBUpdate(\"@1q_list\", $id, q)\n        }\n        if $operation == \"GA\" {\n            audience = JSONDecode(DBFind(\"@1q_list\").Where({\"id\":$id}).Columns(\"au_groups\").One(\"au_groups\"))\n            if audience[0]==0 {\n                audience[0] = $au_groups\n            } else {\n                audience = Append(audience, $au_groups)\n            }\n            q[\"au_groups\"] = JSONEncode(audience)\n            DBUpdate(\"@1q_list\", $id, q)\n        }\n        if $operation == \"RD\" {\n            audience = JSONDecode(DBFind(\"@1q_list\").Where({\"id\":$id}).Columns(\"au_roles\").One(\"au_roles\"))\n            var i int\n            if audience[0]==$au_roles && Len(audience)<2 {\n                audience[0] = 0\n                q[\"au_roles\"] = JSONEncode(audience)\n            } else {\n                while i < Len(audience) {\n                    if audience[i] != $au_roles {\n                        audience_new = Append(audience_new, audience[i])\n                    }\n                    i = i + 1\n                }\n                q[\"au_roles\"] = JSONEncode(audience_new)\n            }\n            DBUpdate(\"@1q_list\", $id, q)\n        }\n        if $operation == \"GD\" {\n            audience = JSONDecode(DBFind(\"@1q_list\").Where({\"id\":$id}).Columns(\"au_groups\").One(\"au_groups\"))\n            var i int\n            if audience[0]==$au_groups && Len(audience)<2 {\n                audience[0] = 0\n                q[\"au_groups\"] = JSONEncode(audience)\n            } else {\n                while i < Len(audience) {\n                    if audience[i] != $au_roles {\n                        audience_new = Append(audience_new, audience[i])\n                    }\n                    i = i + 1\n                }\n                q[\"au_groups\"] = JSONEncode(audience)\n            }\n            DBUpdate(\"@1q_list\", $id, q)\n        }        \n        if $operation == \"T\" {\n            //notification send\n            q[\"init\"] = $key_id\n            q[\"status\"] = 1\n            q[\"lastmodified\"] = $time\n            DBUpdate(\"@1q_list\", $id, q)\n        }\n        if $operation == \"Z\" {\n            //notifications close\n            q[\"init\"] = $key_id\n            q[\"status\"] = 3\n            q[\"lastmodified\"] = $time\n            DBUpdate(\"@1q_list\", $id, q)\n        }\n        if $operation == \"D\" {\n            //notifications close\n            q[\"init\"] = $key_id\n            q[\"status\"] = 3\n            q[\"deleted\"] = 1\n            q[\"lastmodified\"] = $time\n            DBUpdate(\"@1q_list\", $id, q)\n        }\n    }\n}",
+            "Type": "contracts"
+        }
+    ]
+}
