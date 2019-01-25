@@ -5,6 +5,7 @@ contract QAnswer {
         question_id int
         decision string
         answer_id int
+        notific_id int "optional"
     }
     conditions {
         if JSONDecode(DBFind("@1q_list").Where({"id":$question_id}).Columns("deleted").One("deleted")) == 1 {
@@ -36,6 +37,9 @@ contract QAnswer {
         }
     }
     action {
+        if ($notific_id > 0){
+            @1NotificationsClose("notific_id", $notific_id)
+        }
         if $time > Int(DBFind("@1q_list").Where({"id":$question_id}).Columns("expired").One("expired")) {
             var q map
             q["expired"] = $time
