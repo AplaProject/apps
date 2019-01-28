@@ -48,7 +48,7 @@ contract ErrandCreate {
     }
 
     conditions {
-        $app = DBFind("@1applications").Where({ecosystem:$ecosystem_id, name:"Errand"}).One("id")
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Errand"}).One("id")
         $check_access = AppParam(Int($app), "errand_access", $ecosystem_id)
         if $check_access {
             var rids array
@@ -61,12 +61,12 @@ contract ErrandCreate {
             admin_id = EcosysParam("role_admin")
             var rids array
             rids = JSONDecode("["+admin_id+"]")  
-            if !DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":{"$in":rids}, "member->member_id":$key_id, deleted:0}).Row() {
+            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id":{"$in":rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
                 warning LangRes("@1access_denied", "en")
             }
         }
         if $errand_type == 0 {
-            $valid_role = DBFind("@1roles").Where({ecosystem:$ecosystem_id,id:$rec_role_id,deleted:0}).One("id")
+            $valid_role = DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $rec_role_id, "deleted": 0}).One("id")
             if $valid_role == 0 {
                 info LangRes("@1role_not_found", "en")
             }
@@ -76,9 +76,9 @@ contract ErrandCreate {
                 info LangRes("@1empty_wallet", "en")
             }
             $member_id = AddressToId($member_id)
-            $check_member = DBFind("@1members").Where({id:$member_id,ecosystem:$ecosystem_id}).One("id")
+            $check_member = DBFind("@1members").Where({"id": $member_id, "ecosystem": $ecosystem_id}).One("id")
             if (Int($check_member) == 0){
-                if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$member_id}).Columns("id").Row() {
+                if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $member_id}).Columns("id").Row() {
                     error LangRes("@1member_not_fount", "en")
                 }
             }
@@ -120,7 +120,7 @@ contract ErrandCreate {
         if $errand_type == 0 {
             if $role_type_errand == 2 {
                 var errands array i lenErrands member_r_id int v map
-                errands = DBFind("@1roles_participants").Columns("id,role->id,member->member_id,ecosystem,deleted").Where({"role->id":$rec_role_id,"deleted":0,"ecosystem":$ecosystem_id})
+                errands = DBFind("@1roles_participants").Columns("id,role->id,member->member_id,ecosystem,deleted").Where({"role->id": $rec_role_id, "deleted": 0, "ecosystem": $ecosystem_id})
                 lenErrands = Len(errands)
                 if lenErrands == 0 {
                     info(LangRes("@1recipient_role_no_members", "en"))
