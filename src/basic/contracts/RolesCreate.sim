@@ -6,13 +6,13 @@ contract RolesCreate {
     
     func getMemberInfo(kid int) map {
         var res member map
-        member = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:kid}).Row()
+        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
         if member {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         } else {
-            member = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:kid}).Row()
+            member = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
             if member {
                 res["member_id"] = member["id"]
                 res["member_name"] = IdToAddress(Int(member["id"]))
@@ -33,7 +33,7 @@ contract RolesCreate {
         if $check_access && Str($check_access) != "0" {
             var rids array
             rids = JSONDecode("["+$check_access+"]")  
-            if !DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":{"$in":rids}, "member->member_id":$key_id, deleted:0}).Row() {
+            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
                 warning LangRes("@1access_denied", "en")
             }
         } else {
@@ -41,11 +41,11 @@ contract RolesCreate {
             admin_id = EcosysParam("role_admin")
             var rids array
             rids = JSONDecode("["+admin_id+"]")  
-            if !DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":{"$in":rids}, "member->member_id":$key_id, deleted:0}).Row() {
+            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
                 warning LangRes("@1access_denied", "en")
             }
         }
-        if $role_name == DBFind("@1roles").Where({"ecosystem":$ecosystem_id, "role_name":$role_name}).One("role_name") {
+        if $role_name == DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "role_name": $role_name}).One("role_name") {
             warning LangRes("@1role_exists", "en")
         }
         if Size($role_name) < 3 || Size($role_name) > 30 {
@@ -55,7 +55,7 @@ contract RolesCreate {
 
     action {
         var roles_access_arr array, buffer map
-        buffer = DBFind("@1buffer_data").Where({ecosystem:$ecosystem_id, "member_id": $key_id, "key": "roles_access"}).Columns("id,value,value->roles_access").Row()
+        buffer = DBFind("@1buffer_data").Where({"ecosystem": $ecosystem_id, "member_id": $key_id, "key": "roles_access"}).Columns("id,value,value->roles_access").Row()
         if buffer {
             roles_access_arr = JSONDecode(buffer["value.roles_access"])
             var filled map

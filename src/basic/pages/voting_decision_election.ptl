@@ -1,5 +1,5 @@
 If(#vID# == ""){
-    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "member_id" :#key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
+    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
     If(#buffer_value_voting_id#>0){
         SetVar(vID, #buffer_value_voting_id#)
     }
@@ -12,7 +12,7 @@ If(#vID# > 0){
         SetVar(back_page,@1voting_view)
     }
     DBFind(@1votings, src_voting).WhereId(#vID#).Columns("id,voting->name,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params").Vars(instance)
-    DBFind(@1votings_subject, src_subject).Where({voting_id:#vID#}).Columns("id,subject->member_id,subject->member_name").Custom(_address){
+    DBFind(@1votings_subject, src_subject).Where({"voting_id": #vID#}).Columns("id,subject->member_id,subject->member_name").Custom(_address){
         SetVar(candidates,"#candidates#,#subject.member_id#")
         Address(#subject.member_id#)
     }.Custom(_member){
@@ -21,15 +21,15 @@ If(#vID# > 0){
         }
     }
 
-    DBFind(@1keys,src_keys).Where({"ecosystem":#ecosystem_id#, {"$and": [{id:{"$neq":#guest_key#}}, {id:{"$nin":[#candidates#]}}]}}).Columns("id").Count(members_count).Custom(_name){
-        DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#id#}).Columns("id,member_name").Count(have_name).Vars(m)
+    DBFind(@1keys,src_keys).Where({"ecosystem": #ecosystem_id#, {"$and": [{"id": {"$neq":#guest_key#}}, {"id": {"$nin":[#candidates#]}}]}}).Columns("id").Count(members_count).Custom(_name){
+        DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Columns("id,member_name").Count(have_name).Vars(m)
         Address(#id#)
         If(#have_name#>0){
             " (#m_member_name#)"
         }
     }
 
-    DBFind(@1roles,src_roles).Where({ecosystem:#ecosystem_id#, role_type:2, deleted:0}).Columns("id,role_name").Count(elective_roles_count)
+    DBFind(@1roles,src_roles).Where({"ecosystem": #ecosystem_id#, "role_type": 2, "deleted": 0}).Columns("id,role_name").Count(elective_roles_count)
     If(#elective_roles_count#>0){
         Form(){
             Div(form-group){

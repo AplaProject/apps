@@ -31,7 +31,7 @@ contract VotingInvite {
         $STARTED = 3
         $FINISHED = 4
 
-        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Row()
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $votingID, "status": [{"$neq": $STARTED},{"$neq": $FINISHED}]}).Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Row()
         if !$voting {
             warning LangRes("@1voting_expired_can_not_add_participants", "en")
         }
@@ -48,23 +48,23 @@ contract VotingInvite {
             if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $var_id}).Row(){
                 warning LangRes("@1key_not_found", "en")
             }
-            isAdded = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID,"member->member_id":$var_id}).One("id")
+            isAdded = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "member->member_id": $var_id}).One("id")
             if isAdded {
                 warning LangRes("@1member_added_before", "en")
             }
         }
 
         if $type_participants == 3 {
-            isAdded = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID}).One("id")
+            isAdded = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID}).One("id")
             if isAdded {
                 warning LangRes("@1voting_one_role_allowed", "en")
             }
-            if Len(DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$var_id, deleted:0})) == 0 {
+            if Len(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": $var_id, "deleted": 0})) == 0 {
                 warning LangRes("@1roles_participants_not_found", "en")
             }
         }
         if ($type_participants == 4 || $type_participants == 5) {
-            isAdded = DBFind("@1votings_participants").Where({ecosystem:$ecosystem_id, voting_id:$votingID,"member->role_id":$var_id}).One("id")
+            isAdded = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "member->role_id": $var_id}).One("id")
             if isAdded {
                 if ($type_participants == 4){
                     warning LangRes("@1role_members_added_before", "en")
@@ -73,7 +73,7 @@ contract VotingInvite {
                     warning LangRes("@1role_added_before", "en")
                 }
             }
-            if Len(DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$var_id, deleted:0})) == 0 {
+            if Len(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": $var_id, "deleted": 0})) == 0 {
                 warning LangRes("@1roles_participants_not_found", "en")
             }
         }
@@ -83,7 +83,7 @@ contract VotingInvite {
         var i int
         if $type_participants == 1 { // everybody
             var keys array
-            keys = DBFind("@1keys").Where({id:{"$neq":$guest_key}, ecosystem:$ecosystem_id})
+            keys = DBFind("@1keys").Where({"id": {"$neq": $guest_key}, ecosystem:$ecosystem_id})
             while i < Len(keys) {
                 var key map
                 key = keys[i]
@@ -100,7 +100,7 @@ contract VotingInvite {
         }
         if $type_participants == 3 { // one role
             var roles array
-            roles = DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$var_id, deleted:0}).Columns("member->member_id").Order("id")
+            roles = DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": $var_id, "deleted": 0}).Columns("member->member_id").Order("id")
             while i < Len(roles) {
                 var role m map
                 role = roles[i]
@@ -111,7 +111,7 @@ contract VotingInvite {
         }
         if $type_participants == 4 { // all participants in the selected roles vote
             var roles array
-            roles = DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$var_id, deleted:0}).Columns("member->member_id").Order("id")
+            roles = DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": $var_id, "deleted": 0}).Columns("member->member_id").Order("id")
             while i < Len(roles) {
                 var role m map
                 role = roles[i]
