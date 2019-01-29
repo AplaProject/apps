@@ -1,0 +1,63 @@
+contract AppInstall {
+    data {
+        ApplicationId int
+    }
+    conditions {
+        var admin_id int rids array
+        admin_id = EcosysParam("role_admin")
+        rids = JSONDecode("["+admin_id+"]")  
+        if !DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":{"$in":rids}, "member->member_id":$key_id, deleted:0}).Row() {
+            warning LangRes("@1access_denied", "en")
+        }
+
+        $check_app = DBFind("@1applications").Columns("id,ecosystem,name,conditions").Where({id: $ApplicationId,ecosystem: 1}).Row()
+        if !$check_app["id"] {
+            warning LangRes("@1item_not_found", "en")
+        }
+        $check_config = DBFind("@1app_params").Where({app_id:$ApplicationId,ecosystem: 1, name:{"$like":"_config"}}).Row()
+        if !$check_config["id"] {
+            error("Could not find config for this application")
+        }
+        $application_name = Str($check_app["name"])
+        $application_condition = `ContractConditions("DeveloperCondition")`
+        $application_config = Str($check_config["value"])
+        $check_install_apps = DBFind("@1applications").Columns("id,ecosystem,name").Where({name: $application_name,ecosystem: $ecosystem_id}).One("id")
+        if $check_install_apps {
+            warning ("Application already installed")
+        }
+    }
+    action {
+        //new_app
+        @1NewApplication("Name,Conditions",$application_name,$application_condition)
+
+        //buffer data for import contract
+        var app_ins map
+        app_ins["app_name"] = $application_name
+        
+        $import_id = DBFind("@1buffer_data").Where({member_id:$key_id, key: "import_info", ecosystem: $ecosystem_id}).One("id")
+        if $import_id {
+            $import_id = Int($import_id)
+            DBUpdate("@1buffer_data", $import_id, {"value": app_ins})
+        } else {
+            DBInsert("@1buffer_data", {"member_id":$key_id,"key": "import_info", "value": app_ins,"ecosystem": $ecosystem_id})
+        }
+
+        //import
+        var input item map arrData array sa array
+        input = JSONDecode($application_config)
+        
+        arrData = input["data"]
+        var i lenArrData int
+        lenArrData = Len(arrData)
+        
+        while i < lenArrData {
+            sa = arrData[i]
+            $tt = JSONEncode(sa)
+            $kk = "[" + $tt + "]"
+          
+            Import("Data",$kk)
+            
+            i = i + 1
+        }
+    }
+}
