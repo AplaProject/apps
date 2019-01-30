@@ -4,13 +4,6 @@ contract AppInstall {
     }
 
     conditions {
-        var admin_id string rids array
-        admin_id = EcosysParam("role_admin")
-        rids = JSONDecode("["+admin_id+"]")  
-        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id":{"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
-            warning LangRes("@1access_denied", "en")
-        }
-
         $check_app = DBFind("@1applications").Columns("id,ecosystem,name,conditions").Where({"id": $ApplicationId, "ecosystem": 1}).Row()
         if !$check_app["id"] {
             warning LangRes("@1item_not_found", "en")
@@ -27,15 +20,13 @@ contract AppInstall {
         $app_name = Str(config_map["name"])
         $app_condition = Str(config_map["conditions"])
         $app_data = config_map["data"]
-
-        if DBFind("@1applications").Columns("id,ecosystem,name").Where({"name": $app_name, "ecosystem": $ecosystem_id}).One("id") {
-            warning LangRes("@1app_installed", "en")
-        }
     }
 
     action {
         //new_app
-        @1NewApplication("Name,Conditions", $app_name, $app_condition)
+        if !DBFind("@1applications").Columns("id,ecosystem,name").Where({"name": $app_name, "ecosystem": $ecosystem_id}).One("id") {
+            @1NewApplication("Name,Conditions", $app_name, $app_condition)
+        }
 
         //buffer data for import contract
         var app_ins map
