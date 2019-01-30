@@ -1,13 +1,13 @@
-SetVar(this_page, @1apps_install_list).(this_table, @1applications)
+SetVar(this_page, @1apps_catalog).(this_table, @1applications)
 Include(@1pager_header)
 
-SetTitle("Install applications")
-Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "On this page you can install missing applications"))
+SetTitle($@1apps_catalog$)
+Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: $@1apps_catalog_desc$))
 
 If(GetVar(search)){
-    SetVar(where, {ecosystem:1, deleted:0, name:{"$like": "#search#"}})
+    SetVar(where, {"ecosystem": 1, "deleted": 0, "name": {"$like": "#search#"}})
 }.Else{
-    SetVar(where, {ecosystem:1, deleted:0}).(search,)
+    SetVar(where, {"ecosystem": 1, "deleted": 0})
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
@@ -18,13 +18,13 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(inst_app){
     If(#ecosystem_id# != 1){
         SetVar(config_id,0)
-        DBFind(@1applications).Where({name:#name#,ecosystem:#ecosystem_id#}).Count(inst_app)
-        DBFind(@1app_params).Where({app_id:#id#,ecosystem: 1, name:{"$like":"_config"}}).Vars(config)
+        DBFind(@1applications).Where({"name": #name#, "ecosystem": #ecosystem_id#}).Count(inst_app)
+        DBFind(@1app_params).Where({"app_id": #id#, "ecosystem": 1, "name": {"$like":"_config"}}).Vars(config)
         If(#config_id# > 0){
             If(#inst_app# == 0){
-                Button(Install app,Class: pull-right btn-link,Contract:@1AppInstall,Params:"ApplicationId=#id#",Page: @1apps_install_list)
+                Button(Body: $@1install$, Class: pull-right btn-link, Contract:@1AppInstall, Params:"ApplicationId=#id#", Page: #this_page#)
             }.Else{
-                Span(Installed,Class: text-muted pull-right)
+                Span(Body: $@1installed$, Class: text-muted pull-right)
             }
         }
     }
