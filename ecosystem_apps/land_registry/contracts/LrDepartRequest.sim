@@ -1,0 +1,46 @@
+contract LrDepartRequest {
+    data {
+        ObjectId int
+        DepartNumber int
+    }
+
+    conditions {
+        $app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Land registry"}).One("id")
+        var requests_flag int
+        if $DepartNumber == 2 {
+            requests_flag = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "page_params->object_id": $ObjectId, "page_params->depart2_requests": 2}).One("id")
+            if requests_flag {
+                warning LangRes("lr_requests_limit_reached", "en")
+            }
+        } elif $DepartNumber == 3 {
+            requests_flag = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "page_params->object_id": $ObjectId, "page_params->depart3_requests": 2}).One("id")
+            if requests_flag {
+                warning LangRes("lr_requests_limit_reached", "en")
+            }
+        }
+    }
+    
+    action {
+        var request params map
+        request["sender"] = 1
+        request["page_name"] = "lr_view"
+        request["text_header"] = LangRes("lr_additional_request", "en")
+        request["text_body"] = LangRes("lr_need_processing", "en")
+        request["icon_name"] = "fa fa-bell-o"
+        request["closure_type"] = 1
+        request["popup"] = "true"
+        params["object_id"] = $ObjectId
+        
+        if $DepartNumber == 2 {
+            request["rid"] = Int(AppParam(Int($app_id), "lr_depart2_role", $ecosystem_id))
+            params["depart2_requests"] = 2
+            request["params_map"] = params
+        } elif $DepartNumber == 3 {
+            request["rid"] = Int(AppParam(Int($app_id), "lr_depart3_role", $ecosystem_id))
+            params["depart3_requests"] = 2
+            request["params_map"] = params
+        }
+
+        CallContract("@1NotificationsSend", request)
+    }
+}

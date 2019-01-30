@@ -1,104 +1,131 @@
-Div(content-wrapper){
+SetVar(this_page, @1history)
+If(#view_mode# == ""){
+    SetVar(view_mode, "compact")
+}
+If(#view_mode# == compact){
+    SetVar(compact_button, "bg-gray-lighter")
+    SetVar(full_button, "bg-gray")
+}.Else{
+    SetVar(full_button, "bg-gray-lighter")
+    SetVar(compact_button, "bg-gray")
+}
+SetVar(element_id, #id#)
+If(GetVar(type) == page){
+    DBFind(@1pages).Where({"id": #element_id#, "ecosystem": #ecosystem_id#}).Limit(1).Vars("res")
+    SetTitle($@1page_history$: #res_name#)
+    SetVar(contract_name, "@1EditPage")
+    GetHistory(Source: src_history, Name: pages, Id: #element_id#)
+}.ElseIf(GetVar(type) == block){
+    DBFind(@1blocks).Where({"id": #element_id#, "ecosystem": #ecosystem_id#}).Limit(1).Vars("res")
+    SetTitle($@1block_history$: #res_name#)
+    SetVar(contract_name, "@1EditBlock")
+    GetHistory(Source: src_history, Name: blocks, Id: #element_id#)
+}.ElseIf(GetVar(type) == contract){
+    DBFind(@1contracts).Where({"id": #element_id#, "ecosystem": #ecosystem_id#}).Limit(1).Vars("res")
+    SetTitle($@1contract_history$: #res_name#)
+    SetVar(contract_name, "@1EditContract")
+    GetHistory(Source: src_history, Name: contracts, Id: #element_id#)
+}.ElseIf(GetVar(type) == menu){
+    DBFind(@1menu).Where({"id": #element_id#, "ecosystem": #ecosystem_id#}).Limit(1).Vars("res")
+    SetTitle($@1menu_history$: #res_name#)
+    SetVar(contract_name, "@1EditMenu")
+    GetHistory(Source: src_history, Name: menu, Id: #element_id#)
+}
 
-    If(GetVar(type) == page){
-        DBFind(@1pages, src_res).Where({id:#id#,ecosystem:#ecosystem_id#}).Limit(1).Vars("res")
-        SetTitle($@1page_history$: #res_name#)
-    }
-    If(GetVar(type) == block){
-        DBFind(@1blocks, src_res).Where({id:#id#,ecosystem:#ecosystem_id#}).Limit(1).Vars("res")
-        SetTitle($@1block_history$: #res_name#)
-    }
-    If(GetVar(type) == contract){
-        DBFind(@1contracts, src_res).Where({id:#id#,ecosystem:#ecosystem_id#}).Limit(1).Vars("res")
-        SetTitle($@1contract_history$: #res_name#)
-    }
-    If(GetVar(type) == menu){
-        DBFind(@1menu, src_res).Where({id:#id#,ecosystem:#ecosystem_id#}).Limit(1).Vars("res")
-        SetTitle($@1menu_history$: #res_name#)
-    }
-    SetVar(admin_page, page_history)
-    If(#sort#==1){
-        SetVar(sort_name, "id asc")
-    }.ElseIf(#sort#==2){
-        SetVar(sort_name, "id desc")
-    }.ElseIf(#sort#==3){
-        SetVar(sort_name, "name asc")
-    }.ElseIf(#sort#==4){
-        SetVar(sort_name, "name desc")
-    }.Else{
-        SetVar(sort, "1")
-        SetVar(sort_name, "id asc")
-    }
+Div(mr-lg text-right){
+    Button(Page: #this_page#, PageParams: "view_mode=compact,type=#type#,id=#element_id#", Class: btn #compact_button# mr-sm, Body: Em(Class: fa fa-bars) $@1compact$)
+    Button(Page: #this_page#, PageParams: "view_mode=full,type=#type#,id=#element_id#", Class: btn #full_button# mr-sm, Body: Em(Class: fa fa-arrows-alt) $@1full$)
+}.Style(margin-top: -33px; z-index: 1001;)
 
-    If(GetVar(type) == page){
-        GetHistory(Source: src_history, Name:pages, Id: #id#)
-    }
-    If(GetVar(type) == block){
-        GetHistory(Source: src_history, Name: blocks, Id: #id#)
-    }
-    If(GetVar(type) == contract){
-        GetHistory(Source: src_history, Name: contracts, Id: #id#)
-    }
-    If(GetVar(type) == menu){
-        GetHistory(Source: src_history, Name: menu, Id: #id#)
-    }
-
-
-    If(Or(#width#==12,#width#==6,#width#==4)){
-    }.Else{
-        SetVar(width, "12")
-    }
-
-    Form(){
-        Div(clearfix){
-            Div(pull-right){
-                If(#width#==12){
-                    Span(Button(Body: Em(Class: fa fa-bars), Class: btn bg-gray-lighter, Page: #admin_page#, PageParams: "width=12,id=#id#,type=#type#")).Style(margin-right:5px;)
-                }.Else{
-                    Span(Button(Body: Em(Class: fa fa-bars), Class: btn bg-gray, Page: #admin_page#, PageParams: "width=12,id=#id#,type=#type#")).Style(margin-right:5px;)
-                }
-                If(#width#==6){
-                    Span(Button(Body: Em(Class: fa fa-th-large), Class: btn bg-gray-lighter, Page: #admin_page#, PageParams: "width=6,id=#id#,type=#type#")).Style(margin-right:5px;)
-                }.Else{
-                    Span(Button(Body: Em(Class: fa fa-th-large), Class: btn bg-gray, Page: #admin_page#, PageParams: "width=6,id=#id#,type=#type#")).Style(margin-right:5px;)
-                }
-                If(#width#==4){
-                    Span(Button(Body: Em(Class: fa fa-th), Class: btn bg-gray-lighter, Page: #admin_page#, PageParams: "width=4,id=#id#,type=#type#")).Style(margin-right:5px;)
-                }.Else{
-                    Span(Button(Body: Em(Class: fa fa-th), Class: btn bg-gray, Page: #admin_page#, PageParams: "width=4,id=#id#,type=#type#")).Style(margin-right:5px;)
+Div(fullscreen){
+    Div(list-group-item ml-lg mr-lg){
+        Div(table){
+            Div(table__head){
+                Div(table__row){
+                    Div(table__cell){$@1id$}
+                    Div(table__cell){$@1value$}
+                    Div(table__cell){}
                 }
             }
-        }
-    }
-
-
-
-    Form(panel panel-primary){
-        Div(panel-body){
-            Div(row){
-                ForList(Source: src_history){
-                    Div(col-md-#width# col-sm-12){
-                        Div(list-group-item){
-                            Div(row){
-                                Div(col-md-1){
-                                    Span(Class: h5, Body: "#src_history_index#")
-                                }
-                                Div(col-md-3){
-                                    Span(Class: h5, Body: "#name#")
-                                }
-                                Div(col-md-4){
-                                    Span(Class: h5, Body: "#conditions#")
-                                }
-                                Div(col-md-4){
-                                    Div(pull-right){
-                                        Button(Body: Em(Class: fa fa-recycle), Class: btn btn-primary, Page: @1history, PageParams: "width=#width#,id=#id#,type=#type#", Contract: @1Restore, Params: "Id=#id#,IdHistory=#src_history_index#,Type=#type#")
-                                    }
-                                }
+            Div(table__row){
+                Div(table__cell table__cell_collapse){$@1current$}
+                Div(table__cell){
+                    If(#view_mode# == compact){
+                        VarAsIs(value_as_is, #res_value#)
+                        Span(#value_as_is#)
+                    }.ElseIf(#view_mode# == full){
+                        VarAsIs(value_as_is, #res_value#)
+                        Code(#value_as_is#)
+                    }
+                }
+                Div(table__cell table__cell_collapse){}
+            }
+            ForList(src_history){
+                If(#id#>0){
+                    Div(table__row){
+                        Div(table__cell table__cell_collapse){#id#}
+                        Div(table__cell){
+                            If(#view_mode# == compact){
+                                VarAsIs(value_as_is, #value#)
+                                Span(#value_as_is#)
+                            }.ElseIf(#view_mode# == full){
+                                VarAsIs(value_as_is, #value#)
+                                Code(#value_as_is#)
                             }
+                        }
+                        Div(table__cell table__cell_collapse){
+                            Div(text-right){
+                                Button(Class: btn bg-gray-lighter mr-sm, Body: Em(Class: fa fa-eye), Page: @1history_compare, PageParams: "type=#type#,element_id=#element_id#,history_id=#id#")
+                                Button(Class: btn bg-gray-lighter, Body: Em(Class: fa fa-undo), Page: #this_page#, PageParams: "type=#type#,id=#element_id#,view_mode=#view_mode#", Contract: #contract_name#, Params: "Id=#element_id#,Value=#value_as_is#").Alert(Text: "$@1want_restore_history_value$", ConfirmButton: "$@1yes$", CancelButton: "$@1no$", Icon: icon-question)
+                            }.Style(min-width: 120px;)
                         }
                     }
                 }
             }
         }
     }
-}
+}.Style(
+    .table {
+        display: table;
+    }
+
+    .table > div:not(.table__body) {
+        display: table-row-group;
+    }
+
+    .table .table__head {
+        display: table-header-group;
+    }
+
+    .table .table__head .table__cell {
+        font-weight: 700;
+        color: #888;
+        background: #fff !important;
+        border-left: 0 !important;
+        border-right: 0 !important;
+        border-top: 0 !important;
+    }
+
+    .table .table__row {
+        display: table-row;
+        flex-direction: row;
+        flex-wrap: no-wrap;
+    }
+
+    .table .table__row:nth-child(even) {
+        background: #f8f9fc;
+    }
+
+    .table .table__row .table__cell {
+        border-top: solid 1px #eee;
+    }
+
+    .table .table__cell {
+        display: table-cell;
+        padding: 8px 10px;
+    }
+
+    .table .table__cell.table__cell_collapse {
+        width: 1px;
+    }
+)

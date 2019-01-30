@@ -1,0 +1,177 @@
+SetVar(this_page,"@1errand_create")
+
+If(GetVar(EcosystemId) == #ecosystem_id#){
+    SetVar(errand_type,1)
+}
+
+If(GetVar(errand_type)==""){
+    SetVar(errand_type,0)
+}
+
+If(GetVar(MemberId) == ""){
+    SetVar(MemberId, 0)
+}
+
+Form(){
+    Div(row mb-sm){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                $@1errand_performer$
+                Span(*,text-danger)
+            }
+        }
+        Div(col-md-9 text-left){
+            If(GetVar(errand_type)==0){
+                Button(Body: $@1role$, Class: btn btn-primary mr-sm disabled)
+                Button(Body: $@1member$, Page: #this_page#, PageParams: "errand_type=1,type=#type#", Class: btn btn-primary).Popup(50, "$@1new_errand$")
+
+            }.ElseIf(GetVar(errand_type)==1){
+                Button(Body: $@1role$, Page: #this_page#, PageParams: "errand_type=0,type=#type#", Class: btn btn-primary mr-sm).Popup(50, "$@1new_errand$")
+                Button(Body: $@1member$, Class: btn btn-primary disabled)
+            }
+        }
+    }
+    Div(row mt-sm){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                If(GetVar(errand_type)==0){
+                    $@1choose_role_errand$
+                }.ElseIf(GetVar(errand_type)==1){
+                    $@1recipient$
+                }
+                Span(*,text-danger)
+            }
+        }
+        Div(col-md-9 text-left){
+            If(GetVar(errand_type)==0){
+                DBFind(@1roles, src_roles).Where({"ecosystem": #ecosystem_id#, "deleted": 0}).Columns("id,role_name")
+                Select(Name: rec_role_id, Source: src_roles, NameColumn: role_name, ValueColumn: id)
+            }.ElseIf(GetVar(errand_type)==1){
+                Input(Name: member_id, Type:hidden, Value: #MemberId#)
+                Div(input-group){
+                    If(#MemberId# != 0){
+                        SetVar(AddressMemberId, Address(#MemberId#))
+                        Input(Name: m_name, Disabled: 1, Value: #AddressMemberId#)
+                    }.Else{
+                        Input(Name: m_name, Disabled: 1, Value: "xxxx-xxxx-xxxx-xxxx-xxxx")
+                    }
+                    Div(input-group-btn){
+                        Button(Class: btn bg-gray-lighter fa fa-caret-down mtl buttons, Page: @1select_wallet, PageParams:"back_page=#this_page#,back_header=$@1send$,EcosystemId=#ecosystem_id#").Popup(Header: $@1member$, Width: "50")
+                    }.Style(
+                        .buttons{border: 1px solid #dde6e9;}
+                    )
+                }
+            }
+        }
+    }
+    If(And(#MemberId# != 0,GetVar(errand_type)==1)){
+        Div(row mt-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    $@1name$
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Input(Name: errand_name, Value: "New errand")
+            }
+        }
+        Div(row mt-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(For: end_date){
+                    $@1date_end$
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Div(row){
+                    Div(col-md-6){
+                        Input(Name: end_date, Type: date)
+                    }
+                    Div(col-md-6){
+                        Input(Name: end_time, Type: time, Value: "00:00")
+                    }
+                }
+            }
+        }
+        Div(row mt-sm){
+            Div(col-md-3 mt text-right){
+                Label(){
+                    $@1body_text$
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Input(Name: errand_text,Type: textarea)
+            }
+        }
+    }.ElseIf(GetVar(errand_type)==0){
+        If(#role_type_errand# != 2){
+            SetVar(role_type_errand,1)
+        }
+        Div(row mt-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    $@1type_role_errand$
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                If(And(GetVar(errand_type)==0,#role_type_errand# == 1)){
+                    Button(Body: $@1one_role_representative$, Class: btn btn-primary mr-sm disabled)
+                    Button(Body: $@1all_roles_member$, Page: #this_page#, PageParams: "errand_type=0,role_type_errand=2", Class: btn btn-primary).Popup(50, "$@1new_errand$")
+                }.ElseIf(And(GetVar(errand_type)==0,#role_type_errand# == 2)){
+                    Button(Body: $@1one_role_representative$, Page: #this_page#, PageParams: "errand_type=0,role_type_errand=1", Class: btn btn-primary mr-sm).Popup(50, "$@1new_errand$")
+                    Button(Body: $@1all_roles_member$, Class: btn btn-primary disabled)
+                }
+            }
+        }
+        Div(row mt-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    $@1name$
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Input(Name: errand_name, Value: "New errand")
+            }
+        }
+        Div(row mt-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(For: end_date){
+                    $@1date_end$
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Div(row){
+                    Div(col-md-6){
+                        Input(Name: end_date, Type: date)
+                    }
+                    Div(col-md-6){
+                        Input(Name: end_time, Type: time, Value: "00:00")
+                    }
+                }
+            }
+        }
+        Div(row mt-sm){
+            Div(col-md-3 mt text-right){
+                Label(){
+                    $@1body_text$
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Input(Name: errand_text,Type: textarea)
+            }
+        }
+    }
+    Div(row mt){
+        Div(col-md-12){
+            Input(send_role_id,Class: hidden,Value: #role_id#)
+            Button(Body: $@1send$, Class: btn btn-primary pull-right,PageParams:"type=#type#",Page: @1errand_list, Contract: @1ErrandCreate, Params: "errand_type=#errand_type#,role_type_errand=#role_type_errand#")
+            Button(Body: $@1back$, Class: btn btn-default pull-right,PageParams:"type=#type#",Page: @1errand_list)
+        }
+    }
+}

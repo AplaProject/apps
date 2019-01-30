@@ -16,34 +16,34 @@ If(GetVar(wallet) == ""){
 
 If(GetVar(new_filter)){
     If(#show_fees#!="true"){
-        SetVar(filter1, {"type": {$neq: 1}})
+        SetVar(filter1, {"type": {"$neq": 1}})
     }
     If(#wallet# != 0){
-        SetVar(filter2, {$or: [{$and: [{"sender_id": #key_id#}, {"recipient_id": #wallet#}]}, {$and: [{"sender_id": #wallet#}, {"recipient_id": #key_id#}]}]})
+        SetVar(filter2, {"$or": [{"$and": [{"sender_id": #key_id#}, {"recipient_id": #wallet#}]}, {"$and": [{"sender_id": #wallet#}, {"recipient_id": #key_id#}]}]})
     }.Else{
-        SetVar(filter2, {$or: [{"sender_id":#key_id#}, {"recipient_id":#key_id#}]})
+        SetVar(filter2, {"$or": [{"sender_id":#key_id#}, {"recipient_id":#key_id#}]})
     }
     If(#lower_limit#>0){
         If(#upper_limit#>0){
-            SetVar(filter3, {"amount": [{$gte: Calculate(Exp: #lower_limit#*1000000000000000000, Type: money)}, {$lte: Calculate(Exp: #upper_limit#*1000000000000000000, Type: money)}]})
+            SetVar(filter3, {"amount": [{"$gte": Calculate(Exp: #lower_limit#*1000000000000000000, Type: money)}, {"$lte": Calculate(Exp: #upper_limit#*1000000000000000000, Type: money)}]})
         }.Else{
-            SetVar(filter3, {"amount": {$gte: Calculate(Exp: #lower_limit#*1000000000000000000, Type: money)}})
+            SetVar(filter3, {"amount": {"$gte": Calculate(Exp: #lower_limit#*1000000000000000000, Type: money)}})
         }
     }.ElseIf(#upper_limit#>0){
-        SetVar(filter3, {"amount": {$lte: Calculate(Exp: #upper_limit#*1000000000000000000, Type: money)}})
+        SetVar(filter3, {"amount": {"$lte": Calculate(Exp: #upper_limit#*1000000000000000000, Type: money)}})
     }
-    SetVar(filters, {$and: [{"ecosystem":#ecosystem_id#}, GetVar(filter1), GetVar(filter2), GetVar(filter3)]})
+    SetVar(filters, {"$and": [{"ecosystem":#ecosystem_id#}, GetVar(filter1), GetVar(filter2), GetVar(filter3)]})
     SetVar(page_par, #filters#)
 }.ElseIf(GetVar(page_par)){
     SetVar(filters, #page_par#)
 }.Else{
-    SetVar(filters, {$and: [{"ecosystem":#ecosystem_id#}, {"type": {$neq: 1}}, {$or: [{"sender_id":#key_id#}, {"recipient_id":#key_id#}]}]})
+    SetVar(filters, {"$and": [{"ecosystem":#ecosystem_id#}, {"type": {"$neq": 1}}, {"$or": [{"sender_id":#key_id#}, {"recipient_id":#key_id#}]}]})
 }
 
-If(GetVar(search)!=""){
-    SetVar(where, {$and: [GetVar(filters), {"comment": {$like: #search#}}]})
+If(GetVar(search)){
+    SetVar(where, {"$and": [GetVar(filters), {"comment": {"$like": "#search#"}}]})
 }.Else{
-    SetVar(where, GetVar(filters)).(search,)
+    SetVar(where, GetVar(filters))
 }
 
 Div(mr-lg text-right){
@@ -57,7 +57,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
+DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
 
 DBFind(@1history, src_history).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(sender_wallet){
     If(#sender_id# != 0){

@@ -1,0 +1,68 @@
+contract QAnswer {
+    data {
+        id int "optional"
+        operation string
+        question_id int
+        decision string
+        answer_id int
+    }
+    conditions {
+        if JSONDecode(DBFind("@1q_list").Where({"id": $question_id}).Columns("deleted").One("deleted")) == 1 {
+            warning LangRes("@1q_error_cannot", "en")
+        }
+        if JSONDecode(DBFind("@1q_list").Where({"id": $question_id}).Columns("status").One("status")) != 1 {
+            warning LangRes("@1q_error_cannot", "en")
+        }
+        if $operation == "UV" {
+            if Str(JSONDecode(DBFind("@1q_list").Where({"id": $question_id}).Columns("params->change").One("params->change"))) != "true" {
+                warning LangRes("@1q_error_revoting", "en")
+            }
+        }
+        var rid_array array
+        rid_array = JSONDecode(DBFind("@1q_list").Where({"id": $question_id}).One("au_roles"))
+        if rid_array[0] != 0 {
+            $role_access = DBFind("@1roles_participants").Where({"member->member_id": $key_id, "deleted": 0, "ecosystem": $ecosystem_id, "role->id": {"$in": rid_array}}).Columns("role->id")
+            if Len($role_access) == 0 {
+                warning LangRes("@1q_error_cannot", "en")
+            }
+        }
+        var grp_array array
+        grp_array = JSONDecode(DBFind("@1q_list").Where({"id": $question_id}).One("au_groups"))
+        if grp_array[0] != 0 {
+            $group_access = DBFind("@1groups_participants").Where({"member->member_id": $key_id, "deleted": 0, "ecosystem": $ecosystem_id," groups_info->id": {"$in": grp_array}}).Columns("groups_info->id")
+            if Len($group_access) == 0 {
+                warning LangRes("@1q_error_cannot", "en")
+            }
+        }
+    }
+    action {
+        if $time > Int(DBFind("@1q_list").Where({"id": $question_id}).Columns("expired").One("expired")) {
+            var q map
+            q["expired"] = $time
+            q["status"] = 2
+            q["lastmodified"] = $time
+            DBUpdate("@1q_list", $question_id, q)
+        } else {
+            if $operation == "CV" {
+                var a map
+                a["member"] = $key_id
+                a["decision"] = $decision
+                a["answer_id"] = $answer_id
+                a["ecosystem"] = $ecosystem_id
+                a["lastmodified"] = $time
+                a["question_id"] = $question_id
+                DBInsert("@1q_answers", a)
+            }
+            if $operation == "UV" {
+                var a map
+                a["member"] = $key_id
+                a["decision"] = $decision
+                a["answer_id"] = $answer_id
+                a["ecosystem"] = $ecosystem_id
+                a["lastmodified"] = $time
+                a["question_id"] = $question_id
+                DBUpdate("@1q_answers", $id, a)
+            }
+        }
+    }
+}

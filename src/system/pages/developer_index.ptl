@@ -1,6 +1,6 @@
 SetVar(this_page, @1developer_index).(deleters_count,0)
-DBFind(@1contracts).Where({name:ItemChangeAppId,ecosystem:1}).Count(changer_count)
-DBFind(@1applications,src_apps).Where({deleted:0,ecosystem:#ecosystem_id#}).Order(id).Count(apps_count)
+DBFind(@1contracts).Where({"name": ItemChangeAppId, "ecosystem": 1}).Count(changer_count)
+DBFind(@1applications,src_apps).Where({"deleted": 0, "ecosystem": #ecosystem_id#}).Order(id).Count(apps_count)
 
 If(And(GetVar(Restore),GetVar(Table),GetVar(Id))){
     Form(){
@@ -20,7 +20,7 @@ If(And(GetVar(Restore),GetVar(Table),GetVar(Id))){
     )
     Include(Name:#block#)
 }.Else{
-    DBFind(@1buffer_data).Columns("value->app_id").Where({key:export,member_id:#key_id#,ecosystem:#ecosystem_id#}).Vars(buffer)
+    DBFind(@1buffer_data).Columns("value->app_id").Where({"key": export, "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
     If(#Single#==binaries){
         Data(tables, "Table,Page,Name"){
             @1binaries,@1app_upload_binary,$@1binaries$
@@ -41,24 +41,24 @@ If(And(GetVar(Restore),GetVar(Table),GetVar(Id))){
     SetVar(active_btn,"btn btn-info").(create_icon,fa fa-plus-square).(cols,3)
 
     If(GetVar(appid)!=""){
-        SetVar(where,"{app_id:#appid#,ecosystem:#ecosystem_id#}")
+        SetVar(where, {"app_id": #appid#, "ecosystem": #ecosystem_id#})
     }.Else{
         If(#buffer_value_app_id#>0){
-            DBFind(@1applications).Where({id:#buffer_value_app_id#,deleted:0,ecosystem:#ecosystem_id#}).Vars(check)
+            DBFind(@1applications).Where({"id": #buffer_value_app_id#, "deleted": 0, "ecosystem": #ecosystem_id#}).Vars(check)
             If(#check_id# > 0){
-                SetVar(appid,#buffer_value_app_id#).(where,"{app_id:#appid#,ecosystem:#ecosystem_id#}")
+                SetVar(appid,#buffer_value_app_id#).(where, {"app_id": #appid#, "ecosystem": #ecosystem_id#})
             }.Else{
-                SetVar(where,"{id:{ $gt:0},ecosystem:#ecosystem_id#}").(appid,1)
+                SetVar(where,{"id":{"$gt":0}, "ecosystem": #ecosystem_id#}).(appid,1)
             }
         }.Else{
-            SetVar(where,"{id:{ $gt:0},ecosystem:#ecosystem_id#}").(appid,1)
+            SetVar(where, {"id": {"$gt": 0}, "ecosystem": #ecosystem_id#}).(appid,1)
         }
     }
 
     If(#appid#==0){
         SetVar(application_name,trash)
     }.ElseIf(#appid#>0){
-        DBFind(@1applications).Where({id:#appid#,ecosystem:#ecosystem_id#}).Vars(application)
+        DBFind(@1applications).Where({"id": #appid#, "ecosystem": #ecosystem_id#}).Vars(application)
     }
     If(And(#appid# == 1,#ecosystem_id# != 1)){
         SetTitle($@1dashboard$: $@1select_application$)
@@ -107,10 +107,10 @@ If(And(GetVar(Restore),GetVar(Table),GetVar(Id))){
                                 Image(Src: Binary().ById(#id#), Class: preview)
                             }
                         }.ElseIf(#Table#==@1languages){
-                            If(GetVar(search)!=""){
-                                SetVar(where,"{ecosystem:#ecosystem_id#, {$or:[{name:{$like:#search#}}, {res:{$like:#search#}}]}}")
+                            If(GetVar(search)){
+                                SetVar(where, {"ecosystem": #ecosystem_id#, {"$or":[{"name": {"$like": "#search#"}}, {"res": {"$like": "#search#"}}]}})
                             }.Else{
-                                SetVar(where,"{ecosystem:#ecosystem_id#}").(search,)
+                                SetVar(where, {"ecosystem": #ecosystem_id#})
                             }
                             DBFind(#Table#, src_table).Limit(#limit#).Columns(#Cols#).Order("name").Where(#where#).Count(items_count)
                         }.Else{
@@ -126,7 +126,7 @@ If(And(GetVar(Restore),GetVar(Table),GetVar(Id))){
                                         Input(Name: search, Value: #search#)
                                         Div(input-group-btn){
                                             Button(Class: btn btn-primary fa fa-search, Page: #this_page#, PageParams: "appid=#appid#,search=Val(search),Single=#Single#")
-                                            If(GetVar(search)!=""){
+                                            If(GetVar(search)){
                                                 Button(Class: btn btn-default fa fa-close mr-sm, Page: #this_page#, PageParams: "appid=#appid#,Single=#Single#")
                                             }
                                         }
@@ -192,14 +192,17 @@ If(And(GetVar(Restore),GetVar(Table),GetVar(Id))){
                                                                 If(#wallet_id#!=0){
                                                                     Span($@1binded$, text-success mr-lg)
                                                                 }
+                                                                LinkPage(Class: text-muted fa fa-history, Page: @1history, PageParams: "id=#id#,type=contract")
                                                                 LinkPage(Class: text-muted fa fa-cogs, Page: @1properties_edit, PageParams: "edit_property_id=#id#,type=contract")
                                                             }
                                                             If(#Table#==@1pages){
                                                                 LinkPage(Class: text-muted fa fa-eye, Page: #name#)
+                                                                LinkPage(Class: text-muted fa fa-history, Page: @1history, PageParams: "id=#id#,type=page")
                                                                 LinkPage(Class: text-muted fa fa-cogs, Page: @1properties_edit, PageParams: "edit_property_id=#id#,type=page")
                                                             }
                                                             If(#Table#==@1blocks){
                                                                 LinkPage(Class: text-muted fa fa-eye, Page: #this_page#, PageParams:"block=#name#")
+                                                                LinkPage(Class: text-muted fa fa-history, Page: @1history, PageParams: "id=#id#,type=block")
                                                                 LinkPage(Class: text-muted fa fa-cogs, Page: @1properties_edit, PageParams: "edit_property_id=#id#,type=block")
                                                             }
                                                             If(#Table#==@1tables){

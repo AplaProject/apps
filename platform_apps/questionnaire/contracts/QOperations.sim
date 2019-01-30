@@ -1,0 +1,247 @@
+contract QOperations {
+    data {
+        id int "optional"
+        description string
+        question string
+        answer string
+        operation string
+        status int
+        notifications bool "optional"
+        hide bool "optional"
+        change bool "optional"
+        au_groups int "optional"
+        au_roles int "optional"
+        end_date string
+        end_time string
+    }
+    func trimZeroTime(s string) string {
+        if Contains(s, "T00:00:00Z") {
+            s = Replace(s, "T00:00:00Z", "")
+        }
+        return s
+    }
+    func dateAddTime(d, t string) string {
+        var dt string
+        if Size(t) == 5 {
+            dt = Sprintf("%v %v:00", trimZeroTime(d), t)
+        }
+        return dt
+    }
+    func isCalledFromPage() bool {
+        return $stack[0] == Sprintf("@%v%v", $ecosystem_id, $this_contract)
+    }
+    func expToTimestamp() {
+        $ext_string = dateAddTime($end_date, $end_time)
+        if $time > UnixDateTime($ext_string) {
+            warning LangRes("@1ending_date_invalid", "en")
+        }
+    }
+    conditions {
+        AdminCondition()
+        if $operation == "GA" {
+            $groups = JSONDecode(DBFind("@1q_list").Where({"id": $id}).Columns("au_groups").One("au_groups"))
+            var i int
+            i = 0
+            while i < Len($groups) {
+                if $groups[i] == $au_roles {
+                    warning LangRes("@1q_error_groups", "en") 
+                }
+                i = i + 1
+            }
+        }
+        if $operation == "RA" {
+            $roles = JSONDecode(DBFind("@1q_list").Where({"id": $id}).Columns("au_roles").One("au_roles"))
+            var i int
+            i = 0
+            while i < Len($roles) {
+                if $roles[i] == $au_roles {
+                    warning LangRes("@1q_error_roles", "en") 
+                }
+                i = i + 1
+            }
+        } 
+        if $operation == "AA" {
+            if $answer == "" {
+                warning LangRes("@1q_error_blank", "en") 
+            }
+        }
+        if $operation == "C" {
+            if $description == "" {
+                warning LangRes("@1q_error_blank", "en") 
+            }
+            if $question == "" {
+                warning LangRes("@1q_error_blank", "en") 
+            }
+            expToTimestamp()
+            if $time > UnixDateTime($ext_string) {
+                warning LangRes("@1q_error_expdate", "en")
+            }
+        }     
+    }
+    action {
+        var q map
+        var audience audience_new array
+        //notifications when start and changing status
+        if $operation == "C" {
+            var decision array
+            decision = JSONDecode(DBFind("@1buffer_data").Where({"key": "q_answers", "member_id": $key_id, "ecosystem": $ecosystem_id}).One("value"))
+            var params map
+            params["notifications"] = $notifications
+            params["hide"] = $hide
+            params["change"] = $change
+            q["question"] = $question
+            q["description"] = $description
+            q["answer"] = JSONEncode(decision)
+            q["ecosystem"] = $ecosystem_id
+            q["deleted"] = 0
+            q["init"] = $key_id
+            q["status"] = 0
+            q["au_roles"] = `[0]`
+            q["au_groups"] = `[0]`
+            q["created_at"] = $time
+            q["params"] = JSONEncode(params)
+            q["lastmodified"] = $time 
+            q["expired"] = UnixDateTime($ext_string)
+            DBInsert("@1q_list", q)
+        }
+        if $operation == "E" {
+            q["description"] = $description
+            q["question"] = $question
+            q["ecosystem"] = $ecosystem_id
+            q["init"] = $key_id
+            q["lastmodified"] = $time
+            DBUpdate("@1q_list", $id, q)
+        }
+        if $operation == "AA" {
+            if $id==0 {
+                if !DBFind("@1buffer_data").Where({"key": "q_answers", "member_id": $key_id, "ecosystem": $ecosystem_id}).One("value") {
+                    var decision array
+                    decision = Append(decision, Str($answer))
+                    q["value"] = JSONEncode(decision)
+                    q["member_id"] = $key_id
+                    q["key"] = "q_answers"
+                    q["ecosystem"] = $ecosystem_id
+                    DBInsert("@1buffer_data", q)
+                } else {
+                    var decision array
+                    $id_upd = Int(DBFind("@1buffer_data").Where({"key": "q_answers", "member_id": $key_id, "ecosystem": $ecosystem_id}).One("id"))
+                    decision = JSONDecode(DBFind("@1buffer_data").Where({"key": "q_answers", "member_id": $key_id, "ecosystem": $ecosystem_id}).One("value"))
+                    decision = Append(decision, Str($answer))
+                    q["value"] = JSONEncode(decision)
+                    DBUpdate("@1buffer_data", $id_upd, q)
+                }
+                
+            } else {
+                var decision array
+                decision = JSONDecode(DBFind("@1q_list").Columns("answer").Where({"id": $id, "ecosystem": $ecosystem_id}).One("answer"))
+                decision = Append(decision, Str($answer))
+                q["answer"] = JSONEncode(decision)
+                DBUpdate("@1q_list", $id, q)
+            }
+        }
+        if $operation == "AD" {
+            if $id==0 {
+                var decision decision_new array
+                decision = JSONDecode(DBFind("@1buffer_data").Where({"key": "q_answers", "member_id": $key_id}).One("value"))
+                $id_upd = Int(DBFind("@1buffer_data").Where({"key": "q_answers", "member_id": $key_id}).One("id"))
+                var i int
+                while i < Len(decision) {
+                    if decision[i] != Str($answer) {
+                        decision_new = Append(decision_new, decision[i])
+                    }
+                    i = i + 1
+                }
+                q["value"] = JSONEncode(decision_new)
+                DBUpdate("@1buffer_data", $id_upd, q)
+            } else {
+                var decision decision_new array
+                decision = JSONDecode(DBFind("@1q_list").Columns("answer").Where({"id": $id, "ecosystem": $ecosystem_id}).One("answer"))
+                var i int
+                while i < Len(decision) {
+                    if decision[i] != Str($answer) {
+                        decision_new = Append(decision_new, decision[i])
+                    }
+                    i = i + 1
+                } 
+                q["answer"] = JSONEncode(decision_new)
+                DBUpdate("@1q_list", $id, q)
+            }
+        }
+        if $operation == "RA" {
+            audience = JSONDecode(DBFind("@1q_list").Where({"id": $id}).Columns("au_roles").One("au_roles"))
+            if audience[0]==0 {
+                audience[0] = $au_roles
+            } else {
+                audience = Append(audience, $au_roles)
+            }
+            q["au_roles"] = JSONEncode(audience)
+            DBUpdate("@1q_list", $id, q)
+        }
+        if $operation == "GA" {
+            audience = JSONDecode(DBFind("@1q_list").Where({"id": $id}).Columns("au_groups").One("au_groups"))
+            if audience[0]==0 {
+                audience[0] = $au_groups
+            } else {
+                audience = Append(audience, $au_groups)
+            }
+            q["au_groups"] = JSONEncode(audience)
+            DBUpdate("@1q_list", $id, q)
+        }
+        if $operation == "RD" {
+            audience = JSONDecode(DBFind("@1q_list").Where({"id": $id}).Columns("au_roles").One("au_roles"))
+            var i int
+            if audience[0]==$au_roles && Len(audience)<2 {
+                audience[0] = 0
+                q["au_roles"] = JSONEncode(audience)
+            } else {
+                while i < Len(audience) {
+                    if audience[i] != $au_roles {
+                        audience_new = Append(audience_new, audience[i])
+                    }
+                    i = i + 1
+                }
+                q["au_roles"] = JSONEncode(audience_new)
+            }
+            DBUpdate("@1q_list", $id, q)
+        }
+        if $operation == "GD" {
+            audience = JSONDecode(DBFind("@1q_list").Where({"id": $id}).Columns("au_groups").One("au_groups"))
+            var i int
+            if audience[0]==$au_groups && Len(audience)<2 {
+                audience[0] = 0
+                q["au_groups"] = JSONEncode(audience)
+            } else {
+                while i < Len(audience) {
+                    if audience[i] != $au_roles {
+                        audience_new = Append(audience_new, audience[i])
+                    }
+                    i = i + 1
+                }
+                q["au_groups"] = JSONEncode(audience)
+            }
+            DBUpdate("@1q_list", $id, q)
+        }        
+        if $operation == "T" {
+            //notification send
+            q["init"] = $key_id
+            q["status"] = 1
+            q["lastmodified"] = $time
+            DBUpdate("@1q_list", $id, q)
+        }
+        if $operation == "Z" {
+            //notifications close
+            q["init"] = $key_id
+            q["status"] = 3
+            q["lastmodified"] = $time
+            DBUpdate("@1q_list", $id, q)
+        }
+        if $operation == "D" {
+            //notifications close
+            q["init"] = $key_id
+            q["status"] = 3
+            q["deleted"] = 1
+            q["lastmodified"] = $time
+            DBUpdate("@1q_list", $id, q)
+        }
+    }
+}

@@ -1,0 +1,137 @@
+SetVar(this_page, @1e_event_form).(back_page, @1e_events)
+
+SetTitle($@1e_events$)
+Div(breadcrumb text-muted){
+    LinkPage(Body:$@1e_events$, Page: @1e_events)
+    Span(/,mh)
+    If(#Id#>0){
+        $@1e_edit_event$
+    }.Else{
+        $@1e_create_event$
+    }
+}
+
+SetVar(event_name,).(event_description,).(event_event_address_json,{"type":"point","coords":[[37.620558583362,55.75364730329732]],"area":0, "zoom":10})
+
+DBFind(@1e_types, t).Where({"ecosystem": #ecosystem_id#}).Columns("id,name")
+SetVar(types_json,`"0":"$@1e_new_type$"`)
+ForList(t){
+    SetVar(types_json,`#types_json#,"#id#":"#name#"`)
+}
+JsonToSource(types,{#types_json#})
+
+Div(row){
+    Div(col-sm-6 col-sm-offset-3){
+        Form(mt-lg panel panel-primary){
+            Div(panel-body){
+                If(#Id#>0){
+                    Input(Name: Id, Type: hidden, Value: #Id#)
+                    DBFind("@1e_events").WhereId(#Id#).Vars(event)
+                    If(GetVar(MemberId)==""){
+                        SetVar(MemberId, #event_responsible#)
+                    }
+                    If(GetVar(Type)==""){
+                        SetVar(Type, #event_type#)
+                    }
+                }.Else{
+                    SetVar(Id,)
+                }
+                Div(row mb-sm){
+                    Div(col-sm-4 mt text-bold text-right){
+                        $@1e_responsible$
+                    }
+                    Div(col-sm-8 text-left){
+                        Div(input-group){
+                            Div(text-muted mt){
+                                If(GetVar(MemberId)!=""){
+                                    SetVar(AddressMemberId, Address(#MemberId#))
+                                    Div(list-group-item){
+                                        #AddressMemberId#
+                                    }.Style(height: 35px; top: -5px;)
+                                }.Else{
+                                    Div(list-group-item){
+                                        xxxx-xxxx-xxxx-xxxx-xxxx
+                                    }.Style(height: 35px; top: -5px;)
+                                }
+                            }
+                            Div(input-group-btn){
+                                Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=#this_page#,EcosystemId=#ecosystem_id#,Id=#Id#").Popup(Header: $@1member$, Width: "50")
+                            }.Style(
+                                .buttons {
+                                    border: 1px solid #dde6e9;
+                                    padding: 6px 16px;
+                                }
+                            )
+                        }
+                    }
+                }
+                If(GetVar(MemberId)!=""){
+                    Div(row mb-sm){
+                        Div(col-md-4 mt-sm text-right text-bold){
+                            $@1e_event_name$
+                        }
+                        Div(col-md-8 text-left){
+                            Input(Name: Name, Value: #event_name#)
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-4 mt text-bold text-right){
+                            $@1description$
+                        }
+                        Div(col-sm-8 text-left){
+                            Input(Name: Description, Type: textarea, Value: #event_description#)
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-4 mt-sm text-right text-bold){
+                            $@1e_type$
+                        }
+                        Div(col-sm-8 text-left){
+                            Select(Name: Type, Source: types, NameColumn: value, ValueColumn: key, Value: #Type#)
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-4 mt text-bold text-right){
+                            $@1e_event_address$
+                        }
+                        Div(col-sm-8 text-left){
+                            InputMap(Name: EventAddress, Type: point, MapType: streets, Value: #event_event_address_json#)
+                        }
+                    }
+                    Div(row mb-sm){
+                        Div(col-sm-4 mt-sm text-right text-bold){
+                            $@1e_starting_date$
+                        }
+                        Div(col-sm-8 text-left){
+                            Div(row){
+                                If(#Id#>0){
+                                    Div(col-sm-6){
+                                        SetVar(date, DateTime(#event_starting_date#, Format: YYYY-MM-DD))
+                                        Input(Name:StartingDate, Type:date, Value: #date#)
+                                    }
+                                    Div(col-sm-6){
+                                        SetVar(time, DateTime(#event_starting_date#, Format: HH:MI))
+                                        Input(Name:StartingTime, Type:time, Value: #time#)
+                                    }
+                                }.Else{
+                                    Div(col-sm-6){
+                                        Input(Name:StartingDate, Type:date)
+                                    }
+                                    Div(col-sm-6){
+                                        Input(Name:StartingTime, Type:time, Value: "00:00")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Div(panel-footer text-right){
+                Button(Body: $@1back$, Class: btn btn-default, Page: #back_page#)
+                If(GetVar(MemberId)!=""){
+                    Button(Body: $@1send$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: @1EEvent, Params: "Responsible=#MemberId#")
+                }
+            }
+        }
+    }
+}

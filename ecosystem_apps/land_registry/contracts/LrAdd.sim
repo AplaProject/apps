@@ -1,0 +1,76 @@
+contract LrAdd {
+    data {
+        Coords string
+        LandUse int
+        LandType int
+        LandAuthority int
+        BuildingsUseClass int
+        RegistrationDate string
+        Price money
+    }
+    
+    conditions {
+        $app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Land registry"}).One("id")
+        if $app_id > 0 {
+            if AppParam(Int($app_id), "lr_depart2_role", $ecosystem_id) == 0 || AppParam(Int($app_id), "lr_depart3_role", $ecosystem_id) == 0 || AppParam(Int($app_id), "lr_bank_role", $ecosystem_id) == 0 || AppParam(Int($app_id), "lr_admin_role", $ecosystem_id) == 0 {
+                info LangRes("lr_all_roles_needed", "en")
+            }
+        } else {
+            warning LangRes("@1app_not_found", "en")
+        }
+    }
+    
+    action {
+        var coords map coordsAddress, area string unixRegDate int
+        coords = JSONToMap($Coords)
+        coordsAddress = coords["address"]
+        area = Sprintf("%.0f", coords["area"])
+        unixRegDate = UnixDateTime(Sprintf("%s %s", $RegistrationDate, "00:00:00"))
+
+        var m specifications map objectId int
+        specifications["address"] = coordsAddress
+        specifications["area"] = area
+        specifications["buildings_class"] = $BuildingsUseClass
+        specifications["map_coords"] = $Coords
+        specifications["land_use"] = $LandUse
+        specifications["land_type"] = $LandType
+        specifications["land_authority"] = $LandAuthority
+
+        m["owner_id"] = $key_id
+        m["deleted"] = 0
+        m["date_created"] = $block_time
+        m["registration_date"] = unixRegDate
+        m["modification_date"] = $block_time
+        m["price"] = $Price
+        m["specifications"] = specifications
+        m["buyer_id"] = $key_id
+        m["step"] = "-1"
+
+        objectId = DBInsert("land_registry", m)
+
+        // notifications to all departments
+        var depart_map depart2_params depart3_params map
+        depart2_params["object_id"] = objectId
+        depart2_params["depart2_requests"] = 1
+
+        depart_map["sender"] = 1
+        depart_map["rid"] = Int(AppParam(Int($app_id), "lr_depart2_role", $ecosystem_id))
+        depart_map["page_name"] = "lr_view"
+        depart_map["text_header"] = LangRes("lr_new_object", "en")
+        depart_map["text_body"] = LangRes("lr_need_processing", "en")
+        depart_map["icon_name"] = "fa fa-bell-o"
+        depart_map["closure_type"] = 1
+        depart_map["popup"] = "true"
+        depart_map["params_map"] = depart2_params
+
+        CallContract("@1NotificationsSend", depart_map)
+
+        depart3_params["object_id"] = objectId
+        depart3_params["depart3_requests"] = 1
+
+        depart_map["rid"] = Int(AppParam(Int($app_id), "lr_depart3_role", $ecosystem_id))
+        depart_map["params_map"] = depart3_params
+        
+        CallContract("@1NotificationsSend", depart_map)
+    }
+}

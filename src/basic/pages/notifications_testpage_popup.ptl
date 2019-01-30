@@ -1,65 +1,101 @@
-DBFind(@1applications).Columns("name,id").Where({ecosystem:1, name:"Basic"}).Vars(application)
+DBFind(@1applications).Columns("name,id").Where({"ecosystem": 1, "name": "Basic"}).Vars(application)
+
+If(#notific_id#>0){
+    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("id,sender->type,notification->type,notification->header,notification->body,page_params->param_int,page_params->param_str,date_start_processing,closed").Vars(prefix)
+    SetVar(sender_type,#prefix_sender_type#).(notification_type,#prefix_notification_type#).(notific_header,#prefix_notification_header#).(notific_body,#prefix_notification_body#).(notific_val_int,#prefix_page_params_param_int#).(notific_val_str,#prefix_page_params_param_str#)
+}.Else{
+    Div(md-12 alert alert-danger text-center){
+        Span(Body: LangRes(@1attention))
+    }
+    SetVar(notific_id,"0").SetVar(sender_type,"0").(notification_type,"0").(notific_header,"null").(notific_body,"null").(notific_val_int,"null").(notific_val_str,"null")
+}
+
 Form(){
-    If(#notific_id#>0){
-        DBFind(@1notifications).Where({ecosystem:#ecosystem_id#, id:#notific_id#}).Columns("id,sender->type,sender->member_name,sender->role_name,notification->body,notification->type,notification->header,date_start_processing,closed").Vars(n)
+    Div(list-group-item text-center){
+        Span(Class: h3, Body: #notific_header#)
+    }
+    Div(list-group-item){
         Div(row){
-            Div(col-md-3 mt-sm text-right){
-                Label(){
-                    Span(LangRes(@1sender))
-                }
+            Div(col-md-6 mt-sm text-right){
+                Span(Class: h4, Body: LangRes(@1id))
             }
-            Div(col-md-9 mt-sm text-left){
-                If(#n_sender_type#==1){
-                    Span(Class: text-normal, Body: #n_sender_member_name#)
-                }.ElseIf(#n_sender_type#==2){
-                    Span(Class: text-normal, Body: #n_sender_role_name#)
+            Div(col-md-6 mt-sm text-left){
+                Span(Class: h4, Body: #notific_id#)
+            }
+        }
+        Div(row){
+            Div(col-md-6 mt-sm text-right){
+                Span(Class: h4, Body: LangRes(@1type))
+            }
+            Div(col-md-6 mt-sm text-left){
+                If(#notification_type# > 0){
+                    Span(Class: h4, Body: AppParam(Ecosystem: 1, App:#application_id#, Name: notification_type, Index: #notification_type#))
+                }.Else{
+                    Span(Class: h4, Body: #notification_type#)
                 }
             }
         }
         Div(row){
-            Div(col-md-3 mt-sm text-right){
-                Label(){
-                    Span(LangRes(@1header))
-                }
+            Div(col-md-6 mt-sm text-right){
+                Span(Class: h4, Body: LangRes(@1sender))
             }
-            Div(col-md-9 mt-sm text-left){
-                Span(Class: text-normal, Body: #n_notification_header#)
+            Div(col-md-6 mt-sm text-left){
+                If(#sender_type# > 0){
+                    If(#sender_type# == 1){
+                        Span(Class: h4, Body: $@1member$)
+                    }
+                    If(#sender_type# == 2){
+                        Span(Class: h4, Body: $@1role$)
+                    }
+                }.Else{
+                    Span(Class: h4, Body: #sender_type#)
+                }
             }
         }
         Div(row){
-            Div(col-md-3 mt-sm text-right){
-                Label(){
-                    Span(LangRes(@1body_text))
-                }
+            Div(col-md-6 mt-sm text-right){
+                Span(Class: h4, Body: LangRes(@1body_text))
             }
-            Div(col-md-9 mt-sm text-left){
-                Span(Class: text-normal, Body: #n_notification_body#)
+            Div(col-md-6 mt-sm text-left){
+                Span(Class: h4, Body: #notific_body#)
             }
-        }
-    }.Else{
-        Div(md-12 alert alert-danger text-center){
-            Span(Body: LangRes(@1attention))
         }
     }
-    If(#n_notification_type# == 1){
-        SetVar(page_type,0)
-    }.ElseIf(#n_notification_type# == 2){
-        SetVar(page_type,1)
-    }
-    If(#n_closed# == 0){
-        If(#n_notification_type# == 1){
-            Button(Body: LangRes(@1close), Class: btn btn-primary pull-right mt, Contract: @1NotificationsClose, Params: "notific_id=#notific_id#", Page: @1notifications_list, PageParams: "type=#page_type#").Alert(Text: "$@1want_close_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
-            Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1notifications_list, PageParams: "type=#page_type#")
-        }.ElseIf(#n_notification_type# == 2){
-            If(#n_date_start_processing# == ""){
-                Button(Body: LangRes(@1begin), Class: btn btn-primary pull-right mt, Contract: @1NotificationsProcess, Params: "notific_id=#notific_id#", Page: @1notifications_list, PageParams: "type=#page_type#").Alert(Text: "$@1want_start_processing_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
-                Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1notifications_list, PageParams: "type=#page_type#")
-            }.Else{
-                Button(Body: LangRes(@1close), Class: btn btn-primary pull-right mt, Contract: @1NotificationsClose, Params: "notific_id=#notific_id#", Page: @1notifications_list, PageParams: "type=#page_type#").Alert(Text: "$@1want_close_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
-                Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1notifications_list, PageParams: "type=#page_type#")
+    Div(list-group-item){
+        Div(row){
+            Div(col-md-6 mt-sm text-right){
+                Span(Class: h4, Body: LangRes(@1value_number))
+            }
+            Div(col-md-6 mt-sm text-left){
+                Span(Class: h4, Body: #notific_val_int#)
             }
         }
-    }.Else{
-        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1notifications_list, PageParams: "type=#page_type#")
+        Div(row){
+            Div(col-md-6 mt-sm text-right){
+                Span(Class: h4, Body: LangRes(@1value_string))
+            }
+            Div(col-md-6 mt-sm text-left){
+                Span(Class: h4, Body: #notific_val_str#)
+            }
+        }
+    }
+    Div(list-group-item text-right){
+        If(#prefix_closed# == 0){
+            If(#notification_type# == 1){
+                Button(Body: LangRes(@1close), Class: btn btn-primary, Contract: @1NotificationsClose, Params: "notific_id=#notific_id#", Page: @1notifications_list).Alert(Text: "$@1want_close_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+            }.ElseIf(#notification_type# == 2){
+                If(#prefix_date_start_processing# == ""){
+                    Button(Body: LangRes(@1begin), Class: btn btn-primary, Contract: @1NotificationsProcess, Params: "notific_id=#notific_id#", Page: @1notifications_list, PageParams: "type=1").Alert(Text: "$@1want_start_processing_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                }.Else{
+                    Button(Body: LangRes(@1close), Class: btn btn-primary, Contract: @1NotificationsClose, Params: "notific_id=#notific_id#", Page: @1notifications_list, PageParams: "type=1").Alert(Text: "$@1want_close_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                }
+            }
+        }.Else{
+            If(#notification_type# == 1){
+                Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1notifications_list, PageParams: "type=0")
+            }.ElseIf(#notification_type# == 2){
+                Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1notifications_list, PageParams: "type=1")
+            }
+        }
     }
 }

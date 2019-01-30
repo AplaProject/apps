@@ -1,0 +1,110 @@
+contract TsTransferAdmin {
+    data {
+        WalletStr string
+        CurrencyType int
+        AmountApl money
+        TransferredDate string
+        TransferredTime string
+    }
+
+    func getRoleId(name string) int {
+        var rid int
+        rid = Int(EcosysParam(name))
+        if rid == 0 {
+            warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), name)
+        }
+        return rid
+    }
+
+    func dateAddTime(d, t string) string {
+        var dt string
+        if Contains(d, "T00:00:00Z") {
+            d = Replace(d, "T00:00:00Z", "")
+        }
+        if Size(t) == 5 {
+            dt = Sprintf("%v %v:00", d, t)
+        }
+        return dt
+    }
+
+    conditions {
+        $WAITING_MANAGER = 1
+        $WAITING_SELLER = 2
+        $FINISHED = 3
+        $REJECTED = 4
+        if $AmountApl <= 0 {
+            warning "invalid amount APLA"
+        }
+
+        $transferredAt = UnixDateTime(dateAddTime($TransferredDate, $TransferredTime))
+        if $transferredAt == 0 {
+            warning "invalid transfer datetime"
+        }
+
+        $appId = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Tokens sale"}).One("id"))
+        if $appId == 0 {
+            warning LangRes("@1app_not_found", "en")
+        }
+
+        $currentRole = getRoleId("role_sale_admin")
+        if !RoleAccess($currentRole) {
+            warning "this action allowed only for role id #" + $currentRole
+        }
+
+        if $CurrencyType <= 0 || $CurrencyType > 3 {
+            warning "Invalid Currency Type"
+        }
+
+        if $CurrencyType == 1 {
+            $wallet = DBFind("ts_wallets").Where({"wallet_btc": $WalletStr}).Row()
+        }
+        if $CurrencyType == 2 {
+            $wallet = DBFind("ts_wallets").Where({"wallet_eth": $WalletStr}).Row()
+        }
+        if $CurrencyType == 3 {
+            if $WalletStr == "" {
+                warning LangRes("@1public_key_empty", "en")
+            }
+
+            $WalletStr = Replace($WalletStr, " ", "")
+            if Size($WalletStr) < 128 {
+                warning LangRes("@1key_too_short", "en")
+            }
+            if Size($WalletStr) > 130 {
+                warning LangRes("@1key_too_long", "en")
+            }
+            var key_id_buyer int
+            key_id_buyer = PubToID($WalletStr)
+            if key_id_buyer == 0 {
+                warning LangRes("@1public_key_invalid", "en")
+            }
+
+            $wallet = DBFind("ts_wallets").Where({"key_id_buyer": key_id_buyer}).Row()
+        }
+
+        if !$wallet {
+            warning "Buyer wallet not found"
+        }
+    }
+
+    action {
+        var sale map saleId int
+        sale["key_id_buyer"] = $wallet["key_id_buyer"]
+        sale["currency_type"] = $CurrencyType
+        sale["amount_apl"] = $AmountApl
+        sale["key_id_sale_apl_admin"] = $key_id
+        sale["created_at"] = $time
+        sale["buyer_transferred_at"] = $transferredAt
+        sale["status"] = $WAITING_MANAGER
+
+        saleId = DBInsert("ts_sales", sale)
+
+        // role Apla sales manager notification
+        var params map title page string
+        title = Sprintf("Check sale id %v", saleId)
+        page = "ts_transfer_manager"
+        params["sale_id"] = saleId
+        $roleAplManager = getRoleId("role_sale_manager")
+        @1NotificationsSend("rid,sender,text_header,page_name,params_map,closure_type,current_role_id", $roleAplManager, 2, title, page, params, 1, $currentRole)
+    }
+}

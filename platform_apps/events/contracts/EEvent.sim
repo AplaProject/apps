@@ -1,0 +1,68 @@
+contract EEvent {
+    data {
+        Id int "optional"
+        Name string
+        Description string
+        Type int
+        StartingDate string
+        StartingTime string
+        EventAddress string
+        Responsible int
+    }
+
+    func dateAddTime(d, t string) string {
+        var dt string
+        if Contains(d, "T00:00:00Z") {
+            d = Replace(d, "T00:00:00Z", "")
+        }
+        if Size(t) == 5 {
+            dt = Sprintf("%v %v:00", d, t)
+        }
+        return dt
+    }
+
+    conditions{
+        var adminId int
+        adminId = Int(EcosysParam("role_admin"))
+        if !RoleAccess(adminId){
+            warning LangRes("@1access_denied", "en")
+        }
+
+        if $Id > 0 {
+            var event map
+            event = DBFind("@1e_events").Where({"id": $Id, "ecosystem": $ecosystem_id}).Row()
+            if !event{
+                warning "Event not founded"
+            }
+            if event["starting_date"] < $block_time {
+                warning "Event not editable"
+            }
+        }
+
+        $date = UnixDateTime(dateAddTime($StartingDate, $StartingTime))
+        if $date == 0 {
+            warning "Invalid date"
+        }
+
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $Responsible}).Row(){
+            warning "Responsible not founded"
+        }
+    }
+
+    action {
+        var addr map encAddr string
+        addr = JSONDecode($EventAddress)
+        addr["zoom"] = 11
+        encAddr = JSONEncode(addr)
+
+        var m map
+        m = {name:$Name, description:$Description, type:$Type, starting_date:$date, event_address_json:encAddr, responsible:$Responsible}
+        if $Id > 0 {
+            DBUpdate("@1e_events", $Id, m)
+        } else {
+            m["created_at"] = $block_time
+            m["ecosystem"] = $ecosystem_id
+            DBInsert("@1e_events", m)
+        }
+    }
+}

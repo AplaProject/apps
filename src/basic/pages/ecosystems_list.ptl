@@ -5,21 +5,20 @@ SetTitle("$@1ecosystems$")
 Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1ecosystems_list_desc$"))
 AddToolButton(Title: $@1update_metrics$, Page: @1ecosystems_metrics_update, Icon: icon-refresh).Popup(Header: $@1update_metrics$, Width: "30")
 
-If(GetVar(search)!=""){
-    SetVar(where, "{name:{$like:#search#}}")
-}.Else{
-    SetVar(where, "{id:{$neq:1}}").(search,)
+If(GetVar(search)){
+    SetVar(w_search, {"name": {"$like": "#search#"}})
 }
+SetVar(where, {GetVar(w_search)})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, LangRes(@1ecosystem_name))
     Include(@1search)
 }
 
-DBFind(@1buffer_data).Where({ecosystem:#ecosystem_id#, member_id:#key_id#, key:"metrics"}).Vars(m)
+DBFind(@1buffer_data).Where({"ecosystem": #ecosystem_id#, "member_id": #key_id#, "key": "metrics"}).Vars(m)
 JsonToSource(src_metrics,#m_value#)
 
-DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(basic_application)
+DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(basic_application)
 SetVar(template_id, AppParam(Ecosystem:1, App:#basic_application_id#, Name: voting_ves_template_id))
 
 DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_id){

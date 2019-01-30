@@ -1,0 +1,145 @@
+SetVar(this_page, @1errand_list).(this_table, @1notifications)
+Include(@1pager_header)
+
+If(GetVar(page_par)!=""){
+    SetVar(Name: type, Value: #page_par#)
+}
+
+If(And(#type#!=0,#type#!=1)){
+    SetVar(Name: type, Value: 0)
+}
+
+SetTitle($@1errands$)
+DBFind("@1applications",Source: src_mem).Where({"ecosystem": #ecosystem_id#, "name": "Errand"}).Vars(application)
+SetVar(access_role,AppParam(Ecosystem:#ecosystem_id#, App:#application_id#, Name: errand_access))
+DBFind("@1app_params",Source: src_mems).Where({"ecosystem": #ecosystem_id#, "name": errand_access, "app_id": #application_id#, "value": {"$like": #role_id#}}).Vars(access_er)
+If(#access_er_id# > 0){
+    AddToolButton(Title: $@1send$, Page: @1errand_create,PageParams:"type=#type#", Icon: icon-plus).Popup(50, "$@1new_errand$")
+}
+
+Div(btn-group){
+    Div(btn-group ml-lg){
+        If(#type#==0){
+            Button(Body: Em(Class: fa fa-user) $@1individual_errands$, Page: @1errand_list, PageParams: "type=0", Class: btn bg-gray-lighter ml-sm)
+        }.Else{
+            Button(Body: Em(Class: fa fa-user) $@1individual_errands$, Page: @1errand_list, PageParams: "type=0", Class: btn bg-gray ml-sm)
+        }
+        If(#type#==1){
+            Button(Body: Em(Class: fa fa-users) $@1roles_errands$, Page: @1errand_list, PageParams: "type=1", Class: btn bg-gray-lighter ml-sm)
+        }.Else{
+            Button(Body: Em(Class: fa fa-users) $@1roles_errands$, Page: @1errand_list, PageParams: "type=1", Class: btn bg-gray ml-sm)
+        }
+        If(EcosysParam(Name:role_admin)==#role_id#){
+            Button(Body: $@1update_statuses$, Class: btn btn-default ml-lg, Page: @1errand_list, PageParams: "type=#type#", Contract: @1ErrandStatusUpdate)
+        }
+    }
+    Div(btn-group mr-lg pull-right){
+        If(GetVar(search)){
+            Button(Class:btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=0,search=#search#,type=#type#"){Span(Body: Em(Class:fa fa-hourglass-half), Class: text-primary)}
+            Button(Class:btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=1,search=#search#,type=#type#"){Span(Body: Em(Class:fa fa-hourglass-end),Class: text-success)}
+            Button(Class:btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=-1,search=#search#,type=#type#"){Span(Body: Em(Class:fa fa-times), Class: text-danger)} 
+        }.Else{
+            Button(Class:btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=0,type=#type#"){Span(Body: Em(Class:fa fa-hourglass-half), Class: text-primary)}
+            Button(Class:btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=1,type=#type#"){Span(Body: Em(Class:fa fa-hourglass-end),Class: text-success)}
+            Button(Class:btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=-1,type=#type#"){Span(Body: Em(Class:fa fa-times), Class: text-danger)} 
+        }            
+    }
+    If(Or(GetVar(search)!="",GetVar(Status)==-1,GetVar(Status)==0,GetVar(Status)==1)){
+        Span(Button(Class: btn btn-link pull-right, Page: @1errand_list,PageParams: "type=#type#", Body: $@1clear_filters$)).Style(padding-left:10px)
+    }
+}
+
+If(#type#==1){
+    SetVar(where_recipient, {"recipient->role_id": {"$neq": 0}})
+}.Else{
+    SetVar(where_recipient, {"recipient->member_id": {"$neq": 0}})
+}
+
+If(Or(GetVar(Status)==-1,GetVar(Status)==0,GetVar(Status)==1)){
+    SetVar(where_status, {"page_params->status": #Status#})
+}
+
+If(GetVar(search)){
+    SetVar(where_search, {"page_params->name": {"$like": "#search#"}})
+}
+
+SetVar(where, {"$and": [{"ecosystem": #ecosystem_id#}, {"page_params->type": "task"}, GetVar(where_recipient), GetVar(where_status), GetVar(where_search)]})
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, LangRes(@1name)).(page_par, #type#)
+    Include(@1search)
+}
+
+DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,ecosystem,page_params->status,page_params->name,recipient->role_name,recipient->role_id,recipient->member_name,recipient->member_id,recipient->image_id,sender->image_id,sender->role_name,sender->role_id,date_created,page_params->date_end").Custom(_status){
+    If(#page_params.status# == 0){
+        Span(Body:Em(Class:fa fa-hourglass-half) $@1in_progress$,Class: text-primary h5)
+    }.ElseIf(#page_params.status# == -1){
+        Span(Body:Em(Class:fa fa-times) $@1expired$,Class: text-danger h5)
+    }.ElseIf(#page_params.status# == 1){
+        Span(Body:Em(Class:fa fa-hourglass-end) $@1done$,Class: text-success h5)
+    }
+}.Custom(_role){
+    If(#recipient.role_id# > 0){
+        LinkPage(Class: text-primary h5 text-bold, Page: @1roles_view, PageParams: "v_role_id=#recipient.role_id#"){
+            Div(){
+                Span(Class: icon-people fa-2x mr-sm).(#recipient.role_name#)
+            }.Style(display:flex; align-items:center;)
+        }  
+    }.ElseIf(#recipient.member_id# != 0){
+        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#recipient.member_id#"){
+            If(#recipient.image_id#>0){
+                Image(Src: Binary().ById(#recipient.image_id#), Class: img-circle).Style(height: 30px;width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
+                Span(#recipient.member_name#)
+            }.Else{
+                Div(){
+                    Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                    Span(#recipient.member_name#)
+                }.Style(display:flex; align-items:center;)
+            }
+        }
+    }
+}.Custom(_name){
+    LinkPage(#page_params.name#,Class: text-primary h5 text-bold,Page: @1errand_view,PageParams: "errand_id=#id#,type=#type#")
+}.Custom(custom_arrow){
+    Em(Class: fa fa-long-arrow-right fa-1x)
+}.Custom(_sender){
+    LinkPage(Class: text-primary h5 text-bold, Page: @1roles_view, PageParams: "v_role_id=#sender.role_id#"){
+        If(#sender.image_id#>0){
+            Image(Src: Binary().ById(#sender.image_id#), Class: mr-sm).Style(width: 30px; border: 1px solid #5A5D63;)
+            #sender.role_name#
+        }.Else{
+            Div(){
+                Span(Class: icon-people fa-2x mr-sm).(#sender.role_name#)
+            }.Style(display:flex; align-items:center;)
+        }
+    }
+}.Custom(_date_start){
+    Div(Class:h5){DateTime(DateTime: #date_created#, Format: "YYYY.MM.DD HH:MI:SS")}
+}.Custom(_date_end){
+    Div(Class:h5){Span(#page_params.date_end#)}
+}.Custom(_del){
+    DBFind(@1roles).WhereId(#role_id#).Vars(adm)
+    If(#adm_role_name# == Admin){
+        Button(Body: Em(Class: fa fa-trash), Class: btn btn-default pull-right, Contract: @1ErrandeDelete, Page: @1errand_list, Params: "errand_id=#id#", PageParams: "type=#type#")
+    }
+}.Count(count)
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src, "$@1name$=_name,$@1sender$=_sender,=custom_arrow,$@1recipient$=_role,$@1date_start$=_date_start,$@1date_end$=_date_end,$@1status$=_status,=_del")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1errands$ $@1not_founded$")
+            }                       
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
+}

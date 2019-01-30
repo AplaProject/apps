@@ -1,0 +1,87 @@
+contract LrEdit {
+    data {
+        ObjectId int
+        LandUse int "optional"
+        LandType int "optional"
+        LandAuthority int "optional"
+        BuildingsUseClass int "optional"
+        RegistrationDate string "optional"
+        Price money "optional"
+        DeleteObject int "optional"
+        RoleId int
+    }
+
+    func log(property, value string) {
+        var history map
+        if property == "land_use" || property ==  "land_type" || property ==  "land_authority" || property ==  "buildings_class" {
+            if Int(value) != Int($old_specifications[property]) {
+                history["old_value"] = Int($old_specifications[property])
+                history["object_id"] = $ObjectId
+                history["attribute_name"] = property
+                history["new_value"] = value
+                history["member_id"] = $key_id
+                history["date"] = $block_time
+                DBInsert("land_registry_history", history)
+            }
+        } elif value != $object[property] {
+            history["old_value"] = Str($object[property])
+            history["object_id"] = $ObjectId
+            history["attribute_name"] = property
+            history["new_value"] = value
+            history["member_id"] = $key_id
+            history["date"] = $block_time
+            DBInsert("land_registry_history", history)
+        }
+    }
+
+    conditions {
+        $app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Land registry"}).One("id")
+        $object = DBFind("land_registry").WhereId($ObjectId).Row()
+        $admin_role = Int(AppParam(Int($app_id), "lr_admin_role", $ecosystem_id))
+
+        if $app_id > 0 {
+            if $admin_role == 0 || AppParam(Int($app_id), "lr_bank_role", $ecosystem_id) == 0 || AppParam(Int($app_id), "lr_depart2_role", $ecosystem_id) == 0 || AppParam(Int($app_id), "lr_depart3_role", $ecosystem_id) == 0 {
+                info LangRes("lr_all_roles_needed", "en")
+            }
+        } else {
+            warning LangRes("@1app_not_found", "en")
+        }
+    }
+    
+    action {
+        if $DeleteObject != 1 {
+            if $RoleId == $admin_role {
+                var specifications m map unixRegDate int
+                unixRegDate = UnixDateTime(Sprintf("%s %s", $RegistrationDate, "00:00:00"))
+                $old_specifications = JSONDecode($object["specifications"])
+
+                specifications["address"] = $old_specifications["address"]
+                specifications["area"] = $old_specifications["area"]
+                specifications["map_coords"] = $old_specifications["map_coords"]
+                specifications["land_use"] = $LandUse
+                specifications["land_type"] = $LandType
+                specifications["land_authority"] = $LandAuthority
+                specifications["buildings_class"] = $BuildingsUseClass
+
+                m["registration_date"] = unixRegDate
+                m["specifications"] = specifications
+                DBUpdate("land_registry", $ObjectId, m)
+
+                log("land_use", Str($LandUse))
+                log("land_type", Str($LandType))
+                log("land_authority", Str($LandAuthority))
+                log("buildings_class", Str($BuildingsUseClass))
+                log("registration_date", Str(unixRegDate))
+            }
+            if $object["owner_id"] == $key_id {
+                DBUpdate("land_registry", $ObjectId, {"price": $Price})
+                log("price", Str($Price))
+            }
+        } else {
+            if $object["owner_id"] == $key_id || $RoleId == $admin_role {
+                DBUpdate("land_registry", $ObjectId, {"deleted": 1})
+                log("deleted", Str($DeleteObject))
+            }
+        }
+    }
+}

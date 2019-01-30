@@ -8,7 +8,10 @@ contract EditSection {
     }
 
     conditions {
-        if(!DBFind("@1sections").Columns("id,ecosystem").Where({id: $id,ecosystem: $ecosystem_id})){
+        if DBFind("@1sections").Where({"urlname": $urlname, "ecosystem": $ecosystem_id}) {
+            warning LangRes("@1section_exist", "en")
+        }
+        if(!DBFind("@1sections").Columns("id,ecosystem").Where({"id": $id, "ecosystem": $ecosystem_id})){
             warning LangRes("@1item_not_found", "en")
         }
         if $status < 0 || $status > 2 {
@@ -16,12 +19,12 @@ contract EditSection {
         }
         if $status == 0 || $status == 1 {
             var status_check map
-            status_check = DBFind("@1sections").Columns("id,status").Where({"id":$id,ecosystem:$ecosystem_id}).Row()
+            status_check = DBFind("@1sections").Columns("id,status").Where({"id": $id, "ecosystem": $ecosystem_id}).Row()
             if (Int(JSONDecode(status_check["status"]))==2) {
                 warning LangRes("@1main_section_warning", "en")
             }
         }
-        if !DBFind("@1sections").Columns("id").Where({id:$id,ecosystem:$ecosystem_id}) {
+        if !DBFind("@1sections").Columns("id").Where({"id": $id, "ecosystem": $ecosystem_id}) {
             warning Sprintf(LangRes("@1template_section_not_exist", "en"), $id)
         }
     }
@@ -30,7 +33,7 @@ contract EditSection {
         if $status == 2 {
             var status_check map
             var curr_id int
-            status_check = DBFind("@1sections").Columns("id,status").Where({"status":$status,ecosystem:$ecosystem_id}).Row()
+            status_check = DBFind("@1sections").Columns("id,status").Where({"status": $status, "ecosystem": $ecosystem_id}).Row()
             curr_id = Int(JSONDecode(status_check["id"]))
             DBUpdate("@1sections", curr_id, {"status":1})
         }
