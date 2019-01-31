@@ -1,63 +1,15 @@
 contract PlatformAppsInstall {
     data {}
-    func appendOnce(ar array, menu, page, item string) array{
-        if !Contains(menu, page) {
-            ar = Append(ar, item)
-        }    
-        return ar
-    }
-
-    func getDeveloperMenu() string {
-        var items array currentMenu string
-        currentMenu = Str($developer_menu["value"])
-        
-        items = appendOnce(items, currentMenu, "@1developer_index", `MenuItem(Title:$@1platform_apps$, Page:@1developer_index, Icon:"fa fa-arrow-circle-o-up")`)
-        return Join(items array, "\n")
-    }
-    
-    func getAdminMenu() string {
-        var items array currentMenu string
-        currentMenu = Str($admin_menu["value"])
-        
-        items = appendOnce(items, currentMenu, "@1admin_index", `MenuItem(Title:$@1platform_apps$, Page:@1admin_index, Icon:"fa fa-arrow-circle-o-up")`)
-        return Join(items array, "\n")
-    }
-
-    func getDefaultMenu() string {
-        var items array currentMenu string
-        currentMenu = Str($default_menu["value"])
-
-        items = appendOnce(items, currentMenu, "@1default_page", `MenuItem(Title:$@1platform_apps$, Page:@1default_page, Icon:"fa fa-arrow-circle-o-up")`)
-        return Join(items array, "\n")
-    }
 
     conditions {
-        $admin_menu = DBFind("@1menu").Columns("id,value").Where({name: "admin_menu", ecosystem: $ecosystem_id}).Row()
-        $developer_menu = DBFind("@1menu").Columns("id,value").Where({name: "developer_menu", ecosystem: $ecosystem_id}).Row()
-        $default_menu = DBFind("@1menu").Columns("id,value").Where({name: "default_menu", ecosystem: $ecosystem_id}).Row()
-
-        if !$admin_menu {
-            warning LangRes("@1admin_menu_not_found", "en")
-        }
-        if !$developer_menu {
-            warning LangRes("@1developer_menu_not_found", "en")
-        }
-        if !$default_menu {
-            warning LangRes("@1default_menu_not_found", "en")
-        }
+        $basic_id = DBFind("@1applications").Where({"ecosystem": 1, "name": "Basic", "deleted": 0}).One("id")
+        $system_id = DBFind("@1applications").Where({"ecosystem": 1, "name": "System", "deleted": 0}).One("id")
     }
 
     action {
-        var val_admin_menu string
-        val_admin_menu = getAdminMenu()
-        EditMenu("Id,Value",Int($admin_menu["id"]), val_admin_menu)
-    
-        var val_developer_menu string
-        val_developer_menu = getDeveloperMenu()
-        EditMenu("Id,Value",Int($developer_menu["id"]), val_developer_menu)
-
-        var val_default_menu string
-        val_default_menu = getDefaultMenu()
-        EditMenu("Id,Value", Int($default_menu["id"]), val_default_menu)
+        if $ecosystem_id != 1 {
+            @1AppInstall("ApplicationId", $system_id)
+            @1AppInstall("ApplicationId", $basic_id)
+        }
     }
 }

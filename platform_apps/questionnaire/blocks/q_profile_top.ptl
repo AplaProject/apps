@@ -1,0 +1,51 @@
+DBFind(@1questionnaire,src_q).Where({"ecosystem": #ecosystem_id#, "deleted": 0, "status": 1}).Order({"created_at": 1}).Limit(5).Columns("id,question,description,answer,ecosystem,init,lastmodified,created_at,expired,status,params->hide,params->change,au_groups,au_roles").Custom(custom_name){
+   If(#permission#==1){
+        LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: "q_id=#id#"){
+            Div(Class: text-primary){
+                Span(#question#).Style({padding-left: 30px;})
+            }
+        }
+    }.Else{
+        If(#status#==1){
+            If(And(#au_groups#==[0],#au_roles#==[0])){
+                LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: "q_id=#id#"){
+                    Div(Class: text-primary){
+                        Span(#question#).Style({padding-left: 30px;})
+                    }
+                }
+            }.Else{
+                DBFind(@1groups_participants).Where({"member->member_id": #key_id#, "deleted": 0, "ecosystem": #ecosystem_id#, "groups_info->id": {"$in": #au_groups#}}).Count(gp)
+                DBFind(@1roles_participants).Where({"member->member_id": #key_id#, "deleted": 0, "ecosystem": #ecosystem_id#, "role->id": {"$in": #au_roles#}}).Count(rl)
+                If(Or(#gp#>0,#rl#>0)){
+                    LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: "q_id=#id#"){
+                        Div(Class: text-primary){
+                            Span(#question#).Style({padding-left: 30px;})
+                        }
+                    }
+                }.Else{
+                    Span(#question#.Style({padding-left: 30px;})
+                }
+            }
+        }.Else{
+            Span(#question#).Style({padding-left: 30px;})
+        }
+    }
+}.Custom(initiator){
+    DBFind(@1members).Where({"ecosystem": #ecosystem#, "id": #init#}).Vars(m)
+    If(Or(#m_id#>0,#m_id#<0)){
+        SetVar(member_name, #m_member_name#)
+    }.Else{
+        SetVar(member_name, Address(#id#))
+    }
+    Span(#member_name#)
+}.Custom(stats){
+    Span(Class: pull-right){
+        If(Or(#role_id#==1,#params.hide#==true)){
+            Button(Body: Em(Class: fa fa-comment), Class: btn-xs btn-link, Page: @1q_question_graph, PageParams: "q_id=#id#").Style({margin-left: 30px;}).Popup(Header: $@1q_answer_graph$ / #question#, Width: "50")
+        }
+    }
+}.Count(que)
+
+If(#que#>0){
+    Table(Source: src_q, Columns: "$@1q_question$=custom_name,$@1q_initiator$=initiators,=stats")
+}

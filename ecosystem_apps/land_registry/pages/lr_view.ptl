@@ -1,0 +1,495 @@
+If(#notific_id#>0){
+    DBFind("@1notifications").Where({"id": #notific_id#, "ecosystem": #ecosystem_id#}).Columns("notification->body,recipient->member_id,page_params->object_id,page_params->info_message,page_params->info_status,closed").Vars(notific)
+    SetVar(object_id, #notific_page_params_object_id#)
+    SetVar(back_page,@1notifications_list)
+}
+
+If(#object_id#>0){
+    Include(lr_check_rights)
+    DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Land registry"}).Columns("name,id").Vars(app)
+    AppParam(App: #app_id#, Name: lr_issues, Source: src_issues)
+    SetVar(col_left,"col-md-4 text-right").(col_right,"col-md-8 text-left")
+    DBFind("land_registry", src).WhereId(#object_id#).Columns("id,owner_id,buyer_id,step,specifications->map_coords,specifications->address,specifications->area,specifications->land_type,specifications->land_use,specifications->buildings_class,specifications->land_authority,registration_date,date_created,modification_date,status->legal_status,status->encumbrance_certificate,status->tax_receipt_and_bills,price,market_price,government_price").Vars(view)
+    SetVar(custom_token_title, "APLA")
+    If(#ecosystem_id#>1){
+        DBFind("@1ecosystems").Where({"id": #ecosystem_id#}).Vars("custom")
+    }
+
+    If(#view_owner_id#==#key_id#){
+        SetVar(owner,1)
+        DBFind("@1notifications").Where({"page_params->object_id": #view_id#, "page_params->depart2_requests": 2, "ecosystem": #ecosystem_id#}).Columns("id").Vars(depart2)
+        DBFind("@1notifications").Where({"page_params->object_id": #view_id#, "page_params->depart3_requests": 2, "ecosystem": #ecosystem_id#}).Columns("id").Vars(depart3)
+        If(#depart2_id#>0){
+            SetVar(depart2_requests,2)
+        }.Else{
+            SetVar(depart2_requests,1)
+        }
+        If(#depart3_id#>0){
+            SetVar(depart3_requests,2)
+        }.Else{
+            SetVar(depart3_requests,1)
+        }
+    }
+    If(#view_buyer_id#==#key_id#){
+        SetVar(buyer,1)
+    }
+    If(And(#view_status_legal_status#==1,#view_status_encumbrance_certificate#==1,#view_status_tax_receipt_and_bills#==1,#view_government_price#>0,#view_market_price#>0)){
+        SetVar(depart_checks,1)
+        If(And(#depart_checks#==1,#view_step#==-1,#view_price#>0)){
+            SetVar(available_for_sale,1)
+        }
+    }
+
+    Form(){
+        Div(){
+            Map(MapType: streets, Hmap: 250, Value: #view_specifications_map_coords#)
+        }
+        Div(row mt){
+            Div(#col_left# mt-sm){
+                Label(){
+                    LangRes(lr_owner)
+                }
+            }
+            Div(#col_right#){
+                SetVar(m_id, 0)
+                DBFind("@1members").Where({"id": #view_owner_id#, "ecosystem": #ecosystem_id#}).Vars(m)
+                If(Or(#m_id#>0,#m_id#<0)){
+                    SetVar(image_id, #m_image_id#)
+                    SetVar(member_name, #m_member_name#)
+                }.Else{
+                    SetVar(image_id, 0)
+                    SetVar(member_name, Address(#view_owner_id#))
+                }
+                LinkPage(Page: @1profile_view, PageParams: "v_key_id=#view_owner_id#"){
+                    If(#image_id#>0){
+                        Image(Src: Binary().ById(#image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)
+                        Span(Class: ml-sm text-bold, Body: #member_name#)
+                    }.Else{
+                        Div(){
+                            Span(Em(Class: fa icon-user fa-2x))
+                            Span(Class: ml-sm text-bold, Body: #member_name#)
+                        }.Style(display:flex; align-items:center;)
+                    }
+                }
+            }
+        }
+        Div(row mt-sm){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_location)
+                }
+            }
+            Div(#col_right#){
+                If(#view_specifications_address#){
+                    Span(#view_specifications_address#)
+                }.Else{
+                    Span($lr_no_address_found$)
+                }
+            }
+        }
+        Div(row){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_area_size)
+                }
+            }
+            Div(#col_right#){
+                Span(#view_specifications_area#)
+            }
+        }
+        Div(row){
+            Div(#col_left#){
+                Label(){
+                    LangRes(@1date_created)
+                }
+            }
+            Div(#col_right#){
+                If(#view_date_created#>0){
+                    SetVar(view_date_created, DateTime(#view_date_created#, "YYYY-MM-DD"))
+                    Span(#view_date_created#)
+                }
+            }
+        }
+        Div(row){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_registration_date)
+                }
+            }
+            Div(#col_right#){
+                If(#view_registration_date#>0){
+                    SetVar(view_registration_date, DateTime(#view_registration_date#, "YYYY-MM-DD"))
+                    Span(#view_registration_date#)
+                }
+            }
+        }
+        Div(row){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_modification_date)
+                }
+            }
+            Div(#col_right#){
+                If(#view_modification_date#>0){
+                    SetVar(view_modification_date, DateTime(#view_modification_date#, "YYYY-MM-DD"))
+                    Span(#view_modification_date#)
+                }
+            }
+        }
+        Div(row){
+            Div(#col_left#){
+                Label(){
+                    LangRes(@1type)
+                }
+            }
+            Div(#col_right#){
+                SetVar(view_specifications_land_type, AppParam(App: #app_id#, Name: lr_land_type, Index: #view_specifications_land_type#))
+                Span(#view_specifications_land_type#)
+            }
+        }
+        Div(row){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_land_use)
+                }
+            }
+            Div(#col_right#){
+                SetVar(view_specifications_land_use, AppParam(App: #app_id#, Name: lr_land_use, Index: #view_specifications_land_use#))
+                Span(#view_specifications_land_use#)
+            }
+        }
+        Div(row){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_buildings_class)
+                }
+            }
+            Div(#col_right#){
+                SetVar(view_specifications_buildings_class, AppParam(App: #app_id#, Name: lr_buildings_class, Index: #view_specifications_buildings_class#))
+                Span(#view_specifications_buildings_class#)
+            }
+        }
+        Div(row){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_land_authority)
+                }
+            }
+            Div(#col_right#){
+                SetVar(view_specifications_land_authority, AppParam(App: #app_id#, Name: lr_land_authority, Index: #view_specifications_land_authority#))
+                Span(#view_specifications_land_authority#)
+            }
+        }
+        Div(row){
+            Div(#col_left#){
+                Label(){
+                    LangRes(lr_price)
+                }
+            }
+            Div(#col_right#){
+                If(#view_price#>0){
+                    SetVar(view_price, Money(#view_price#))
+                    Span(#view_price# #custom_token_title#)
+                }.Else{
+                    Em(Class: fa fa-question-circle text-muted)
+                }
+            }
+        }
+        If(And(#depart3#==1,#depart_checks#!=1,#notific_recipient_member_id#=="")){
+            Div(list-group-item){
+                Div(row mt-sm){
+                    Div(#col_left# mt-sm){
+                        Label(){
+                            LangRes(lr_market_price)
+                        }
+                    }
+                    Div(#col_right#){
+                        If(#view_market_price#>0){
+                            SetVar(view_market_price, Money(#view_market_price#))
+                            Input(Name: MarketPrice, Value: #view_market_price#)
+                        }.Else{
+                            Input(Name: MarketPrice)
+                        }
+                    }
+                }
+                Div(row mt-sm){
+                    Div(#col_left# mt-sm){
+                        Label(){
+                            LangRes(lr_government_price)
+                        }
+                    }
+                    Div(#col_right#){
+                        If(#view_government_price#>0){
+                            SetVar(view_government_price, Money(#view_government_price#))
+                            Input(Name: GovernmentPrice, Value: #view_government_price#)
+                        }.Else{
+                            Input(Name: GovernmentPrice)
+                        }
+                    }
+                }
+                Div(row mt-sm){
+                    Div(#col_left#){
+                        Label(){
+                            LangRes(lr_taxes_and_bills)
+                        }
+                    }
+                    Div(#col_right#){
+                        Div(form-inline){
+                            If(#view_status_tax_receipt_and_bills#>0){
+                                RadioGroup(Name: TaxReceiptAndBills, Value: #view_status_tax_receipt_and_bills#, Source: src_issues, ValueColumn: id, NameColumn: name)
+                            }.Else{
+                                RadioGroup(Name: TaxReceiptAndBills, Value: 0, Source: src_issues, ValueColumn: id, NameColumn: name)
+                            }
+                        }
+                    }
+                }
+            }
+        }.Else{
+            Div(row){
+                Div(#col_left#){
+                    Label(){
+                        LangRes(lr_market_price)
+                    }
+                }
+                Div(#col_right#){
+                    If(#view_market_price#>0){
+                        SetVar(view_market_price, Money(#view_market_price#))
+                        Span(#view_market_price# #custom_token_title#)
+                    }.Else{
+                        Em(Class: fa fa-question-circle text-muted)
+                        If(And(#owner#==1,#depart3_requests#==1)){
+                            Button(Body: ($lr_additional_request$), Class: btn-link p0 ml-sm, Contract: LrDepartRequest, Params: "ObjectId=#view_id#,DepartNumber=3", Page: #back_page#, PageParams: "sales_list=#sales_list#")
+                        }
+                    }
+                }
+            }
+            Div(row){
+                Div(#col_left#){
+                    Label(){
+                        LangRes(lr_government_price)
+                    }
+                }
+                Div(#col_right#){
+                    If(#view_government_price#>0){
+                        SetVar(view_government_price, Money(#view_government_price#))
+                        Span(#view_government_price# #custom_token_title#)
+                    }.Else{
+                        Em(Class: fa fa-question-circle text-muted)
+                        If(And(#owner#==1,#depart3_requests#==1)){
+                            Button(Body: ($lr_additional_request$), Class: btn-link p0 ml-sm, Contract: LrDepartRequest, Params: "ObjectId=#view_id#,DepartNumber=3", Page: #back_page#, PageParams: "sales_list=#sales_list#")
+                        }
+                    }
+                }
+            }
+            Div(row){
+                Div(#col_left#){
+                    Label(){
+                        LangRes(lr_taxes_and_bills)
+                    }
+                }
+                Div(#col_right#){
+                    If(#view_status_tax_receipt_and_bills#==1){
+                        Em(Class: fa fa-check-circle text-success)
+                    }.ElseIf(#view_status_tax_receipt_and_bills#==2){
+                        Em(Class: fa fa-exclamation-circle text-danger)
+                    }.Else{
+                        Em(Class: fa fa-question-circle text-muted)
+                        If(And(#owner#==1,#depart3_requests#==1)){
+                            Button(Body: ($lr_additional_request$), Class: btn-link p0 ml-sm, Contract: LrDepartRequest, Params: "ObjectId=#view_id#,DepartNumber=3", Page: #back_page#, PageParams: "sales_list=#sales_list#")
+                        }
+                    }
+                }
+            }
+        }
+        If(And(#depart2#==1,#depart_checks#!=1,#notific_recipient_member_id#=="")){
+            Div(list-group-item){
+                Div(row mt-sm){
+                    Div(#col_left#){
+                        Label(){
+                            LangRes(lr_legal_status)
+                        }
+                    }
+                    Div(#col_right#){
+                        Div(form-inline){
+                            If(#view_status_legal_status#>0){
+                                RadioGroup(Name: LegalStatus, Value: #view_status_legal_status#, Source: src_issues, ValueColumn: id, NameColumn: name)
+                            }.Else{
+                                RadioGroup(Name: LegalStatus, Value: 0, Source: src_issues, ValueColumn: id, NameColumn: name)
+                            }
+                        }
+                    }
+                }
+                Div(row mt-sm){
+                    Div(#col_left#){
+                        Label(){
+                            LangRes(lr_encumbrance_certificate)
+                        }
+                    }
+                    Div(#col_right#){
+                        Div(form-inline){
+                            If(#view_status_encumbrance_certificate#>0){
+                                RadioGroup(Name: EncumbranceCertificate, Value: #view_status_encumbrance_certificate#, Source: src_issues, ValueColumn: id, NameColumn: name)
+                            }.Else{
+                                RadioGroup(Name: EncumbranceCertificate, Value: 0, Source: src_issues, ValueColumn: id, NameColumn: name)
+                            }
+                        }
+                    }
+                }
+            }
+        }.Else{
+            Div(row){
+                Div(#col_left#){
+                    Label(){
+                        LangRes(lr_legal_status)
+                    }
+                }
+                Div(#col_right#){
+                    If(#view_status_legal_status#==1){
+                        Em(Class: fa fa-check-circle text-success)
+                    }.ElseIf(#view_status_legal_status#==2){
+                        Em(Class: fa fa-exclamation-circle text-danger)
+                    }.Else{
+                        Em(Class: fa fa-question-circle text-muted)
+                        If(And(#owner#==1,#depart2_requests#==1)){
+                            Button(Body: ($lr_additional_request$), Class: btn-link p0 ml-sm, Contract: LrDepartRequest, Params: "ObjectId=#view_id#,DepartNumber=2", Page: #back_page#, PageParams: "sales_list=#sales_list#")
+                        }
+                    }
+                }
+            }
+            Div(row){
+                Div(#col_left#){
+                    Label(){
+                        LangRes(lr_encumbrance_certificate)
+                    }
+                }
+                Div(#col_right#){
+                    If(#view_status_encumbrance_certificate#==1){
+                        Em(Class: fa fa-check-circle text-success)
+                    }.ElseIf(#view_status_encumbrance_certificate#==2){
+                        Em(Class: fa fa-exclamation-circle text-danger)
+                    }.Else{
+                        Em(Class: fa fa-question-circle text-muted)
+                        If(And(#owner#==1,#depart2_requests#==1)){
+                            Button(Body: ($lr_additional_request$), Class: btn-link p0 ml-sm, Contract: LrDepartRequest, Params: "ObjectId=#view_id#,DepartNumber=2", Page: #back_page#, PageParams: "sales_list=#sales_list#")
+                        }
+                    }
+                }
+            }
+        }
+        Div(list-group-item){
+            Div(row){
+                If(And(#notific_closed#==1,And(Or(#depart2#==1,#depart3#==1),#depart_checks#!=1,#view_step#==-1,#notific_recipient_member_id#=="")!=1)){
+                    Div(col-md-8 col-md-offset-2 text-center){
+                        Div(Class: h4, Body: Em(Class: fa fa-fw fa-check-circle text-muted) $lr_decision_made$)
+                    }
+                }.Else{
+                    Div(col-md-2 text-center){
+                        If(#view_step#>=0){
+                            SetVar(o_id, 0)
+                            DBFind("@1members").Where({"id": #view_owner_id#, "ecosystem": #ecosystem_id#}).Vars(o)
+                            If(Or(#o_id#>0,#o_id#<0)){
+                                SetVar(owner_image_id, #o_image_id#)
+                                SetVar(owner_member_name, #o_member_name#)
+                            }.Else{
+                                SetVar(owner_image_id, 0)
+                                SetVar(owner_member_name, Address(#view_owner_id#))
+                            }
+                            LinkPage(Page: @1profile_view, PageParams: "v_key_id=#view_owner_id#"){
+                                If(#owner_image_id#>0){
+                                    Image(Src: Binary().ById(#owner_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)
+                                }.Else{
+                                    Span(Em(Class: fa icon-user fa-2x))
+                                }
+                                Div(Class: short-name text-bold, Body: #owner_member_name#)
+                            }
+                            Div(Class: text-muted m0, Body: ($lr_owner$))
+                        }
+                    }
+                    Div(col-md-8 text-center){
+                        If(And(#notific_page_params_info_message#==1,And(Or(#depart2#==1,#depart3#==1),#depart_checks#!=1,#view_step#==-1,#notific_recipient_member_id#=="")!=1)){
+                            If(#notific_page_params_info_status#=="success"){
+                                Div(Class: h4, Body: Em(Class: fa fa-fw fa-check-circle text-success) #notific_notification_body#)
+                            }.Else{
+                                Div(Class: h4, Body: Em(Class: fa fa-fw fa-times text-danger) #notific_notification_body#)
+                            }
+                            If(#notific_closed#==0){
+                                Button(Body: LangRes(@1ok), Class: btn btn-primary mb, Contract: @1NotificationsClose, Params: "notific_id=#notific_id#", Page: #back_page#)
+                            }
+                        }.ElseIf(And(#view_step#==-1,#available_for_sale#!=1)){
+                            Div(Class: h4, Body: Em(Class: fa fa-fw fa-hourglass-o text-primary) $lr_awaiting_depart_checks$)
+                            If(Or(#depart2#==1,#depart3#==1)){
+                                Button(Body: LangRes(lr_save_results), Class: btn btn-primary mb, Contract: LrDepartChecks, Params: "ObjectId=#view_id#,RoleId=#role_id#", Page: #back_page#, PageParams: "sales_list=#sales_list#")
+                            }
+                        }.ElseIf(And(#view_step#==-1,#available_for_sale#==1)){
+                            Div(Class: h4, Body: Em(Class: fa fa-fw fa-check-circle text-success) $lr_available_for_purchase$)
+                            If(#owner#!=1){
+                                Button(Body: LangRes(lr_purchase), Class: btn btn-success mb, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,Step=#view_step#", Page: #back_page#, PageParams: "sales_list=#sales_list#").Alert($lr_want_initiate_purchase$, $@1confirm_button$, $@1cancel$)
+                            }
+                        }.ElseIf(#view_step#==0){
+                            Div(Class: h4, Body: Em(Class: fa fa-fw fa-hourglass-1 text-primary) $lr_awaiting_owner_accept$)
+                            If(#owner#==1){
+                                Button(Body: LangRes(@1reject), Class: btn btn-danger mb, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,Step=#view_step#,Decision=reject", Page: #back_page#, PageParams: "sales_list=#sales_list#").Alert($lr_want_reject_purchase$, $@1confirm_button$, $@1cancel$)
+                                Button(Body: LangRes(@1accept), Class: btn btn-success mb, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,Step=#view_step#,Decision=accept", Page: #back_page#, PageParams: "sales_list=#sales_list#").Alert($lr_want_accept_purchase$, $@1confirm_button$, $@1cancel$)
+                            }
+                        }.ElseIf(#view_step#==1){
+                            Div(Class: h4, Body: Em(Class: fa fa-fw fa-hourglass-2 text-primary) $lr_awaiting_buyer_deposit$)
+                            If(Or(#owner#==1,#buyer#==1)){
+                                Button(Body: LangRes(@1cancel), Class: btn btn-danger mb, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,Step=#view_step#,Decision=cancel", Page: #back_page#, PageParams: "sales_list=#sales_list#").Alert($lr_want_cancel_deal$, $@1confirm_button$, $@1cancel$)
+                            }
+                            If(#buyer#==1){
+                                SetVar(bank_role_id, AppParam(App: #app_id#, Name: lr_bank_role))
+                                DBFind("@1roles_participants").Where({"role->id": #bank_role_id#, "deleted": 0, "ecosystem": #ecosystem_id#}).Columns("id,member->member_id").Vars(bank)
+                                SetVar(bank_account,Address(#bank_member_member_id#))
+                                If(#bank_id#>0){
+                                    Button(Body: LangRes(lr_deposit_money), Class: btn btn-success mb, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,Step=#view_step#,Decision=deposit", Page: #back_page#, PageParams: "sales_list=#sales_list#").CompositeContract(@1TokensSend, [{"Amount": #view_price#, "Recipient": "#bank_account#"}])
+                                }
+                            }
+                        }.ElseIf(#view_step#==2){
+                            Div(Class: h4, Body: Em(Class: fa fa-fw fa-hourglass-3 text-primary) $lr_awaiting_bank_transfer$)
+                            If(#bank#==1){
+                                Button(Body: LangRes(@1cancel), Class: btn btn-danger mb, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,RoleId=#role_id#,Step=#view_step#,Decision=cancel", Page: #back_page#, PageParams: "sales_list=#sales_list#").Alert($lr_want_cancel_deal$, $@1confirm_button$, $@1cancel$)
+                                Button(Body: LangRes(lr_finalize_deal), Class: btn btn-success mb, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,RoleId=#role_id#,Step=#view_step#,Decision=finalize", Page: #back_page#, PageParams: "sales_list=#sales_list#").CompositeContract(@1TokensSend, [{"Amount": #view_price#, "Recipient": "#view_owner_id#"}])
+                            }
+                        }
+                    }
+                    Div(col-md-2 text-center){
+                        If(#view_step#>=0){
+                            SetVar(b_id, 0)
+                            DBFind("@1members").Where({"id": #view_buyer_id#, "ecosystem": #ecosystem_id#}).Vars(b)
+                            If(Or(#b_id#>0,#b_id#<0)){
+                                SetVar(buyer_image_id, #b_image_id#)
+                                SetVar(buyer_member_name, #b_member_name#)
+                            }.Else{
+                                SetVar(buyer_, 0)
+                                SetVar(buyer_member_name, Address(#view_buyer_id#))
+                            }
+                            LinkPage(Page: @1profile_view, PageParams: "v_key_id=#view_buyer_id#"){
+                                If(#buyer_image_id#>0){
+                                    Image(Src: Binary().ById(#buyer_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)
+                                }.Else{
+                                    Span(Em(Class: fa icon-user fa-2x))
+                                }
+                                Div(Class: short-name text-bold, Body: #buyer_member_name#)
+                            }
+                            Div(Class: text-muted m0, Body: ($lr_owner$))
+                        }
+                    }
+                }
+            }
+        }
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: #back_page#, PageParams: "sales_list=#sales_list#")
+    }.Style(
+        .short-name {
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        }
+    )
+}.Else{
+    Form(){
+        Div(alert alert-danger text-center){
+            LangRes(@1attention)
+        }
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: lr_list)
+    }
+}

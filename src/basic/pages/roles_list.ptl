@@ -6,21 +6,21 @@ Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1roles_
 AddToolButton(Page: @1roles_create, Icon: icon-plus, Title: $@1create$).Popup(50, $@1new_role$)
 
 If(GetVar(search)){
-    SetVar(w_search, {"role_name": {"$like": #search#}})
+    SetVar(w_search, {"role_name": {"$like": "#search#"}})
 }
-SetVar(where, {"ecosystem":#ecosystem_id#, GetVar(w_search)})
+SetVar(where, {"ecosystem": #ecosystem_id#, {GetVar(w_search)}})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, LangRes(@1role))
     Include(@1search)
 }
 
-DBFind(#this_table#).Where({ecosystem:#ecosystem_id#}).Count(all_roles_count)
+DBFind(#this_table#).Where({"ecosystem": #ecosystem_id#}).Count(all_roles_count)
 DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access").Custom(_id){
     If(#deleted# == 0){
-        SetVar(style_text,).(style_link,"text-primary")
+        SetVar(style_text,"text-normal").(style_link, "text-primary")
     }.Else{
-        SetVar(style_text,"text-muted").(style_link,"text-muted")
+        SetVar(style_text,"text-muted").(style_link, "text-muted")
     }
     Span(Class: #style_text#, Body: #id#)
 }.Custom(_creator){
@@ -35,13 +35,13 @@ DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limi
             Image(Src: Binary().ById(#image_id#), Class: mr-sm).Style(width: 30px; border: 1px solid #5A5D63;)
             #role_name#
         }.Else{
-            Div(Class: text-primary){
+            Div(Class: #style_link#){
                 Span(Class: fa icon-settings fa-2x mr-sm)
             }.Style(
                 display: inline-block;
             )
-            Div(Class: text-primary){
-                Span(Class: btn-link text-bold pb-sm, Body: #role_name#)
+            Span(Class: btn-link text-bold pb-sm){
+                Span(Class: #style_link#, Body: #role_name#)
             }.Style(
                 display: inline-block;
                 vertical-align: top;
@@ -53,10 +53,12 @@ DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limi
 }.Custom(_date){
     Div(#style_text# small){
         Div(text-nowrap){DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI")}
-        Div(text-nowrap){DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI")}
+        If(#deleted# == 1){
+          Div(text-nowrap){DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI")}
+        }
     }
 }.Custom(_type){
-    DBFind(@1applications).Where({name:"Basic", ecosystem:1}).Columns("name,id").Vars(application)
+    DBFind(@1applications).Where({"name": "Basic", "ecosystem": 1}).Columns("name,id").Vars(application)
     Span(Class: #style_text#, Body: AppParam(Ecosystem: 1, App: #application_id#, Name: roles_types, Index: #role_type#))
 }.Custom(_status){
     Span(Class:#style_text#){
@@ -72,15 +74,13 @@ DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limi
     }.Else{
         SetVar(access,)
     }
-
     If(And(#roles_access#!="NULL",#roles_access#!="",#roles_access#!="[]")){
-        DBFind(@1roles,src_access_list).Where({id:{"$in":#roles_access#}}).Columns("id,role_name").Count(access_count).Order(role_name)
+        DBFind(@1roles,src_access_list).Where({"id": {"$in": #roles_access#}}).Columns("id,role_name").Count(access_count).Order(role_name)
         Div(#style_text# breaker){
             ForList(src_access_list){
                 If(And(#role_id#==#id#)){
                     SetVar(access,done)
                 }
-
                 If(#access_count#!=#src_access_list_index#){
                     Span("#role_name#,",mr-sm)
                 }.Else{
@@ -93,11 +93,19 @@ DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limi
     Div(text-right button-group text-nowrap){
         If(#access#=="done"){
             If(And(#deleted#==0,#role_type#!=3)){
-                Button(Class: fa fa-trash btn btn-danger mh-sm, Contract: @1RolesDelete, Params: "ops=D,rid=#id#", Page: @1roles_list).Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                Button(Class: btn bg-gray-lighter, Contract: @1RolesDelete, Params: "ops=D,rid=#id#", Page: @1roles_list){
+                    Em(Class: text-danger fa fa-1x fa-trash)
+                }.Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
             }.ElseIf(#deleted#==1){
-                Button(Class: fa fa-recycle btn btn-info mh-sm, Contract: @1RolesDelete, Params: "ops=R,rid=#id#", Page: @1roles_list)
+                Button(Class: btn bg-gray-lighter mh-sm, Contract: @1RolesDelete, Params: "ops=R,rid=#id#", Page: @1roles_list){
+                    Em(Class: btn-default fa fa-1x fa-recycle)
+                }
             }
-            Button(Class: fa fa-edit btn btn-default mh-sm, PageParams: "rid=#id#", Page: @1roles_create).Popup(50, $@1edit_role$)
+            If(#deleted#==0){
+                Button(Class: btn bg-gray-lighter mh-sm, PageParams: "rid=#id#", Page: @1roles_create){
+                    Em(Class: text-default fa fa-1x fa-edit)
+                }.Popup(50, $@1edit_role$)
+            }
         }
     }
 }.Count(count)
@@ -106,7 +114,7 @@ Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){
-                Table(src_roles, "$@1role$=_name,$@1type$=_type,$@1id$=id,$@1creator$=_creator,$@1role_created_deleted$=_date,$@1status$=_status,$@1roles_access$=_access,=_actions")
+                Table(src_roles, "$@1role$=_name,$@1type$=_type,$@1id$=_id,$@1creator$=_creator,$@1role_created_deleted$=_date,$@1status$=_status,$@1roles_access$=_access,=_actions")
             }.ElseIf(#all_roles_count# > 0){
                 Div(Class: text-center h4 text-muted){
                     Div(Class: text-center h4 text-muted, Body: "$@1roles$ $@1not_founded$")

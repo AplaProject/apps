@@ -9,10 +9,10 @@ contract VotingTokensRefundCreate {
     conditions {
         $victimId = AddressToId($VictimAccount)
         $attackerId = AddressToId($SuspectAccount)
-        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$victimId}).Row(){
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $victimId}).Row(){
             warning LangRes("@1victim_key_invalid", "en")
         }
-        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$attackerId}).Row(){
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $attackerId}).Row(){
             warning LangRes("@1attacker_key_invalid", "en")
         }
 
@@ -24,13 +24,13 @@ contract VotingTokensRefundCreate {
         }
 
         var app_id template_id int
-        app_id = Int(DBFind("@1applications").Where({ecosystem:1, name:"Basic"}).Columns("name,id").One("id"))
+        app_id = Int(DBFind("@1applications").Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").One("id"))
         template_id = Int(AppParam(app_id,"voting_tokenrefund_template_id", 1))
         if template_id <= 0 {
             warning LangRes("@1template_id_not_found", "en")
         }
 
-        $template = DBFind("@1voting_templates").Where({ecosystem:$ecosystem_id, id:template_id}).Row()
+        $template = DBFind("@1voting_templates").Where({"ecosystem": $ecosystem_id, "id": template_id}).Row()
         $votersRoleId = Int($template["voters"])
         $votingName = $template["title"]
         $typeParticipants = Int($template["type_participants"])
@@ -44,10 +44,10 @@ contract VotingTokensRefundCreate {
 
         if !RoleAccess($votersRoleId){
             var roleName string
-            roleName = DBFind("@1roles").Where({ecosystem:1, id:$votersRoleId}).One("role_name")
+            roleName = DBFind("@1roles").Where({"ecosystem": 1, "id": $votersRoleId}).One("role_name")
             warning Sprintf(LangRes("@1template_only_role_allowed", "en"), roleName)
         }
-        if !DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$votersRoleId, deleted:0}).One("id") {
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": $votersRoleId, "deleted": 0}).One("id") {
             warning Sprintf(LangRes("@1role_id_no_members", "en"), $votersRoleId)
         }
 

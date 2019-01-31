@@ -1,10 +1,17 @@
+If(#vID# == ""){
+    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
+    If(#buffer_value_voting_id#>0){
+        SetVar(vID, #buffer_value_voting_id#)
+        SetVar(toPageInvite, 1)
+    }
+}
 If(#vID# > 0){
     If(GetVar(back_page)){}.Else{
         SetVar(back_page,@1voting_view)
     }
 
     DBFind(@1votings, src_voting).WhereId(#vID#).Columns("id,voting->name,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params").Vars(instance)
-    DBFind(@1votings_subject, src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->text").Vars(prefix)
+    DBFind(@1votings_subject, src_voting_subject).Where({"voting_id": #vID#}).Columns("id,subject->text").Vars(prefix)
 
     If(#prefix_id#>0){
     }.Else{
@@ -19,7 +26,7 @@ If(#vID# > 0){
                         Span(Body: LangRes(@1text_document))
                         Span(Class: text-danger, Body:*)
                     }
-                    Input(Name: text_document, Type: textarea, Value: #prefix_subject_text#)
+                    Input(Name: text_document, Type: textarea, Value: #prefix_subject_text#).Style(resize: vertical;)
                 }
             }
         }
@@ -67,15 +74,13 @@ If(#vID# > 0){
                 }
             }
         }
-        Div(row mt){
-            Div(col-md-12){
-                Button(Body: LangRes(@1back), Class: btn btn-default, Page: #back_page#, PageParams: "vID=#vID#")
-                Input(Name: votingID, Type: hidden, Value: #vID#)
-                Div(pull-right){
-                    Button(Body: LangRes(@1save), Class: btn btn-primary, Page: #back_page#, PageParams: "vID=#vID#", Contract: @1VotingSubjectDocument)
-                }
-            }
+        Input(Name: votingID, Type: hidden, Value: #vID#)
+        If(#toPageInvite#==1){
+            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: @1voting_invite, PageParams: "vID=#vID#", Contract: @1VotingSubjectDocument).Popup(60, $@1participants_add$)
+        }.Else{
+            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: #back_page#, PageParams: "vID=#vID#", Contract: @1VotingSubjectDocument)
         }
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: #back_page#, PageParams: "vID=#vID#")
     }
 }.Else{
     Div(md-12 alert alert-danger text-center){

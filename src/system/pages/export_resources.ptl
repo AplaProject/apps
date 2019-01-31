@@ -1,80 +1,71 @@
+SetVar(this_page, @1export_resources).(pager_limit, 25)
 Div(content-wrapper){
-    SetVar(pager_limit, 25).(pager_page, @1export_resources)
-    If(GetVar(res_type)){
-        SetVar(page_params,`{"res_type":"#res_type#"}`)
-    }.Else{
-        SetVar(res_type,)
-        JsonToSource(src_params, #page_params#)
-        ForList(src_params){
-            If(#key#==res_type){
-                SetVar(res_type,#value#)
-            }
-        }
+    If(GetVar(page_par)){
+        SetVar(res_type, #page_par#)
     }
+
     SetTitle($@1application_export$)
     Div(breadcrumb text-muted){
         $@1application_export_select$
     }
-    DBFind(@1buffer_data).Columns("value->app_id,value->app_name,value->menu_name,value->menu_id,value->count_menu").Where({key: export, member_id:#key_id#,ecosystem:#ecosystem_id#}).Vars(buffer)
-
+    DBFind(@1buffer_data).Columns("value->app_id,value->app_name,value->menu_name,value->menu_id,value->count_menu").Where({"key": export, "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
     Include(@1export_link)
 
     If(#buffer_value_app_id# > 0){
         If(#res_type#=="pages"){
-            SetVar(pager_table, @1pages).(pager_where, "{app_id:#buffer_value_app_id#}")
+            SetVar(this_table, @1pages).(where, {"app_id": #buffer_value_app_id#}).(page_par, "pages")
             Include(@1pager_header)
-            DBFind(@1pages, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}).Custom(_cbox){
+            DBFind(@1pages, src).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({"app_id": #buffer_value_app_id#, "ecosystem": #ecosystem_id#}).Custom(_cbox){
                 Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
             }.Order("id")
         }
         If(#res_type#=="blocks"){
-            SetVar(pager_table, @1blocks).(pager_where, "{app_id:#buffer_value_app_id#}")
+            SetVar(this_table, @1blocks).(where, {"app_id": #buffer_value_app_id#}).(page_par, "blocks")
             Include(@1pager_header)
-            DBFind(@1blocks, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}).Custom(_cbox){
+            DBFind(@1blocks, src).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({"app_id": #buffer_value_app_id#, "ecosystem": #ecosystem_id#}).Custom(_cbox){
                 Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
             }.Order("id")
         }
         If(#res_type#=="menu"){
-            SetVar(pager_table, @1menu).(pager_where, "{id: {$in: [#buffer_value_menu_id#]}}")
+            SetVar(this_table, @1menu).(where, {"id": {"$in": [#buffer_value_menu_id#]}}).(page_par, "menu")
             Include(@1pager_header)
-            DBFind(@1menu, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({id: {$in: [#buffer_value_menu_id#]},ecosystem:#ecosystem_id#}).Custom(_cbox){
+            DBFind(@1menu, src).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({"id": {"$in": [#buffer_value_menu_id#]}, "ecosystem": #ecosystem_id#}).Custom(_cbox){
                 Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
             }.Order("id")
         }
         If(#res_type#=="parameters"){
-            SetVar(pager_table, @1app_params).(pager_where, "{app_id:#buffer_value_app_id#}")
+            SetVar(this_table, @1app_params).(where, {"app_id": #buffer_value_app_id#}).(page_par, "parameters")
             Include(@1pager_header)
-            DBFind(@1app_params, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}).Custom(_cbox){
+            DBFind(@1app_params, src).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({"app_id": #buffer_value_app_id#, "ecosystem": #ecosystem_id#}).Custom(_cbox){
                 Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
             }.Order("id")
         }
         If(#res_type#=="languages"){
-            SetVar(pager_table, @1languages)
+            SetVar(this_table, @1languages).(page_par, "languages")
             Include(@1pager_header)
-            DBFind(@1languages, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({"id":0}).Custom(_cbox){
+            DBFind(@1languages, src).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({"id": 0}).Custom(_cbox){
                 Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
             }.Order("id")
         }
         If(#res_type#=="contracts"){
-            SetVar(pager_table, @1contracts).(pager_where, "{app_id:#buffer_value_app_id#}")
+            SetVar(this_table, @1contracts).(where, {"app_id": #buffer_value_app_id#}).(page_par, "contracts")
             Include(@1pager_header)
-            DBFind(@1contracts, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}).Custom(_cbox){
+            DBFind(@1contracts, src).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({"app_id": #buffer_value_app_id#, "ecosystem": #ecosystem_id#}).Custom(_cbox){
                 Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
             }.Order("id")
         }
         If(#res_type#=="tables"){
-            SetVar(pager_table, @1tables).(pager_where, "{app_id:#buffer_value_app_id#}")
+            SetVar(this_table, @1tables).(where, {"app_id": #buffer_value_app_id#}).(page_par, "tables")
             Include(@1pager_header)
-            DBFind(@1tables, src_pages).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({app_id:#buffer_value_app_id#,ecosystem:#ecosystem_id#}).Custom(_cbox){
+            DBFind(@1tables, src).Count(pages_count).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where({"app_id": #buffer_value_app_id#, "ecosystem": #ecosystem_id#}).Custom(_cbox){
                 Input(Name: cbox, Type: checkbox, Value: true, Disabled: 1)
             }.Order("id")
         }
     }
-
     Div(row){
         Div(col-md-9){
-            Table(src_pages, "ID=id,$@1name$=name,=_cbox")
-            If(#pages_count#>#pager_limit#){
+            Table(src, "ID=id,$@1name$=name,=_cbox")
+            If(#pages_count# > #pager_limit#){
                 Include(@1pager)
             }
         }
@@ -82,7 +73,6 @@ Div(content-wrapper){
             Include(@1export_info)
         }
     }
-
 }.Style(
     tbody > tr:nth-of-type(odd) {
         background-color: #fafbfc;
