@@ -1,5 +1,5 @@
 Div(content-wrapper){
-    DBFind(@1notifications).Where({"id": #notific_id#}).Columns("page_params->ecosystem_id,sender->image_id,sender->member_id,sender->member_name,closed").Vars(notific)
+    DBFind(@1notifications).Where({"id": #notific_id#}).Columns("page_params->ecosystem_id,sender->image_id,sender->member_id,sender->key_id,sender->member_name,closed").Vars(notific)
     DBFind(@1ecosystems).Where({"id": #notific_page_params_ecosystem_id#}).Vars(ecosystem)
 
     Div(row){
@@ -17,13 +17,19 @@ Div(content-wrapper){
                                 }.Else{
                                     Span(Class: fa icon-user fa-5x)
                                 }
-                                Div(m0 h4 text-bold){#notific_sender_member_name#}
+                                DBFind(@1members).Where({id:#notific_sender_key_id#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
+                                If(#m_member_name#!=""){
+                                    SetVar(m_name,#m_member_name#)
+                                }.Else{
+                                    SetVar(m_name,Address(#notific_sender_key_id#))
+                                }
+                                Div(m0 h4 text-bold){#m_name#}
                             }
                         }
                     }
                     Div(list-group-item text-center){
                         Div(text-muted m0 h5, Body: LangRes(@1address))
-                        Span(Class: h5 text-bold, Body: Address(#notific_sender_member_id#))
+                        Span(Class: h5 text-bold, Body: Address(#notific_sender_key_id#))
                     }
                     Div(list-group-item text-center){
                         Div(text-muted m0 h5, Body: LangRes(@1ecosystem))

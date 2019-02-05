@@ -5,24 +5,7 @@ contract NotificationsBroadcast {
         Body string
         Popup string "optional"
     }
-    
-    func getMemberInfo(kid int) map {
-        var res member map
-        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
-        if member {
-            res["member_id"] = member["id"]
-            res["member_name"] = member["member_name"]
-            res["image_id"] = member["image_id"]
-        }else{
-            if DBFind("@1keys").Columns("id").Where({"ecosystem": $ecosystem_id, "id": kid}).Row() {
-                res["member_id"] = Str(kid)
-                res["member_name"] = IdToAddress(kid)
-                res["image_id"] = "0"
-            }
-        }
-        return res
-    }
-    
+
     conditions {
         if $RoleId !=1 {
             warning LangRes("@1admin_only_action", "en")
@@ -36,11 +19,13 @@ contract NotificationsBroadcast {
             warning LangRes("@1other_ecosystems_not_found", "en")
         }
     }
-    
+
     action {
         var i lenIds int eco map ids array bt string sender recipient params note map
         bt = BlockTime()
-        sender = getMemberInfo($key_id)
+        sender["address"] = IdToAddress($key_id)
+        sender["key_id"] = $key_id
+        sender["member_id"] = $key_id
         sender["type"] = 1
         note["header"] = $Header
         note["type"] = 1
@@ -51,7 +36,7 @@ contract NotificationsBroadcast {
         }else{
             note["popup"] = 0
         }
-        
+
         while i < $lenEcos{
             eco = $ecos[i]
             var ecoId int
@@ -61,12 +46,13 @@ contract NotificationsBroadcast {
                 adminRoleId = Int(DBFind("@1parameters").Where({"ecosystem": ecoId, "name": "role_admin"}).One("value"))
                 ids = DBFind("@1roles_participants").Where({"ecosystem": ecoId, "role->id": adminRoleId, "role->type": 3}).Columns("member->member_id")
                 lenIds = Len(ids)
-                var i_ids int
+                var i_ids recipientKey int recipientAddress string
                 while i_ids < lenIds{
                     recipient = ids[i_ids]
-                    recipient = getMemberInfo(Int(recipient["member.member_id"]))
+                    recipientKey = Int(recipient["member.member_id"])
+                    recipientAddress = IdToAddress(recipientKey)
                     var m map
-                    m["recipient"] = recipient
+                    m["recipient"] = {"address":recipientAddress, "key_id":recipientKey, "member_id":recipientKey}
                     m["sender"] = sender
                     m["notification"] = note
                     m["page_name"] = "@1notifications_show"

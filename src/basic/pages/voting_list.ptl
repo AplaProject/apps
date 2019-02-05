@@ -1,4 +1,4 @@
-SetVar(this_page, @1voting_list).(this_table, @1votings)
+SetVar(this_page, @1voting_list).(this_table, @1votings).(key_address,Address(#key_id#))
 Include(@1pager_header)
 
 SetTitle("$@1voting_list$")
@@ -26,7 +26,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 SetVar(INVALID,1).(WAITING,2).(STARTED,3).(FINISHED,4)
 DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->success,flags->decision,flags->full_data,progress->percent_success,progress->number_participants,creator->member_id,creator->member_name,date_started,date_ended,deleted,status,voting->count_type_voters,voting->volume,progress->number_voters").Count(count_votings).Custom(_id){
+DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->success,flags->decision,flags->full_data,progress->percent_success,progress->number_participants,creator->key_id,creator->address,date_started,date_ended,deleted,status,voting->count_type_voters,voting->volume,progress->number_voters").Count(count_votings).Custom(_id){
     Span(Class: h5, Body: #id#)
 }.Custom(_name){
     LinkPage(Page: @1voting_view, PageParams: "vID=#id#"){
@@ -74,7 +74,14 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
         }
     }
 }.Custom(_creator){
-    LinkPage(Class: text-primary h6, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#", Body: #creator.member_name#)
+    SetVar(m_member_name,)
+    DBFind(@1members).Where({address:#creator.address#, ecosystem:#ecosystem_id#}).Columns("member_name").Vars(m)
+    If(#m_member_name#!=""){
+        SetVar(m_name,#m_member_name#)
+    }.Else{
+        SetVar(m_name,#creator.address#)
+    }
+    LinkPage(Class: text-primary h6, Page: @1profile_view, PageParams: "v_key_id=#creator.key_id#", Body: #m_name#)
 }.Custom(_date){
     P(Class: text-center h6 m0, Body: DateTime(DateTime: #date_started#, Format: "DD.MM.YYYY HH:MI"))
     P(Class: text-center h6 m0, Body: DateTime(DateTime: #date_ended#, Format: "DD.MM.YYYY HH:MI"))
@@ -135,7 +142,7 @@ Div(fullscreen){
                 Table(src, "$@1voting$=_name,$@1type$=_type,$@1voting_subject$=_subject,$@1participants$=_participants,$@1date_start$ / $@1date_end$=_date,$@1creator$=_creator,$@1progress$=_progress,$@1decision$=_decision,$@1status$=_status,=_actions")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1votings$ $@1not_founded$")
-            }                       
+            }
         }.Style(
             margin-top:-15px;
             tbody > tr:nth-of-type(odd) {

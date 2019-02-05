@@ -1,5 +1,5 @@
 Div(content-wrapper){
-    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("page_params->ecosystem_id,page_params->status,recipient->image_id,recipient->member_name,closed").Vars(notific)
+    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("page_params->ecosystem_id,page_params->status,recipient->image_id,recipient->member_name,recipient->key_id,closed").Vars(notific)
     DBFind(@1ecosystems).Where({"id": #notific_page_params_ecosystem_id#}).Vars(ecosystem)
 
     Div(row){
@@ -12,12 +12,18 @@ Div(content-wrapper){
                     Div(form-group){
                         Div(row){
                             Div(col-md-12 mt-sm text-center){
-                                If(#notific_recipient_image_id#>0){
-                                    Image(Src: Binary().ById(#notific_recipient_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                DBFind(@1members).Where({id:#notific_recipient_key_id#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
+                                If(#m_member_name#!=""){
+                                    SetVar(m_name,#m_member_name#)
+                                }.Else{
+                                    SetVar(m_name,Address(#notific_recipient_key_id#))
+                                }
+                                If(#m_image_id#>0){
+                                    Image(Src: Binary().ById(#m_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
                                 }.Else{
                                     Span(Class: fa icon-user fa-5x)
                                 }
-                                Div(m0 h4 text-bold){#notific_recipient_member_name#}
+                                Div(m0 h4 text-bold){#m_name#}
                             }
                         }
                     }

@@ -41,11 +41,17 @@ If(#vID# > 0){
                     }
                 }
             }
-            DBFind(@1votings_subject,src_voting_subject).Where({"voting_id": #vID#}).Columns("id,subject->member_id,subject->member_name").Count(members_count).Custom(_address){
-                Address(#subject.member_id#)
+            DBFind(@1votings_subject,src_voting_subject).Where({"voting_id": #vID#}).Columns("id,subject->key_id,subject->address").Count(members_count).Custom(_address){
+                #subject.address#
             }.Custom(_member){
-                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#subject.member_id#"){
-                    Span(Body: #subject.member_name#)
+                DBFind(@1members).Where({id:#subject.key_id#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
+                If(#m_member_name#!=""){
+                    SetVar(m_name,#m_member_name#)
+                }.Else{
+                    SetVar(m_name,#subject.address#)
+                }
+                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#subject.key_id#"){
+                    Span(Body: #m_name#)
                 }
             }
             If(Or(#members_count#>0,#apply#==1)){

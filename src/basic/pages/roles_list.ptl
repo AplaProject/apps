@@ -16,7 +16,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 }
 
 DBFind(#this_table#).Where({"ecosystem": #ecosystem_id#}).Count(all_roles_count)
-DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access").Custom(_id){
+DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,role_name,role_type,image_id,creator->key_id,date_created,date_deleted,deleted,roles_access").Custom(_id){
     If(#deleted# == 0){
         SetVar(style_text,"text-normal").(style_link, "text-primary")
     }.Else{
@@ -24,10 +24,14 @@ DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limi
     }
     Span(Class: #style_text#, Body: #id#)
 }.Custom(_creator){
-    If(And(#creator.member_name#!=NULL,#creator.member_name#!="")){
-        LinkPage(Class: #style_link# text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
-            #creator.member_name#
-        }
+    DBFind(@1members).Where({id:#creator.key_id#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
+    If(#m_member_name#!=""){
+        SetVar(m_name,#m_member_name#)
+    }.Else{
+        SetVar(m_name,Address(#creator.key_id#))
+    }
+    LinkPage(Class: #style_link# text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.key_id#"){
+        #m_name#
     }
 }.Custom(_name){
     LinkPage(Class: #style_link# h5 text-bold, Page: @1roles_view, PageParams: "v_role_id=#id#"){
@@ -54,7 +58,7 @@ DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limi
     Div(#style_text# small){
         Div(text-nowrap){DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI")}
         If(#deleted# == 1){
-          Div(text-nowrap){DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI")}
+            Div(text-nowrap){DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI")}
         }
     }
 }.Custom(_type){

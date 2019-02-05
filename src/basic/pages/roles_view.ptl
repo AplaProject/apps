@@ -27,7 +27,7 @@ If(#v_role_id#>0){
     )
 
     If(GetVar(search)){
-        SetVar(w_search, {"member->member_name": {"$like": "#search#"}})
+        SetVar(w_search, {"member->address": {"$like": "#search#"}})
     }
     SetVar(where, {"ecosystem":#ecosystem_id#, "role->id":#v_role_id#, {GetVar(w_search)}})
 
@@ -36,7 +36,7 @@ If(#v_role_id#>0){
         Include(@1search)
     }
 
-    DBFind(#this_table#, src_participants).Where(#where#).Order({"deleted": 1, "id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,member->member_id,member->member_name,member->image_id,appointed->member_id,appointed->member_name,appointed->voting_id,appointed->voting_name,date_created,date_deleted,deleted").Custom(custom_id){
+    DBFind(#this_table#, src_participants).Where(#where#).Order({"deleted": 1, "id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,member->key_id,appointed->key_id,appointed->voting_id,appointed->voting_name,date_created,date_deleted,deleted").Custom(custom_id){
         If(#deleted# == 0){
             SetVar(Name: style_text, Value: "text-normal")
             SetVar(Name: style_link, Value: "text-primary")
@@ -46,9 +46,15 @@ If(#v_role_id#>0){
         }
         Span(Class: #style_text#, Body: #id#)
     }.Custom(custom_appointed){
-        If(Or(#appointed.member_id#>0,#appointed.member_id#<0)){
-            LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#appointed.member_id#"){
-                Span(Body: #appointed.member_name#)
+        If(Or(#appointed.key_id#>0,#appointed.key_id#<0)){
+            DBFind(@1members).Where({id:#appointed.key_id#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(a)
+            If(#a_member_name#!=""){
+                SetVar(a_name,#a_member_name#)
+            }.Else{
+                SetVar(a_name,Address(#appointed.key_id#))
+            }
+            LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#appointed.key_id#"){
+                Span(Body: #a_name#)
             }
         }
         If(#appointed.voting_id#>0){
@@ -57,19 +63,25 @@ If(#v_role_id#>0){
             }
         }
     }.Custom(custom_member){
-        LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#member.member_id#"){
-            If(#member.image_id#>0){
-                Image(Src: Binary().ById(#member.image_id#), Class: img-circle).Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
-                Span(#member.member_name#)
+        DBFind(@1members).Where({id:#member.key_id#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
+        If(#m_member_name#!=""){
+            SetVar(m_name,#m_member_name#)
+        }.Else{
+            SetVar(m_name,Address(#member.key_id#))
+        }
+        LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#member.key_id#"){
+            If(#m_image_id#>0){
+                Image(Src: Binary().ById(#member.image_id#), Class: img-circle mr).Style(width: 30px; border: 1px solid #5A5D63;)
+                Span(#m_name#)
             }.Else{
                 Div(){
-                    Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
-                    Span(#member.member_name#)
+                    Em(Class: fa icon-user fa-2x mr)
+                    Span(#m_name#)
                 }.Style(display:flex; align-items:center;)
             }
         }
     }.Custom(custom_address){
-        Span(Class: #style_text#, Body: Address(#member.member_id#))
+        Span(Class: #style_text#, Body: Address(#member.key_id#))
     }.Custom(custom_date){
         Div(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI"))
         Div(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_deleted#, Format: "DD.MM.YYYY HH:MI"))
@@ -96,7 +108,7 @@ If(#v_role_id#>0){
                     Table(src_participants, "$@1member$=custom_member,$@1address$=custom_address,$@1appointed$=custom_appointed,$@1appointed_deleted_member$=custom_date,$@1status$=custom_status,=actions")
                 }.Else{
                     Div(Class: text-center h4 text-muted, Body: "$@1participants$ $@1not_founded$")
-                }                       
+                }
             }.Style(
                 margin-top:-15px;
                 tbody > tr:nth-of-type(odd) {

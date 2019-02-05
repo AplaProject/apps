@@ -15,20 +15,11 @@ contract NotificationsSend {
         popup string "optional"
     }
 
-    func getMemberInfo(kid, ecoId int) map {
-        var res member map
-        member = DBFind("@1members").Where({"ecosystem": ecoId, "id": kid}).Row()
-        if member {
-            res["member_id"] = member["id"]
-            res["member_name"] = member["member_name"]
-            res["image_id"] = member["image_id"]
-        }else{
-            if DBFind("@1keys").Where({"ecosystem": ecoId, "id": kid}).Columns("id").Row() {
-                res["member_id"] = Str(kid)
-                res["member_name"] = IdToAddress(kid)
-                res["image_id"] = "0"
-            }
-        }
+    func getMemberInfo(kid int) map {
+        var res map
+        res["member_id"] = Str(kid)
+        res["key_id"] = Str(kid)
+        res["address"] = IdToAddress(kid)
         return res
     }
 
@@ -48,8 +39,8 @@ contract NotificationsSend {
             // send from member
             sender["type"] = $sender
             sender["member_id"] = $senderMember["member_id"]
-            sender["member_name"] = $senderMember["member_name"]
-            sender["image_id"] = $senderMember["image_id"]
+            sender["key_id"] = $senderMember["member_id"]
+            sender["address"] = $senderMember["address"]
         }else{
             if $sender == 2 && $senderRole{
                 // send from role
@@ -109,7 +100,7 @@ contract NotificationsSend {
         $senderMember = nil
         $senderRole = nil
         if $sender == 1 {
-            $senderMember = getMemberInfo($key_id, $ecosystem_id)
+            $senderMember = getMemberInfo($key_id)
         }elif $sender == 2 {
             $senderRole = DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $current_role_id}).Row()
             if !$senderRole {
@@ -122,7 +113,7 @@ contract NotificationsSend {
 
     action {
         if $member_id != 0 {
-            sendNotify(getMemberInfo($member_id, $eco_id))
+            sendNotify(getMemberInfo($member_id))
             UpdateNotifications($eco_id, Int($member_id))
         }elif $rid > 0 {
             if $closure_type == 1 {
@@ -138,7 +129,7 @@ contract NotificationsSend {
                 while i < Len(participants) {
                     var p map
                     p = participants[i]
-                    sendNotify(getMemberInfo(Int(p["member.member_id"]), $eco_id))
+                    sendNotify(getMemberInfo(Int(p["member.member_id"])))
                     UpdateNotifications($eco_id, Int(p["member.member_id"]))
                     i = i + 1
                 }
