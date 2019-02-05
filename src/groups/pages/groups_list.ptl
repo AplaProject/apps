@@ -6,9 +6,9 @@ Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: $@1group_d
 AddToolButton(Page: @1groups_create, Icon: icon-plus, Title: $@1create$).Popup(50, $@1new_group$)
 
 If(GetVar(search)){
-    SetVar(where, "{group_name:{$like:#search#}, ecosystem:#ecosystem_id#}")
+    SetVar(where, {"group_name":{"$like":"#search#"}, "ecosystem":#ecosystem_id#})
 }.Else{
-    SetVar(where, "{id:{$neq:0}, ecosystem:#ecosystem_id#}").(search,)
+    SetVar(where, {"id":{"$neq":0}, "ecosystem":#ecosystem_id#}).(search,)
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
@@ -112,13 +112,15 @@ DBFind(#this_table#, src_groups).Where(#where#).Order({deleted:"1", id:"1"}).Lim
         Span(Body: AppParam(Ecosystem:1, App: #application_id#, Name: type_groups,Index:#group_type#),Class:text-muted)
     }
 }.Custom(join_group){
-    DBFind("@1groups_participants").Columns("id,groups_info,groups_info->id,deleted,member,member->member_id").Where({"groups_info->id":#id#,"deleted":0,"member->member_id":#key_id#}).Vars(j_l).Count(check_membership)
-    If(And(#group_type# == 1,#check_membership# == 0)){
-        Button(Body: $@1join_the_group$, Class: btn btn-link pull-right,Contract:@1GroupsAssign,Page: @1groups_view,PageParams: "v_group_id=#id#",Params: "gr_id=#id#,member_id=#key_id#")
-    }.ElseIf(And(#group_type# == 1,#check_membership# == 1)){
-        Button(Body: $@1leave_the_group$, Class: btn btn-link pull-right,Contract:@1GroupsUnassign,Page: @1groups_list,Params:"row_id=#j_l_id#")
-    }.ElseIf(And(#group_type# == 2,#check_membership# == 0)){
-        Button(Body: $@1send_request$, Class: btn btn-link pull-right,Contract:@1GroupRequestMembership,Page: @1groups_view,PageParams:"v_group_id=#id#",Params: "gr_id=#id#")
+    If(#deleted# == 0){
+        DBFind("@1groups_participants").Columns("id,groups_info,groups_info->id,deleted,member,member->member_id").Where({"groups_info->id":#id#,"deleted":0,"member->member_id":#key_id#}).Vars(j_l).Count(check_membership)
+        If(And(#group_type# == 1,#check_membership# == 0)){
+            Button(Body: $@1join_the_group$, Class: btn btn-link pull-right,Contract:@1GroupsAssign,Page: @1groups_view,PageParams: "v_group_id=#id#",Params: "gr_id=#id#,member_id=#key_id#")
+        }.ElseIf(And(#group_type# == 1,#check_membership# == 1)){
+            Button(Body: $@1leave_the_group$, Class: btn btn-link pull-right,Contract:@1GroupsUnassign,Page: @1groups_list,Params:"row_id=#j_l_id#")
+        }.ElseIf(And(#group_type# == 2,#check_membership# == 0)){
+            Button(Body: $@1send_request$, Class: btn btn-link pull-right,Contract:@1GroupRequestMembership,Page: @1groups_view,PageParams:"v_group_id=#id#",Params: "gr_id=#id#")
+        }
     }
 }.Custom(gr_info){
     If(#deleted#==0){
