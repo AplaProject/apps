@@ -6,18 +6,17 @@ Span(Class: text-muted h5 m0 mb ml-lg){
     $@1ecosystem_members_list_desc$
 }
 
-SetVar(isManager,0)
-SetVar(admin_role_id, EcosysParam(Name:role_admin))
-If(#role_id#>0){
-    If(#admin_role_id#==#role_id#){
-        SetVar(isManager,1)
-    }
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Ratings"}).Vars(application)
+SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: ratings_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+If(#admin_access_id# > 0){
+    SetVar(isManager,1)
 }
 If(#isManager#==1){
     AddToolButton(Title:$@1r_rating_group$, Page: @1r_rating_group, Icon: icon-calendar).Popup(Header: $@1r_rating_group$, Width: "50")
 }
 
-If(GetVar(search)){
+If(#search#){
     SetVar(where, {"ecosystem": #ecosystem_id#, "id": {"$neq":#guest_key#}, "deleted": 0, "id": AddressToId(#search#)})
 }.Else{
     SetVar(where, {"ecosystem": #ecosystem_id#, "id": {"$neq":#guest_key#}, "deleted": 0})

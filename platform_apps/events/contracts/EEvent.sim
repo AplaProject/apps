@@ -22,9 +22,12 @@ contract EEvent {
     }
 
     conditions{
-        var adminId int
-        adminId = Int(EcosysParam("role_admin"))
-        if !RoleAccess(adminId){
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Events"}).One("id")
+        var admin_ids int
+        admin_ids = AppParam(Int($app), "events_admin_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+admin_ids+"]")  
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id":{"$in":rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
             warning LangRes("@1access_denied", "en")
         }
 
@@ -32,10 +35,10 @@ contract EEvent {
             var event map
             event = DBFind("@1e_events").Where({"id": $Id, "ecosystem": $ecosystem_id}).Row()
             if !event{
-                warning "Event not founded"
+                warning "The event is not found"
             }
             if event["starting_date"] < $block_time {
-                warning "Event not editable"
+                warning "The event is not editable"
             }
         }
 
@@ -45,7 +48,7 @@ contract EEvent {
         }
 
         if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $Responsible}).Row(){
-            warning "Responsible not founded"
+            warning "Responsible member is not found"
         }
     }
 
