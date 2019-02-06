@@ -1,20 +1,21 @@
 SetVar(this_page, @1errand_list).(this_table, @1notifications)
 Include(@1pager_header)
 
-If(GetVar(page_par)!=""){
+If(#page_par#!=""){
     SetVar(Name: type, Value: #page_par#)
 }
-
 If(And(#type#!=0,#type#!=1)){
     SetVar(Name: type, Value: 0)
 }
 
 SetTitle($@1errands$)
-DBFind("@1applications",Source: src_mem).Where({"ecosystem": #ecosystem_id#, "name": "Errand"}).Vars(application)
-SetVar(access_role,AppParam(Ecosystem:#ecosystem_id#, App:#application_id#, Name: errand_access))
-DBFind("@1app_params",Source: src_mems).Where({"ecosystem": #ecosystem_id#, "name": errand_access, "app_id": #application_id#, "value": {"$like": #role_id#}}).Vars(access_er)
-If(#access_er_id# > 0){
-    AddToolButton(Title: $@1send$, Page: @1errand_create,PageParams:"type=#type#", Icon: icon-plus).Popup(50, "$@1new_errand$")
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Errands"}).Vars(application)
+SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: errands_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "role->id": {"$in": [#admin_roles#]}, "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+SetVar(create_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: errands_access))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#create_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(create_access)
+If(#create_access_id# > 0){
+    AddToolButton(Title: $@1send$, Page: @1errand_create, PageParams:"type=#type#", Icon: icon-plus).Popup(50, "$@1new_errand$")
 }
 
 Div(btn-group){
@@ -29,8 +30,8 @@ Div(btn-group){
         }.Else{
             Button(Body: Em(Class: fa fa-users) $@1roles_errands$, Page: @1errand_list, PageParams: "type=1", Class: btn bg-gray ml-sm)
         }
-        If(EcosysParam(Name:role_admin)==#role_id#){
-            Button(Body: $@1update_statuses$, Class: btn btn-default ml-lg, Page: @1errand_list, PageParams: "type=#type#", Contract: @1ErrandStatusUpdate)
+        If(#admin_access_id#>0){
+            Button(Body: Em(Class: fa fa-refresh) $@1update_statuses$, Class: btn btn-default ml-lg, Page: @1errand_list, PageParams: "type=#type#", Contract: @1ErrandStatusUpdate)
         }
     }
     Div(btn-group mr-lg pull-right){
@@ -118,9 +119,8 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
 }.Custom(_date_end){
     Div(Class:h5){Span(#page_params.date_end#)}
 }.Custom(_del){
-    DBFind(@1roles).WhereId(#role_id#).Vars(adm)
-    If(#adm_role_name# == Admin){
-        Button(Body: Em(Class: fa fa-trash), Class: btn btn-default pull-right, Contract: @1ErrandeDelete, Page: @1errand_list, Params: "errand_id=#id#", PageParams: "type=#type#")
+    If(#admin_access_id#>0){
+        Button(Body: Em(Class: text-danger fa fa-trash), Class: btn btn-default pull-right, Contract: @1ErrandDelete, Page: @1errand_list, Params: "errand_id=#id#", PageParams: "type=#type#")
     }
 }.Count(count)
 

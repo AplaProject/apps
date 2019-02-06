@@ -1,4 +1,4 @@
-DBFind(@1applications).Columns("id").Where({"name": "Tokens emission", "deleted": 0, "ecosystem": 1}).Vars(application)
+DBFind(@1applications).Columns("id").Where({"name": "Token emission", "deleted": 0, "ecosystem": 1}).Vars(application)
 AppParam(App:#application_id#, Name:type_emission, Source:type_emission, Ecosystem:1)
 AppParam(App:#application_id#, Name:type_withdraw, Source:type_withdraw, Ecosystem:1)
 DBFind(@1ecosystems).WhereId(#ecosystem_id#).Vars(e)
@@ -12,8 +12,10 @@ If(#e_type_emission#>0){
         AddToolButton(Page: @1te_create, Icon: icon-plus, Title: $@1emission_new$).Popup(50, $@1emission_new$)
     }
 }.Else{
-    SetVar(role_admin, EcosysParam(Ecosystem:#ecosystem_id#, Name: role_admin))
-    If(#role_id#==#role_admin#){
+    DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Token emission"}).Vars(ecosystem_application)
+    SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #ecosystem_application_id#, Name: te_admin_role))
+    DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+    If(#admin_access_id# > 0){
         AddToolButton(Page: @1te_create, Icon: icon-plus, Title: $@1emission_new$).Popup(50, $@1emission_new$)
     }
 }

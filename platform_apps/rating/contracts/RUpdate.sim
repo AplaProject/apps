@@ -39,9 +39,12 @@ contract RUpdate {
     }
 
     conditions{
-        var adminId int
-        adminId = Int(EcosysParam("role_admin"))
-        if !RoleAccess(adminId){
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Ratings"}).One("id")
+        var admin_ids int
+        admin_ids = AppParam(Int($app), "ratings_admin_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+admin_ids+"]")  
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
             warning LangRes("@1access_denied", "en")
         }
 
@@ -52,14 +55,14 @@ contract RUpdate {
         var id int
         id = AddressToId($Member)
         if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": id}).Row(){
-            warning "Wallet not founded"
+            warning "Wallet not found"
         }
 
         if $LastEvent == "true" {
             var event map
             event = DBFind("@1e_events").WhereId($EventId).Row()
             if !event {
-                warning "Event not founded"
+                warning "Event not found"
             }
             $EventType = Int(event["type"])
         }
