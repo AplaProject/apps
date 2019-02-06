@@ -14,12 +14,14 @@ contract QOperations {
         end_date string
         end_time string
     }
+
     func trimZeroTime(s string) string {
         if Contains(s, "T00:00:00Z") {
             s = Replace(s, "T00:00:00Z", "")
         }
         return s
     }
+
     func dateAddTime(d, t string) string {
         var dt string
         if Size(t) == 5 {
@@ -27,17 +29,27 @@ contract QOperations {
         }
         return dt
     }
+
     func isCalledFromPage() bool {
         return $stack[0] == Sprintf("@%v%v", $ecosystem_id, $this_contract)
     }
+
     func expToTimestamp() {
         $ext_string = dateAddTime($end_date, $end_time)
         if $time > UnixDateTime($ext_string) {
             warning LangRes("@1ending_date_invalid", "en")
         }
     }
+
     conditions {
-        AdminCondition()
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Questionnaire"}).One("id")
+        var admin_ids int
+        admin_ids = AppParam(Int($app), "q_admin_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+admin_ids+"]")  
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id":{"$in":rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+            warning LangRes("@1access_denied", "en")
+        }
         if $operation == "GA" {
             $groups = JSONDecode(DBFind("@1q_list").Where({"id": $id}).Columns("au_groups").One("au_groups"))
             var i int
@@ -78,9 +90,9 @@ contract QOperations {
             }
         }     
     }
+
     action {
-        var q map
-        var audience audience_new array
+        var q map audience audience_new array
         //notifications when start and changing status
         if $operation == "C" {
             var decision array
@@ -227,13 +239,13 @@ contract QOperations {
             q["lastmodified"] = $time
             DBUpdate("@1q_list", $id, q)
             var params map
-            params = DBFind("@1q_list").Where({"id":$id}).Columns("id,question,params->notifications").Row()
+            params = DBFind("@1q_list").Where({"id": $id}).Columns("id,question,params->notifications").Row()
             var rid_array grp_array array
-            rid_array = JSONDecode(DBFind("@1q_list").Where({"id":$id}).One("au_roles"))
-            grp_array = JSONDecode(DBFind("@1q_list").Where({"id":$id}).One("au_groups"))
+            rid_array = JSONDecode(DBFind("@1q_list").Where({"id": $id}).One("au_roles"))
+            grp_array = JSONDecode(DBFind("@1q_list").Where({"id": $id}).One("au_groups"))
             if rid_array[0] == 0 && grp_array[0] == 0 && params["params.notifications"] == "true" {
                 var participants array
-                participants = DBFind("@1keys").Where({ecosystem:$ecosystem_id, deleted:0}).Columns("id")
+                participants = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "deleted": 0}).Columns("id")
                 var i int
                 while i < Len(participants) {
                     var participant map
@@ -250,13 +262,13 @@ contract QOperations {
             DBUpdate("@1q_list", $id, q)
             var question string
             var params map
-            params = DBFind("@1q_list").Where({"id":$id}).Columns("id,question,params->notifications").Row()
+            params = DBFind("@1q_list").Where({"id": $id}).Columns("id,question,params->notifications").Row()
             question = params["question"]
             var c_notifications map
-            c_notifications = DBFind("@1notifications").Where({"page_params->question":question,"page_params->id":$id,"ecosystem":$ecosystem_id}).Columns("id")
+            c_notifications = DBFind("@1notifications").Where({"page_params->question": question, "page_params->id": $id, "ecosystem": $ecosystem_id}).Columns("id")
             var rid_array grp_array array
-            rid_array = JSONDecode(DBFind("@1q_list").Where({"id":$id}).One("au_roles"))
-            grp_array = JSONDecode(DBFind("@1q_list").Where({"id":$id}).One("au_groups"))
+            rid_array = JSONDecode(DBFind("@1q_list").Where({"id": $id}).One("au_roles"))
+            grp_array = JSONDecode(DBFind("@1q_list").Where({"id": $id}).One("au_groups"))
             if rid_array[0] == 0 && grp_array[0] == 0 && params["params.notifications"] == "true" {
                 var i int
                 while i < Len(c_notifications) {
@@ -275,13 +287,13 @@ contract QOperations {
             DBUpdate("@1q_list", $id, q)
             var question string
             var params map
-            params = DBFind("@1q_list").Where({"id":$id}).Columns("id,question,params->notifications").Row()
+            params = DBFind("@1q_list").Where({"id": $id}).Columns("id,question,params->notifications").Row()
             question = params["question"]
             var c_notifications map
-            c_notifications = DBFind("@1notifications").Where({"page_params->question":question,"page_params->id":$id,"ecosystem":$ecosystem_id}).Columns("id")
+            c_notifications = DBFind("@1notifications").Where({"page_params->question": question, "page_params->id": $id, "ecosystem": $ecosystem_id}).Columns("id")
             var rid_array grp_array array
-            rid_array = JSONDecode(DBFind("@1q_list").Where({"id":$id}).One("au_roles"))
-            grp_array = JSONDecode(DBFind("@1q_list").Where({"id":$id}).One("au_groups"))
+            rid_array = JSONDecode(DBFind("@1q_list").Where({"id": $id}).One("au_roles"))
+            grp_array = JSONDecode(DBFind("@1q_list").Where({"id": $id}).One("au_groups"))
             if rid_array[0] == 0 && grp_array[0] == 0 && params["params.notifications"] == "true" {
                 var i int
                 while i < Len(c_notifications) {

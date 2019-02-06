@@ -2,14 +2,17 @@ SetVar(this_page, @1q_listing).(this_table, @1q_list)
 Include(@1pager_header)
 
 SetTitle($@1q_poll$)
-If(#role_id#==1){
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Questionnaire"}).Vars(application)
+SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: q_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+If(#admin_access_id# > 0){
     SetVar(permission,1)
 }
 If(#permission#==1){
     AddToolButton(Title: $@1q_new_question$, Page: @1q_question_new, Icon: icon-plus).Popup(Header: $@1q_new_question$, Width: "60")
 }
 
-If(GetVar(search)){
+If(#search#){
     SetVar(where, {"ecosystem": #ecosystem_id#, "deleted": 0, {"$or": [{"question": {"$like": "#search#"}}]}})
 }.Else{
     SetVar(where, {"ecosystem": #ecosystem_id#, "deleted": 0})
@@ -21,7 +24,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 }
 
 DBFind(#this_table#,src_q).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Columns("id,question,description,answer,ecosystem,init,lastmodified,created_at,expired,status,params->hide,params->change,au_groups,au_roles").Custom(custom_name){
-    If(#permission#==1){
+    If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
         LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: "q_id=#id#"){
             Div(Class: text-primary){
                 Span(#question#)
@@ -90,7 +93,7 @@ DBFind(#this_table#,src_q).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).
     }
 }.Custom(ops){
     Span(Class: pull-right){
-        If(#permission#==1){
+        If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
             If(#status#==0){
                 Button(Body: Em(Class: fa fa-hourglass-start), Class: btn-xs btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=T,id=#id#")
             }
@@ -108,7 +111,7 @@ DBFind(#this_table#,src_q).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).
                 Span(Class:btn-xs fa fa-book).Style({margin-left: 35px;})
             }
         }
-        If(Or(#permission#==1,#params.hide#==true)){
+        If(Or(#role_id#==#admin_role_id#,#params.hide#==true)){
             Button(Body: Em(Class: fa fa-comment), Class: btn-xs btn-link, Page: @1q_question_graph, PageParams: "q_id=#id#").Style({margin-left: 30px;}).Popup(Header: $@1q_answer_graph$ / #question#, Width: "50")
         }
     }

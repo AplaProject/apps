@@ -1,13 +1,11 @@
 SetVar(this_page, @1r_rating_member).(back_page, @1r_ratings)
-DBFind(@1applications).Where({"ecosystem": 1, name: "Ratings"}).Columns("name,id").Vars(application)
 DBFind(@1e_types, types).Where({"ecosystem": #ecosystem_id#}).Columns("id,name")
 
-SetVar(isManager,0)
-SetVar(admin_role_id, EcosysParam(Name:role_admin))
-If(#role_id#>0){
-    If(#admin_role_id#==#role_id#){
-        SetVar(isManager,1)
-    }
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Ratings"}).Vars(application)
+SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: ratings_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+If(#admin_access_id# > 0){
+    SetVar(isManager,1)
 }
 
 Form(){
