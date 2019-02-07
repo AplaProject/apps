@@ -3,7 +3,7 @@ contract InvestorRefresh {
         RoleId int
     }
 
-    func notInArray(val string, arr array) bool {
+    func notInArray(arr array, val string) bool {
         var i lenArr int
         lenArr = Len(arr)
         while i < lenArr{
@@ -57,33 +57,33 @@ contract InvestorRefresh {
 
     action {
         // get investors ids
-        var keysInvestors assignedInvestors investorsIds assignedIds array
-        keysInvestors = DBFind("@1keys").Where({"ecosystem": $ecosystem_id}).Columns("id").Order([{amount:"-1"},{id:"-1"}]).Limit($limitInvestors)
-        assignedInvestors = DBFind("@1roles_participants").Where({"role->id": $roleId, "deleted": 0}).Columns("member->member_id")
+        var investors assignedInvestors investorsAddrs assignedAddrs array
+        investors = DBFind("@1keys").Where({"ecosystem": $ecosystem_id}).Columns("address").Order([{amount:"-1"},{id:"-1"}]).Limit($limitInvestors) // получаем самых богатых юзеров экосистемы в количестве $limitInvestors
+        assignedInvestors = DBFind("@1roles_participants").Where({"role->id": $roleId, "deleted": 0}).Columns("member->address")
 
-        // get ids
+        // get addresses
         var i int
-        while i < Len(keysInvestors) {
+        while i < Len(investors) {
             var inv map
-            inv = keysInvestors[i]
-            investorsIds[i] = inv["id"]
+            inv = investors[i]
+            investorsAddrs[i] = inv["address"]
             i = i + 1
         }
         i = 0
         while i < Len(assignedInvestors) {
             var inv map
             inv = assignedInvestors[i]
-            assignedIds[i] = inv["member.member_id"]
+            assignedAddrs[i] = inv["member.address"]
             i = i + 1
         }
 
         // remove old investors
-        var assigned map mid string
+        var assigned map adr string
         i = 0
-        while i < Len(assignedIds) {
-            if notInArray(assignedIds[i], investorsIds){
-                mid = assignedIds[i]
-                assigned = DBFind("@1roles_participants").Where({"member->member_id": mid, "role->id": $roleId}).Row()
+        while i < Len(assignedAddrs) {
+            adr = assignedAddrs[i]
+            if notInArray(investorsAddrs, adr){
+                assigned = DBFind("@1roles_participants").Where({"member->address": adr, "role->id": $roleId}).Row()
                 if assigned {
                     @1RolesUnassign("row_id", Int(assigned["id"]))
                 }
@@ -92,12 +92,12 @@ contract InvestorRefresh {
         }
         // add new investors
         i = 0
-        while i < Len(investorsIds) {
-            if notInArray(investorsIds[i], assignedIds){
-                var id int
-                id = Int(investorsIds[i])
-                if DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": id}).Row(){
-                    @1RolesAssign("rid,member_id", $roleId, id)
+        while i < Len(investorsAddrs) {
+            if notInArray(assignedAddrs, investorsAddrs[i]){
+                var adr string
+                adr = investorsAddrs[i]
+                if DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "address": adr}).Row(){
+                    @1RolesAssign("rid,Address", $roleId, adr)
                 }
             }
             i = i + 1

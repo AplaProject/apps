@@ -7,12 +7,13 @@ contract VotingTokensRefundCreate {
     }
 
     conditions {
-        $victimId = AddressToId($VictimAccount)
-        $attackerId = AddressToId($SuspectAccount)
-        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $victimId}).Row(){
+        $key_address = IdToAddress($key_id)
+        $victimAddress = IdToAddress(AddressToId($VictimAccount))
+        $attackerAddress = IdToAddress(AddressToId($SuspectAccount))
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "address": $victimAddress}).Row(){
             warning LangRes("@1victim_key_invalid", "en")
         }
-        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $attackerId}).Row(){
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "address": $attackerAddress}).Row(){
             warning LangRes("@1attacker_key_invalid", "en")
         }
 
@@ -51,7 +52,7 @@ contract VotingTokensRefundCreate {
             warning Sprintf(LangRes("@1role_id_no_members", "en"), $votersRoleId)
         }
 
-        $desc = Sprintf("%v (" + LangRes("@1tokens_refund_victim", "en") + ": %v, " + LangRes("@1tokens_refund_attacker", "en") + ": %v, " + LangRes("@1amount", "en") + ": %v)", $votingName, $victimId, $attackerId, $Amount)
+        $desc = Sprintf("%v (" + LangRes("@1tokens_refund_victim", "en") + ": %v, " + LangRes("@1tokens_refund_attacker", "en") + ": %v, " + LangRes("@1amount", "en") + ": %v)", $votingName, $victimAddress, $attackerAddress, $Amount)
     }
 
     action {
@@ -60,18 +61,18 @@ contract VotingTokensRefundCreate {
             CallContract($initContract, m)
         }
 
-        TokensLockoutMember("KeyId,Value", $victimId, 1)
-        TokensLockoutMember("KeyId,Value", $attackerId, 1)
+        TokensLockoutMember("Address,Value", $victimAddress, 1)
+        TokensLockoutMember("Address,Value", $attackerAddress, 1)
         
         var votingId int params m map paramsJSON interval_days string
         interval_days = "3"
         votingId = @1VotingCreate("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval", $votingName, $typeVoting, $desc, $typeParticipants, $typeDecision, $volume, $quorum, interval_days)
 
-        m["victim_key_id"] = $victimId
-        m["attacker_key_id"] = $attackerId
+        m["victim_address"] = $victimAddress
+        m["attacker_address"] = $attackerAddress
         m["amount"] = $Amount
         m["note"] = $Note
-        m["validator_key_id"] = $key_id
+        m["validator_address"] = $key_address
         m["blocked_at"] = BlockTime()
         m["voting_id"] = votingId
         m["status"] = 1 // 0. Accounts blocked, 1. Discussion, 2. Vote, 3. Closed

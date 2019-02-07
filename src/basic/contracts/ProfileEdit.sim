@@ -6,7 +6,8 @@ contract ProfileEdit {
     }
 
     conditions {
-        $member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": $key_id}).Row()
+        $key_address = IdToAddress($key_id)
+        $member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "address": $key_address}).Row()
         $app_id = DBFind("@1applications").Where({"ecosystem": 1, "name": "Basic", "deleted": 0}).One("id")
         $image_id = Int($image_id)
 
@@ -29,10 +30,10 @@ contract ProfileEdit {
         m["image_id"] = $image_id
         
         if $member{
-            DBUpdateExt("@1members", {"ecosystem": $ecosystem_id, "id": $key_id}, m)
+            DBUpdateExt("@1members", {"ecosystem": $ecosystem_id, "address": $key_address}, m)
         } else {
             m["id"] = $key_id
-            m["address"] =  IdToAddress($key_id)
+            m["address"] =  $key_address
             m["member_name"] = $member_name
             m["ecosystem"] = $ecosystem_id
             DBInsert("@1members", m)

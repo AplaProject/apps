@@ -12,6 +12,7 @@ contract VotingNotificationSend {
     }
     
     conditions {
+        $key_address = IdToAddress($key_id)
         var bt string
         bt = BlockTime()
         $voting = DBFind("@1votings").Columns("id,date_ended").Where({"ecosystem": $ecosystem_id, "id": $votingID, "date_ended":[{"$gt": bt}]}).One("id")
@@ -19,11 +20,11 @@ contract VotingNotificationSend {
             warning LangRes("@1voting_expired_can_not_notify", "en")
         }
 
-        $voting = DBFind("@1votings").Columns("voting->name,creator->member_id,flags->notifics,flags,date_started").Where({"ecosystem": $ecosystem_id, "id": $votingID, "date_started":[{"$gt": bt}]}).Row()
+        $voting = DBFind("@1votings").Columns("voting->name,creator->address,flags->notifics,flags,date_started").Where({"ecosystem": $ecosystem_id, "id": $votingID, "date_started":[{"$gt": bt}]}).Row()
         if !$voting {
             warning LangRes("@1voting_not_started", "en")
         }
-        if $voting["creator.member_id"] != $key_id {
+        if $voting["creator.address"] != $key_address {
             warning LangRes("@1voting_not_creator", "en")
         }
         if $voting["flags.notifics"] == 1 {
@@ -35,14 +36,14 @@ contract VotingNotificationSend {
 
     action {
         var participants array
-        participants = DBFind("@1votings_participants").Limit(250).Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "decision": 0})
+        participants = DBFind("@1votings_participants").Limit(10000).Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "decision": 0})
         var i int
         while i < Len(participants) {
             var participant member params map
             participant = participants[i]
             member = safeJsonToMap(participant["member"])
             params["voting_id"] = $votingID
-            @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,rid,closure_type", Int(member["member_id"]), 1, "fa-check", LangRes("@1voting", "en"), $voting_name, "voting_view", JSONEncode(params), 0, 0)
+            @1NotificationsSend("Address,sender,icon_name,text_header,text_body,page_name,params_map,rid,closure_type",member["address"], 1, "fa-check", LangRes("@1voting", "en"), $voting_name, "voting_view", JSONEncode(params), 0, 0)
 
             i = i + 1
         }

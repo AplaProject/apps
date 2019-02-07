@@ -11,7 +11,7 @@ contract VotingStatusUpdate {
         title = voting["voting.name"]
         id = Int(voting["id"])
         if voting["voting.type_participants"] == 5 {
-            voters = DBFind("@1votings_participants").Columns("member->role_id").Limit(250).Where({"ecosystem": $ecosystem_id, "voting_id": id, "decision": 0})
+            voters = DBFind("@1votings_participants").Columns("member->role_id").Limit($QUERY_LIMIT).Where({"ecosystem": $ecosystem_id, "voting_id": id, "decision": 0})
             lenVoters = Len(voters)
             while i < lenVoters {
                 var voter roleId params map
@@ -22,14 +22,14 @@ contract VotingStatusUpdate {
                 i = i + 1
             }
         } else {
-            voters = DBFind("@1votings_participants").Columns("member->member_id").Limit(250).Where({"ecosystem": $ecosystem_id, "voting_id": id, "decision": 0})
+            voters = DBFind("@1votings_participants").Columns("member->address").Limit($QUERY_LIMIT).Where({"ecosystem": $ecosystem_id, "voting_id": id, "decision": 0})
             lenVoters = Len(voters)
             while i < lenVoters {
-                var voter memberId params map
+                var voter params map adr string
                 voter = voters[i]
-                memberId = Int(voter["member.member_id"])
+                adr = voter["member.address"]
                 params["voting_id"] = id
-                @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", memberId, 1, "fa-check", LangRes("@1voting", "en"), title, $page_name, params)
+                @1NotificationsSend("Address,sender,icon_name,text_header,text_body,page_name,params_map", adr, 1, "fa-check", LangRes("@1voting", "en"), title, $page_name, params)
                 i = i + 1
             }
         }
@@ -39,16 +39,16 @@ contract VotingStatusUpdate {
         if voting["voting.rating"] == 1 && voting["voting.type_participants"] != 5  {
             var id i lenVoters int voters array
             id = Int(voting["id"])
-            voters = DBFind("@1votings_participants").Columns("id,member->member_id").Limit(250).Where({"ecosystem": $ecosystem_id, "voting_id": id})
+            voters = DBFind("@1votings_participants").Columns("id,member->address").Limit($QUERY_LIMIT).Where({"ecosystem": $ecosystem_id, "voting_id": id})
             lenVoters = Len(voters)
 
             while i < lenVoters {
-                var voter map memberId int
+                var voter map adr string
                 voter = voters[i]
-                memberId = Int(voter["member.member_id"])
+                adr = voter["member.address"]
 
                 var where rating map
-                where[$rating_wallet] = IdToAddress(memberId)
+                where[$rating_wallet] = adr
                 where["ecosystem"] = $ecosystem_id
                 rating = DBFind($rating_table).Columns($request_columns).Where(where).Row()
 
@@ -60,7 +60,6 @@ contract VotingStatusUpdate {
                 rating_amount_f = 1 + Log(rating_amount_f)
                 rating_amount_i = Int(rating_amount_f * 1000)
 
-                //Println("wallet: " + Str(IdToAddress(memberId)) + "  rating_f: " + Str(rating_amount_f) + "  rating_i: " + Str(rating_amount_i))
                 DBUpdate("@1votings_participants", Int(voter["id"]), {rating: rating_amount_i})
                 i = i + 1
             }
@@ -99,6 +98,7 @@ contract VotingStatusUpdate {
         $rating_amount = AppParam(app_id, "voting_rating_amount", $ecosystem_id)
         $rating_weight = AppParam(app_id, "voting_rating_weight", $ecosystem_id)
         $request_columns = "id," + $rating_wallet + "," + $rating_amount
+        $QUERY_LIMIT = 10000
     }
 
     action {

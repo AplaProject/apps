@@ -9,11 +9,11 @@ contract VotingInvite {
 
         if k_id != 0 {
             member["member_id"] = k_id
-            member["member_name"] = IdToAddress(k_id)
             member["key_id"] = k_id
             member["address"] = IdToAddress(k_id)
         } else {
             member["member_id"] = 0
+            member["address"] = ""
         }
 
         if r_id != 0 {
@@ -47,10 +47,12 @@ contract VotingInvite {
         }
         var isAdded string
         if $type_participants == 2 {
-            if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $var_id}).Row(){
-                warning LangRes("@1key_not_found", "en")
+            var adr string
+            adr = IdToAddress(Int($var_id))
+            if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "address": adr}).Row(){
+                warning LangRes("@1address_invalid", "en")
             }
-            isAdded = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "member->member_id": $var_id}).One("id")
+            isAdded = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "member->address": adr}).One("id")
             if isAdded {
                 warning LangRes("@1member_added_before", "en")
             }

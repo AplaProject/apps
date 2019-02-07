@@ -5,7 +5,7 @@ contract MembershipDecide {
     }
 
     conditions {
-        $request = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $notific_id}).Columns("id,closed,sender->member_id,page_params->ecosystem_id,page_params->ecosystem_sender").Row()
+        $request = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $notific_id}).Columns("id,closed,sender->address,page_params->ecosystem_id,page_params->ecosystem_sender").Row()
         var ecoId int
         ecoId = Int($request["page_params.ecosystem_id"])
 
@@ -25,11 +25,12 @@ contract MembershipDecide {
         params["ecosystem_id"] = $request["page_params.ecosystem_id"]
         if $accept == 1 {
             params["status"] = 1
-            var pub string mid eco_id int
+            var pub string mid eco_id int adr string
+            adr = $request["sender.address"]
             mid = Int($request["sender.member_id"])
             eco_id = Int($request["page_params.ecosystem_id"])
-            pub = DBFind("@1keys").Where({"ecosystem": 1, "id": mid}).One("pub") 
-            DBInsert("@1keys", {id:mid, pub:pub, ecosystem:$ecosystem_id})
+            pub = DBFind("@1keys").Where({"ecosystem": 1, "address": adr}).One("pub") 
+            DBInsert("@1keys", {"address":adr, "id":mid, "pub":pub, "ecosystem":$ecosystem_id})
         }
         else{
             params["status"] = 0
@@ -43,7 +44,7 @@ contract MembershipDecide {
         body = Sprintf(LangRes("@1ecosystem_request_approved", "en"), ecoName, ecoId)
         page = "@1membership_user_view"
 
-        @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,eco_id", $request["sender.member_id"], 1, icon, header, body, page, params, Int($request["page_params.ecosystem_sender"]))
+        @1NotificationsSend("Address,sender,icon_name,text_header,text_body,page_name,params_map,eco_id", $request["sender.address"], 1, icon, header, body, page, params, Int($request["page_params.ecosystem_sender"]))
         @1NotificationsProcess("notific_id", $notific_id)
         @1NotificationsClose("notific_id", $notific_id)
     }

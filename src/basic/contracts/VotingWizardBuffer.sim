@@ -18,7 +18,7 @@ contract VotingWizardBuffer {
         start_time string "optional"
         end_date string "optional"
         end_time string "optional"
-        
+
         member_participants string "optional"
         role_participants string "optional"
 
@@ -41,15 +41,17 @@ contract VotingWizardBuffer {
         role_id string "optional"
         vacancies string "optional"
     }
-    
+    conditions{
+        $key_address = IdToAddress($key_id)
+    }
     action {
         if $load_autosave == "no" {
-            DBUpdateExt("@1buffer_data", {"key": "voting_wizard_buffer", "member_id": $key_id, "ecosystem": $ecosystem_id}, {"value": "{}"})
+            DBUpdateExt("@1buffer_data", {"key": "voting_wizard_buffer", "address": $key_address, "ecosystem": $ecosystem_id}, {"value": "{}"})
         }
 
         var buffer_map old_buffer old_value map
 
-        old_buffer = DBFind("@1buffer_data").Where({"key": "voting_wizard_buffer", "member_id": $key_id, "ecosystem": $ecosystem_id}).Row()
+        old_buffer = DBFind("@1buffer_data").Where({"key": "voting_wizard_buffer", "address": $key_address, "ecosystem": $ecosystem_id}).Row()
         if old_buffer {
             old_value = JSONDecode(old_buffer["value"])
         }
@@ -213,9 +215,9 @@ contract VotingWizardBuffer {
         }
 
         if old_buffer {
-            DBUpdateExt("@1buffer_data", {"key": "voting_wizard_buffer", "member_id": $key_id, "ecosystem": $ecosystem_id}, {"value": buffer_map})
+            DBUpdateExt("@1buffer_data", {"key": "voting_wizard_buffer", "address": $key_address, "ecosystem": $ecosystem_id}, {"value": buffer_map})
         } else {
-            DBInsert("@1buffer_data", {"key": "voting_wizard_buffer", "member_id": $key_id, "ecosystem": $ecosystem_id, "value": buffer_map})
+            DBInsert("@1buffer_data", {"key": "voting_wizard_buffer", "address": $key_address, "ecosystem": $ecosystem_id, "value": buffer_map})
         }
     }
 }

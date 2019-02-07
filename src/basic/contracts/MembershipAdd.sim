@@ -12,18 +12,19 @@ contract MembershipAdd {
             warning LangRes("@1key_too_long", "en")
         }
 
-        var k_id int
+        var k_id int pub_bytes bytes adr string
+        pub_bytes = HexToPub(pub)
+        adr = IdToAddress(k_id)
         k_id = PubToID(pub)
+
         if k_id == 0 {
             warning LangRes("@1public_key_invalid", "en")
         }
-        $check_user = DBFind("@1keys").Where({"id": k_id, "ecosystem": $ecosystem_id})
+        $check_user = DBFind("@1keys").Where({"address": adr, "ecosystem": $ecosystem_id})
         if $check_user {
             warning LangRes("@1key_already_exists", "en")
         }
-        var pub_bytes bytes
-        pub_bytes = HexToPub(pub)
-        DBInsert("@1keys",{id:k_id, pub:pub_bytes, ecosystem:$ecosystem_id})
+        DBInsert("@1keys",{"id":k_id, "pub":pub_bytes, "ecosystem":$ecosystem_id, "address":adr})
     }
 
     conditions {
@@ -36,7 +37,7 @@ contract MembershipAdd {
 
         var admin_id int
         admin_id = EcosysParam("role_admin")
-       
+
         if !RoleAccess(Int(admin_id)) {
             warning LangRes("@1access_denied", "en")
         }

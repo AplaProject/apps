@@ -15,30 +15,31 @@ contract BufferManager {
     
     action {
         $emptyVal = JSONEncode("")
-        $buf = DBFind("@1buffer_data").Where({"ecosystem": $ecosystem_id, "key": $Key, "member_id": $key_id}).Row()
+        $key_address = IdToAddress($key_id)
+        $buf = DBFind("@1buffer_data").Where({"ecosystem": $ecosystem_id, "key": $Key, "address": $key_address}).Row()
         if !$buf {
             var buf map, id int
-            id = DBInsert("@1buffer_data", {ecosystem:$ecosystem_id, key:$Key, value:$emptyVal, member_id:$key_id})
+            id = DBInsert("@1buffer_data", {"ecosystem":$ecosystem_id, "key":$Key, "value":$emptyVal, "address":$key_address})
             buf["id"] = Str(id)
             buf["value"] = ""
-            buf["member_id"] = Str($key_id)
+            buf["address"] = $key_address
             buf["key"] = Str($Key)
             $buf = buf
         }
         var id int
         id = Int($buf["id"])
         if $Action == "clean" {
-            DBUpdate("@1buffer_data", id, {value:$emptyVal})
+            DBUpdate("@1buffer_data", id, {"value":$emptyVal})
         }
         if $Action == "set" {
-            DBUpdate("@1buffer_data", id, {value:$Val})
+            DBUpdate("@1buffer_data", id, {"value":$Val})
         }
         if $Action == "array_add_value" {
             var ar array enc string
             ar = decodeArray($buf["value"])
             ar = Append(ar, $Val)
             enc = JSONEncode(ar)
-            DBUpdate("@1buffer_data", id, {value:enc})
+            DBUpdate("@1buffer_data", id, {"value":enc})
         }
         if $Action == "array_remove_value" {
             var ar arNew array i int enc string
@@ -50,7 +51,7 @@ contract BufferManager {
                 i = i + 1
             }
             enc = JSONEncode(arNew)
-            DBUpdate("@1buffer_data", id, {value:enc})
+            DBUpdate("@1buffer_data", id, {"value":enc})
         }
     }
 }

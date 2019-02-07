@@ -11,7 +11,7 @@ contract VotingDecisionAccept {
             @1NotificationsClose("notific_id", role_id_search)
         } else {
             var id int
-            id = Int(DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_params->voting_id": $votingID, "closed": 0}).One("id"))
+            id = Int(DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->address": $key_address, "page_params->voting_id": $votingID, "closed": 0}).One("id"))
             if id > 0 {
                 @1NotificationsClose("notific_id", id)
             }
@@ -25,6 +25,7 @@ contract VotingDecisionAccept {
     }
 
     conditions {
+        $key_address = IdToAddress($key_id)
         $INVALID = 1
         $WAITING = 2
         $STARTED = 3
@@ -63,14 +64,13 @@ contract VotingDecisionAccept {
 
     action {
         if Int($voting["voting.type_participants"]) == 5 {
-            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "member->member_id": $key_id, "role->id": $RoleId, "deleted": 0}).One("id") {
+            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "member->address": $key_address, "role->id": $RoleId, "deleted": 0}).One("id") {
                 warning LangRes("@1voting_not_participant", "en")
             } else {
                 var member map
                 member["member_id"] = $key_id
                 member["key_id"] = $key_id
-                member["address"] = IdToAddress($key_id)
-                member["member_name"] = IdToAddress($key_id)
+                member["address"] = $key_address
                 member["role_id"] = $RoleId
                 var member_json string
                 member_json = JSONEncode(member)
@@ -94,8 +94,8 @@ contract VotingDecisionAccept {
             rating_rejected = Int($subject["results.rating_rejected"])
             summ_rating = rating_accepted + rating_rejected
             var percent_accepted percent_rejected float
-            percent_accepted = (Float(rating_accepted)*Float(100))/Float(summ_rating)
-            percent_rejected = (Float(rating_rejected)*Float(100))/Float(summ_rating)
+            percent_accepted = (Float(rating_accepted) * Float(100)) / Float(summ_rating)
+            percent_rejected = (Float(rating_rejected) * Float(100)) / Float(summ_rating)
             p["results->rating_accepted"] = rating_accepted
             p["results->rating_rejected"] = rating_rejected
             p["results->percent_accepted"] = percent_accepted

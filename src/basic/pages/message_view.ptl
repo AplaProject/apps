@@ -1,24 +1,30 @@
 If(#notific_id#>0){
-    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_id,recipient->member_name,notification->body,notification->header,page_params->thread,date_created,closed").Vars(message)
-    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #message_sender_member_id#}).Vars(highlighted)
-    If(GetVar(highlighted_id)){
+    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("id,sender->member_id,sender->address,recipient->member_id,recipient->address,notification->body,notification->header,page_params->thread,date_created,closed").Vars(message)
+    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "address": #message_sender_address#}).Vars(highlighted)
+    If(#highlighted_id#!=""){
         SetVar(message_sender_member_name,#highlighted_member_name#)
         SetVar(message_sender_image_id,#highlighted_image_id#)
+    }.Else{
+        SetVar(message_sender_member_name,#message_sender_address#)
+        SetVar(message_sender_image_id,0)
     }
 
     If(#message_page_params_thread#>0){
         SetVar(thread,#message_page_params_thread#)
-        DBFind(@1notifications,src_thread).Where({"ecosystem": #ecosystem_id#, "page_params->thread": #message_page_params_thread#}).Order("id").Count("thread_quantity").Columns("id,sender->member_id,sender->member_name,sender->image_id,notification->body,date_created")
-        DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #message_page_params_thread#}).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_id,notification->body,date_created").Vars(init_message)
+        DBFind(@1notifications,src_thread).Where({"ecosystem": #ecosystem_id#, "page_params->thread": #message_page_params_thread#}).Order("id").Count("thread_quantity").Columns("id,sender->member_id,sender->address,notification->body,date_created")
+        DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #message_page_params_thread#}).Columns("id,sender->member_id,sender->address,recipient->member_id,recipient->address,notification->body,date_created").Vars(init_message)
     }.Else{
         SetVar(thread,#message_id#)
-        DBFind(@1notifications,src_thread).Where({"ecosystem": #ecosystem_id#, "page_params->thread": #message_id#}).Order("id").Count("thread_quantity").Columns("id,sender->member_id,sender->member_name,sender->image_id,notification->body,date_created")
-        DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #message_id#}).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_id,notification->body,date_created").Vars(init_message)
+        DBFind(@1notifications,src_thread).Where({"ecosystem": #ecosystem_id#, "page_params->thread": #message_id#}).Order("id").Count("thread_quantity").Columns("id,sender->member_id,sender->address,notification->body,date_created")
+        DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #message_id#}).Columns("id,sender->member_id,sender->address,recipient->member_id,recipient->address,notification->body,date_created").Vars(init_message)
     }
-    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #init_message_sender_member_id#}).Vars(starter)
-    If(GetVar(starter_id)){
+    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "address": #init_message_sender_address#}).Vars(starter)
+    If(#starter_id#!=""){
         SetVar(init_message_sender_member_name,#starter_member_name#)
         SetVar(init_message_sender_image_id,#starter_image_id#)
+    }.Else{
+        SetVar(init_message_sender_member_name,#init_message_sender_address#)
+        SetVar(init_message_sender_image_id,0)
     }
 
     If(#init_message_sender_member_id#!=#key_id#){
@@ -138,10 +144,11 @@ If(#notific_id#>0){
                         ForList(src_thread){
                             Div(list-group-item wrapper-block){
                                 Div(avatar-block text-center){
+                                    SetVar(thread_message_id,)
                                     DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #sender.member_id#}).Vars(thread_message)
-                                    If(GetVar(thread_message_id)==""){
-                                        SetVar(thread_message_member_name,#sender.member_name#)
-                                        SetVar(thread_message_image_id,#sender.image_id#)
+                                    If(#thread_message_id#==""){
+                                        SetVar(thread_message_member_name,#sender.address#)
+                                        SetVar(thread_message_image_id,0)
                                     }
                                     LinkPage(Page: @1profile_view, PageParams: "v_key_id=#sender.member_id#"){
                                         If(#thread_message_image_id#>0){

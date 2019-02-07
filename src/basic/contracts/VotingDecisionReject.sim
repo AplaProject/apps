@@ -11,7 +11,7 @@ contract VotingDecisionReject {
             @1NotificationsClose("notific_id", role_id_search)
         } else {
             var id int
-            id = Int(DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_params->voting_id": $votingID, "closed": 0}).One("id"))
+            id = Int(DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->address": $key_address, "page_params->voting_id": $votingID, "closed": 0}).One("id"))
             if id > 0 {
                 @1NotificationsClose("notific_id", id)
             }
@@ -25,6 +25,7 @@ contract VotingDecisionReject {
     }
 
     conditions {
+        $key_address = IdToAddress($key_id)
         $INVALID = 1
         $WAITING = 2
         $STARTED = 3
@@ -51,7 +52,7 @@ contract VotingDecisionReject {
         }
 
         if Int($voting["voting.type_participants"]) != 5 {
-            $participant = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "member->member_id": $key_id, "decision": 0}).Columns("id,rating").Row()
+            $participant = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "member->address": $key_address, "decision": 0}).Columns("id,rating").Row()
         }
         if Int($voting["voting.type_participants"]) == 5 {
             $participant = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "member->member_id": 0, "member->role_id": $RoleId, "decision": 0}).Columns("id,rating").Row()
@@ -63,14 +64,13 @@ contract VotingDecisionReject {
 
     action {
         if Int($voting["voting.type_participants"]) == 5 {
-            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "member->member_id": $key_id, "role->id": $RoleId, "deleted": 0}).One("id") {
+            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "member->address": $key_address, "role->id": $RoleId, "deleted": 0}).One("id") {
                 warning LangRes("@1voting_not_participant", "en")
             } else {
                 var member map
                 member["member_id"] = $key_id
                 member["key_id"] = $key_id
-                member["address"] = IdToAddress($key_id)
-                member["member_name"] = IdToAddress($key_id)
+                member["address"] = $key_address
                 member["role_id"] = $RoleId
                 var member_json string
                 member_json = JSONEncode(member)

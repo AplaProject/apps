@@ -24,6 +24,7 @@ contract NotificationsClose {
 
 
     conditions {
+        $key_address = IdToAddress($key_id)
         $notify = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $notific_id}).Columns("id,date_start_processing,processing_info->member_id,closed,notification->type,recipient->member_id,recipient->role_id").Row()
         if !$notify {
             warning LangRes("@1notification_not_found", "en")
@@ -40,7 +41,7 @@ contract NotificationsClose {
 
         // checking personal notification
         if $notify["notification.type"] == 1 && flag_permission == 0 {
-            if $notify["recipient.member_id"] != $key_id {
+            if $notify["recipient.address"] != $key_address {
                 warning LangRes("@1notification_another_member", "en")
             }
         }
@@ -51,7 +52,7 @@ contract NotificationsClose {
                 warning LangRes("@1notification_processing_not_started", "en")
             }
 
-            if $notify["processing_info.member_id"] != $key_id {
+            if $notify["processing_info.address"] != $key_address {
                 warning LangRes("@1notice_processing_started_another_member", "en")
             }     
         }

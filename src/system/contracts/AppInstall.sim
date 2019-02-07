@@ -4,6 +4,7 @@ contract AppInstall {
     }
 
     conditions {
+        $key_address = IdToAddress($key_id)
         $check_app = DBFind("@1applications").Columns("id,ecosystem,name,conditions").Where({"id": $ApplicationId, "ecosystem": 1}).Row()
         if !$check_app["id"] {
             warning LangRes("@1item_not_found", "en")
@@ -32,12 +33,12 @@ contract AppInstall {
         var app_ins map
         app_ins["app_name"] = $app_name
 
-        $import_id = DBFind("@1buffer_data").Where({"member_id": $key_id, "key": "import_info", "ecosystem": $ecosystem_id}).One("id")
+        $import_id = DBFind("@1buffer_data").Where({"address": $key_address, "key": "import_info", "ecosystem": $ecosystem_id}).One("id")
         if $import_id {
             $import_id = Int($import_id)
             DBUpdate("@1buffer_data", $import_id, {"value": app_ins})
         } else {
-            DBInsert("@1buffer_data", {"member_id": $key_id, "key": "import_info", "value": app_ins, "ecosystem": $ecosystem_id})
+            DBInsert("@1buffer_data", {"address": $key_address, "key": "import_info", "value": app_ins, "ecosystem": $ecosystem_id})
         }
 
         //import
