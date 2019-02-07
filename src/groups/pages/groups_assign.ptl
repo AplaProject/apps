@@ -1,64 +1,68 @@
-DBFind(@1applications).Columns("name,id").Where({name:"Groups", ecosystem:1}).Vars(application)
+DBFind(@1applications).Columns("name,id").Where({"name": "Groups", "ecosystem": 1}).Vars(application)
+
+If(#Id#!=""){
+    SetVar(v_group_id, #Id#)
+}
 
 If(#v_group_id#>0){
-    DBFind(@1groups,src_groups).Where({ecosystem:#ecosystem_id#, id:#v_group_id#}).Columns("id,group_name,group_type,group_access,creator->member_id").Vars(prefix)
-
+    DBFind(@1groups, src_groups).Where({"ecosystem": #ecosystem_id#, "id": #v_group_id#}).Columns("id,group_name,group_type,group_access,creator->member_id").Vars(prefix)
     If(#prefix_creator_member_id#==#key_id#){
-        SetVar(manager_id,1)
-    }.ElseIf(And(#prefix_group_access#!="NULL",#prefix_group_access#!="",#prefix_group_access#!="[]",#group_id#>0)){
-        DBFind(@1groups).Where({ecosystem:#ecosystem_id#, id:[{"$in": #prefix_group_access#}, {"$eq":#group_id#}]}).Columns("id").Vars(manager)
-    }.Else{
-        SetVar(manager_id,0)
+        SetVar(manager_id, 1)
+    }.ElseIf(And(#prefix_group_access#!="NULL",#prefix_group_access#!="",#prefix_group_access#!="[]",#group_id#>0,#prefix_deleted#==0)){
+        DBFind(@1groups).Where({"ecosystem": #ecosystem_id#, "id":[{"$in": #prefix_group_access#}, {"$eq": #group_id#}]}).Columns("id").Vars(manager)
     }
+
     Form(){
         Div(row){
             Div(col-md-3 mt-sm text-right){
                 Label(){
-                    Span(Body: $@1group$)
+                    LangRes(@1group)
                     Span(Class: text-danger, Body:*)
                 }
             }
             Div(col-md-9 text-left){
                 Input(Type: hidden, Name: gr_id, Value: #prefix_id#)
                 SetVar(Name: var_prefix_group_name, Value: LangRes(#prefix_group_name#))
-                Input(Name: input_prefix_group_name, Value: #var_prefix_group_name#, Disabled: true)
+                Input(Name: input_prefix_group_name, Value: #var_prefix_group_name#, Disabled: 1)
             }
         }
         Div(row mt-sm){
             Div(col-md-3 mt-sm text-right){
                 Label(){
-                    LangRes(@1type) Span(*,text-danger)
+                    LangRes(@1type)
+                    Span(Class: text-danger, Body:*)
                 }
             }
             Div(col-md-9 text-left){
                 SetVar(Name: var_prefix_group_type, Value: AppParam(Ecosystem:1, App:#application_id#, Name: type_groups, Index: #prefix_group_type#))
-                Input(Name: input_prefix_group_type, Value: #var_prefix_group_type#, Disabled: true)
-                If(#manager_id#==0){
-                    P(Class: m0 text-danger h6, Body: LangRes(@1appointment_impossible))
-                }
+                Input(Name: input_prefix_group_type, Value: #var_prefix_group_type#, Disabled: 1)
             }
         }
-        If(#manager_id#>0){
-            SetVar(participants,0)
-            DBFind(@1groups_participants).Where({"groups_info->id":#v_role_id#, deleted:0, ecosystem:#ecosystem_id#}).Columns("groups_info->id,id,member->member_id").Custom(_id){
-                SetVar(participants,"#participants#,#member.member_id#")
-            }
-            DBFind(@1keys,src_keys).Where({ecosystem:#ecosystem_id#, id:{"$nin":[#participants#]}}).Columns("id").Custom(_name){
-                SetVar(m_id, 0)
-                DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#id#}).Columns("id,member_name").Vars(m)
-                Address(#id#)
-                If(Or(#m_id#>0,#m_id#<0)){
-                    " (#m_member_name#)"
+        Div(row mt-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    LangRes(@1member)
+                    Span(Class: text-danger, Body:*)
                 }
             }
-            Div(row mt-sm){
-                Div(col-md-3 mt-sm text-right){
-                    Label(){
-                        Span(Body: LangRes(@1member)).(Class: text-danger, Body:*)
+            Div(col-md-9 text-left){
+                If(GetVar(MemberId) == ""){
+                    SetVar(MemberId, 0)
+                }
+                Input(Name: member_id, Type:hidden, Value: #MemberId#)
+                Div(input-group){
+                    If(Or(#MemberId#>0,#MemberId#<0)){
+                        SetVar(AddressMemberId, Address(#MemberId#))
                     }
-                }
-                Div(col-md-9 text-left){
-                    Select(Name: member_id, Source: src_keys, NameColumn: _name, ValueColumn: id)
+                    Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #AddressMemberId#)
+                    Div(input-group-btn){
+                        Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=@1groups_assign,back_header=$@1assign$,Id=#v_group_id#,EcosystemId=#ecosystem_id#").Popup(Header: $@1member$, Width: "50")
+                    }.Style(
+                        .buttons {
+                            border: 1px solid #dde6e9;
+                            padding: 6px 16px;
+                        }
+                    )
                 }
             }
         }

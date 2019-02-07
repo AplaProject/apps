@@ -1,24 +1,24 @@
 If(GetVar(page_par)!=""){
     SetVar(Name: v_group_id, Value: #page_par#)
 }
+
 If(#v_group_id# > 0){
     SetVar(this_page, @1groups_view).(this_table, @1groups_participants)
     Include(@1pager_header)
 
-    DBFind(@1groups).Where({ecosystem:#ecosystem_id#, id:#v_group_id#}).Columns("group_name,group_type,deleted,group_access,creator->member_id").Vars(prefix)
-    SetTitle($@1group$: #prefix_group_name#)
+    DBFind(@1groups).Where({"ecosystem": #ecosystem_id#, "id": #v_group_id#}).Columns("group_name,group_type,deleted,group_access,creator->member_id").Vars(prefix)
     If(#prefix_creator_member_id#==#key_id#){
         SetVar(manager_id,1)
-    }.ElseIf(#prefix_deleted#==0){
-        If(And(#prefix_group_access#!="NULL",#prefix_group_access#!="",#prefix_group_access#!="[]",#group_id#>0)){
-            DBFind(@1groups).Where({ecosystem:#ecosystem_id#, id:[{"$in": #prefix_group_access#}, {"$eq":#group_id#}]}).Columns("id").Vars(manager)
-        }
-    }
-    If(#manager_id#>0){
-        AddToolButton(Page: @1groups_assign, PageParams: "v_group_id=#v_group_id#", Icon: icon-plus, Title: $@1assign$).Popup(50, $@1assign$)
-        AddToolButton(Title: $@1members_add$, Page:@1group_add_members, Icon: icon-plus,PageParams: "v_group_id=#v_group_id#").Popup(50, $@1add_members_to_group$)
+    }.ElseIf(And(#prefix_group_access#!="NULL",#prefix_group_access#!="",#prefix_group_access#!="[]",#group_id#>0,#prefix_deleted#==0)){
+        DBFind(@1groups).Where({"ecosystem": #ecosystem_id#, "id": [{"$in": #prefix_group_access#}, {"$eq": #group_id#}]}).Columns("id").Vars(manager)
     }
 
+    If(#manager_id#>0){
+        AddToolButton(Page: @1groups_assign, PageParams: "v_group_id=#v_group_id#", Icon: icon-plus, Title: $@1assign$).Popup(50, $@1assign$)
+        AddToolButton(Page: @1groups_add_members, PageParams: "v_group_id=#v_group_id#", Icon: icon-plus, Title: $@1members_add$).Popup(50, $@1add_members_to_group$)
+    }
+
+    SetTitle("$@1group$": #prefix_group_name#)
     Span(Class: h5 m0 mb ml-lg){
         LinkPage(Class: ml-sm, Body: $@1groups$, Page: @1groups_list)
         Span(Class: text-muted mh-sm, Body: /)
@@ -28,10 +28,9 @@ If(#v_group_id# > 0){
     )
 
     If(GetVar(search)){
-        SetVar(where, {"ecosystem":#ecosystem_id#,"groups_info->id":#v_group_id#,"member->member_name":{"$like": #search#}})
-    }.Else{
-        SetVar(where, {"ecosystem":#ecosystem_id#,"groups_info->id":#v_group_id#}).(search,)
+        SetVar(w_search, {"member->member_name": {"$like": "#search#"}})
     }
+    SetVar(where, {"ecosystem": #ecosystem_id#, "groups_info->id": #v_group_id#, {GetVar(w_search)}})
 
     Div(list-group-item ml-lg mr-lg pt-lg){
         SetVar(search_name, LangRes(@1member)).(page_par, #v_group_id#)
@@ -81,7 +80,9 @@ If(#v_group_id# > 0){
     }.Custom(actions){
         Div(pull-right){
             If(#deleted#==0){
-                Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, Contract: @1GroupsUnassign, Params: "row_id=#id#", Page: @1groups_view, PageParams: "v_group_id=#v_group_id#").Alert(Text: "$@1sure_want_delete_member$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                Button(Class: btn bg-gray-lighter mh-sm, Contract: @1GroupsUnassign, Params: "row_id=#id#", Page: @1groups_view, PageParams: "v_group_id=#v_group_id#"){
+                    Em(Class: text-danger fa fa-1x fa-trash)
+                }.Alert(Text: "$@1sure_want_delete_member$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
             }
         }
     }.Count(count)
