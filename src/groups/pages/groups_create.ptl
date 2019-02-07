@@ -1,0 +1,102 @@
+DBFind(@1applications).Columns("name,id").Where({"ecosystem": 1, "name": "Groups"}).Vars(application)
+DBFind(@1roles, src_roles).Columns("id,role_name").Where({"ecosystem": #ecosystem_id#, "deleted": 0}).Order(id)
+If(#back_page#==""){
+   SetVar(back_page, "@1groups_list")
+}
+
+If(#gr_id#==""){
+    SetVar(title, $@1new_group$)
+    DBFind(@1buffer_data).Columns(value).Where({"ecosystem": #ecosystem_id#, "key": "group_access", "member_id": #key_id#}).Columns("id,key,member_id,ecosystem,value->groups_access,value->group_information,value->group_type,value->group_name").Vars(buffer)
+    AppParam(Source: type_group, Ecosystem: 1, App: #application_id#, Name: groups_types)
+    If(And(#buffer_value_groups_access#!="NULL",#buffer_value_groups_access#!="",#buffer_value_groups_access#!="[]")){
+        DBFind(@1roles, src_roles_access).Where({"ecosystem": #ecosystem_id#, "id": {"$in": #buffer_value_groups_access#}}).Columns("id,role_name").Count(ra_count).Order("role_name")
+    }
+}.Else{
+    SetVar(title, $@1edit_group$)
+    DBFind(@1groups).Where({"ecosystem": #ecosystem_id#, "id": #gr_id#}).Columns("id,group_name,group_type,group_info,group_access").Vars(gr_e)
+    SetVar(type_group, AppParam(Ecosystem: 1, App: #application_id#, Name: groups_types, Index: #gr_e_group_type#))
+    If(And(#gr_e_group_access#!="NULL",#gr_e_group_access#!="",#gr_e_group_access#!="[]")){
+        DBFind(@1roles, src_roles_access).Where({"ecosystem": #ecosystem_id#, "id": {"$in": #gr_e_group_access#}}).Columns("id,role_name").Count(ra_count).Order("role_name")
+    }
+}
+
+Form(){
+    Div(row){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                LangRes(@1name)
+                Span(Class: text-danger, Body:*)  
+            }
+        }
+        Div(col-md-9 text-left){
+            If(#gr_id#==""){
+                Input(Name: group_name, Value: #buffer_value_group_name#).Validate(minLength:3, maxLength:30)
+                InputErr(Name: group_name, minLength: $@1validate_role_name$, maxLength: $@1validate_role_name$)
+            }.Else{
+                Input(Name: e_group_name, Value: #gr_e_group_name#, Disabled: 1)
+            }
+        }
+    }
+    Div(row mt-sm){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                LangRes(@1type)
+                Span(Class: text-danger, Body:*)  
+            }
+        }
+        Div(col-md-9 text-left){
+            If(#gr_id#==""){
+                Select(Name: group_type, Source: type_group, NameColumn: name, ValueColumn: id, Value: #buffer_value_group_type#)
+            }.Else{
+                Input(Name: e_group_type, Value: #type_group#, Disabled: 1)
+            }
+        }
+    }
+    Div(row mt-sm){
+        Div(col-md-3 mt text-right){
+            Label(){
+                LangRes(@1group_info)
+            }
+        }
+        Div(col-md-9 text-left){ 
+            If(#gr_id#==""){
+                Input(Name: group_information, Type: textarea, Value: #buffer_value_group_information#)
+            }.Else{
+                Input(Name: group_information, Type: textarea, Value: #gr_e_group_info#)
+            }
+        }
+    }
+    Div(row mt-sm){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                LangRes(@1group_access)
+                Span(Class: text-danger, Body:*) 
+            }
+        }
+        Div(col-md-9 text-left){
+            Div(input-group mb-sm){
+                Select(Name: roles_managers, Source: src_roles, NameColumn: role_name, ValueColumn: id)
+                Div(input-group-btn){
+                    Button(Class: btn bg-gray-lighter fa fa-plus mtl buttons, Page: @1groups_create, Contract: @1GroupAccessManager, Params: "ManagerRid=Val(roles_managers),Action=add,gr_id=#gr_id#", PageParams: "gr_id=#gr_id#").Popup(50, #title#)
+                }
+            }
+            If(#ra_count#>0){
+                ForList(src_roles_access){
+                    SetVar(btn_class, "bg-gray-lighter")
+                    If(#id#==#role_id#){
+                        SetVar(btn_class, "bg-primary")
+                    }
+                    Button(Class: btn-xs #btn_class# mr-sm mb-sm, Page: @1groups_create, Contract: @1GroupAccessManager, Params: "ManagerRid=#id#,Action=remove,gr_id=#gr_id#", PageParams: "gr_id=#gr_id#", Body: Span(Class: fa fa-remove) #role_name#).Popup(50, #title#)
+                }
+            }
+        }
+    }
+    If(#gr_id#==""){
+        Button(Body: LangRes(@1create), Class: btn btn-primary pull-right mt, Page: #back_page#, Contract:GroupsCreate)
+    }.Else{
+        Button(Body: LangRes(@1edit), Class: btn btn-primary pull-right mt, Page: #back_page#, Contract:GroupsCreate, Params:"gr_id=#gr_id#")
+    }
+    Button(Body: LangRes(@1back), Class: btn bg-gray-lighter pull-right mt, Page: #back_page#)
+}.Style(
+    .buttons{border: 1px solid #dde6e9;}
+)
