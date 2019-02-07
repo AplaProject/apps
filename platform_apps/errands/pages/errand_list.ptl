@@ -15,7 +15,7 @@ DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "role->id": {
 SetVar(create_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: errands_access))
 DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#create_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(create_access)
 If(#create_access_id# > 0){
-    AddToolButton(Title: $@1send$, Page: @1errand_create, PageParams:"type=#type#", Icon: icon-plus).Popup(50, "$@1new_errand$")
+    AddToolButton(Title: $@1new_errand$, Page: @1errand_create, PageParams:"type=#type#", Icon: icon-plus).Popup(50, "$@1new_errand$")
 }
 
 Div(btn-group){
@@ -35,17 +35,17 @@ Div(btn-group){
         }
     }
     Div(btn-group mr-lg pull-right){
-        If(GetVar(search)){
-            Button(Class:btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=0,search=#search#,type=#type#"){Span(Body: Em(Class:fa fa-hourglass-half), Class: text-primary)}
-            Button(Class:btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=1,search=#search#,type=#type#"){Span(Body: Em(Class:fa fa-hourglass-end),Class: text-success)}
-            Button(Class:btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=-1,search=#search#,type=#type#"){Span(Body: Em(Class:fa fa-times), Class: text-danger)} 
+        If(#search#){
+            Button(Class: btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=0,search=#search#,type=#type#"){Span(Body: Em(Class: fa fa-hourglass-half), Class: text-primary)}
+            Button(Class: btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=1,search=#search#,type=#type#"){Span(Body: Em(Class: fa fa-hourglass-end), Class: text-success)}
+            Button(Class: btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=-1,search=#search#,type=#type#"){Span(Body: Em(Class: fa fa-times), Class: text-danger)} 
         }.Else{
-            Button(Class:btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=0,type=#type#"){Span(Body: Em(Class:fa fa-hourglass-half), Class: text-primary)}
-            Button(Class:btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=1,type=#type#"){Span(Body: Em(Class:fa fa-hourglass-end),Class: text-success)}
-            Button(Class:btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=-1,type=#type#"){Span(Body: Em(Class:fa fa-times), Class: text-danger)} 
+            Button(Class: btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=0,type=#type#"){Span(Body: Em(Class: fa fa-hourglass-half), Class: text-primary)}
+            Button(Class: btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=1,type=#type#"){Span(Body: Em(Class: fa fa-hourglass-end), Class: text-success)}
+            Button(Class: btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=-1,type=#type#"){Span(Body: Em(Class: fa fa-times), Class: text-danger)} 
         }            
     }
-    If(Or(GetVar(search)!="",GetVar(Status)==-1,GetVar(Status)==0,GetVar(Status)==1)){
+    If(Or(#search#!="",#Status#==-1,#Status#==0,#Status#==1)){
         Span(Button(Class: btn btn-link pull-right, Page: @1errand_list,PageParams: "type=#type#", Body: $@1clear_filters$)).Style(padding-left:10px)
     }
 }
@@ -56,15 +56,15 @@ If(#type#==1){
     SetVar(where_recipient, {"recipient->member_id": {"$neq": 0}})
 }
 
-If(Or(GetVar(Status)==-1,GetVar(Status)==0,GetVar(Status)==1)){
+If(Or(#Status#==-1,#Status#==0,#Status#==1)){
     SetVar(where_status, {"page_params->status": #Status#})
 }
 
-If(GetVar(search)){
+If(#search#){
     SetVar(where_search, {"page_params->name": {"$like": "#search#"}})
 }
 
-SetVar(where, {"$and": [{"ecosystem": #ecosystem_id#}, {"page_params->type": "task"}, GetVar(where_recipient), GetVar(where_status), GetVar(where_search)]})
+SetVar(where, {"$and": [{"ecosystem": #ecosystem_id#}, {"page_params->type": "task"}, #where_recipient#, #where_status#, #where_search#]})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, LangRes(@1name)).(page_par, #type#)
@@ -100,7 +100,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
         }
     }
 }.Custom(_name){
-    LinkPage(#page_params.name#,Class: text-primary h5 text-bold,Page: @1errand_view,PageParams: "errand_id=#id#,type=#type#")
+    LinkPage(#page_params.name#, Class: text-primary h5 text-bold,Page: @1errand_view,PageParams: "errand_id=#id#,type=#type#")
 }.Custom(custom_arrow){
     Em(Class: fa fa-long-arrow-right fa-1x)
 }.Custom(_sender){
