@@ -2,7 +2,10 @@ SetVar(this_page, @1polls_templates).(this_table, @1voting_templates)
 Include(@1pager_header)
 
 SetTitle($@1polls_templates$)
-If(EcosysParam(Ecosystem:1, Name: role_admin) == #role_id#){
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Polls"}).Vars(application)
+SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: polls_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+If(#admin_access_id#>0){
     AddToolButton(Title: $@1template_add$, Page: @1polls_template_add, Icon: icon-plus).Popup(40, $@1template_add$)
 }
 Span(Class: h5 m0 mb ml-lg){
@@ -13,10 +16,10 @@ Span(Class: h5 m0 mb ml-lg){
     display: inline-block;
 )
 
-If(GetVar(search)){
-    SetVar(where, {"ecosystem": #ecosystem_id#, "type_voting": 3, "title": {"$like":#search#}})
+If(#search#){
+    SetVar(where, {"ecosystem": #ecosystem_id#, "type_voting": 3, "title": {"$like": "#search#"}})
 }.Else{
-    SetVar(where, {"ecosystem": #ecosystem_id#, "type_voting": 3}).(search,)
+    SetVar(where, {"ecosystem": #ecosystem_id#, "type_voting": 3})
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
@@ -24,7 +27,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(@1applications).Where({ecosystem:1, name:"Basic"}).Columns("name,id").Vars(application)
+DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
 
 DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_participants){
     AppParam(Ecosystem:1, App:#application_id#, Name:type_voting_participants, Index: #type_participants#)

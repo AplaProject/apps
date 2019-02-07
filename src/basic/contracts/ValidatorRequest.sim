@@ -1,0 +1,41 @@
+contract ValidatorRequest {
+    data {
+        TcpAddress string
+        ApiAddress string
+        KeyId int
+        PubKey string
+        Description string "optional"
+        Comment string "optional"
+    }
+
+    conditions {
+        if $ecosystem_id != 1 {
+            warning LangRes("@1contract_first_ecosystem_only", "en")
+        }
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $KeyId}).Row(){
+            warning LangRes("@1address_invalid", "en")
+        }
+    }
+
+    action {
+        var roleParam string roleId int
+        roleParam = "role_candidate_for_validators"
+        roleId = Int(EcosysParam(roleParam))
+        if !DBFind("@1roles").Where({"ecosystem": 1, "id": roleId, "deleted": 0}).One("id"){
+            warning Sprintf(LangRes("@1role_app_param_not_found", "en"), roleParam)
+        }
+        @1RolesAssign("rid,member_id", roleId, $key_id)
+
+        var m map
+        m["candidate_key_id"] = $KeyId
+        m["tcp_address"] = $TcpAddress
+        m["api_address"] = $ApiAddress
+        m["pub_key"] = $PubKey
+
+        m["description"] = $Description
+        m["comment"] = $Comment
+        m["date_created"] = BlockTime()
+        m["deleted"] = 0
+        DBInsert("@1validator_candidates", m)
+    }
+}

@@ -6,13 +6,13 @@ contract RolesAssign {
 
     func getMemberInfo(kid int) map {
         var res member map
-        member = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:kid}).Row()
+        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
         if member {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         }else{
-            member = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:kid}).Row()
+            member = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
             if member {
                 res["member_id"] = member["id"]
                 res["member_name"] = IdToAddress(Int(member["id"]))
@@ -23,7 +23,7 @@ contract RolesAssign {
     }
 
     conditions {
-        $role = DBFind("@1roles").Where({id:$rid}).Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Row()
+        $role = DBFind("@1roles").Where({"id": $rid}).Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Row()
         if (Int($role["role_type"]) == 2){
             warning LangRes("@1elective_role_voting_only", "en")
         }
@@ -31,7 +31,7 @@ contract RolesAssign {
             warning LangRes("@1role_not_found", "en")
         }
 
-        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$member_id}).Row() {
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $member_id}).Row() {
             warning LangRes("@1key_not_found", "en")
         }
 
@@ -46,7 +46,7 @@ contract RolesAssign {
         }
         specRules["@1VotingValidatorAccept"] = 1
         specRules["@1DelegateRefresh"] = 1
-        specRules["@1CandidateValidatorRequest"] = 1
+        specRules["@1ValidatorRequest"] = 1
         specRules["@1VotingTemplateRun"] = 1
         specRules["@1VotingTokensRefundCreate"] = 1
         specRules["@1VotingValidatorCreate"] = 1
@@ -57,7 +57,7 @@ contract RolesAssign {
     }
 
     action {
-        if DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "role->id":$rid, "member->member_id":$member_id, deleted:0}).One("id") {
+        if DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": $rid, "member->member_id": $member_id, "deleted": 0}).One("id") {
             // do not re-assign and do not warning because this contract may be called for other
             return
         }

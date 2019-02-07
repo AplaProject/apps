@@ -1,0 +1,129 @@
+DBFind(@1q_list).Where({"ecosystem": #ecosystem_id#, id:#q_id#}).Vars(question)
+DBFind(@1roles,src_rid).Where({"ecosystem": #ecosystem_id#}).Count(r)
+DBFind(@1groups,src_gp).Where({"ecosystem": #ecosystem_id#}).Count(g)
+
+ArrayToSource(src, #question_answer#)
+
+If(And(#question_au_groups#==[0],#question_au_roles#==[0])){
+    SetVar(access,$@1q_question_everyone$)
+}.Else{
+    SetVar(access,$@1q_question_nobody$)
+}
+
+If(#question_status#==0){
+    SetVar(editable,1)
+}
+SetVar(time,DateTime(#question_lastmodified#,HH:MI DD.MM.YYYY))
+
+SetTitle(#question_question#)
+Span(Class: h5 m0 mb ml-lg){
+    LinkPage(Class: ml-sm, Body: $@1q_poll$, Page: @1q_listing)
+    Span(Class: text-muted mh-sm, Body: /)
+    Span(Class: text-muted, Body: #question_question#)
+}.Style(
+    display: inline-block;
+)
+
+Div(content-wrapper){
+    Form(){
+        Div(form-group){
+            Label($@1title$)
+            If(#editable#==1){
+                Input(Name: question, Value: #question_question#)
+            }.Else{
+                Input(Name: question, Value: #question_question#, Disabled: true)
+            }
+        }
+        Div(form-group){
+            If(#editable#==1){
+            Label($@1q_description$)
+                Input(Type: textarea, Name: description, Value: #question_description#).Style(resize: vertical; min-height: 6em;)
+            }
+        }
+        If(#g#>0){
+            Div(form-group){
+            Label($@1q_question_groups$)
+                If(#editable#==1){
+                    Div(input-group mb-sm){
+                        Select(Name: au_groups, Source: src_gp, NameColumn: group_name, ValueColumn: id)
+                        Div(input-group-btn){
+                            Button(Class: btn bg-gray-lighter fa fa-plus mtl buttons, Page: @1q_question_edit, PageParams:"q_id=#question_id#", Contract: @1QOperations, Params:"id=#question_id#, operation=GA")
+                        }
+                    }
+                } 
+                ArrayToSource(au_g_src, #question_au_groups#)
+                ForList(Source: au_g_src, Index: ind){
+                DBFind(@1groups).Where({"id": #value#}).Vars(gn)
+                    If(#editable#==1){
+                        If(#value#==0){
+                            Button(Body: #access#, Class: btn-xs bg-gray-lighter ml-sm)
+                        }.Else{
+                            Button(Body: Span(Class: fa fa-remove) #gn_group_name#, Page: @1q_question_edit, Class: btn-xs bg-gray-lighter ml-sm, Contract: @1QOperations, PageParams: "q_id=#question_id#", Params: "id=#question_id#, au_groups=#value#, operation=GD")
+                        }
+                    }.Else{
+                        If(#value#==0){
+                            Button(Body: #access#, Class: btn-xs bg-gray-lighter ml-sm)
+                        }.Else{
+                            Button(Body: #gn_group_name#, Class: btn-xs bg-gray-lighter ml-sm)
+                        }
+                    }
+                }
+            }
+        }
+        If(#r#>0){
+            Div(form-group){
+            Label($@1q_question_roles$)
+                If(#editable#==1){
+                    Div(input-group mb-sm){
+                        Select(Name: au_roles, Source: src_rid, NameColumn: role_name, ValueColumn: id)
+                        Div(input-group-btn){
+                            Button(Class: btn bg-gray-lighter fa fa-plus mtl buttons, Page: @1q_question_edit, PageParams:"q_id=#question_id#", Contract: @1QOperations, Params:"id=#question_id#, operation=RA")
+                        }
+                    }
+                }
+                ArrayToSource(au_r_src, #question_au_roles#)
+                ForList(Source: au_r_src, Index: ind){
+                DBFind(@1roles).Where({"id": #value#}).Vars(rn)
+                    If(#editable#==1){
+                        If(#value#==0){
+                            Button(Body: #access#, Class: btn-xs bg-gray-lighter ml-sm)
+                        }.Else{
+                            Button(Body: Span(Class: fa fa-remove) #rn_role_name#, Page: @1q_question_edit, Class: btn-xs bg-gray-lighter ml-sm, Contract: @1QOperations, PageParams: "q_id=#question_id#", Params: "id=#question_id#, au_roles=#value#, operation=RD")
+                        }
+                    }.Else{
+                        If(#value#==0){
+                            Button(Body: #access#, Class: btn-xs bg-gray-lighter ml-sm)
+                        }.Else{
+                            Button(Body: #rn_role_name#, Class: btn-xs bg-gray-lighter ml-sm)
+                        }
+                    }
+                }
+            }
+        }
+        Div(form-group){
+            Label($@1q_answer$)
+
+            If(#editable#==1){
+                Div(input-group mb-sm){
+                    Input(Name: answer)
+                    Div(input-group-btn){
+                        Button(Class: btn bg-gray-lighter fa fa-plus mtl buttons, Page: @1q_question_edit, PageParams:"q_id=#question_id#", Contract: @1QOperations, Params:"id=#question_id#, operation=AA")
+                    }
+                }
+            }
+            ForList(Source: src, Index: ind){
+                If(#editable#==1){
+                    Button(Body: Span(Class: fa fa-remove) #value#, Page: @1q_question_edit, Class: btn-xs bg-gray-lighter ml-sm, Contract: @1QOperations, PageParams: "q_id=#question_id#", Params: "id=#question_id#, answer=#value#, operation=AD")
+                }.Else{
+                    Button(Body: #value#, Class: btn-xs bg-gray-lighter ml-sm)
+                }
+            } 
+        }  
+        Div(form-group){
+            Button(Class: btn btn-primary pull-right mt sm, Body: $@1save$, Contract: @1QOperations, Page: @1q_listing, Params: "id=#question_id#,operation=E")
+            Button(Class: btn btn-default pull-right mt sm, Body: LangRes(@1back), Page: @1q_listing)
+        }
+    }
+}.Style(
+    .buttons{border: 1px solid #dde6e9;}
+)

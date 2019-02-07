@@ -22,30 +22,33 @@ contract EEvent {
     }
 
     conditions{
-        var adminId int
-        adminId = Int(EcosysParam("role_admin"))
-        if !RoleAccess(adminId){
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Events"}).One("id")
+        var admin_ids int
+        admin_ids = AppParam(Int($app), "events_admin_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+admin_ids+"]")  
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
             warning LangRes("@1access_denied", "en")
         }
 
         if $Id > 0 {
             var event map
-            event = DBFind("@1e_events").Where({id:$Id, ecosystem:$ecosystem_id}).Row()
+            event = DBFind("@1e_events").Where({"id": $Id, "ecosystem": $ecosystem_id}).Row()
             if !event{
-                warning "Event not founded"
+                warning LangRes("@1e_event_not_found", "en")
             }
             if event["starting_date"] < $block_time {
-                warning "Event not editable"
+                warning LangRes("@1e_event_not_editable", "en")
             }
         }
 
         $date = UnixDateTime(dateAddTime($StartingDate, $StartingTime))
         if $date == 0 {
-            warning "Invalid date"
+            warning LangRes("@1starting_date_invalid", "en")
         }
 
-        if !DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$Responsible}).Row(){
-            warning "Responsible not founded"
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $Responsible}).Row(){
+            warning LangRes("@1e_responsible_not_found", "en")
         }
     }
 
