@@ -14,7 +14,7 @@ contract NotificationsClose {
         while i < Len(array_permissions) {
             var contract_name string
             contract_name = array_permissions[i]
-            if contract_name==prevContract {
+            if contract_name == prevContract {
                 result = 1
             }
             i = i + 1
@@ -25,7 +25,7 @@ contract NotificationsClose {
 
     conditions {
         $key_address = IdToAddress($key_id)
-        $notify = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $notific_id}).Columns("id,date_start_processing,processing_info->member_id,closed,notification->type,recipient->member_id,recipient->role_id").Row()
+        $notify = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $notific_id}).Columns("id,date_start_processing,processing_info->address,closed,notification->type,recipient->address,recipient->role_id").Row()
         if !$notify {
             warning LangRes("@1notification_not_found", "en")
         }
@@ -54,7 +54,7 @@ contract NotificationsClose {
 
             if $notify["processing_info.address"] != $key_address {
                 warning LangRes("@1notice_processing_started_another_member", "en")
-            }     
+            }
         }
     }
 
@@ -70,10 +70,13 @@ contract NotificationsClose {
         m["closed"] = 1
         DBUpdate("@1notifications", $notific_id, m)
 
+        var id int
         if $notify["notification.type"] == 1 {
-            UpdateNotifications($ecosystem_id, Int($notify["recipient.member_id"]))
+            id = AddressToId(Int($notify["recipient.address"]))
+            UpdateNotifications($ecosystem_id, id)
         } else {
-            UpdateRolesNotifications($ecosystem_id, Int($notify["recipient.role_id"]))
+            id = Int($notify["recipient.role_id"])
+            UpdateRolesNotifications($ecosystem_id, id)
         }
     }
 }

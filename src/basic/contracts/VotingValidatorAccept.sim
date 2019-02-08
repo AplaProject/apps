@@ -1,7 +1,7 @@
 contract VotingValidatorAccept {
     data {
         VotingTemplateId string
-        KeyId string
+        Address string
         VotingId string
     }
 
@@ -34,15 +34,15 @@ contract VotingValidatorAccept {
             warning LangRes("@1template_incorrect", "en")
         }
 
-        var candidateId oldRoleId roleId int roleName string
+        var oldRoleId roleId int roleName candidateAddr string
         oldRoleId = getRoleId("role_candidate_for_validators", false)
         roleId = getRoleId("role_validator", true)
 
-        candidateId = DBFind("@1validator_candidates").Where({"candidate_key_id": $KeyId}).One("candidate_key_id") //no $ecosystem_id
-        if !candidateId {
+        candidateAddr = DBFind("@1validator_candidates").Where({"candidate_address": $Address}).One("candidate_address") //no $ecosystem_id
+        if !candidateAddr {
             warning LangRes("@1candidate_key_not_found", "en")
         }
-        $oldRoleRowId = Int(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": oldRoleId, "member->member_id": candidateId}).One("id"))
+        $oldRoleRowId = Int(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": oldRoleId, "member->address": candidateAddr}).One("id"))
 
         $roleId = Int(DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": roleId, "deleted": 0}).One("id"))
         if $roleId == 0 {
@@ -54,6 +54,6 @@ contract VotingValidatorAccept {
         if $oldRoleRowId > 0 {
             @1RolesUnassign("row_id", $oldRoleRowId)
         }
-        @1RolesAssign("rid,member_id", $roleId, Int($KeyId))
+        @1RolesAssign("rid,Address", $roleId, $Address)
     }
 }

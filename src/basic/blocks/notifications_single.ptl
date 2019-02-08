@@ -1,3 +1,4 @@
+SetVar(key_address,Address(#key_id#))
 SetVar(this_page, @1notifications_list).(this_table, @1notifications)
 Include(@1pager_header)
 
@@ -12,9 +13,9 @@ If(And(#role_id#==#role_admin#,#ecosystem_id#==1)){
 AddToolButton(Title: $@1send$, Page: @1notifications_single_send, Icon: icon-plus).Popup(Header: $@1send$, Width: "50")
 
 If(GetVar(search)){
-    SetVar(where, {"ecosystem": #ecosystem_id#, "recipient->member_id": #key_id#, {"$and": [{"notification->type":1}, {"$or": [{"sender->address":{"$like": "#search#"}}, {"sender->role_name":{"$like": "#search#"}}]}]}})
+    SetVar(where, {"ecosystem": #ecosystem_id#, "recipient->address": #key_address#, {"$and": [{"notification->type":1}, {"$or": [{"sender->address":{"$like": "#search#"}}, {"sender->role_name":{"$like": "#search#"}}]}]}})
 }.Else{
-    SetVar(where, {"ecosystem": #ecosystem_id#, "notification->type": 1, "recipient->member_id": #key_id#})
+    SetVar(where, {"ecosystem": #ecosystem_id#, "notification->type": 1, "recipient->address": #key_address#})
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
@@ -22,7 +23,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,recipient->member_id,recipient->address,recipient->key_id,sender->type,sender->member_id,sender->address,sender->key_id,sender->role_id,sender->role_name,notification->icon,notification->popup,page_name,page_params,date_created,date_closed,closed").Custom(custom_id){
+DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,recipient->address,sender->type,sender->address,sender->role_id,sender->role_name,notification->icon,notification->popup,page_name,page_params,date_created,date_closed,closed").Custom(custom_id){
     If(#closed# == 0){
         SetVar(Name: style_text, Value: "text-normal")
         SetVar(Name: style_link, Value: "text-primary")
@@ -32,13 +33,13 @@ DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(
     }
     Span(Class: #style_text#, Body: #id#)
 }.Custom(custom_recipient){
-    DBFind(@1members).Where({id:#sender.key_id#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(r)
+    DBFind(@1members).Where({address:#sender.address#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(r)
     If(#r_member_name#!=""){
         SetVar(recipient_name,#r_member_name#)
     }.Else{
         SetVar(recipient_name,#recipient.address#)
     }
-    LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#recipient.key_id#"){
+    LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "Address=#recipient.address#"){
         If(#r_image_id#>0){
             Image(Src: Binary().ById(#r_image_id#), Class: img-circle mr).Style(width: 30px; border: 1px solid #5A5D63;)
             Span(#recipient_name#)
@@ -53,13 +54,13 @@ DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(
     Em(Class: fa fa-long-arrow-right fa-1x #style_text#)
 }.Custom(custom_sender){
     If(#sender.type#==1){
-        DBFind(@1members).Where({id:#sender.key_id#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(s)
+        DBFind(@1members).Where({address:#sender.address#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(s)
         If(#s_member_name#!=""){
             SetVar(sender_name,#s_member_name#)
         }.Else{
             SetVar(sender_name,#sender.address#)
         }
-        LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#sender.key_id#"){
+        LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "Address=#sender.address#"){
             Span(Body: #sender_name#)
         }
     }

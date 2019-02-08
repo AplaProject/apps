@@ -1,6 +1,7 @@
-DBFind(@1notifications,notification_singles).Where({"ecosystem": #ecosystem_id#, "closed": 0, "notification->type": 1, "recipient->member_id": #key_id#}).Columns("id,page_name,notification->icon,notification->header,notification->popup,notification->body").Count(count_singles)
+SetVar(key_address,Address(#key_id#))
+DBFind(@1notifications,notification_singles).Where({"ecosystem": #ecosystem_id#, "closed": 0, "notification->type": 1, "recipient->address": #key_address#}).Columns("id,page_name,notification->icon,notification->header,notification->popup,notification->body").Count(count_singles)
 
-DBFind(@1notifications,notification_roles).Where({"ecosystem": #ecosystem_id#, "closed": 0, "notification->type": 2, "recipient->role_id": #role_id#, {"$or":[{"date_start_processing": "$isnull"}, {"processing_info->member_id": #key_id#}]}}).Columns("id,page_name,notification->icon,notification->header,notification->popup,notification->body,recipient->role_id").Count(count_current_role)
+DBFind(@1notifications,notification_roles).Where({"ecosystem": #ecosystem_id#, "closed": 0, "notification->type": 2, "recipient->role_id": #role_id#, {"$or":[{"date_start_processing": "$isnull"}, {"processing_info->address": #key_address#}]}}).Columns("id,page_name,notification->icon,notification->header,notification->popup,notification->body,recipient->role_id").Count(count_current_role)
 
 SetVar(limit,10).(limit_count,#limit#)
 SetVar(remaining,Calculate(#count_singles#+#count_current_role#-#limit#))
@@ -22,7 +23,9 @@ If(And(#limit_count#>0,#count_singles#>0)){
                             }
                         }
                     }.Popup(Header: $@1notifications_view$, Width: "40")
-                }.Style(.vm{vertical-align: middle;})
+                }.Style(
+                    .vm {vertical-align: middle;}
+                )
             }.Else{
                 Div(list-group-item){
                     Button(Class: btn-link m0 p0 b0 text-left vm, Page: #page_name#, PageParams: "notific_id=#id#"){

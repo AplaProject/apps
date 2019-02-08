@@ -1,3 +1,4 @@
+SetVar(key_address,Address(#key_id#))
 SetVar(this_page, @1roles_list).(this_table, @1roles)
 Include(@1pager_header)
 
@@ -16,7 +17,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 }
 
 DBFind(#this_table#).Where({"ecosystem": #ecosystem_id#}).Count(all_roles_count)
-DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,role_name,role_type,image_id,creator->key_id,date_created,date_deleted,deleted,roles_access").Custom(_id){
+DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,role_name,role_type,image_id,creator->address,date_created,date_deleted,deleted,roles_access").Custom(_id){
     If(#deleted# == 0){
         SetVar(style_text,"text-normal").(style_link, "text-primary")
     }.Else{
@@ -24,13 +25,13 @@ DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limi
     }
     Span(Class: #style_text#, Body: #id#)
 }.Custom(_creator){
-    DBFind(@1members).Where({id:#creator.key_id#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
+    DBFind(@1members).Where({address:#creator.address#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
     If(#m_member_name#!=""){
         SetVar(m_name,#m_member_name#)
     }.Else{
-        SetVar(m_name,Address(#creator.key_id#))
+        SetVar(m_name,#creator.address#)
     }
-    LinkPage(Class: #style_link# text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.key_id#"){
+    LinkPage(Class: #style_link# text-bold, Page: @1profile_view, PageParams: "Address=#creator.address#"){
         #m_name#
     }
 }.Custom(_name){
@@ -73,7 +74,7 @@ DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limi
         }
     }
 }.Custom(_access){
-    If(#creator.member_id#==#key_id#){
+    If(#creator.address#==#key_address#){
         SetVar(access,done)
     }.Else{
         SetVar(access,)

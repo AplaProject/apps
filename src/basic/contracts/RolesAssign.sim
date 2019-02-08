@@ -5,12 +5,12 @@ contract RolesAssign {
     }
 
     conditions {
-        $role = DBFind("@1roles").Where({"id": $rid}).Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Row()
-        if (Int($role["role_type"]) == 2){
-            warning LangRes("@1elective_role_voting_only", "en")
-        }
+        $role = DBFind("@1roles").Where({"id": $rid}).Columns("id,deleted,role_type,role_name,image_id").Row()
         if !$role {
             warning LangRes("@1role_not_found", "en")
+        }
+        if (Int($role["role_type"]) == 2){
+            warning LangRes("@1elective_role_voting_only", "en")
         }
 
         if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "address": $Address}).Row() {
@@ -50,10 +50,8 @@ contract RolesAssign {
         role["image_id"] = $role["image_id"]
 
         member["address"] = $Address
-        member["key_id"] = AddressToId($Address)
         member["member_id"] = AddressToId($Address)
         appointer["address"] = IdToAddress($key_id)
-        appointer["key_id"] = $key_id
         appointer["member_id"] = $key_id
         var m map
         m["role"] = role

@@ -1,5 +1,5 @@
 SetVar(key_address,Address(#key_id#))
-DBFind(@1notifications,threads).Where({"ecosystem": #ecosystem_id#, "page_params->type": "message", {"$or": [{"sender->address": #key_address#}, {"recipient->address": #key_address#}]}}).Order({"id":"-1"}).Limit(10000).Count(threads_count).Columns("id,sender->address,sender->member_id,recipient->address,recipient->member_id,notification->body,notification->header,page_params->thread,date_created,closed")
+DBFind(@1notifications,threads).Where({"ecosystem": #ecosystem_id#, "page_params->type": "message", {"$or": [{"sender->address": #key_address#}, {"recipient->address": #key_address#}]}}).Order({"id":"-1"}).Limit(10000).Count(threads_count).Columns("id,sender->address,recipient->address,notification->body,notification->header,page_params->thread,date_created,closed")
 
 Div(content-wrapper){
     Div(row){
@@ -30,29 +30,29 @@ Div(content-wrapper){
                         }
                         Div(list-group-item col-sm-12 thread-block #status#){
                             Div(avatar-block text-center){
-                                DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Columns("sender->address,sender->member_id,recipient->address,recipient->member_id").Vars(init_message)
+                                DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Columns("sender->address,recipient->address").Vars(init_message)
                                 If(#init_message_sender_address#!=#key_address#){
                                     DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "address": #init_message_sender_address#}).Vars(talker)
-                                    If(#talker_id#!=""){
+                                    If(#talker_address#!=""){
                                         SetVar(talker_name,#talker_member_name#)
                                         SetVar(talker_picture,#talker_image_id#)
                                     }.Else{
-                                        SetVar(talker_id,#init_message_sender_member_id#)
+                                        SetVar(talker_address,#init_message_sender_address#)
                                         SetVar(talker_name,#init_message_sender_address#)
                                         SetVar(talker_picture,0)
                                     }
                                 }.Else{
-                                    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #init_message_recipient_member_id#}).Vars(talker)
-                                    If(#talker_id#){
+                                    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "address": #init_message_recipient_address#}).Vars(talker)
+                                    If(#talker_address#!=""){
                                         SetVar(talker_name,#talker_member_name#)
                                         SetVar(talker_picture,#talker_image_id#)
                                     }.Else{
-                                        SetVar(talker_id,#init_message_recipient_member_id#)
+                                        SetVar(talker_address,#init_message_recipient_address#)
                                         SetVar(talker_name,#init_message_recipient_address#)
                                         SetVar(talker_picture,0)
                                     }
                                 }
-                                LinkPage(Page: @1profile_view, PageParams: "v_key_id=#talker_id#"){
+                                LinkPage(Page: @1profile_view, PageParams: "Address=#talker_address#"){
                                     If(#talker_picture#>0){
                                         Image(Src: Binary().ById(#talker_picture#), Class: img-circle avatar)
                                     }.Else{
@@ -68,7 +68,7 @@ Div(content-wrapper){
                                     }.Else{
                                         Div(Class: preview h4 m0, Body: #notification.header#)
                                     }
-                                    If(#sender.member_id#==#key_id#){
+                                    If(#sender.address#==#key_address#){
                                         Div(Class: preview text-muted, Body: $@1you$: #notification.body#)
                                     }.Else{
                                         Div(Class: preview text-muted, Body: #notification.body#)

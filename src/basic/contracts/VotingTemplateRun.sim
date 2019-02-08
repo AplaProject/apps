@@ -3,7 +3,7 @@ contract VotingTemplateRun {
         TemplateId int
         Duration int
 
-        KeyId int "optional"
+        Address string "optional"
         TableWritten string "optional"
         RowId string "optional"
         ColumnName string "optional"
@@ -30,8 +30,8 @@ contract VotingTemplateRun {
         if !$template{
             warning LangRes("@1voting_template_not_found", "en")
         }
-        if $KeyId != 0{
-            $keyFind = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $KeyId}).Row()
+        if $Address != ""{
+            $keyFind = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "address": $Address}).Row()
             if !$keyFind{
                 warning LangRes("@1key_not_found", "en")
             }
@@ -144,7 +144,7 @@ contract VotingTemplateRun {
                 initParam["Name"] = $ColumnName
                 initParam["Value"] = $NewValue
             } else {
-                initParam["KeyId"] = $KeyId
+                initParam["Address"] = $Address
             }
             CallContract(initContract, initParam)
         }
@@ -157,7 +157,7 @@ contract VotingTemplateRun {
         }
         // the default argument for Contract
         var defaultParams string
-        defaultParams = Sprintf(`{"VotingTemplateId":"%v","KeyId":"%v","VotingId":"%v"}`, $TemplateId, $KeyId, votingId)
+        defaultParams = Sprintf(`{"VotingTemplateId":"%v","Address":"%v","VotingId":"%v"}`, $TemplateId, $Address, votingId)
 
         if Size($acceptParams) == 0{
             $acceptParams = defaultParams
@@ -169,7 +169,7 @@ contract VotingTemplateRun {
         if $decision == 1 || $decision == 2{
             // 1. Role candidates with the registration of participants on request
             // 2. Role candidates with manual registration of the participants
-            @1VotingSubjectCandidates("votingID,memberID", votingId, $KeyId)
+            @1VotingSubjectCandidates("votingID,Address", votingId, $Address)
             @1VotingSubjectSettings("votingID,roleID,vacancies,contract_accept,contract_accept_params,contract_reject,contract_reject_params", votingId, $candidateId, $vacancies, $contractAccept, $acceptParams, $contractReject,$rejectParams)
         }
         if $decision == 3 {

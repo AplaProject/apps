@@ -1,3 +1,4 @@
+SetVar(key_address,Address(#key_id#))
 SetVar(this_page, @1profile_transactions).(this_table, @1history)
 Include(@1pager_header)
 
@@ -10,18 +11,14 @@ If(#ecosystem_id# == 1){
     SetVar(token_title, #custom_token_title#)
 }
 
-If(GetVar(wallet) == ""){
-    SetVar(wallet, 0)
-}
-
 If(GetVar(new_filter)){
     If(#show_fees#!="true"){
         SetVar(filter1, {"type": {"$neq": 1}})
     }
     If(#wallet# != 0){
-        SetVar(filter2, {"$or": [{"$and": [{"sender_id": #key_id#}, {"recipient_id": #wallet#}]}, {"$and": [{"sender_id": #wallet#}, {"recipient_id": #key_id#}]}]})
+        SetVar(filter2, {"$or": [{"$and": [{"sender_address": #key_address#}, {"recipient_address": {"$like":#wallet#}}]}, {"$and": [{"sender_address": {"$like":#wallet#}}, {"recipient_address": #key_address#}]}]})
     }.Else{
-        SetVar(filter2, {"$or": [{"sender_id":#key_id#}, {"recipient_id":#key_id#}]})
+        SetVar(filter2, {"$or": [{"sender_address":#key_address#}, {"recipient_address":#key_address#}]})
     }
     If(#lower_limit#>0){
         If(#upper_limit#>0){
@@ -37,17 +34,17 @@ If(GetVar(new_filter)){
 }.ElseIf(GetVar(page_par)){
     SetVar(filters, #page_par#)
 }.Else{
-    SetVar(filters, {"$and": [{"ecosystem":#ecosystem_id#}, {"type": {"$neq": 1}}, {"$or": [{"sender_id":#key_id#}, {"recipient_id":#key_id#}]}]})
+    SetVar(filters, {"$and": [{"ecosystem":#ecosystem_id#}, {"type": {"$neq": 1}}, {"$or": [{"sender_address":#key_address#}, {"recipient_address":#key_address#}]}]})
 }
 
-If(GetVar(search)){
-    SetVar(where, {"$and": [GetVar(filters), {"comment": {"$like": "#search#"}}]})
+If(#search#!=""){
+    SetVar(where, {"$and": [GetVar(filters), {"comment": {"$ilike": "#search#"}}]})
 }.Else{
     SetVar(where, GetVar(filters))
 }
 
 Div(mr-lg text-right){
-    Button(Page: @1profile_transactions_filter, Class: btn bg-gray-lighter mr-sm, PageParams: "show_fees=#show_fees#,MemberId=#wallet#,lower_limit=#lower_limit#,upper_limit=#upper_limit#", Body: Em(Class: fa fa-filter) $@1filter$).Popup(Header: $@1filter$, Width: "50")
+    Button(Page: @1profile_transactions_filter, Class: btn bg-gray-lighter mr-sm, PageParams: "show_fees=#show_fees#,Address=#wallet#,lower_limit=#lower_limit#,upper_limit=#upper_limit#", Body: Em(Class: fa fa-filter) $@1filter$).Popup(Header: $@1filter$, Width: "50")
     If(GetVar(page_par)){
         Button(Page: #this_page#, Class: btn bg-gray-lighter mr-sm, Body: Em(Class: fa fa-close))
     }
@@ -60,15 +57,11 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
 
 DBFind(@1history, src_history).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(sender_wallet){
-    If(#sender_id# != 0){
-        LinkPage(Page: @1profile_view, PageParams: "v_key_id=#sender_id#"){
-            Address(#sender_id#)
-        }
+    If(#sender_address# != ""){
+        LinkPage(Page: @1profile_view, PageParams: "Address=#sender_address#", Body: #sender_address#)
     }
 }.Custom(recipient_wallet){
-    LinkPage(Page: @1profile_view, PageParams: "v_key_id=#recipient_id#"){
-        Address(#recipient_id#)
-    }
+    LinkPage(Page: @1profile_view, PageParams: "Address=#recipient_address#", Body: #recipient_address#)
 }.Custom(amount_apl){
     Span(Money(#amount#) #token_title#)
 }.Custom(_type){
@@ -82,7 +75,7 @@ Div(fullscreen){
                 Table(src_history, "$@1block$=block_id,$@1sender$=sender_wallet,$@1recipient$=recipient_wallet,$@1amount$=amount_apl,$@1comment$=comment,$@1type$=_type")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1transactions_history_empty$")
-            }                       
+            }
         }.Style(
             margin-top:-15px;
             tbody > tr:nth-of-type(odd) {

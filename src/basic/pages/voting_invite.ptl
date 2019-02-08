@@ -1,7 +1,8 @@
+SetVar(key_address,Address(#key_id#)).(guest_address,Address(#guest_key#))
 If(#vID# > 0){
     Form(){
-        If(GetVar(member_participants) == ""){
-            SetVar(member_participants,0)
+        If(#member_participants#==""){
+            SetVar(member_participants,)
         }
         If(GetVar(role_participants) == ""){
             SetVar(role_participants,0)
@@ -10,18 +11,18 @@ If(#vID# > 0){
             SetVar(back_page,@1voting_view)
         }
         DBFind(@1votings).WhereId(#vID#).Columns("id,voting->name,voting->type_participants").Vars(instance)
-        DBFind(@1votings_participants, src_participants).Where({"voting_id": #vID#}).Columns("id,member->key_id,member->address,member->role_id").Count(participants_count).Custom(_id){
-            SetVar(member_participants,"#member_participants#,#member.key_id#")
+        DBFind(@1votings_participants, src_participants).Where({"voting_id": #vID#}).Columns("id,member->address,member->role_id").Count(participants_count).Custom(_id){
+            SetVar(member_participants,"#member_participants#,#member.address#")
             #member.address#
         }.Custom(_name){
             SetVar(m_member_name,)
-            DBFind(@1members).Where({id:#member.key_id#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
+            DBFind(@1members).Where({address:#member.address#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
             If(#m_member_name#!=""){
                 SetVar(m_name,#m_member_name#)
             }.Else{
                 SetVar(m_name,#member.address#)
             }
-            LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#member.key_id#", Body: #m_member_name#)
+            LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "Address=#member.address#", Body: #m_member_name#)
         }.Custom(_sent){
             $@1voting_role_added$
         }.Custom(_member_roles){
@@ -55,10 +56,10 @@ If(#vID# > 0){
         If(#instance_voting_type_participants# != 1){
             Div(row){
                 If(#instance_voting_type_participants# == 2){
-                    DBFind(@1keys,src_keys).Where({"ecosystem": #ecosystem_id#, {"$and": [{"id":{"$neq": #guest_key#}}, {"id":{"$nin":[#member_participants#]}}]}}).Columns("id").Count(keys_count).Custom(_name){
+                    DBFind(@1keys,src_keys).Where({"ecosystem": #ecosystem_id#, {"$and": [{"address":{"$neq": #guest_address#}}, {"address":{"$nin":[#member_participants#]}}]}}).Columns("address").Count(keys_count).Custom(_name){
                         SetVar(m_member_name,)
-                        DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Columns("member_name").Vars(m)
-                        Address(#id#)
+                        DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "address": #address#}).Columns("member_name").Vars(m)
+                        #address#
                         If(#m_member_name# !=""){
                             " (#m_member_name#)"
                         }

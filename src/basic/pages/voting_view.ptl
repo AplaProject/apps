@@ -1,3 +1,4 @@
+SetVar(key_address,Address(#key_id#))
 DBFind(@1applications).Columns("name,id").Where({"ecosystem": 1, "name": "Basic"}).Vars(application)
 If(#notific_id#>0){
     DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("page_params->voting_id").Vars(notific)
@@ -17,9 +18,9 @@ Div(content-wrapper){
         SetVar(isVotingAllowed,0)
         SetVar(isStartProcessing,0)
         If(Or(#type_participants#==1,#type_participants#==2,#type_participants#==3,#type_participants#==4)){
-            DBFind(@1votings_participants).Where({"voting_id": #vID#, "member->member_id": #key_id#, "decision": 0, "ecosystem": #ecosystem_id#}).Columns("id").Vars(flag_participant)
+            DBFind(@1votings_participants).Where({"voting_id": #vID#, "member->address": #key_address#, "decision": 0, "ecosystem": #ecosystem_id#}).Columns("id").Vars(flag_participant)
             If(And(#instance_status#==#STARTED#,#flag_participant_id#>0)){
-                DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "recipient->member_id": #key_id#, "page_name": #this_page#, "page_params->voting_id": #vID#, "closed": 0}).Columns("id,notification->type,date_start_processing").Vars(notificcc)
+                DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "recipient->address": #key_address#, "page_name": #this_page#, "page_params->voting_id": #vID#, "closed": 0}).Columns("id,notification->type,date_start_processing").Vars(notificcc)
                 If(#notificcc_id#>0){
                     SetVar(isVotingAllowed,1)
                     SetVar(notific_id,#notificcc_id#)
@@ -32,7 +33,7 @@ Div(content-wrapper){
         If(#type_participants#==5){
             DBFind(@1votings_participants).Where({"voting_id": #vID#, "member->role_id": #role_id#, "decision": 0, "ecosystem": #ecosystem_id#}).Columns("id").Vars(flag_participant)
             If(And(#instance_status#==#STARTED#,#flag_participant_id#>0)){
-                DBFind(@1notifications).Where({{"$or":[{"date_start_processing": "$isnull"}, {"processing_info->member_id": #key_id#}]}, "ecosystem": #ecosystem_id#, "recipient->role_id": #role_id#, "page_name": #this_page#, "page_params->voting_id": #vID#, "closed": 0}).Columns("id,notification->type,date_start_processing").Vars(notificcc)
+                DBFind(@1notifications).Where({{"$or":[{"date_start_processing": "$isnull"}, {"processing_info->address": #key_address#}]}, "ecosystem": #ecosystem_id#, "recipient->role_id": #role_id#, "page_name": #this_page#, "page_params->voting_id": #vID#, "closed": 0}).Columns("id,notification->type,date_start_processing").Vars(notificcc)
                 If(#notificcc_id#>0){
                     SetVar(isVotingAllowed,1)
                     SetVar(notific_id,#notificcc_id#)
@@ -179,7 +180,7 @@ Div(content-wrapper){
                                     }
                                 }
                             }
-                            DBFind(@1votings_subject, src_voting_subject).Where({"voting_id": #vID#}).Order("id").Columns("id,subject->key_id,subject->address").Custom(_address){
+                            DBFind(@1votings_subject, src_voting_subject).Where({"voting_id": #vID#}).Order("id").Columns("id,subject->address").Custom(_address){
                                 #subject.address#
                             }.Custom(_member){
                                 SetVar(m_member_name,)
@@ -189,7 +190,7 @@ Div(content-wrapper){
                                 }.Else{
                                     SetVar(m_name,#subject.address#)
                                 }
-                                LinkPage(Class: text-primary t6 text-bold, Page: @1profile_view, PageParams: "v_key_id=#subject.key_id#"){
+                                LinkPage(Class: text-primary t6 text-bold, Page: @1profile_view, PageParams: "Address=#subject.address#"){
                                     #m_name#
                                 }
                             }.Custom(_voting){

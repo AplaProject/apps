@@ -1,16 +1,19 @@
+SetVar(key_address,Address(#key_id#))
+If(#Address#==""){
+    If(#v_key_id#==""){
+        SetVar(Address, #key_address#)
+    }.Else{
+        SetVar(Address, Address(#v_key_id#))
+    }
+}
+DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "address": #Address#}).Columns("id,image_id,member_name,member_info->information,address").Vars(member)
+
+If(#member_address#!=""){
+    SetVar(member_name, #member_member_name#).(member_info, #member_member_info_information#)
+}.Else{
+    SetVar(member_name,).(member_info,)
+}
 Div(content-wrapper){
-    If(Or(#v_key_id#>0,#v_key_id#<0)){
-    }.Else{
-        SetVar(v_key_id,#key_id#)
-    }
-    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #v_key_id#}).Columns("id,image_id,member_name,member_info->information").Vars(member)
-
-    If(Or(#member_id#>0,#member_id#<0)){
-        SetVar(member_name, #member_member_name#).(member_info, #member_member_info_information#)
-    }.Else{
-        SetVar(member_name,).(member_info,)
-    }
-
     Div(row){
         Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
             Form(panel panel-primary){
@@ -20,8 +23,8 @@ Div(content-wrapper){
                     }
                     Div(row mt-lg){
                         Div(col-md-12 text-center){
-                            If(Or(#member_id#>0,#member_id#<0)){
-                                If(#member_id# == #key_id#){
+                            If(#member_address#!=""){
+                                If(#member_address# == #key_address#){
                                     Button(Class: btn btn-link, Page: @1profile_edit){
                                         If(#member_image_id#>0){
                                             Image(Src: Binary().ById(#member_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
@@ -46,7 +49,7 @@ Div(content-wrapper){
                                 }
                                 Div(Class: h5 text-muted m0, Body: #member_info#)
                             }.Else{
-                                If(#v_key_id# == #key_id#){
+                                If(#Address# == #key_address#){
                                     Button(Class: btn btn-link, Page: @1profile_edit){
                                         Div(Class: h4 m0, Body: LangRes(@1editing_profile))
                                     }
@@ -57,15 +60,15 @@ Div(content-wrapper){
                     Div(row mt-lg){
                         Div(col-md-12 text-center){
                             Div(text-bold m0 h5, Body: LangRes(@1wallet_address))
-                            Span(Class: h5, Body: Address(#v_key_id#))
+                            Span(Class: h5, Body: #Address#)
                         }
                     }
-                    If(#v_key_id# == #key_id#){
+                    If(#Address# == #key_address#){
                         Div(row){
                             Div(col-md-12 mt text-center){
-                                DBFind(@1keys).Where({"ecosystem": 1, "id": #v_key_id#}).Vars(apl)
+                                DBFind(@1keys).Where({"ecosystem": 1, "address": #Address#}).Vars(apl)
                                 If(#ecosystem_id#>1){
-                                    DBFind("@1keys").Where({"ecosystem": #ecosystem_id#, "id": #v_key_id#}).Vars("tokens")
+                                    DBFind("@1keys").Where({"ecosystem": #ecosystem_id#, "address": #Address#}).Vars("tokens")
                                     DBFind("@1ecosystems").Where({"id": #ecosystem_id#}).Vars("custom")
                                 }
                                 Div(text-bold m0 h5, Body: LangRes(@1balance))
@@ -82,9 +85,9 @@ Div(content-wrapper){
                     }
                     Div(list-group-item text-center mt-lg){
                         Div(text-bold m0 h5, Body: LangRes(@1roles))
-                        DBFind(@1roles_participants).Where({"ecosystem": #ecosystem_id#, "member->member_id": #v_key_id#, "deleted": 0}).Columns("id").Vars(check)
+                        DBFind(@1roles_participants).Where({"ecosystem": #ecosystem_id#, "member->address": #Address#, "deleted": 0}).Columns("id").Vars(check)
                         If(#check_id#>0){
-                            DBFind(@1roles_participants,src_roles).Where({"ecosystem": #ecosystem_id#, "member->member_id":#v_key_id#, "deleted": 0}).Columns("role->id,role->name").Order("id")
+                            DBFind(@1roles_participants,src_roles).Where({"ecosystem": #ecosystem_id#, "member->address":#Address#, "deleted": 0}).Columns("role->id,role->name").Order("id")
                             ForList(src_roles){
                                 Span(){
                                     LinkPage(Class: h6 m0 text-primary, Page: @1roles_view, PageParams: "v_role_id=#role.id#", Body: "#role.name#")
@@ -93,11 +96,11 @@ Div(content-wrapper){
                         }.Else{
                             Span(LangRes(@1role_none))
                         }
-                        If(#v_key_id# == #key_id#){
+                        If(#Address# == #key_address#){
                             SetVar(founder_account, EcosysParam("founder_account"))
                             If(#founder_account# != #key_id#){
                                 Div(row){
-                                    Div(col-md-12 text-center){    
+                                    Div(col-md-12 text-center){
                                         Button(Class: btn-xs btn-link, Page: @1roles_request, Body: LangRes(@1request)).Popup(Header: $@1request_to_role$, Width: "50")
                                     }
                                 }

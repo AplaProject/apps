@@ -4,14 +4,6 @@ contract VotingSubjectCandidates {
         Address string
     }
 
-    func getMemberInfo(kid int) map {
-        var res map
-        res["member_id"] = Str(kid)
-        res["key_id"] = Str(kid)
-        res["address"] = IdToAddress(kid)
-        return res
-    }
-
     conditions {
         $STARTED = 3
         $FINISHED = 4
@@ -34,16 +26,13 @@ contract VotingSubjectCandidates {
         if DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "subject->address": $Address}).One("id") {
             warning LangRes("@1candidate_added_before", "en")
         }
-
-        $member = getMemberInfo($memberID)
-        if !$member {
-            warning Sprintf(LangRes("@1key_not_found", "en") + " (%v)", $memberID)
-        }
     }
 
     action {
-        DBInsert("@1votings_subject", {ecosystem: $ecosystem_id, voting_id:$votingID, subject:$member})
-        var m map
+        var m member map
+        member["member_id"] = AddressToId($Address)
+        member["address"] = $Address
+        DBInsert("@1votings_subject", {"ecosystem":$ecosystem_id, "voting_id":$votingID, "subject":member})
         m["optional->number_candidates"] = Int($voting["optional.number_candidates"]) + 1
         DBUpdate("@1votings", $votingID, m)
         @1VotingSubjectCheck("votingID", $votingID)

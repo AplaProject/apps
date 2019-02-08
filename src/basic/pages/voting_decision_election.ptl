@@ -1,35 +1,36 @@
+SetVar(key_address,Address(#key_id#)).(guest_address,Address(#guest_key#))
 If(#vID# == ""){
-    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
+    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "address": #key_address#, "ecosystem": #ecosystem_id#}).Vars(buffer)
     If(#buffer_value_voting_id#>0){
         SetVar(vID, #buffer_value_voting_id#)
     }
 }
 If(#vID# > 0){
     If(#candidates#==""){
-        SetVar(candidates,0)
+        SetVar(candidates,)
     }
     If(GetVar(back_page)){}.Else{
         SetVar(back_page,@1voting_view)
     }
     DBFind(@1votings, src_voting).WhereId(#vID#).Columns("id,voting->name,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params").Vars(instance)
-    DBFind(@1votings_subject, src_subject).Where({"voting_id": #vID#}).Columns("id,subject->key_id,subject->address").Custom(_address){
-        SetVar(candidates,"#candidates#,#subject.key_id#")
+    DBFind(@1votings_subject, src_subject).Where({"voting_id": #vID#}).Columns("id,subject->address").Custom(_address){
+        SetVar(candidates,"#candidates#,#subject.address#")
         #subject.address#
     }.Custom(_member){
-        DBFind(@1members).Where({id:#subject.key_id#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
+        DBFind(@1members).Where({address:#subject.address#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
         If(#m_member_name#!=""){
             SetVar(m_name,#m_member_name#)
         }.Else{
             SetVar(m_name,#subject.address#)
         }
-        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#subject.member_id#"){
+        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "Address=#subject.address#"){
             Span(Body: #m_name#)
         }
     }
 
-    DBFind(@1keys,src_keys).Where({"ecosystem": #ecosystem_id#, {"$and": [{"id": {"$neq":#guest_key#}}, {"id": {"$nin":[#candidates#]}}]}}).Columns("id").Count(members_count).Custom(_name){
-        DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Columns("member_name").Count(have_name).Vars(m)
-        Address(#id#)
+    DBFind(@1keys,src_keys).Where({"ecosystem": #ecosystem_id#, {"$and": [{"address": {"$neq":#guest_address#}}, {"address": {"$nin":[#candidates#]}}]}}).Columns("address").Count(members_count).Custom(_name){
+        DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "address": #address#}).Columns("member_name").Count(have_name).Vars(m)
+        #address#
         If(#have_name#>0){
             " (#m_member_name#)"
         }

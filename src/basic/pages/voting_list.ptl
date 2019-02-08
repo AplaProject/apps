@@ -26,7 +26,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 SetVar(INVALID,1).(WAITING,2).(STARTED,3).(FINISHED,4)
 DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->success,flags->decision,flags->full_data,progress->percent_success,progress->number_participants,creator->key_id,creator->address,date_started,date_ended,deleted,status,voting->count_type_voters,voting->volume,progress->number_voters").Count(count_votings).Custom(_id){
+DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->success,flags->decision,flags->full_data,progress->percent_success,progress->number_participants,creator->address,date_started,date_ended,deleted,status,voting->count_type_voters,voting->volume,progress->number_voters").Count(count_votings).Custom(_id){
     Span(Class: h5, Body: #id#)
 }.Custom(_name){
     LinkPage(Page: @1voting_view, PageParams: "vID=#id#"){
@@ -81,7 +81,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
     }.Else{
         SetVar(m_name,#creator.address#)
     }
-    LinkPage(Class: text-primary h6, Page: @1profile_view, PageParams: "v_key_id=#creator.key_id#", Body: #m_name#)
+    LinkPage(Class: text-primary h6, Page: @1profile_view, PageParams: "Address=#creator.address#", Body: #m_name#)
 }.Custom(_date){
     P(Class: text-center h6 m0, Body: DateTime(DateTime: #date_started#, Format: "DD.MM.YYYY HH:MI"))
     P(Class: text-center h6 m0, Body: DateTime(DateTime: #date_ended#, Format: "DD.MM.YYYY HH:MI"))
@@ -101,7 +101,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
 }.Custom(_decision){
     Div(text-center){
         If(#flags.decision# == 0){
-            If(And(#status#==#FINISHED#,#creator.member_id#==#key_id#)){
+            If(And(#status#==#FINISHED#,#creator.address#==#key_address#)){
                 Button(Body: LangRes(@1decision), Class: btn btn-primary, Contract: @1VotingDecisionCheck, Params: "votingID=#id#", Page: #this_page#)
             }.Else{
                 Div(text-muted){LangRes(@1no)}
@@ -129,7 +129,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
     }
 }.Custom(_actions){
     Div(text-right){
-        If(And(#creator.member_id#==#key_id#,#status#==#INVALID#)){
+        If(And(#creator.address#==#key_address#,#status#==#INVALID#)){
             Button(Class: fa fa-trash btn btn-default, Contract: @1VotingDelete, Params: "votingID=#id#", Page: #this_page#).Alert(Text: "$@1want_delete_voting$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
         }
     }
