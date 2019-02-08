@@ -1,0 +1,26 @@
+contract TokensUnwind {
+    data {
+        Deposit money
+    }
+    func checkDeposit() {
+        var amount money
+        amount = Money(DBFind("@1keys").Where({"id": $key_id, "ecosystem": $ecosystem_id}).One("deposit"))
+        if $Deposit > amount {
+            warning LangRes("@1amount_less_than_needed", "en")
+        }
+    }
+    conditions {
+        if $Deposit == 0 {
+            warning LangRes("@1amount_zero", "en")
+        }
+        if $Deposit < 0 {
+            warning LangRes("@1amount_less_zero", "en")
+        }
+        checkDeposit()
+    }
+    action {
+        DBUpdateExt("@1keys", {"id": $key_id, "ecosystem": $ecosystem_id}, {"-deposit": $Deposit})
+        DBUpdateExt("@1keys", {"id": $key_id, "ecosystem": $ecosystem_id}, {"+amount": $Deposit})
+        //without history block
+    }
+}
