@@ -1,0 +1,58 @@
+If(GetVar(back_page)==""){
+    SetVar(back_page, @1params_list)
+}
+SetVar(tid, EcosysParam(Name: voting_ecosysparam_template_id))
+DBFind(@1voting_templates).Where({id:#tid#, ecosystem:#ecosystem_id#}).Vars(template)
+SetVar(voters_id,EcosysParam(Name:voters_role_id))
+
+Div(content-wrapper){
+    If(#stylesheet# == stylesheet){
+        DBFind(@1parameters, src_params).Where({name: #stylesheet#,ecosystem:#ecosystem_id#}).Vars("param")
+    }.Else{
+        If(#id#>0){
+            DBFind(@1parameters, src_params).Where({id:#id#,ecosystem:#ecosystem_id#}).Vars("param")
+        }.Else{
+            SetVar(param_name, $@1new_parameter$)
+        }
+    }
+
+    SetTitle($@1ecosystem_parameters$)
+    Div(Class: breadcrumb){
+        LinkPage($@1ecosystem_parameters$, @1params_list)
+        Span(/).Style(margin-right: 10px; margin-left: 10px;)
+        Span(Class: text-muted, Body: #param_name#)
+    }
+    
+    Form(){
+        Div(form-group){
+            Label($@1name$)
+            If(#param_id#>0){
+                Input(Name: name, Value: #param_name#, Disabled: "true")
+            }.Else{
+                Input(Name: name)
+            }
+        }
+        Div(form-group){
+            If(#param_id#>0){
+                Input(Type: textarea, Name: value, Value: "#param_value#").Style(height: 500px !important;)
+            }.Else{
+                Input(Type: textarea, Name: value).Style(height: 500px !important;)
+            }
+        }
+        Div(form-group){
+            Label($@1change_conditions$)
+            If(#param_id#>0){
+                Input(Name: conditions, Value: #param_conditions#)
+            }.Else{
+                Input(Name: conditions)
+            }
+        }
+        Div(form-group text-right){
+            If(#param_id#>0){
+                Button(Class: btn btn-primary, Body: $@1voting$, Contract: @1VotingEcosysParam, Params: "Id=#param_id#,Value=Val(value),Conditions=Val(conditions)", Page: @1voting_list)
+            }.Else{
+                Button(Class: btn btn-primary, Body: $@1save$, Contract: @1NewParameter, Params: "Name=Val(name),Value=Val(value),Conditions=Val(conditions)", Page: #back_page#)
+            }
+        }
+    }
+}
