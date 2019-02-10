@@ -6,7 +6,7 @@ contract VotingSubjectCandidates {
     
     func getMemberInfo(kid int) map {
         var res member map
-        member = DBFind("@1members").Where({ecosystem:$ecosystem_id, id:kid}).Row()
+        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
         if member {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
@@ -25,7 +25,7 @@ contract VotingSubjectCandidates {
     conditions {
         $STARTED = 3
         $FINISHED = 4
-        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id:$votingID}).Columns("id,optional->number_candidates,voting->type,flags->full_data,status").Row()
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $votingID}).Columns("id,optional->number_candidates,voting->type,flags->full_data,status").Row()
         if $voting["status"] == $STARTED {
             warning LangRes("@1voting_started_can_not_add_candidates", "en")
         }
@@ -41,7 +41,7 @@ contract VotingSubjectCandidates {
             $memberID = $key_id
         }
 
-        if DBFind("@1votings_subject").Where({ecosystem:$ecosystem_id, voting_id:$votingID, "subject->member_id":$memberID}).One("id") {
+        if DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "subject->member_id": $memberID}).One("id") {
             warning LangRes("@1candidate_added_before", "en")
         }
 
@@ -56,5 +56,6 @@ contract VotingSubjectCandidates {
         var m map
         m["optional->number_candidates"] = Int($voting["optional.number_candidates"]) + 1
         DBUpdate("@1votings", $votingID, m)
+        @1VotingSubjectCheck("votingID", $votingID)
     }
 }

@@ -1,0 +1,69 @@
+contract QAnswer {
+    data {
+        id int "optional"
+        operation string
+        question_id int
+        decision string
+        answer_id int
+    }
+
+    conditions {
+        $question = DBFind("@1q_list").Where({"id": $question_id}).Columns("deleted,status,params->change,au_roles,au_groups,expired").Row()
+        if $question["deleted"] == 1 {
+            warning LangRes("@1q_error_cannot", "en")
+        }
+        if $question["status"] != 1 {
+            warning LangRes("@1q_error_cannot", "en")
+        }
+        if $operation == "UV" {
+            if $question["params.change"] != "true" {
+                warning LangRes("@1q_error_revoting", "en")
+            }
+        }
+        if $question["au_roles"] != "[0]" {
+            var au_roles array
+            au_roles = JSONDecode($question["au_roles"])
+            if !DBFind("@1roles_participants").Where({"member->member_id": $key_id, "deleted": 0, "ecosystem": $ecosystem_id, "role->id": {"$in": au_roles}}) {
+                warning LangRes("@1q_error_cannot", "en")
+            }
+        }
+        if $question["au_groups"] != "[0]" {
+            var au_groups array
+            au_groups = JSONDecode($question["au_groups"])
+            if !DBFind("@1groups_participants").Where({"member->member_id": $key_id, "deleted": 0, "ecosystem": $ecosystem_id," groups_info->id": {"$in": au_groups}}) {
+                warning LangRes("@1q_error_cannot", "en")
+            }
+        }
+    }
+
+    action {
+        var notes array i int note map
+        notes = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_name": "@1q_question", "page_params->id": $question_id, "closed": 0}).Columns("id")
+        while i < Len(notes){
+            note = notes[i]
+            @1NotificationsClose("notific_id", Int(note["id"]))
+            i = i + 1
+        }
+
+        var m map
+        if $block_time > Int($question["expired"]) {
+            m["expired"] = $block_time
+            m["status"] = 2
+            m["lastmodified"] = $block_time
+            DBUpdate("@1q_list", $question_id, m)
+        } else {
+            m["member"] = $key_id
+            m["decision"] = $decision
+            m["answer_id"] = $answer_id
+            m["ecosystem"] = $ecosystem_id
+            m["lastmodified"] = $block_time
+            m["question_id"] = $question_id
+            if $operation == "CV" {
+                DBInsert("@1q_answers", m)
+            }
+            if $operation == "UV" {
+                DBUpdate("@1q_answers", $id, m)
+            }
+        }
+    }
+}

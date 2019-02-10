@@ -1,21 +1,21 @@
 contract ErrandStatusUpdate {
-    data {}
-	
     conditions {
-        var admin_id int
-        admin_id = EcosysParam("role_admin")
-       
-        if !RoleAccess(Int(admin_id)) {
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Errands"}).One("id")
+        var admin_ids int
+        admin_ids = AppParam(Int($app), "errands_admin_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+admin_ids+"]")  
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
             warning LangRes("@1access_denied", "en")
         }
     }
-	
+
     action {
         var bt string
         bt = BlockTime()
 
         var errands array i lenErrands int v page_params_edit map
-        errands = DBFind("@1notifications").Columns("id,page_params->date_end,page_params->type,page_params->status").Where({"page_params->type":"task","page_params->date_end":{"$lte":bt},"page_params->status":0})
+        errands = DBFind("@1notifications").Columns("id,page_params->date_end,page_params->type,page_params->status").Where({"page_params->type": "task", "page_params->date_end": {"$lte": bt}, "page_params->status": 0})
         lenErrands = Len(errands)
         page_params_edit["page_params->status"] = -1
         while i < lenErrands{

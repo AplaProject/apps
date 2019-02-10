@@ -18,12 +18,12 @@ contract VotingUpdate {
     }
 
     conditions {
-        $WAITING = 1
-        $VALID = 2
+        $INVALID = 1
+        $WAITING = 2
         $STARTED = 3
         $FINISHED = 4
-        $INVALID = 5
-        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id:$votingID, status:$STARTED}).Columns("flags,voting,progress,progress->number_voters,voting->count_type_voters").Row()
+
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $votingID, "status": $STARTED}).Columns("flags,voting,progress,progress->number_voters,voting->count_type_voters").Row()
         if !$voting {
             warning LangRes("@1started_voting_not_found", "en")
         }
@@ -39,12 +39,12 @@ contract VotingUpdate {
         quorum = Int(voting["quorum"])
         volume = Int(voting["volume"])
         number_voters = Int(progress["number_voters"]) + 1
-        if(Int($voting["voting.count_type_voters"]) == 0){
+        if Int($voting["voting.count_type_voters"]) == 0 {
             percent_voters = percentPartOfTotal(number_voters, Int(progress["number_participants"]))
-            percent_success = percentPartOfTotal(percent_voters, volume)
+            percent_success = percentPartOfTotal(percent_voters, quorum)
         } else {
             percent_voters = percentPartOfTotal(number_voters, Int(progress["number_participants"]))
-            percent_success = percentPartOfTotal(number_voters, volume)
+            percent_success = percentPartOfTotal(number_voters, quorum)
         }
 
         // update the flag of success
@@ -58,32 +58,13 @@ contract VotingUpdate {
         var m map
         m["progress"] = progress
         m["flags->success"] = flag_success
-
-        $check_type = DBFind("@1votings").Columns("id,voting,voting->count_type_voters").Where({ecosystem:$ecosystem_id, id:$votingID}).One("voting.count_type_voters")
-        if $check_type == 0 {
-            if (percent_voters >= quorum && quorum > 50 && percent_voters >= volume) || percent_voters == 100 {
-                // if a quorum is more than 50% we can immediately make the decision
-                // OR
-                // if all participants have voted we can not wait until the end of the voting period
-                m["status"] = $FINISHED
-                DBUpdate("@1votings", $votingID, m)
-                @1VotingDecisionCheck("votingID", $votingID)
-            }else{
-                DBUpdate("@1votings", $votingID, m)
-            }
-        }
-        if $check_type == 1 {
-            $total_voters = Int($voting["progress.number_voters"]) + 1
-            if ($total_voters >= volume) || percent_voters == 100 {
-                // if a quorum is more than 50% we can immediately make the decision
-                // OR
-                // if all participants have voted we can not wait until the end of the voting period
-                m["status"] = $FINISHED
-                DBUpdate("@1votings", $votingID, m)
-                @1VotingDecisionCheck("votingID", $votingID)
-            }else{
-                DBUpdate("@1votings", $votingID, m)
-            }
+        
+        if percent_success == 100 || percent_voters == 100 {
+            m["status"] = $FINISHED
+            DBUpdate("@1votings", $votingID, m)
+            @1VotingDecisionCheck("votingID", $votingID)
+        } else {
+            DBUpdate("@1votings", $votingID, m)
         }
     }
 }

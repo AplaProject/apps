@@ -1,0 +1,67 @@
+Div(content-wrapper){
+    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("page_params->gr_id,page_params->decide,sender->image_id,recipient->member_name,recipient->member_id,recipient->image_id,sender->member_id,sender->member_name,closed").Vars(notific)
+    
+    Div(row){
+        Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
+            Form(panel panel-default){
+                Div(panel-heading text-center){
+                    If(#notific_page_params_decide# == 1){
+                        Span(Class: h3, Body: $@1your_request_approved$)
+                    }.ElseIf(#notific_page_params_decide# == -1){
+                        Span(Class: h3, Body: $@1your_request_denied$)
+                    }.Else{
+                        Span(Class: h3, Body: $@1request_group$)
+                    }
+                }
+                Div(panel-body){
+                    Div(form-group){
+                        Div(row){
+                            Div(col-md-12 mt-sm text-center){
+                                If(Or(#notific_page_params_decide# == 1,#notific_page_params_decide# == -1)){
+                                    If(#notific_recipient_image_id# > 0){
+                                        Image(Src: Binary().ById(#notific_recipient_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                    }.Else{
+                                        Span(Class: fa icon-user fa-5x)
+                                    }
+                                    Div(m0 h4 text-bold){#notific_recipient_member_name#}
+                                }.Else{
+                                    If(#notific_sender_image_id# > 0){
+                                        Image(Src: Binary().ById(#notific_sender_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                    }.Else{
+                                        Span(Class: fa icon-user fa-5x)
+                                    }
+                                    Div(m0 h4 text-bold){#notific_sender_member_name#}
+                                }
+                            }
+                        }
+                    }
+                    Div(list-group-item text-center){
+                        Div(text-muted m0 h5, Body: LangRes(@1address))
+                        If(Or(#notific_page_params_decide# == 1,#notific_page_params_decide# == -1)){
+                            Span(Class: h5 text-bold, Body: Address(#notific_recipient_member_id#))
+                        }.Else{
+                            Span(Class: h5 text-bold, Body: Address(#notific_sender_member_id#))
+                        }
+                    }
+                    Div(list-group-item text-center){
+                        DBFind(@1groups).Where({"ecosystem": #ecosystem_id#, "id": #notific_page_params_gr_id#}).Vars(group)
+                        Div(text-muted m0 h5, Body: $@1group$)
+                        Span(Class: h5 text-bold, Body: #group_group_name# (#group_id#))
+                    }
+                    If(#notific_closed# == 0){
+                        Div(row){
+                            Div(col-md-12 mt-lg text-center){
+                                If(Or(#notific_page_params_decide# == 1,#notific_page_params_decide# == -1)){
+                                    Button(Class: btn btn-primary mh-sm, Body: $@1close$, Contract: @1NotificationsClose, Page: @1notifications_list, Params: "notific_id=#notific_id#")
+                                }.Else{
+                                    Button(Class: btn btn-danger mh-sm, Body: $@1reject$, Contract: @1GroupRequestDecide, Page: @1notifications_list, Params: "notific_id=#notific_id#,accept=0")
+                                    Button(Class: btn btn-success mh-sm, Body: $@1accept$, Contract: @1GroupRequestDecide, Page: @1notifications_list, Params: "notific_id=#notific_id#,accept=1")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

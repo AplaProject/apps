@@ -1,0 +1,35 @@
+contract EType {
+    data {
+        Id int "optional"
+        Name string
+    }
+
+    conditions{
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Events"}).One("id")
+        var admin_ids int
+        admin_ids = AppParam(Int($app), "events_admin_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+admin_ids+"]")  
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+            warning LangRes("@1access_denied", "en")
+        }
+
+        if DBFind("@1e_types").Where({"name": $Name, "ecosystem": $ecosystem_id}).Row() {
+            warning LangRes("e_type_name_exists", "en")
+        }
+
+        if $Id > 0 {
+            if !DBFind("@1e_types").Where({"id": $Id, "ecosystem": $ecosystem_id}).Row() {
+                warning LangRes("e_type_not_found", "en")
+            }
+        }
+    }
+
+    action {
+        if $Id > 0 {
+            DBUpdate("@1e_types", $Id, {name: $Name})
+        } else {
+            DBInsert("@1e_types", {name: $Name, ecosystem: $ecosystem_id})
+        }
+    }
+}

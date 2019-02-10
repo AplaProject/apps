@@ -1,0 +1,134 @@
+SetVar(this_page, @1q_listing).(this_table, @1q_list)
+Include(@1pager_header)
+
+SetTitle($@1q_poll$)
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Questionnaire"}).Vars(application)
+SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: q_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+If(#admin_access_id# > 0){
+    SetVar(permission,1)
+}
+If(#permission#==1){
+    AddToolButton(Title: $@1q_new_question$, Page: @1q_question_new, Icon: icon-plus).Popup(Header: $@1q_new_question$, Width: "60")
+}
+
+If(#search#){
+    SetVar(where, {"ecosystem": #ecosystem_id#, "deleted": 0, {"$or": [{"question": {"$ilike": "#search#"}}]}})
+}.Else{
+    SetVar(where, {"ecosystem": #ecosystem_id#, "deleted": 0})
+}
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, LangRes(@1q_question))
+    Include(@1search)
+}
+
+DBFind(#this_table#,src_q).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Columns("id,question,description,answer,ecosystem,init,lastmodified,created_at,expired,status,params->hide,params->change,au_groups,au_roles").Custom(custom_name){
+    If(#permission#==1){
+        LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: "q_id=#id#"){
+            Div(Class: text-primary){
+                Span(#question#)
+            }
+        }
+    }.Else{
+        If(#status#==1){
+            If(And(#au_groups#==[0],#au_roles#==[0])){
+                LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: "q_id=#id#"){
+                    Div(Class: text-primary){
+                        Span(#question#)
+                    }
+                }
+            }.Else{
+                DBFind(@1groups_participants).Where({"member->member_id": #key_id#, "deleted": 0, "ecosystem": #ecosystem_id#, "groups_info->id": {"$in": #au_groups#}}).Count(gp)
+                DBFind(@1roles_participants).Where({"member->member_id": #key_id#, "deleted": 0, "ecosystem": #ecosystem_id#, "role->id": {"$in": #au_roles#}}).Count(rl)
+                If(And(#gp#>0,#rl#>0)){
+                    LinkPage(Class: #style_link# h5 text-bold, Page: @1q_question, PageParams: "q_id=#id#"){
+                        Div(Class: text-primary){
+                            Span(#question#)
+                        }
+                    }
+                }.Else{
+                    Span(#question#)
+                }
+            }
+        }.Else{
+            Span(#question#)
+        }
+    }
+}.Custom(custom_status){
+    If(#status#==0){
+        Span(Class: text-success, Body: LangRes(@1q_status_created))
+    }
+    If(#status#==1){
+        Span(Class: text-success, Body: LangRes(@1q_status_started))
+    }
+    If(#status#==2){
+        Span(Class: text-primary, Body: LangRes(@1q_status_ended))
+    }
+    If(#status#==3){
+        Span(Class: text-warning, Body: LangRes(@1q_status_admin))
+    }
+}.Custom(time){
+    P(Class:h6 m0, Body: DateTime(#created_at#,HH:MI DD.MM.YYYY))
+    P(Class:h6 m0, Body: DateTime(#expired#,HH:MI DD.MM.YYYY))
+}.Custom(initiator){
+    DBFind(@1members).Where({"ecosystem": #ecosystem#, "id":#init#}).Vars(m)
+    If(Or(#m_id#>0,#m_id#<0)){
+        SetVar(member_name, #m_member_name#)
+    }.Else{
+        SetVar(member_name, Address(#id#))
+    }
+    Span(#member_name#)
+}.Custom(hidden){
+    If(#params.hide#==true){
+        Span(Class: fa fa-check fa-1x)
+    }.Else{
+        Span(Class:fa fa-times fa-1x)
+    }
+}.Custom(change){
+    If(#params.change#==true){
+        Span(Class: fa fa-check fa-1x)
+    }.Else{
+        Span(Class:fa fa-times fa-1x)
+    }
+}.Custom(ops){
+    Span(Class: pull-right){
+        If(#permission#==1){
+            If(#status#==0){
+                LinkPage(Body: Em(Class: fa fa-edit), Class: btn btn-link, Page: @1q_question_edit, PageParams: "q_id=#id#")
+            }
+            DBFind(@1q_answers).Where({"question_id": #id#}).Count(answers)
+            If(#answers#>0){
+                Button(Body: Em(Class: fa fa-bars), Class: btn btn-link, Page: @1q_question_log, PageParams: "q_id=#id#").Popup(Header: #question#, Width: "50")
+            }
+            If(#status#==0){
+                Button(Body: Em(Class: fa fa-play), Class: btn btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=T,id=#id#")
+            }
+            If(#status#==1){
+                Button(Body: Em(Class: fa fa-stop), Class: btn btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=Z,id=#id#")
+            } 
+            Button(Body: Em(Class: fa fa-info-circle), Class: btn btn-link, Page: @1q_question_graph, PageParams: "q_id=#id#").Popup(Header: $@1q_answer_graph$ / #question#, Width: "50")
+            Button(Body: Em(Class: fa fa-trash-o), Class: btn btn-link, Page: @1q_listing, Contract: @1QOperations, Params: "operation=D,id=#id#")
+        }
+    }
+}.Count(q)
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#q#>0){
+                Table(Source: src_q, Columns: "$@1q_question$=custom_name,$@1q_initiator$=initiator,$@1q_status$=custom_status,$@1q_change$=change,$@1q_date_start$/$@1q_date_expiration$=time,=ops")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: $@1q_no_questions$)
+            }
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
+}
