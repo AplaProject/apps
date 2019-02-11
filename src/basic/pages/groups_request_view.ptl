@@ -1,6 +1,7 @@
+SetVar(key_address,Address(#key_id#))
 Div(content-wrapper){
-    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("page_params->gr_id,page_params->decide,sender->image_id,recipient->member_name,recipient->member_id,recipient->image_id,sender->member_id,sender->member_name,closed").Vars(notific)
-    
+    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("page_params->gr_id,page_params->decide,recipient->address,sender->address,closed").Vars(notific)
+
     Div(row){
         Div(col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3){
             Form(panel panel-default){
@@ -18,19 +19,31 @@ Div(content-wrapper){
                         Div(row){
                             Div(col-md-12 mt-sm text-center){
                                 If(Or(#notific_page_params_decide# == 1,#notific_page_params_decide# == -1)){
-                                    If(#notific_recipient_image_id# > 0){
-                                        Image(Src: Binary().ById(#notific_recipient_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                    DBFind(@1members).Where({address:#notific_recipient_address#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
+                                    If(#m_member_name#!=""){
+                                        SetVar(m_name,#m_member_name#)
+                                    }.Else{
+                                        SetVar(m_name,#notific_recipient_address#)
+                                    }
+                                    If(#m_image_id#>0){
+                                        Image(Src: Binary().ById(#m_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
                                     }.Else{
                                         Span(Class: fa icon-user fa-5x)
                                     }
-                                    Div(m0 h4 text-bold){#notific_recipient_member_name#}
+                                    Div(m0 h4 text-bold){#m_name#}
                                 }.Else{
-                                    If(#notific_sender_image_id# > 0){
-                                        Image(Src: Binary().ById(#notific_sender_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
+                                    DBFind(@1members).Where({address:#notific_sender_address#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
+                                    If(#m_member_name#!=""){
+                                        SetVar(m_name,#m_member_name#)
+                                    }.Else{
+                                        SetVar(m_name,#notific_sender_address#)
+                                    }
+                                    If(#m_image_id#>0){
+                                        Image(Src: Binary().ById(#m_image_id#), Class: img-thumbnail).Style(width: 120px; border: 1px solid #5A5D63;)
                                     }.Else{
                                         Span(Class: fa icon-user fa-5x)
                                     }
-                                    Div(m0 h4 text-bold){#notific_sender_member_name#}
+                                    Div(m0 h4 text-bold){#m_name#}
                                 }
                             }
                         }
@@ -38,9 +51,9 @@ Div(content-wrapper){
                     Div(list-group-item text-center){
                         Div(text-muted m0 h5, Body: LangRes(@1address))
                         If(Or(#notific_page_params_decide# == 1,#notific_page_params_decide# == -1)){
-                            Span(Class: h5 text-bold, Body: Address(#notific_recipient_member_id#))
+                            Span(Class: h5 text-bold, Body: #notific_recipient_address#)
                         }.Else{
-                            Span(Class: h5 text-bold, Body: Address(#notific_sender_member_id#))
+                            Span(Class: h5 text-bold, Body: #notific_sender_address#)
                         }
                     }
                     Div(list-group-item text-center){

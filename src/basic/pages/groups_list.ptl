@@ -1,3 +1,4 @@
+SetVar(key_address,Address(#key_id#))
 SetVar(this_page, @1groups_list).(this_table, @1groups)
 Include(@1pager_header)
 
@@ -16,7 +17,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 }
 DBFind(@1applications).Columns("id,name").Where({"ecosystem": 1, "name": "Basic"}).Vars(application)
 
-DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": "1", "id": "1"}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,group_name,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,group_access,group_info,group_type").Custom(_id){
+DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": "1", "id": "1"}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,group_name,image_id,creator->address,date_created,date_deleted,deleted,group_access,group_info,group_type").Custom(_id){
     If(#deleted# == 0){
         SetVar(style_text, "text-normal").(style_link, "text-primary")
     }.Else{
@@ -24,10 +25,14 @@ DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": "1", "id": "1"
     }
     Span(Class: #style_text#, Body: #id#)
 }.Custom(_creator){
-    If(And(#creator.member_name#!=NULL,#creator.member_name#!="")){
-        LinkPage(Class: #style_link# text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
-            #creator.member_name#
-        }
+    DBFind(@1members).Where({address:#creator.address#, ecosystem:#ecosystem_id#}).Columns("member_name,image_id").Vars(m)
+    If(#m_member_name#!=""){
+        SetVar(m_name,#m_member_name#)
+    }.Else{
+        SetVar(m_name,#creator.address#)
+    }
+    LinkPage(Class: #style_link# text-bold, Page: @1profile_view, PageParams: "Address=#creator.address#"){
+        #m_name#
     }
 }.Custom(_name){
     LinkPage(Class: #style_link# h5 text-bold, Page: @1groups_view, PageParams: "v_group_id=#id#"){
@@ -66,7 +71,7 @@ DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": "1", "id": "1"
         }
     }
 }.Custom(_access){
-    If(#creator.member_id#==#key_id#){
+    If(#creator.address#==#key_address#){
         SetVar(access,done)
     }.Else{
         SetVar(access,)
@@ -111,9 +116,9 @@ DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": "1", "id": "1"
     }
 }.Custom(join_group){
     If(#deleted# == 0){
-        DBFind("@1groups_participants").Columns("id,groups_info,groups_info->id,deleted,member,member->member_id").Where({"groups_info->id": #id#, "deleted": 0, "member->member_id": #key_id#}).Vars(j_l).Count(check_membership)
+        DBFind("@1groups_participants").Columns("id,groups_info,groups_info->id,deleted,member,member->address").Where({"groups_info->id": #id#, "deleted": 0, "member->address": #key_address#}).Vars(j_l).Count(check_membership)
         If(And(#group_type#==1,#check_membership#==0)){
-            Button(Body: $@1join_the_group$, Class: btn btn-link pull-right, Contract: @1GroupsAssign, Page: @1groups_view, PageParams: "v_group_id=#id#", Params: "gr_id=#id#,member_id=#key_id#")
+            Button(Body: $@1join_the_group$, Class: btn btn-link pull-right, Contract: @1GroupsAssign, Page: @1groups_view, PageParams: "v_group_id=#id#", Params: "gr_id=#id#,Address=#key_address#")
         }.ElseIf(And(#group_type# == 1,#check_membership# == 1)){
             Button(Body: $@1leave_the_group$, Class: btn btn-link pull-right, Contract: @1GroupsUnassign, Page: @1groups_list, Params:"row_id=#j_l_id#")
         }.ElseIf(And(#group_type# == 2,#check_membership# == 0)){

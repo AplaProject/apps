@@ -1,3 +1,4 @@
+SetVar(key_address,Address(#key_id#))
 DBFind(@1applications).Columns("name,id").Where({"name": "Basic", "ecosystem": 1}).Vars(application)
 
 If(#Id#!=""){
@@ -5,8 +6,8 @@ If(#Id#!=""){
 }
 
 If(#v_group_id#>0){
-    DBFind(@1groups, src_groups).Where({"ecosystem": #ecosystem_id#, "id": #v_group_id#}).Columns("id,group_name,group_type,group_access,creator->member_id,deleted").Vars(prefix)
-    If(#prefix_creator_member_id#==#key_id#){
+    DBFind(@1groups, src_groups).Where({"ecosystem": #ecosystem_id#, "id": #v_group_id#}).Columns("id,group_name,group_type,group_access,creator->address,deleted").Vars(prefix)
+    If(#prefix_creator_address#==#key_address#){
         SetVar(manager_id, 1)
     }.ElseIf(And(#prefix_group_access#!="NULL",#prefix_group_access#!="",#prefix_group_access#!="[]",#prefix_deleted#==0)){
         DBFind(@1roles_participants).Where({"ecosystem": #ecosystem_id#, "id": {"$in": #prefix_group_access#}}).Columns("id").Vars(manager)
@@ -49,12 +50,11 @@ If(#v_group_id#>0){
                 If(GetVar(MemberId) == ""){
                     SetVar(MemberId, 0)
                 }
-                Input(Name: member_id, Type:hidden, Value: #MemberId#)
                 Div(input-group){
-                    If(Or(#MemberId#>0,#MemberId#<0)){
+                    If(#MemberId#!=""){
                         SetVar(AddressMemberId, Address(#MemberId#))
                     }
-                    Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #AddressMemberId#)
+                    Input(Name: Address, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #AddressMemberId#)
                     Div(input-group-btn){
                         Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=@1groups_assign,back_header=$@1assign$,Id=#v_group_id#,EcosystemId=#ecosystem_id#").Popup(Header: $@1member$, Width: "50")
                     }.Style(
@@ -67,7 +67,7 @@ If(#v_group_id#>0){
             }
         }
         If(#manager_id#>0){
-            Button(Body: LangRes(@1assign), Class: btn btn-primary pull-right mt, Page: @1groups_view, PageParams: "v_group_id=#v_group_id#", Contract: @1GroupsAssign, Params: "member_id=Val(member_id)").Alert(Text: "$@1want_assign_member_to_role$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+            Button(Body: LangRes(@1assign), Class: btn btn-primary pull-right mt, Page: @1groups_view, PageParams: "v_group_id=#v_group_id#", Contract: @1GroupsAssign).Alert(Text: "$@1want_assign_member_to_role$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
         }
         Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1groups_view, PageParams: "v_group_id=#v_group_id#")
     }

@@ -4,8 +4,9 @@ contract GroupsUnassign {
     }
 
     conditions {
+        $key_address = IdToAddress($key_id)
         var assigned map
-        assigned = DBFind("@1groups_participants").Where({"ecosystem": $ecosystem_id, "id": $row_id, "deleted": 0}).Columns("id,ecosystem,deleted,groups_info->id,member->member_id").Row()
+        assigned = DBFind("@1groups_participants").Where({"ecosystem": $ecosystem_id, "id": $row_id, "deleted": 0}).Columns("id,ecosystem,deleted,groups_info->id,member->address").Row()
         if !assigned {
             warning LangRes("@1group_participant_not_found", "en")
         }
@@ -21,7 +22,7 @@ contract GroupsUnassign {
             warning LangRes("@1group_not_found", "en")
         }
         if $groupType == 1 {
-            if Int(assigned["member.member_id"]) != $key_id {
+            if Int(assigned["member.address"]) != $key_address {
                 @1GroupsAccessCheck("gr_id", $groupId)
             }
         } else {
