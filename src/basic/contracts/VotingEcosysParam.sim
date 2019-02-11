@@ -1,0 +1,21 @@
+contract VotingEcosysParam {
+    data {
+        Id int
+        Value string
+        Conditions string
+    }
+
+    conditions {
+        $templateId = Int(EcosysParam("voting_ecosysparam_template_id"))
+        if $templateId == 0 {
+            warning LangRes("@1template_id_not_found", "en")
+        }
+    }
+
+    action {
+        var name string params map
+        name = DBFind("@1parameters").WhereId($Id).One("name")
+        params = {Id:$Id, Value:$Value, Conditions:$Conditions}
+        @1VotingTemplateRun("TemplateId,Duration,TableWritten,RowId,ColumnName,NewValue", $templateId, 3, "@1parameters", Str($Id), name, JSONEncode(params))
+    }
+}

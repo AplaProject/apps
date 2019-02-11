@@ -1,0 +1,42 @@
+contract GroupRequestDecide {
+    data {
+        notific_id int
+        accept int
+    }
+
+    conditions {
+        $notific = DBFind("@1notifications").WhereId($notific_id).Columns("id,closed,page_params->gr_id,page_params->member_id,sender,sender->member_id,recipient,recipient->role_id").Row()
+        if $notific["closed"] == 1 {
+            warning LangRes("@1request_already", "en")
+        }
+    }
+
+    action {
+        $gr_id = Int($notific["page_params.gr_id"])
+        $member_id = Int($notific["page_params.member_id"])
+        if $accept == 1 {
+            @1GroupsAssign("gr_id,member_id", $gr_id, $member_id)
+        }
+        var params map
+        params["gr_id"] = $gr_id
+        if $accept == 1 {
+            params["decide"] = 1
+        } else {
+            params["decide"] = -1
+        }
+        var icon header body page ecoName string member int
+        icon = "icon icon-user-follow"
+        header = "Request to group"
+        body = "Solution for your request"
+        page = "@1groups_request_view"
+        member = Int($notific["sender.member_id"])
+        if $notific["recipient.role_id"] > 0 {
+            @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,eco_id,current_role_id", member, 2, icon, header, body, page, params, $ecosystem_id, Int($notific["recipient.role_id"]))
+            @1NotificationsProcess("notific_id", $notific_id)
+            @1NotificationsClose("notific_id", $notific_id)
+        } else{
+            @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,eco_id", member, 1, icon, header, body, page, params, $ecosystem_id)
+            @1NotificationsClose("notific_id", $notific_id)
+        }
+    }
+}

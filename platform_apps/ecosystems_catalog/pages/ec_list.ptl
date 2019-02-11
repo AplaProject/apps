@@ -3,13 +3,13 @@ Include(@1pager_header)
 
 SetTitle("$@1catalog_ecosystems$")
 Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1catalog_ecosystems_desc$"))
-If(GetVar(EcosystemId) == ""){
+If(#EcosystemId# == ""){
     SetVar(EcosystemId, #ecosystem_id#)
 }
 AddToolButton(Title: $@1catalog_ecosystems_manage_button$, Page: @1select_ecosystem, Icon: "icon-settings", PageParams: "back_page=@1ec_manage,go_home=1,back_header=$@1catalog_ecosystems_editing$,EcosystemId=#EcosystemId#,Type=ONLY_MY").Popup(Header: $@1ecosystem_select$, Width: "40")
 AddToolButton(Title: $@1create$, Page: @1ec_new, Icon: icon-plus).Popup(Header: $@1create$, Width: "30")
 
-If(GetVar(sort)){
+If(#sort#){
     If(#sort#==1){
         SetVar(payment_filter, {"info->payment":1})
     }.ElseIf(#sort#==2){
@@ -19,7 +19,7 @@ If(GetVar(sort)){
     SetVar(sort, "0")
 }
 
-If(GetVar(page_par)){
+If(#page_par#){
     If(#page_par#==1){
         SetVar(type_filter, {"info->type":1})
     }.ElseIf(#page_par#==2){
@@ -31,10 +31,10 @@ If(GetVar(page_par)){
     SetVar(page_par, "0")
 }
 
-If(GetVar(search)){
-    SetVar(where, {"$and": [{"info->visibility": 2}, GetVar(payment_filter), GetVar(type_filter), {"name": {"$like": "#search#"}}]})
+If(#search#){
+    SetVar(where, {"$and": [{"info->visibility": 2}, #payment_filter#, #type_filter#, {"name": {"$ilike": "#search#"}}]})
 }.Else{
-    SetVar(where, {"$and": [{"info->visibility": 2}, GetVar(payment_filter), GetVar(type_filter)]})
+    SetVar(where, {"$and": [{"info->visibility": 2}, #payment_filter#, #type_filter#]})
 }
 
 Div(mr-lg text-right){
@@ -87,8 +87,8 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
     DBFind(@1keys).Where({"ecosystem": #id#, "id": #key_id#}).Vars(ecosystem_member)
     DBFind(@1parameters).Where({"$and": [{"ecosystem": #id#}, {"$or": [{"$and": [{"name": "founder_account"},{"value": #key_id#}]},{"$and": [{"name": "delegate_account"},{"value": #key_id#}]}]}]}).Count(access)
     Div(text-right button-group text-nowrap){
-        If(GetVar(access)){
-            Button(Class: icon-settings btn btn-default mh-sm, Page: @1ec_manage, PageParams: "edit_page_id=#id#,sort=#sort#,page_par=#page_par#,search=#search#,current_page=#current_page#").Popup(Header: $@1catalog_ecosystems_editing$, Width: "50")
+        If(#access#){
+            Button(Class: icon-settings btn bg-gray-lighter mh-sm, Page: @1ec_manage, PageParams: "edit_page_id=#id#,sort=#sort#,page_par=#page_par#,search=#search#,current_page=#current_page#").Popup(Header: $@1catalog_ecosystems_editing$, Width: "50")
         }.ElseIf(And(#notific_count#==0,#ecosystem_member_id#=="")){
             Button(Class: btn btn-link, Body: $@1send_request$, Contract: @1MembershipRequest, Page: #this_page#, Params: "ecosystem_num=#id#")
         }

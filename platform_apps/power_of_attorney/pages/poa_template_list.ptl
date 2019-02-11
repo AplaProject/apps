@@ -13,11 +13,11 @@ DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Power of a
 SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: poa_admin_role))
 DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
 If(#admin_access_id# > 0){
-    AddToolButton(Page: @1poa_template_add, Title: $@1template_add$).Popup(Header: $@1template_add$, Width: "50")
+    AddToolButton(Page: @1poa_template_add, Title: $@1template_add$, Icon: icon-plus).Popup(Header: $@1template_add$, Width: "50")
 }
 
 If(#search#){
-    SetVar(where, {"ecosystem": #ecosystem_id#, "contract": {"$like": "#search#"}, "deleted": 0})
+    SetVar(where, {"ecosystem": #ecosystem_id#, "contract": {"$ilike": "#search#"}, "deleted": 0})
 }.Else{
     SetVar(where, {"ecosystem": #ecosystem_id#, "deleted": 0})
 }
@@ -55,9 +55,11 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
     If(#creator.member_id#==#key_id#){
         Div(text-right button-group text-nowrap){
             If(#deleted# == 0){
-                Button(Class: fa fa-trash btn btn-danger mh-sm, Contract: @1PoaTemplateDelete, Params: "TemplateId=#id#", Page: #this_page#).Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                Button(Class: btn bg-gray-lighter, Contract: @1PoaTemplateDelete, Params: "TemplateId=#id#", Page: #this_page#){
+                    Em(Class: text-danger fa fa-1x fa-trash)
+                }.Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
             }
-            Button(Class: fa fa-edit btn btn-default mh-sm, PageParams: "template_id=#id#", Page: @1poa_template_edit).Popup(50, $@1template_edit$)
+            Button(Class: fa fa-edit btn bg-gray-lighter mh-sm, PageParams: "template_id=#id#", Page: @1poa_template_edit).Popup(50, $@1template_edit$)
         }
     }
 }.Count(count)

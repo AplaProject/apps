@@ -62,12 +62,19 @@ contract VotingTemplateRun {
             systemAllowed["@1VotingNodeAdd"] = 1
             systemAllowed["@1VotingParamCreate"] = 1
             systemAllowed["@1VotingNodeRemove"] = 1
+            systemAllowed["@1VotingEcosysParam"] = 1
             prev = $stack[0]
             if Len($stack) > 1 {
                 prev = $stack[Len($stack) - 2]
             }
             if systemAllowed[prev] != 1 {
                 warning LangRes("@1voting_type_invalid", "en")
+            }
+            if prev == "@1VotingEcosysParam"{
+                $voters = Int(EcosysParam("voters_role_id"))
+                if $voters == 0{
+                    warning Sprintf(LangRes("@1template_ecosystem_parameter_x_not_found", "en"), "voters_role_id")
+                }
             }
         }
         $contractAccept = emptyOrValue($template["contract_accept"])
@@ -96,7 +103,7 @@ contract VotingTemplateRun {
             checkInput($ColumnName, "ColumnName")
             checkInput($NewValue, "NewValue")
             if $type_voting == 2{
-                if $TableWritten == "@1ecosystems"{
+                if $TableWritten == "@1ecosystems" || $TableWritten == "@1parameters"{
                     $desc = Sprintf("%v: %v, %v: %v, %v: %v, %v: %v", LangRes("@1table", "en"), $TableWritten, LangRes("@1column", "en"), $ColumnName, LangRes("@1id", "en"), $RowId, LangRes("@1value", "en"), $NewValue)
                 }else{
                     $desc = Sprintf(LangRes("@1parameter", "en") + ": %v, " + LangRes("@1value", "en") + ": %v", $ColumnName, $NewValue)
