@@ -7,35 +7,13 @@ contract ExSymbol {
         pricetick money
         range money
         lotsize money
-        ecosystem int
+        primary_hub int
+        ecosystem_hub int
         isTradeable int "optional"
         isCross int "optional"
         isOTC int "optional"
     }
-    func exWallet (ecosystem int) int {
-        var check_ex_wallet is_ex_wallet new_ex_wallet int
-        check_ex_wallet = Int(DBFind("@1keys").Where({"id":$ecosystem}).Columns("id").One("id"))
-        if check_ex_wallet == $ecosystem {
-            is_ex_wallet = Int(DBFind("@1symbol").Where({"wallet_hub":check_ex_wallet}).Columns("wallet_hub").One("wallet_hub"))
-            if check_ex_wallet == is_ex_wallet {
-                return is_ex_wallet
-            } else {
-                new_ex_wallet = Int($ecosystem - ($ecosystem * 2))
-                DBInsert("@1keys", {"id":new_ex_wallet, "ecosystem":$ecosystem})
-                return new_ex_wallet
-            }
-        }
-        if check_ex_wallet == 0 {
-            DBInsert("@1keys", {"id":$ecosystem, "ecosystem":$ecosystem})
-            return $ecosystem
-        }
-    }
     conditions {
-        if $operation == "N" {
-            if DBFind("@1keys").Where({"id":1, "ecosystem": 1}).Columns("id").One("id") {
-                warning LangRes("@1ex_error_apla_wallet", "en")
-            }
-        }
         if $operation == "C" {
             var check_symbol string
             check_symbol = DBFind("@1symbol").Where({"name":$name}).Columns("name").One("name")
@@ -43,42 +21,44 @@ contract ExSymbol {
                 warning LangRes("@1ex_error_symbol_name", "en")
             }
         }
-        if ($ecosystem == 1) {
+        if ($primary_hub == $ecosystem_hub) {
             warning LangRes("@1ex_error_mirror_trading", "en")
+        }
+        if !DBFind("@1ecosystems").Where({"id": $primary_hub}).One("id") {
+            warning Sprintf(LangRes("@1ecosystem_not_found", "en"), $primary_hub)
+        }
+        if !DBFind("@1ecosystems").Where({"id": $ecosystem_hub}).One("id") {
+            warning Sprintf(LangRes("@1ecosystem_not_found", "en"), $ecosystem_hub)
         }
         ContractConditions("@1AdminCondition") 
     }
     action {
-        if $operation == "N" {
-            DBInsert("@1keys", {"id":1, "ecosystem":1})
-        }
         if $operation == "C" {
             var m map
-            m["name"] = Str($name)+"/APLA"
+            m["name"] = $name + Str("ECO") //fix auto naming
             m["pricetick"] = $pricetick
             m["range"] = $range
             m["lotsize"] = $lotsize
-            m["ecosystem_hub"] = $ecosystem
             m["tradeable"] = $isTradeable
             m["cross"] = $isCross
             m["otc"] = $isOTC
-            m["wallet_hub"] = exWallet($ecosystem)
-            m["wallet_apla"] = 1
+            m["primary_hub"] = $primary_hub
+            m["ecosystem_hub"] = $ecosystem_hub
             DBInsert("@1symbol", m)
         }
         if $operation == "E" {
-            @1ExCancel("symbol", $name)
+            @1ExCancel("symbol", $name) //by id
             var m map
             m["pricetick"] = $pricetick
             m["range"] = $range
             m["lotsize"] = $lotsize
-            m["ecosystem_hub"] = $ecosystem
+            m["ecosystem_hub"] = $ecosystem_hub
             DBUpdate("@1symbol", $id, m)
         }
         if $operation == "U" {
             var m map
             if $status == "TR" {
-                //@1ExCancel("symbol", $name)
+                //@1ExCancel("symbol", $name) by id
                 m["tradeable"] = $isTradeable
             } 
             if $status == "CR" {

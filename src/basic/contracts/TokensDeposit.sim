@@ -1,8 +1,19 @@
 contract TokensDeposit {
     data {
         Deposit money
+        Ecosystem int "optional"
     }
-    func checkBalance() {
+    func getEcosystem() {
+        $e_id = Int($Ecosystem)
+        if $e_id == 0 {
+            $e_id = $ecosystem_id
+        } else {
+            if !DBFind("@1ecosystems").Where({"id": $e_id}).One("id") {
+                warning Sprintf(LangRes("@1ecosystem_not_found", "en"), $e_id)
+            }
+        }    
+    }
+    func checkAmount() {
         var balance money
         balance = Money(DBFind("@1keys").Where({"id": $key_id, "ecosystem": $ecosystem_id}).One("amount"))
         if $Deposit > balance {
@@ -16,11 +27,24 @@ contract TokensDeposit {
         if $Deposit < 0 {
             warning LangRes("@1amount_less_zero", "en")
         }
-        checkBalance()
+        checkAmount()
+        getEcosystem()
     }
     action {
-        DBUpdateExt("@1keys", {"id": $key_id, "ecosystem": $ecosystem_id}, {"-amount": $Deposit})
-        DBUpdateExt("@1keys", {"id": $key_id, "ecosystem": $ecosystem_id}, {"+deposit": $Deposit})
-        //without history block
+        DBUpdateExt("@1keys", {"id": $key_id, "ecosystem": $e_id}, {"-amount": $Deposit})
+        DBUpdateExt("@1keys", {"id": $key_id, "ecosystem": $e_id}, {"+deposit": $Deposit})
+
+        var m map
+        m["sender_id"] = $key_id
+        m["recipient_id"] = $key_id
+        m["amount"] = $Deposit
+        m["comment"] = "Deposit amount of tokens"
+        m["block_id"] = $block
+        m["txhash"] = $txhash
+        m["ecosystem"] = $e_id
+        m["type"] = 3
+        m["created_at"] = $block_time
+        //we need to open permissions here
+        //DBInsert("@1history", m)
     }
 }

@@ -1,33 +1,28 @@
 contract ExCancelOrder {
     data {
         id int
-        symbol string
+        symbol_id int
     }
     conditions {
-        var client int
-        client = Int(DBFind("@1order_log").Where({"id":$id}).Columns("client").One("client")) 
-        if (client!=$key_id){
+        $client = Int(DBFind("@1order_log").Where({"id":$id}).Columns("client").One("client")) 
+        if $client != $key_id {
             warning LangRes("@1ex_error_permissions", "en")
         }
     }
     action {
-        var ecosystem_hub client wallet_apla wallet_hub int
-        var flag string
-        ecosystem_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("ecosystem_hub").One("ecosystem_hub"))
-        wallet_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("wallet_hub").One("wallet_hub"))
-        wallet_apla = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("wallet_apla").One("wallet_apla"))
-        client = Int(DBFind("@1order_log").Where({"id":$id}).Columns("client").One("client"))  
-        flag = DBFind("@1order_log").Where({"id":$id}).Columns("flag").One("flag")
+        var order_map map
+        order_map = DBFind("@1order_log").Where({"id":$id}).Row()
+
+        var symbol_map map
+        symbol_map = DBFind("@1symbol").Where({"id": $symbol_id}).Row()
+
         DBUpdate("@1order_log", $id, {status:"C", lastmodified: $time})  
-        if flag == "S" {
-            var face_value money
-            face_value = Money(DBFind("@1order_log").Where({"id":$id}).Columns("counterparty_value").One("counterparty_value"))
-            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", face_value, wallet_hub, client, "ExCancelOrder", ecosystem_hub)
+
+        if Str(order_map["flag"]) == "S" {
+            @1TokensUnwind("Deposit,Ecosystem", Money(order_map["face_value"]), Int(symbol_map["ecosystem_hub"]))
         }
-        if flag == "B" {
-            var apla_value money
-            apla_value = Money(DBFind("@1order_log").Where({"id":$id}).Columns("client_value").One("client_value"))
-            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", apla_value, wallet_apla, client, "ExCancelOrder", 1)
+        if Str(order_map["flag"]) == "B" {
+            @1TokensUnwind("Deposit,Ecosystem", Money(order_map["primary_value"]), Int(symbol_map["primary_hub"]))
         }
     }
 }

@@ -1,6 +1,17 @@
 contract TokensUnwind {
     data {
         Deposit money
+        Ecosystem int "optional"
+    }
+    func getEcosystem() {
+        $e_id = Int($Ecosystem)
+        if $e_id == 0 {
+            $e_id = $ecosystem_id
+        } else {
+            if !DBFind("@1ecosystems").Where({"id": $e_id}).One("id") {
+                warning Sprintf(LangRes("@1ecosystem_not_found", "en"), $e_id)
+            }
+        }    
     }
     func checkDeposit() {
         var amount money
@@ -17,10 +28,22 @@ contract TokensUnwind {
             warning LangRes("@1amount_less_zero", "en")
         }
         checkDeposit()
+        getEcosystem()
     }
     action {
-        DBUpdateExt("@1keys", {"id": $key_id, "ecosystem": $ecosystem_id}, {"-deposit": $Deposit})
-        DBUpdateExt("@1keys", {"id": $key_id, "ecosystem": $ecosystem_id}, {"+amount": $Deposit})
-        //without history block
+        DBUpdateExt("@1keys", {"id": $key_id, "ecosystem": $e_id}, {"-deposit": $Deposit})
+        DBUpdateExt("@1keys", {"id": $key_id, "ecosystem": $e_id}, {"+amount": $Deposit})
+
+        var m map
+        m["sender_id"] = $key_id
+        m["recipient_id"] = $key_id
+        m["amount"] = $Deposit
+        m["comment"] = "Unwind deposit amount of tokens"
+        m["block_id"] = $block
+        m["txhash"] = $txhash
+        m["ecosystem"] = $e_id
+        m["type"] = 3
+        m["created_at"] = $block_time
+        //DBInsert("@1history", m)
     }
 }

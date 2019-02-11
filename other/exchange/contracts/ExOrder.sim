@@ -2,101 +2,82 @@ contract ExOrder {
     data {
         client int
         flag string
-        symbol string
+        symbol_id int
         quantity int
         price money
     }
-    func calcFaceValue (quantity int) money {
-        var lot_size face_value money
-        lot_size = Money(DBFind("@1symbol").Where({"name":$symbol}).Columns("lotsize").One("lotsize"))
-        var i int
-        i = 1
-        face_value = Money(0)
-        while i < $quantity+1 {
-            face_value = face_value + lot_size
-            if i == $quantity {
-                return face_value
+    func getEcosystem() {
+        $e_id = Int($Ecosystem)
+        if $e_id == 0 {
+            $e_id = $ecosystem_id
+        } else {
+            if !DBFind("@1ecosystems").Where({"id": $e_id}).One("id") {
+                warning Sprintf(LangRes("@1ecosystem_not_found", "en"), $e_id)
             }
-            i = i + 1
-        }  
-    }
-    func calcAplaValue (price money, quantity int) money {
-        var apla_value money
-        var j int
-        j = 1
-        apla_value = Money(0)
-        while j < $quantity+1 {
-            apla_value = apla_value + price
-            if j == $quantity {
-                return apla_value
-            }
-            j = j + 1
-        }  
+        }    
     }
     conditions {
-        var tradestatus int
-        tradestatus = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("tradeable").One("tradeable"))
-        if (tradestatus != 1) {
-           warning LangRes("@1ex_error_tradestatus", "en")
+        var symbol_map map
+        symbol_map = DBFind("@1symbol").Where({"id":$symbol_id}).Row()
+        
+        if !symbol_map {
+            //symbol not found
         }
-        var check_eco_id ecosystem_hub int
-        ecosystem_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("ecosystem_hub").One("ecosystem_hub"))
-        check_eco_id = Int(DBFind("@1keys").Where({"id":$client, "ecosystem":ecosystem_hub}).One("id"))
-        if check_eco_id != $client {
+
+        if Int(symbol_map["tradestatus"]) != 1 {
+            warning LangRes("@1ex_error_tradestatus", "en")
+        }
+
+        $e_hub = Int(symbol_map["ecosystem_hub"])
+        if !DBFind("@1ecosystems").Where({"id": $e_id}).One("id") {
+            warning Sprintf(LangRes("@1ecosystem_not_found", "en"), $e_id)
+        }
+
+        if !DBFind("@1keys").Where({"id":$client, "ecosystem": $e_hub}).One("id") {
             warning LangRes("@1ex_error_account", "en")
         }
+
         var balance value money
         balance = Money(DBFind("@1keys").Where({"id":$client, "ecosystem":$ecosystem_id}).Columns("amount").One("amount"))
-        if $flag == "B" {
-            var check_price int
-            check_price = Int(DBFind("@1order_log").Where({"symbol":$symbol, "status":"A","flag":"S", "price":{"$lt":$price}}).One("price"))
-            if check_price > 0 {
-                warning LangRes("@1ex_error_market_orders", "en")
-            }
-            var face_value money
-            face_value = calcFaceValue($quantity)
-            if (face_value > balance) { 
-                warning LangRes("@1ex_error_balance_check", "en")
-            }
-        }
-        if $flag == "S" {
-            var check_price int
-            check_price = Int(DBFind("@1order_log").Where({"symbol":$symbol, "status":"A","flag":"S", "price":{"$gt":$price}}).One("price"))
-            if check_price > 0 {
-                warning LangRes("@1ex_error_market_orders", "en")
-            }
-            var apla_value money
-            apla_value = calcAplaValue($price, $quantity)
-            if (apla_value > balance) {  
-                warning LangRes("@1ex_error_balance_check", "en")
-            }
-        }
+        warning LangRes("@1ex_error_market_orders", "en")
+        warning LangRes("@1ex_error_balance_check", "en")
     }
     action {
-        var face_value apla_value money
-        face_value = calcFaceValue($quantity)
-        apla_value = calcAplaValue($price, $quantity)
-        var ecosystem_hub wallet_hub wallet_apla int
+        //
+
+        //
+        var symbol_map map
+        symbol_map = DBFind("@1symbol").Where({"id":$symbol_id}).Row()
+
+
+        var ecosystem_hub int
+        var lot_size money
         ecosystem_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("ecosystem_hub").One("ecosystem_hub"))
-        wallet_hub = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("wallet_hub").One("wallet_hub"))
-        wallet_apla = Int(DBFind("@1symbol").Where({"name":$symbol}).Columns("wallet_apla").One("wallet_apla"))
+        lot_size = Money(DBFind("@1symbol").Where({"name":$symbol}).Columns("lotsize").One("lotsize"))
+
+        //
         var m map
         m["flag"] = $flag
         m["client"] = $client
         m["venue"] = "EX"
-        m["symbol"] = $symbol
+        m["symbol"] = ""
         m["quantity"] = $quantity
         m["price"] = $price
-        m["client_value"] = apla_value
-        m["counterparty_value"] = face_value
+        m["client_value"] = ""
+        m["counterparty_value"] = ""
         m["status"] = "A"
         m["lastmodified"] = $time
         DBInsert("@1order_log", m)
+        //
         if $flag == "S" {
-            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", face_value, $client, wallet_hub, "EXOrder", ecosystem_hub)
+            var value money
+            value = Money($price)*Money($qnty)
+            @1TokensDeposit("Deposit,Ecosystem", value, "")
         }
         if $flag == "B" {
-            @1TokensTransfer("Amount,SenderId,RecipientId,Comment,Ecosystem", apla_value, $client, wallet_apla, "EXOrder", 1)
+            var value money
+            value = Money($price)*Money($qnty)
+            @1TokensDeposit("Deposit,Ecosystem", value, "")
         }
     }
 }
