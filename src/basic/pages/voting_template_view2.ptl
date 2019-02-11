@@ -1,0 +1,370 @@
+DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
+If(#TemplateId#>0){
+    DBFind(@1voting_templates2).Where({"id": #TemplateId#, "ecosystem": #ecosystem_id#}).Columns("voting->count_type_voters,voting->name,voting->volume,voting->quorum,voting->type_decision,voting->type_participants,voting->type,voting->rating,subject->candidates,subject->vacancies,subject->voters,subject->contract_accept,subject->contract_reject,optional->contract_accept,optional->contract_reject,optional->init_contract,optional->contract_accept_params,optional->contract_reject_params,optional->init_contract_params").Vars(template)
+    If(#template_subject_voters#>0){
+        DBFind(@1roles).Where({"ecosystem": #ecosystem_id#, "id": #template_subject_voters#}).Columns("role_name").Vars(vid)
+        SetVar(v_role, "#vid_role_name#")
+    }
+    If(#template_subject_candidates#>0){
+        DBFind(@1roles).Where({"ecosystem": #ecosystem_id#, "id": #template_subject_candidates#}).Columns("role_name").Vars(cid)
+        SetVar(c_role, "#cid_role_name#")
+    }
+}
+
+SetTitle("$@1template$": #template_voting_name#)
+Span(Class: h5 m0 mb ml-lg){
+    LinkPage(Class: ml-sm, Body: $@1voting$, Page: @1voting_list)
+    Span(Class: text-muted mh-sm, Body: /)
+    LinkPage(Class: ml-sm, Body: $@1voting_templates$, Page: @1voting_templates_list2)
+    Span(Class: text-muted mh-sm, Body: /)
+    Span(Class: text-muted, Body: #template_voting_name#)
+}.Style(
+    display: inline-block;
+)
+
+Div(content-wrapper){
+    If(#template_id# > 0){
+
+        Div(row){
+            Div(col-lg-10 col-lg-offset-1){
+                Form(panel panel-primary){
+                    Div(list-group-item text-center){
+                        P(Class: h3 text-bold m0, Body: #template_voting_name#)
+                        Div(row){
+                            Div(col-md-12){
+                                Div(Class: t5 text-muted m0, Body: AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_decisions, Index: #template_voting_type_decision#))
+                            }
+                        }
+                    }
+
+                    Div(list-group-item text-center){
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1type)
+                            }
+                            Div(col-md-6 text-left){
+                                AppParam(Ecosystem:1, App:#application_id#, Name: type_voting, Index: #template_voting_type#)
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1vote_count_type)
+                            }
+                            Div(col-md-6 text-left){
+                                If(#template_voting_count_type_voters#==1){
+                                    $@1number_votes$
+                                }.Else{
+                                    $@1percent_votes$
+                                }
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1voting_rating)
+                            }
+                            Div(col-md-6 text-left){
+                                If(#template_voting_rating#==1){
+                                    $@1yes$ Span(Class:text-muted, Body: ($@1voting_rating_desc$))
+                                }.Else{
+                                    $@1no$ Span(Class:text-muted, Body: ($@1voting_rating_not_used$))
+                                }
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1voting_quorum)
+                            }
+                            Div(col-md-6 text-left){
+                                If(#template_voting_count_type_voters#==1){
+                                    #template_voting_quorum#
+                                }.Else{
+                                    #template_voting_quorum#%
+                                }
+                            }
+                        }
+                        If(And(#template_voting_count_type_voters#!=1,#template_voting_type_decision#!=1,#template_voting_type_decision#!=2)){
+                            Div(row t6){
+                                Div(col-md-6 text-right){
+                                    LangRes(@1voting_volume)
+                                }
+                                Div(col-md-6 text-left){
+                                    #template_voting_quorum#%
+                                }
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1participants)
+                            }
+                            Div(col-md-6 text-left){
+                                AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_participants, Index: #template_voting_type_participants#)
+                            }
+                        }
+                        If(#template_voting_type_participants#==3){
+                            Div(row t6){
+                                Div(col-md-6 text-right){
+                                    LangRes(@1voters_role)
+                                }
+                                Div(col-md-6 text-left){
+                                    #v_role#
+                                }
+                            }
+                        }
+                    }
+                    If(Or(#template_voting_type_decision#==1,#template_voting_type_decision#==2)){
+                        Div(list-group-item text-center){
+                            Div(row t6){
+                                Div(col-md-6 text-right){
+                                    LangRes(@1vacancies)
+                                }
+                                Div(col-md-6 text-left){
+                                    #template_subject_vacancies#
+                                }
+                            }
+                            Div(row t6){
+                                Div(col-md-6 text-right){
+                                    LangRes(@1candidates_role)
+                                }
+                                Div(col-md-6 text-left){
+                                    #c_role#
+                                }
+                            }
+                        }
+                    }
+                    If(#template_voting_type_decision#==4){
+                        Div(list-group-item text-center){
+                            Div(row t6){
+                                Div(col-md-6 text-right){
+                                    LangRes(@1contract_accept)
+                                }
+                                Div(col-md-6 text-left){
+                                    If(#template_subject_contract_accept# == ""){
+                                        Span(Class: text-muted, Body: LangRes(@1no))
+                                    }.Else{
+                                        #template_subject_contract_accept#
+                                    }
+                                }
+                            }
+                            Div(row t6){
+                                Div(col-md-6 text-right){
+                                    LangRes(@1contract_reject)
+                                }
+                                Div(col-md-6 text-left){
+                                    If(#template_subject_contract_reject# == ""){
+                                        Span(Class: text-muted, Body: LangRes(@1no))
+                                    }.Else{
+                                        #template_subject_contract_reject#
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Div(list-group-item text-center){
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1voting_init_contract)
+                                Span(Class: text-muted ml, Body: LangRes(@1optional))
+                            }
+                            Div(col-md-6 text-left){
+                                If(#template_optional_init_contract# == ""){
+                                    Span(Class: text-muted, Body: LangRes(@1no))
+                                }.Else{
+                                    #template_optional_init_contract#
+                                }
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1arguments)
+                                Span(Class: text-muted ml, Body: LangRes(@1optional))
+                            }
+                            Div(col-md-6 text-left){
+                                If(#template_optional_init_contract_params# == ""){
+                                    Span(Class: text-muted, Body: LangRes(@1no))
+                                }.Else{
+                                    #template_optional_init_contract_params#
+                                }
+                            }
+                        }
+                        Div(row mt t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1contract_accept)
+                                Span(Class: text-muted ml, Body: LangRes(@1optional))
+                            }
+                            Div(col-md-6 text-left){
+                                If(#template_optional_contract_accept# == ""){
+                                    Span(Class: text-muted, Body: LangRes(@1no))
+                                }.Else{
+                                    #template_optional_contract_accept#
+                                }
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1arguments)
+                                Span(Class: text-muted ml, Body: LangRes(@1optional))
+                            }
+                            Div(col-md-6 text-left){
+                                If(#template_optional_contract_accept_params# == ""){
+                                    Span(Class: text-muted, Body: LangRes(@1no))
+                                }.Else{
+                                    #template_optional_contract_accept_params#
+                                }
+                            }
+                        }
+                        Div(row mt t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1contract_reject)
+                                Span(Class: text-muted ml, Body: LangRes(@1optional))
+                            }
+                            Div(col-md-6 text-left){
+                                If(#template_optional_contract_reject# == ""){
+                                    Span(Class: text-muted, Body: LangRes(@1no))
+                                }.Else{
+                                    #template_optional_contract_reject#
+                                }
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1arguments)
+                                Span(Class: text-muted ml, Body: LangRes(@1optional))
+                            }
+                            Div(col-md-6 text-left){
+                                If(#template_optional_contract_reject_params# == ""){
+                                    Span(Class: text-muted, Body: LangRes(@1no))
+                                }.Else{
+                                    #template_optional_contract_reject_params#
+                                }
+                            }
+                        }
+                    }
+                    Div(list-group-item){
+                        Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1voting_templates_list2)
+                        Div(pull-right){
+                            Button(Class: fa fa-copy btn btn-default, Page: @1voting_template_create2, PageParams: "TemplateId=#TemplateId#").Popup(50, $@1voting_template_create$)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    If(#TemplateId#>0){
+        Div(row){
+            Div(col-md-8 col-md-offset-2 col-lg-8 col-lg-offset-2){
+                Form(panel panel-primary){
+                    Div(panel-heading){LangRes(@1voting_params)}
+                    If(#template_type_voting# != 2){
+                        Div(list-group-item){
+                            Div(row){
+                                Div(col-md-4 mt-sm text-right){
+                                    Label(For: Duration){
+                                        $@1duration$ ($@1days$)
+                                    }
+                                }
+                                Div(col-md-8 mb-sm text-left){
+                                    Input(Name: Duration, Type: number, Value: 3)
+                                }
+                            }
+                            If(#template_type_decision#==3){
+                                Div(row){
+                                    Div(col-md-4 mt-sm text-right){
+                                        Label(For: TextDocument){
+                                            LangRes(@1text_document)
+                                        }
+                                    }
+                                    Div(col-md-8 mb-sm text-left){
+                                        Input(Name: TextDocument, Type: textarea)
+                                    }
+                                }
+                            }.ElseIf(#template_type_decision#==4){
+                                If(#template_type_voting#==2){
+                                    Div(row){
+                                        Div(col-md-4 mt-sm text-right){
+                                            Label(For: ColumnName){
+                                                LangRes(@1system_param)
+                                                Span(*,text-danger)
+                                            }
+                                        }
+                                        Div(col-md-8 mb-sm text-left){
+                                            Input(Name: ColumnName)
+                                        }
+                                    }
+                                    Div(row){
+                                        Div(col-md-4 mt-sm text-right){
+                                            Label(For: NewValue){
+                                                LangRes(@1value)
+                                                Span(*,text-danger)
+                                            }
+                                        }
+                                        Div(col-md-8 mb-sm text-left){
+                                            Input(Name: NewValue)
+                                        }
+                                    }
+                                }.Else{
+                                    Div(row){
+                                        Div(col-md-4 mt-sm text-right){
+                                            Label(For: TableWritten){
+                                                LangRes(@1table_to_written)
+                                                Span(*,text-danger)
+                                            }
+                                        }
+                                        Div(col-md-8 mb-sm text-left){
+                                            Input(Name: TableWritten)
+                                        }
+                                    }
+                                    Div(row){
+                                        Div(col-md-4 mt-sm text-right){
+                                            Label(For: RowId){
+                                                LangRes(@1row_id)
+                                                Span(*,text-danger)
+                                            }
+                                        }
+                                        Div(col-md-8 mb-sm text-left){
+                                            Input(Name: RowId, Type: number)
+                                        }
+                                    }
+                                    Div(row){
+                                        Div(col-md-4 mt-sm text-right){
+                                            Label(For: ColumnName){
+                                                LangRes(@1column_name)
+                                                Span(*,text-danger)
+                                            }
+                                        }
+                                        Div(col-md-8 mb-sm text-left){
+                                            Input(Name: ColumnName)
+                                        }
+                                    }
+                                    Div(row){
+                                        Div(col-md-4 mt-sm text-right){
+                                            Label(For: NewValue){
+                                                LangRes(@1value)
+                                                Span(*,text-danger)
+                                            }
+                                        }
+                                        Div(col-md-8 mb-sm text-left){
+                                            Input(Name: NewValue)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Div(list-group-item){
+                        Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1voting_templates_list)
+                        Div(pull-right){
+                            If(#template_type_voting# != 2){
+                                Button(Body: $@1voting_start_button$, Class: btn btn-primary, Page: @1voting_list, Contract: @1VotingTemplateRun, Params: "TemplateId=#TemplateId#")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }.Else{
+        Div(col-md-12 alert alert-danger text-center){
+            LangRes(@1attention)
+        }
+    }
+}
