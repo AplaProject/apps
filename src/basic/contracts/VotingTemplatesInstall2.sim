@@ -1,0 +1,212 @@
+contract VotingTemplatesInstall2 {
+    data {
+        fill_ids string "optional"
+    }
+
+    func applyTemplate(m map, param string) {
+        var templateId paramId int
+        templateId = DBInsert("@1voting_templates2", m)
+
+        if $fill_ids == "yes" {
+            paramId = Int(DBFind("@1app_params").Where({"app_id": $app_id, "name": param, "ecosystem": $ecosystem_id}).One("id"))
+            @1EditAppParam("Id,Value", paramId, templateId)
+        }
+    }
+
+    func getRoleId(name string) int {
+        var rid int
+        rid = Int(EcosysParam(name))
+        if rid == 0 {
+            warning Sprintf(LangRes("@1role_not_set_eco_parameter", "en"), name)
+        }
+        return rid
+    }
+
+    func installSystem() {
+        var template map
+
+        // Validator
+        template["voting->name"] = "Voting for Validator"
+        template["voting->type"] = 2
+        template["voting->volume"] = 70
+        template["voting->quorum"] = 51
+        template["voting->rating"] = 0
+        template["voting->count_type_voters"] = 0
+        template["voting->type_decision"] = 2
+        template["voting->type_participants"] = 3
+        template["subject->candidates"] = $validatorRoleId
+        template["subject->vacancies"] = 1
+        template["subject->voters"] = $consensusRoleId
+        template["optional->contract_accept"] = "VotingValidatorAccept"
+        template["optional->contract_reject"] = ""
+        template["optional->init_contract"] = "VotingValidatorInit"
+        template["optional->contract_accept_params"] = ""
+        template["optional->contract_reject_params"] = ""
+        template["optional->init_contract_params"] = ""
+        template["ecosystem"] = $ecosystem_id
+        applyTemplate(template, "voting_template_validators")
+
+        // Sysparam
+        template["voting->name"] = "Voting for System param value"
+        template["voting->type"] = 2
+        template["voting->volume"] = 70
+        template["voting->quorum"] = 51
+        template["voting->rating"] = 0
+        template["voting->count_type_voters"] = 0
+        template["voting->type_decision"] = 4
+        template["voting->type_participants"] = 3
+        template["subject->candidates"] = 0
+        template["subject->vacancies"] = 0
+        template["subject->voters"] = $consensusRoleId
+        template["optional->contract_accept"] = ""
+        template["optional->contract_reject"] = ""
+        template["optional->init_contract"] = ""
+        template["optional->contract_accept_params"] = ""
+        template["optional->contract_reject_params"] = ""
+        template["optional->init_contract_params"] = ""
+        template["ecosystem"] = $ecosystem_id
+        applyTemplate(template, "voting_template_sysparams")
+
+        // Valued ecosystem
+        template["voting->name"] = "Voting for Valued Ecosystem"
+        template["voting->type"] = 2
+        template["voting->volume"] = 70
+        template["voting->quorum"] = 51
+        template["voting->rating"] = 0
+        template["voting->count_type_voters"] = 0
+        template["voting->type_decision"] = 4
+        template["voting->type_participants"] = 3
+        template["subject->candidates"] = 0
+        template["subject->vacancies"] = 0
+        template["subject->voters"] = $consensusRoleId
+        template["optional->contract_accept"] = ""
+        template["optional->contract_reject"] = ""
+        template["optional->init_contract"] = ""
+        template["optional->contract_accept_params"] = ""
+        template["optional->contract_reject_params"] = ""
+        template["optional->init_contract_params"] = ""
+        template["ecosystem"] = $ecosystem_id
+        applyTemplate(template, "voting_template_ves")
+
+        // Token refund
+        template["voting->name"] = "Token Refund"
+        template["voting->type"] = 2
+        template["voting->volume"] = 70
+        template["voting->quorum"] = 51
+        template["voting->rating"] = 0
+        template["voting->count_type_voters"] = 0
+        template["voting->type_decision"] = 5
+        template["voting->type_participants"] = 3
+        template["subject->candidates"] = 0
+        template["subject->vacancies"] = 0
+        template["subject->voters"] = $consensusRoleId
+        template["optional->contract_accept"] = "TokensRefundAccept"
+        template["optional->contract_reject"] = "TokensRefundReject"
+        template["optional->init_contract"] = ""
+        template["optional->contract_accept_params"] = ""
+        template["optional->contract_reject_params"] = ""
+        template["optional->init_contract_params"] = ""
+        template["ecosystem"] = $ecosystem_id
+        applyTemplate(template, "voting_template_tokenrefund")
+
+        // Change parameter of the ecosystem
+        template["voting->name"] = "Change parameter of the ecosystem"
+        template["voting->type"] = 2
+        template["voting->volume"] = 70
+        template["voting->quorum"] = 75
+        template["voting->rating"] = 0
+        template["voting->count_type_voters"] = 0
+        template["voting->type_decision"] = 4
+        template["voting->type_participants"] = 3
+        template["subject->candidates"] = 0
+        template["subject->vacancies"] = 0
+        template["subject->voters"] = 0
+        template["optional->contract_accept"] = ""
+        template["optional->contract_reject"] = ""
+        template["optional->init_contract"] = "AdminCondition"
+        template["optional->contract_accept_params"] = ""
+        template["optional->contract_reject_params"] = ""
+        template["optional->init_contract_params"] = ""
+        template["ecosystem"] = $ecosystem_id
+        applyTemplate(template, "voting_template_ecosysparams")
+    }
+
+    func installCustom() {
+        var template map
+
+        // A decision by a simple majority of votes
+        template["voting->name"] = "A decision by a simple majority of votes"
+        template["voting->type"] = 1
+        template["voting->volume"] = 70
+        template["voting->quorum"] = 51
+        template["voting->rating"] = 0
+        template["voting->count_type_voters"] = 0
+        template["voting->type_decision"] = 3
+        template["voting->type_participants"] = 1
+        template["subject->candidates"] = 0
+        template["subject->vacancies"] = 0
+        template["subject->voters"] = 0
+        template["optional->contract_accept"] = ""
+        template["optional->contract_reject"] = ""
+        template["optional->init_contract"] = ""
+        template["optional->contract_accept_params"] = ""
+        template["optional->contract_reject_params"] = ""
+        template["optional->init_contract_params"] = ""
+        template["ecosystem"] = $ecosystem_id
+        applyTemplate(template, "voting_template_decision")
+
+        // The vote for assigning the role of one candidate
+        template["voting->name"] = "The vote for assigning the role of one candidate"
+        template["voting->type"] = 1
+        template["voting->volume"] = 70
+        template["voting->quorum"] = 51
+        template["voting->rating"] = 0
+        template["voting->count_type_voters"] = 0
+        template["voting->type_decision"] = 2
+        template["voting->type_participants"] = 1
+        template["subject->candidates"] = 0
+        template["subject->vacancies"] = 1
+        template["subject->voters"] = 0
+        template["optional->contract_accept"] = "@1RolesAssign"
+        template["optional->contract_reject"] = ""
+        template["optional->init_contract"] = ""
+        template["optional->contract_accept_params"] = ""
+        template["optional->contract_reject_params"] = ""
+        template["optional->init_contract_params"] = ""
+        template["ecosystem"] = $ecosystem_id
+        applyTemplate(template, "voting_template_rolecandidate")
+
+        // Elections for the role of several candidates
+        template["voting->name"] = "Elections for the role of several candidates"
+        template["voting->type"] = 1
+        template["voting->volume"] = 70
+        template["voting->quorum"] = 51
+        template["voting->rating"] = 0
+        template["voting->count_type_voters"] = 0
+        template["voting->type_decision"] = 2
+        template["voting->type_participants"] = 1
+        template["subject->candidates"] = 0
+        template["subject->vacancies"] = 1
+        template["subject->voters"] = 0
+        template["optional->contract_accept"] = "@1RolesAssign"
+        template["optional->contract_reject"] = ""
+        template["optional->init_contract"] = ""
+        template["optional->contract_accept_params"] = ""
+        template["optional->contract_reject_params"] = ""
+        template["optional->init_contract_params"] = ""
+        template["ecosystem"] = $ecosystem_id
+        applyTemplate(template, "voting_template_electioncandidate")
+    }
+
+    conditions {
+        $app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Basic"}).One("id"))
+
+        $consensusRoleId = getRoleId("role_consensus")
+        $validatorRoleId = getRoleId("role_validator")
+    }
+
+    action {
+        installSystem()
+        installCustom()
+    }
+}

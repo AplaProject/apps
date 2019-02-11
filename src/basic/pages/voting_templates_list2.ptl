@@ -1,0 +1,86 @@
+SetVar(this_page, @1voting_templates_list2).(this_table, @1voting_templates2)
+Include(@1pager_header)
+
+SetTitle("$@1voting_templates$")
+Span(Class: h5 m0 mb ml-lg){
+    LinkPage(Class: ml-sm, Body: $@1votings$, Page: @1voting_list)
+    Span(Class: text-muted mh, Body: /)
+    Span(Class: text-muted, Body: $@1voting_templates$)
+}.Style(
+    display: inline-block;
+)
+
+If(GetVar(search)){
+    SetVar(w_search, {"voting->name": {"$ilike": "#search#"}})
+}
+SetVar(where, {"ecosystem": #ecosystem_id#, "voting->type": {"$in": [1,2]}, {GetVar(w_search)}})
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, LangRes(@1template))
+    Include(@1search)
+}
+
+DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
+
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("voting->name,voting->volume,voting->quorum,voting->type_participants,voting->type_decision,voting->type,optional->init_contract,optional->contract_accept,optional->contract_reject").Custom(_participants){
+    P(Class: m0 h6, Body: AppParam(Ecosystem:1, App:#application_id#, Name:type_voting_participants, Index: #voting.type_participants#))
+}.Custom(_decision){
+    P(Class: m0 h6, Body: AppParam(Ecosystem:1, App:#application_id#, Name:type_voting_decisions, Index: #voting.type_decision#))
+}.Custom(_type){
+    AppParam(Ecosystem:1, App:#application_id#, Name:type_voting, Index: #voting.type#)
+}.Custom(_actions){
+    If(#voting.type# != 2){
+        Span(Class: pull-right){
+            LinkPage(Body: Em(Class: fa fa-play), Class: text-primary h4, Page: @1voting_template_start, PageParams: "TemplateId=#id#")
+        }
+    }
+}.Custom(_contracts){
+    If(And(#optional.init_contract#!="",#optional.init_contract#!="NULL")){
+        P(Class: m0 h6, Body: #optional.init_contract#)
+    }
+    If(And(#optional.contract_accept#!="",#optional.contract_accept#!="NULL")){
+        P(Class: m0 h6, Body: #optional.contract_accept#)
+    }
+    If(And(#optional.contract_reject#!="",#optional.contract_reject#!="NULL")){
+        P(Class: m0 h6, Body: #optional.contract_reject#)
+    }
+}.Custom(_vq){
+    Div(text-center){
+        #voting.volume# / #voting.quorum#
+    }
+}.Custom(_name){
+    LinkPage(Body: #voting.name#, Page: @1voting_template_view, PageParams: "TemplateId=#id#")
+}.Count(count)
+
+If(Or(#count#>0,#ecosystem_id#>1)){
+    AddToolButton(Title: $@1create$, Page: @1voting_template_create2, Icon: icon-plus).Popup(50, $@1voting_template_create$)
+}
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src, "$@1template$=_name,$@1voting_type$=_type,$@1participants$=_participants,$@1decision$=_decision,$@1contracts$=_contracts,$@1voting_volume$ / $@1voting_quorum$=_vq,=_actions")
+            }.ElseIf(#ecosystem_id#==1){
+                Form(Class: text-center h6){
+                    Data(autofill, "value,description"){
+                        yes,$@1use_default_voting_templates$
+                        no,$@1select_default_templates_manually$
+                    }
+                    RadioGroup(Name: fill_ids, Source: autofill, NameColumn: description, ValueColumn: value).Style(line-height: 20px;)
+                    Button(Body: $@1install_default_templates$, Class: btn btn-primary, Page: @1voting_templates_list2, Contract: @1VotingTemplatesInstall2)
+                }
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1voting_templates_not_found$")
+            }
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
+}
