@@ -626,6 +626,12 @@
             "Type": "contracts"
         },
         {
+            "Name": "UpdateAddress",
+            "Conditions": "ContractConditions(\"MainCondition\")",
+            "Value": "contract UpdateAddress {\n    action{\n        var keys array i lenKeys int\n        keys = DBFind(\"@1keys\").Columns(\"id,ecosystem\").Where({\"address\":\"\"})\n        lenKeys = Len(keys)\n        while i < lenKeys{\n            var key map addr string id eco int\n            key = keys[i]\n            id = Int(key[\"id\"])\n            addr = IdToAddress(id)\n            eco = Int(key[\"ecosystem\"])\n            DBUpdateExt(\"@1keys\", {\"id\":id, \"ecosystem\":eco}, {\"address\":addr})\n            i = i + 1\n        }\n    }\n}",
+            "Type": "contracts"
+        },
+        {
             "Name": "UpdateMetrics",
             "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
             "Value": "contract UpdateMetrics {\n    conditions {\n        ContractConditions(\"MainCondition\")\n    }\n    action {\n        var values array\n        values = DBCollectMetrics()\n\n        var i, id int\n        var v map\n        while (i < Len(values)) {\n            var inmap map\n\n            v = values[i]\n            inmap[\"time\"] = v[\"time\"]\n            inmap[\"key\"] = v[\"key\"]\n            inmap[\"metric\"] = v[\"metric\"]\n            \n            id = Int(DBFind(\"@1metrics\").Columns(\"id\").Where(inmap).One(\"id\"))\n            var ival int\n            if id != 0 {\n                ival = Int(v[\"value\"])\n                DBUpdate(\"@1metrics\", id, {\"value\": ival})\n            } else {\n                inmap[\"value\"] = Int(v[\"value\"])\n                DBInsert(\"@1metrics\", inmap )\n            }\n            i = i + 1\n        }\n    }\n}",
