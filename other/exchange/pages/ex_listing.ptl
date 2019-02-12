@@ -1,67 +1,71 @@
-SetVar(this_page, @1ex_listing).(this_table, @1symbol)
-Include(@1pager_header)
+
 SetTitle($@1ex_exchange$)
-If(#role_id#==1){
-    SetVar(permission,1)
-}
-DBFind(@1keys).Where({"id":1}).Count(exchange_wallet)
-If(And(#permission#==1,#exchange_wallet#==1)){
+
+SetVar(admin_role_id, EcosysParam(Name:role_admin))
+If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
     Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: $@1ex_exchange_desc$))
     AddToolButton(Title: $@1ex_symbol_new$, Page: @1ex_symbol_new, Icon: icon-plus).Popup(Header: $@1ex_symbol_new$, Width: "65")
 }
 DBFind(@1ecosystems).Count(eco_hubs)
-DBFind(#this_table#,src_symbol).Custom(custom_name){
-        LinkPage(Class: #style_link# h5 text-bold, Page: @1ex_tradedesk, PageParams: "ticker_id=#id#"){
+
+DBFind(@1symbol,src_symbol).Custom(custom_name){
+    LinkPage(Class: #style_link# h5 text-bold, Page: @1ex_tradedesk, PageParams: "ticker_id=#id#"){
             Div(Class: text-primary){
                 Span(#name#)
             }
         }
     }.Custom(lotsize_money){
+        Div(Class: text-primary){
             Money(#lotsize#)
+        }.Style({padding-left: 15px;})
     }.Custom(pricetick_money){
+        Div(Class: text-primary){
             Money(#pricetick#)
+        }.Style({padding-left: 25px;})
     }.Custom(range_money){
+        Div(Class: text-primary){
             Money(#range#)
+        }.Style({padding-left: 25px;})
     }.Custom(tradeable_status){
         If(#tradeable#==1){
-            If(#permission#==1){
+            If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
                 Button(Body: Em(Class: fa fa-check), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: "operation=U,status=TR,isTradeable=0,id=#id#,name=#name#").Style({margin-left: 30px;})
             }.Else{
-                Hint(fa fa-check, $@1ex_hint_tradestatus$)
+                Hint(fa fa-check, $@1ex_hint_tradestatus$).Style({margin-left: 30px;})
             }
         }.Else{
-            If(#permission#==1){
+            If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
                 Button(Body: Em(Class: fa fa-times), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: "operation=U,status=TR,isTradeable=1,id=#id#,name=#name#").Style({margin-left: 30px;})
             }.Else{
-                Hint(fa fa-times, $@1ex_error_tradestatus$)
+                Hint(fa fa-times, $@1ex_error_tradestatus$).Style({margin-left: 30px;})
             }
         }
     }.Custom(otc_status){
         If(#otc#==1){
-            If(#permission#==1){
+            If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
                 Button(Body: Em(Class: fa fa-check), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: "operation=U,status=OTC,isOTC=0,id=#id#").Style({margin-left: 30px;})
             }.Else{
-                Hint(fa fa-times, $@1ex_hint_otcstatus$)
+                Hint(fa fa-times, $@1ex_hint_otcstatus$).Style({margin-left: 30px;})
             }
         }.Else{
-            If(#permission#==1){
+            If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
                 Button(Body: Em(Class: fa fa-times), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: "operation=U,status=OTC,isOTC=1,id=#id#").Style({margin-left: 30px;})
             }.Else{
-                Hint(fa fa-times, $@1ex_error_otcstatus$)
+                Hint(fa fa-times, $@1ex_error_otcstatus$).Style({margin-left: 30px;})
             }
         }
     }.Custom(cross_status){
         If(#cross#==1){
-            If(#permission#==1){
+            If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
                 Button(Body: Em(Class: fa fa-check), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: "operation=U,status=CR,isCross=0,id=#id#").Style({margin-left: 30px;})
             }.Else{
-                Hint(fa fa-check, $@1ex_hint_cross_trades$)
+                Hint(fa fa-check, $@1ex_hint_cross_trades$).Style({margin-left: 30px;})
             }
         }.Else{
-            If(#permission#==1){
+            If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
                 Button(Body: Em(Class: fa fa-times), Class: btn-xs btn-link, Page: @1ex_listing, Contract: @1ExSymbol, Params: "operation=U,status=CR,isCross=1,id=#id#").Style({margin-left: 30px;})
             }.Else{
-                Hint(fa fa-times, $@ex_error_cross_trades$)
+                Hint(fa fa-times, $@ex_error_cross_trades$).Style({margin-left: 30px;})
             }
         }
     }.Custom(cancel_orders){
@@ -71,12 +75,12 @@ DBFind(#this_table#,src_symbol).Custom(custom_name){
             LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: @1ex_edit, PageParams: "id=#id#")
         }
     }.Count(symbols)
-    
+
 Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         If(#symbols#>0){
             Div(list-group-item){
-                If(#permission#==1){
+                If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
                     Table(Source: src_symbol, Columns: "$@1ex_symbol$=custom_name,$@1ex_pricetick$=pricetick_money,$@1ex_range$=range_money,$@1ex_lotsize$=lotsize_money,$@1ex_trade_status$=tradeable_status,$@1ex_cross_trades$=cross_status$,$@1ex_otc_short$=otc_status,$@1ex_cancel_all$=cancel_orders,=edit").Style(
                         tbody > tr > td {
                             padding-left: 30px;
@@ -97,10 +101,7 @@ Div(fullscreen){
             )
         }.Else{
             If(#eco_hubs#>0){
-                If(And(#permission#==1,#exchange_wallet#==0)){
-                    Div(Class: text-center h4 text-muted, Body: $@1ex_hint_exchange_wallet$)
-                    Button(Body: LangRes(@1create), Page: @1ex_listing, Class: center-block btn btn-primary, Contract: @1ExSymbol, Params: "operation=N")
-                }.Else{
+                If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
                     Div(Class: text-center h4 text-muted, Body: $@1ex_error_no_symbols$)
                 }
             }.Else{
@@ -109,6 +110,4 @@ Div(fullscreen){
         }
     }
 }
-Div(mt-sm ml-lg mr-sm mb-sm){
-    Include(@1pager)
-}
+
