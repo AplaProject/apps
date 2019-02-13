@@ -1,0 +1,201 @@
+contract VotingTemplateRun2 {
+    data {
+        TemplateId int
+        Duration int
+
+        TextDocument string "optional"
+        ContractAcceptParams string "optional"
+        ContractRejectParams string "optional"
+    }
+
+    func checkInput(value, name string) {
+        if Size(value) == 0 || value == "NULL" {
+            warning Sprintf(LangRes("@1x_not_found", "en"), name)
+        }
+    }
+
+    func getPermission() {
+        var array_permissions array result i int prevContract string
+        array_permissions = ["@1VotingVesCreate", "@1VotingValidatorCreate", "@1VotingNodeAdd", "@1VotingParamCreate", "@1VotingNodeRemove", "@1VotingEcosysParam"]
+
+        prevContract = $stack[0]
+        if Len($stack) > 2 {
+            prevContract = $stack[Len($stack) - 2]
+        }
+        while i < Len(array_permissions) {
+            var contract_name string
+            contract_name = array_permissions[i]
+            if contract_name==prevContract {
+                result = 1
+            }
+            i = i + 1
+        }
+
+        if result == 0 {
+            warning LangRes("@1voting_type_invalid", "en")
+        }
+    }
+
+    conditions {
+        $template = DBFind("@1voting_templates").Where({"ecosystem": $ecosystem_id, "id": $TemplateId}).Columns("voting->count_type_voters,voting->name,voting->volume,voting->quorum,voting->type_decision,voting->type_participants,voting->type,voting->rating,subject->candidates,subject->vacancies,subject->voters,subject->contract_accept,subject->contract_reject,optional->contract_accept,optional->contract_reject,optional->init_contract,optional->contract_accept_params,optional->contract_reject_params,optional->init_contract_params").Row()
+        if !$template {
+            warning LangRes("@1voting_template_not_found", "en")
+        }
+
+        $v_name = Sprintf("%v [" + LangRes("@1template_id", "en") + ": %v]", $template["voting.name"], $TemplateId)
+        $v_count_type_voters = Int($template["voting.count_type_voters"])
+        $v_volume = Int($template["voting.volume"])
+        $v_quorum = Int($template["voting.quorum"])
+        $v_type_decision = Int($template["voting.type_decision"])
+        $v_type_participants = Int($template["voting.type_participants"])
+        $v_type = Int($template["voting.type"])
+        $v_rating = Int($template["voting.rating"])
+
+        $s_candidates = Int($template["subject.candidates"])
+        $s_vacancies = $template["subject.vacancies"]
+        $s_voters = Int($template["subject.voters"])
+        $s_contract_accept = $template["subject.contract_accept"]
+        $s_contract_reject = $template["subject.contract_reject"]
+        
+        $o_contract_accept = $template["optional.contract_accept"]
+        $o_contract_reject = $template["optional.contract_reject"]
+        $o_init_contract = $template["optional.init_contract"]
+        $o_contract_accept_params = $template["optional.contract_accept_params"]
+        $o_contract_reject_params = $template["optional.contract_reject_params"]
+        $o_init_contract_params = $template["optional.init_contract_params"]
+        
+        $desc = Sprintf(LangRes("@1template", "en") + " #%v", $TemplateId)       
+        if $Duration <= 0 {
+            $Duration = 3
+        }
+
+        if $v_type < 1 || $v_type > 3 {
+            warning LangRes("@1voting_type_invalid", "en")
+        }
+
+        if $v_type == 2 {
+            getPermission()
+
+            // check duplicated
+            if DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "voting->name": $v_name, "voting->type": 2, "flags->decision": {"$nin": ["1", "-1"]}, "deleted": 0}).Row(){
+                warning LangRes("@1same_voting_created", "en")
+            }
+            
+            /*
+                if prev == "@1VotingEcosysParam"{
+                    $voters = Int(EcosysParam("voters_role_id"))
+                    if $voters == 0{
+                        warning Sprintf(LangRes("@1template_ecosystem_parameter_x_not_found", "en"), "voters_role_id")
+                    }
+                }
+            */
+        }
+
+        // candidates
+        if $v_type_decision == 1 || $v_type_decision == 2 {
+            if !DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $s_candidates, "deleted": 0}).One("id") {
+                warning Sprintf(LangRes("@1candidate_role_id_not_found", "en"), $s_candidates)
+            }
+        }
+
+        // document
+        if $v_type_decision == 3 {
+            checkInput($TextDocument, "TextDocument")
+        }
+
+        // contracts
+        if $v_type_decision == 4 {
+            /*
+                // formal decision
+                checkInput($ContractAcceptParams, "Contract Accept Params")
+                checkInput($ContractRejectParams, "Contract Reject Params")
+                if $type_voting == 2{
+                    if $TableWritten == "@1ecosystems" || $TableWritten == "@1parameters"{
+                        $desc = Sprintf("%v: %v, %v: %v, %v: %v, %v: %v", LangRes("@1table", "en"), $TableWritten, LangRes("@1column", "en"), $ColumnName, LangRes("@1id", "en"), $RowId, LangRes("@1value", "en"), $NewValue)
+                    }else{
+                        $desc = Sprintf(LangRes("@1parameter", "en") + ": %v, " + LangRes("@1value", "en") + ": %v", $ColumnName, $NewValue)
+                    }
+                }
+
+                if $type_voting == 1{
+                    checkInput($TableWritten, "TableWritten")
+                    checkInput($RowId, "RowId")
+                    $desc = Sprintf(LangRes("@1table", "en") + ": %v, " + LangRes("@1column", "en") + ": %v, " + LangRes("@1id", "en") + ": %v, " + LangRes("@1value", "en") + ": %v", $TableWritten, $ColumnName, $RowId, $NewValue)
+                }
+                if $RowId == "" || $RowId == "NULL"{
+                    $RowId = 0
+                }
+            */
+        }
+
+
+        if $v_type_participants == 3 {
+            // if the type of the participants "in role" - check the role
+            var role map
+            role =
+            if !DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $s_voters, "deleted": 0}).One("id") {
+                warning Sprintf(LangRes("@1voters_role_id_not_found", "en"), $s_voters)
+            }
+            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": $s_voters, "member->member_id": $key_id}).One("id") {
+                warning LangRes("@1role_not_involved", "en")
+            }
+        }
+    }
+
+    action {
+        // start init contract
+        if Size($o_init_contract) > 0 {
+            var params map
+            if Size($o_init_contract_params) > 0 {
+                params = JSONToMap($o_init_contract_params)
+            }
+            params["TemplateId"] = $TemplateId
+            CallContract($o_init_contract, params)
+        }
+
+        // creating a vote
+        var votingId int
+        votingId = @1VotingCreate("voting_name,voting_type,type_participants,type_decision,quorum,rating,volume,count_type_voters,description,interval", 
+            $v_name, $v_type, $v_type_participants, $v_type_decision, $v_quorum, $v_rating, $v_volume, $v_count_type_voters, $desc, $Duration)
+
+        // new optional parameters
+        var o_accept_params o_reject_params map
+        if Size($o_contract_accept) > 0 {
+            if Size($o_contract_accept_params) > 0 {
+                o_accept_params = JSONToMap($o_contract_accept_params)
+            }
+            o_accept_params["VotingId"] = votingId
+            o_accept_params["TemplateId"] = $TemplateId
+        }
+        if Size($o_contract_reject) > 0 {
+            if Size($o_contract_reject_params) > 0 {
+                o_reject_params = JSONToMap($o_contract_reject_params)
+            }
+            o_reject_params["VotingId"] = votingId
+            o_reject_params["TemplateId"] = $TemplateId
+        }
+
+        // setting the subject of the vote
+        if $decision == 1 || $decision == 2 {
+            @1VotingSubjectCandidates("votingID,memberID", votingId, $key_id)
+            @1VotingSubjectSettings("votingID,roleID,vacancies,contract_accept,contract_accept_params,contract_reject,contract_reject_params", 
+                votingId, $s_candidates, $s_vacancies, $o_contract_accept, o_accept_params, $o_contract_reject, o_reject_params)
+        }
+        if $decision == 3 {
+            @1VotingSubjectDocument("votingID,text_document,contract_accept,contract_accept_params,contract_reject,contract_reject_params", 
+                votingId, $TextDocument, $o_contract_accept, o_accept_params, $o_contract_reject, o_reject_params)
+        }
+        if $decision == 4 {
+            @1VotingSubjectContract("votingID,contract_accept,contract_accept_params,contract_reject,contract_reject_params",
+                votingId, $s_contract_accept, $ContractAcceptParams, $s_contract_reject, $ContractRejectParams)
+        }
+
+        // setting the participants of the vote
+        if $participants == 1 {
+            // if the participants are "all", the invite has already occurred in "@1VotingCreate"
+        }
+        if $participants == 3 {
+            @1VotingInvite("votingID,var_id", votingId, $s_voters)
+        }
+    }
+}
