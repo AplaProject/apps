@@ -16,7 +16,7 @@ contract VotingTemplateRun2 {
 
     func getPermission() {
         var array_permissions array result i int prevContract string
-        array_permissions = ["@1VotingVesCreate", "@1VotingValidatorCreate", "@1VotingNodeAdd", "@1VotingParamCreate", "@1VotingNodeRemove", "@1VotingEcosysParam"]
+        array_permissions = ["@1VotingRunEditSysParam"]
 
         prevContract = $stack[0]
         if Len($stack) > 2 {
@@ -37,7 +37,7 @@ contract VotingTemplateRun2 {
     }
 
     conditions {
-        $template = DBFind("@1voting_templates").Where({"ecosystem": $ecosystem_id, "id": $TemplateId}).Columns("voting->count_type_voters,voting->name,voting->volume,voting->quorum,voting->type_decision,voting->type_participants,voting->type,voting->rating,subject->candidates,subject->vacancies,subject->voters,subject->contract_accept,subject->contract_reject,optional->contract_accept,optional->contract_reject,optional->init_contract,optional->contract_accept_params,optional->contract_reject_params,optional->init_contract_params").Row()
+        $template = DBFind("@1voting_templates2").Where({"ecosystem": $ecosystem_id, "id": $TemplateId}).Columns("voting->count_type_voters,voting->name,voting->volume,voting->quorum,voting->type_decision,voting->type_participants,voting->type,voting->rating,subject->candidates,subject->vacancies,subject->voters,subject->contract_accept,subject->contract_reject,optional->contract_accept,optional->contract_reject,optional->init_contract,optional->contract_accept_params,optional->contract_reject_params,optional->init_contract_params").Row()
         if !$template {
             warning LangRes("@1voting_template_not_found", "en")
         }
@@ -49,7 +49,7 @@ contract VotingTemplateRun2 {
         $v_type_decision = Int($template["voting.type_decision"])
         $v_type_participants = Int($template["voting.type_participants"])
         $v_type = Int($template["voting.type"])
-        $v_rating = Int($template["voting.rating"])
+        $v_rating = $template["voting.rating"]
 
         $s_candidates = Int($template["subject.candidates"])
         $s_vacancies = $template["subject.vacancies"]
@@ -64,6 +64,7 @@ contract VotingTemplateRun2 {
         $o_contract_reject_params = $template["optional.contract_reject_params"]
         $o_init_contract_params = $template["optional.init_contract_params"]
         
+
         $desc = Sprintf(LangRes("@1template", "en") + " #%v", $TemplateId)       
         if $Duration <= 0 {
             $Duration = 3
@@ -89,7 +90,7 @@ contract VotingTemplateRun2 {
                     }
                 }
             */
-        }
+        } 
 
         // candidates
         if $v_type_decision == 1 || $v_type_decision == 2 {
@@ -176,25 +177,25 @@ contract VotingTemplateRun2 {
         }
 
         // setting the subject of the vote
-        if $decision == 1 || $decision == 2 {
+        if $v_type_decision == 1 || $v_type_decision == 2 {
             @1VotingSubjectCandidates("votingID,memberID", votingId, $key_id)
             @1VotingSubjectSettings("votingID,roleID,vacancies,contract_accept,contract_accept_params,contract_reject,contract_reject_params", 
                 votingId, $s_candidates, $s_vacancies, $o_contract_accept, o_accept_params, $o_contract_reject, o_reject_params)
         }
-        if $decision == 3 {
+        if $v_type_decision == 3 {
             @1VotingSubjectDocument("votingID,text_document,contract_accept,contract_accept_params,contract_reject,contract_reject_params", 
                 votingId, $TextDocument, $o_contract_accept, o_accept_params, $o_contract_reject, o_reject_params)
         }
-        if $decision == 4 {
+        if $v_type_decision == 4 {
             @1VotingSubjectContract("votingID,contract_accept,contract_accept_params,contract_reject,contract_reject_params",
                 votingId, $s_contract_accept, $ContractAcceptParams, $s_contract_reject, $ContractRejectParams)
         }
 
         // setting the participants of the vote
-        if $participants == 1 {
+        if $v_type_participants == 1 {
             // if the participants are "all", the invite has already occurred in "@1VotingCreate"
         }
-        if $participants == 3 {
+        if $v_type_participants == 3 {
             @1VotingInvite("votingID,var_id", votingId, $s_voters)
         }
     }
