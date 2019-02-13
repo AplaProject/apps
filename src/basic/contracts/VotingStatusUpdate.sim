@@ -36,7 +36,7 @@ contract VotingStatusUpdate {
     }
 
     func updateRatings(voting map) {
-        if voting["voting.rating"] == 1 && voting["voting.type_participants"] != 5  {
+        if voting["voting.rating"] == 1 && voting["voting.type_participants"] != 5 {
             var id i lenVoters int voters array
             id = Int(voting["id"])
             voters = DBFind("@1votings_participants").Columns("id,member->member_id").Limit(250).Where({"ecosystem": $ecosystem_id, "voting_id": id})
@@ -55,7 +55,7 @@ contract VotingStatusUpdate {
                 var rating_amount_i int rating_amount_f float
                 rating_amount_f = Float(rating[$rating_amount]) * Float($rating_weight)
                 if rating_amount_f < 1.0 {
-                    rating_amount_f = 1.0    
+                    rating_amount_f = 1.0
                 }
                 rating_amount_f = 1 + Log(rating_amount_f)
                 rating_amount_i = Int(rating_amount_f * 1000)
@@ -84,9 +84,25 @@ contract VotingStatusUpdate {
             i = i + 1
         }
     }
-
+    func checkPrev(names array) {
+        var i lenNames int prev string
+        lenNames = Len(names)
+        prev = $stack[0]
+        if Len($stack) > 2 {
+            prev = $stack[Len($stack) - 2]
+        }
+        while i < lenNames {
+            // если не админ - проверяю имя предыдущего контракта в стеке
+            if prev == names[i] {
+                return
+            }
+            i = i + 1
+        }
+        @1AdminCondition() // если админ - можно запускать откуда угодно
+    }
     conditions {
-        @1AdminCondition()
+        checkPrev(["@1VotingSubjectCheck", "@1VotingInvite"])
+
         $INVALID = 1
         $WAITING = 2
         $STARTED = 3
@@ -94,7 +110,7 @@ contract VotingStatusUpdate {
 
         var app_id int
         app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Basic"}).One("id"))
-        $rating_table  = AppParam(app_id, "voting_rating_table", $ecosystem_id)
+        $rating_table = AppParam(app_id, "voting_rating_table", $ecosystem_id)
         $rating_wallet = AppParam(app_id, "voting_rating_wallet", $ecosystem_id)
         $rating_amount = AppParam(app_id, "voting_rating_amount", $ecosystem_id)
         $rating_weight = AppParam(app_id, "voting_rating_weight", $ecosystem_id)
