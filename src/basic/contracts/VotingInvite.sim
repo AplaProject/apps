@@ -31,9 +31,12 @@ contract VotingInvite {
         $STARTED = 3
         $FINISHED = 4
 
-        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $votingID, "status": [{"$neq": $STARTED},{"$neq": $FINISHED}]}).Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended").Row()
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $votingID, "status": [{"$neq": $STARTED},{"$neq": $FINISHED}]}).Columns("progress,progress->number_participants,voting->type_participants,voting->type,id,date_ended,creator->member_id").Row()
         if !$voting {
             warning LangRes("@1voting_expired_can_not_add_participants", "en")
+        }
+        if $voting["creator.member_id"] != $key_id {
+            warning LangRes("@1access_denied", "en")
         }
 
         $type_participants = $voting["voting.type_participants"]
