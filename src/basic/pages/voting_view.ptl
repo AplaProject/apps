@@ -206,12 +206,24 @@ Div(content-wrapper){
                             Div(row mt-sm t6){
                                 Div(col-md-12){
                                     If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==1)){
-                                        If(#instance_creator_member_id#==#key_id#){
-                                            If(#type_decision#==1){
+                                        If(#type_decision#==1){
+                                            If(#instance_creator_member_id#==#key_id#){
                                                 Button(Class: btn btn-link, Page: @1voting_decision_candidates, PageParams: "vID=#vID#"){
                                                     Strong(LangRes(@1subject_voting_edit))
                                                 }.Popup(60, $@1subject_voting$)
+                                            }.Else{
+                                                DBFind(@1votings_subject).Where({"voting_id": #vID#, "subject->member_id": #key_id#}).Columns("id").Vars(already_candidate)
+                                                If(#already_candidate_id#>0){
+                                                    SetVar(hidden,hidden)
+                                                }.Else{
+                                                    SetVar(hidden,)
+                                                }
+                                                Div(#hidden#){
+                                                    Button(Body: $@1can_apply_voting$, Class: btn btn-link, Page: #this_page#, PageParams: "vID=#vID#", Contract: @1VotingSubjectCandidates, Params: "votingID=#vID#,memberID=#key_id#")
+                                                }
                                             }
+                                        }
+                                        If(#instance_creator_member_id#==#key_id#){
                                             If(#type_decision#==2){
                                                 Button(Class: btn btn-link, Page: @1voting_decision_election, PageParams: "vID=#vID#"){
                                                     Strong(LangRes(@1subject_voting_edit))
