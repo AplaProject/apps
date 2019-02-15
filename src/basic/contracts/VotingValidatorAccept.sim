@@ -1,7 +1,6 @@
 contract VotingValidatorAccept {
     data {
-        VotingTemplateId string
-        KeyId string
+        TemplateId string
         VotingId string
     }
 
@@ -24,13 +23,13 @@ contract VotingValidatorAccept {
             warning LangRes("@1contract_start_votingdecisioncheck_only", "en")
         }
 
-        var appId templateId int params map
+        var appId tId int
         appId = Int(DBFind("@1applications").Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").One("id"))
-        templateId = Int(AppParam(appId,"voting_validators_template_id", 1))
-        if !DBFind("@1voting_templates").Where({"ecosystem": $ecosystem_id, "id": templateId}).One("id"){
+        tId = Int(AppParam(appId,"voting_template_validators", 1))
+        if !DBFind("@1voting_templates2").Where({"ecosystem": $ecosystem_id, "id": tId}).One("id"){
             warning LangRes("@1voting_template_not_found", "en")
         }
-        if $VotingTemplateId != templateId{
+        if $TemplateId != tId {
             warning LangRes("@1template_incorrect", "en")
         }
 
@@ -38,7 +37,15 @@ contract VotingValidatorAccept {
         oldRoleId = getRoleId("role_candidate_for_validators", false)
         roleId = getRoleId("role_validator", true)
 
-        candidateId = DBFind("@1validator_candidates").Where({"candidate_key_id": $KeyId}).One("candidate_key_id") //no $ecosystem_id
+        var validator_map map
+        validator_map = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId}).Columns("subject->contract_accept_params").One("subject->contract_accept_params")
+        if !validator_map {
+            warning LangRes("@1voting_subject_not_found", "en")
+        }
+        validator_map = JSONDecode(validator_map)
+        $validator_id = Int(validator_map["ValidatorId"])
+
+        candidateId = DBFind("@1validator_candidates").Where({"candidate_key_id": $validator_id}).One("candidate_key_id")
         if !candidateId {
             warning LangRes("@1candidate_key_not_found", "en")
         }
@@ -54,6 +61,6 @@ contract VotingValidatorAccept {
         if $oldRoleRowId > 0 {
             @1RolesUnassign("row_id", $oldRoleRowId)
         }
-        @1RolesAssign("rid,member_id", $roleId, Int($KeyId))
+        @1RolesAssign("rid,member_id", $roleId, Int($validator_id))
     }
 }
