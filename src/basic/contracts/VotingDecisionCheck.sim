@@ -131,6 +131,26 @@ contract VotingDecisionCheck {
 
             if $type_decision == 4 {
                 var subject map
+                subject = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID}).Columns("id,results->percent_accepted,results->percent_rejected,subject->contract_accept,subject->contract_reject,subject->contract_accept_params,subject->contract_reject_params").Row()
+                if subject {
+                    var percent_accepted percent_rejected float
+                    percent_accepted = Float(subject["results.percent_accepted"])
+                    percent_rejected = Float(subject["results.percent_rejected"])
+                    if ( Int($voting["voting.count_type_voters"]) == 0 && percent_accepted >= Float($volume)   ) ||
+                       ( Int($voting["voting.count_type_voters"]) == 1 && percent_accepted >  percent_rejected ) {
+                        flag_decision = $ACCEPT
+                        runContract(subject["subject.contract_accept"], subject["subject.contract_accept_params"])
+                    } else {
+                        flag_decision = $REJECT
+                        runContract(subject["subject.contract_reject"], subject["subject.contract_reject_params"])
+                    }
+                }
+            }
+
+
+
+            if $type_decision == 40000 {
+                var subject map
                 subject = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID}).Columns("id,results->percent_accepted,results->percent_rejected,subject->table,subject->table_id,subject->column,subject->column_value").Row()
                 if subject {
                     var percent_accepted percent_rejected float
@@ -182,23 +202,7 @@ contract VotingDecisionCheck {
                 }
             }
 
-            if $type_decision == 5 {
-                var subject map
-                subject = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID}).Columns("id,results->percent_accepted,results->percent_rejected,subject->contract_accept,subject->contract_reject,subject->contract_accept_params,subject->contract_reject_params").Row()
-                if subject {
-                    var percent_accepted percent_rejected float
-                    percent_accepted = Float(subject["results.percent_accepted"])
-                    percent_rejected = Float(subject["results.percent_rejected"])
-                    if ( Int($voting["voting.count_type_voters"]) == 0 && percent_accepted >= Float($volume)   ) ||
-                       ( Int($voting["voting.count_type_voters"]) == 1 && percent_accepted >  percent_rejected ) {
-                        flag_decision = $ACCEPT
-                        runContract(subject["subject.contract_accept"], subject["subject.contract_accept_params"])
-                    } else {
-                        flag_decision = $REJECT
-                        runContract(subject["subject.contract_reject"], subject["subject.contract_reject_params"])
-                    }
-                }
-            }
+
 
             if flag_decision == $ACCEPT {
                 runContract($voting["optional.contract_accept"], $voting["optional.contract_accept_params"])    
