@@ -10,10 +10,10 @@ Span(Class: h5 m0 mb ml-lg){
     display: inline-block;
 )
 
-If(GetVar(search)){
+If(#search#){
     SetVar(w_search, {"voting->name": {"$ilike": "#search#"}})
 }
-SetVar(where, {"ecosystem": #ecosystem_id#, "voting->type": {"$in": [1,2]}, {GetVar(w_search)}})
+SetVar(where, {"ecosystem": #ecosystem_id#, "voting->type": {"$in": [1,2]}, {#w_search#}})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, LangRes(@1template))
@@ -22,26 +22,12 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 
 DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("voting->name,voting->volume,voting->quorum,voting->type_participants,voting->type_decision,voting->type,optional->init_contract,optional->contract_accept,optional->contract_reject").Custom(_participants){
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("voting->name,voting->type_participants,voting->type_decision,voting->type").Custom(_participants){
     P(Class: m0 h6, Body: AppParam(Ecosystem:1, App:#application_id#, Name:type_voting_participants, Index: #voting.type_participants#))
 }.Custom(_decision){
     P(Class: m0 h6, Body: AppParam(Ecosystem:1, App:#application_id#, Name:type_voting_decisions, Index: #voting.type_decision#))
 }.Custom(_type){
     AppParam(Ecosystem:1, App:#application_id#, Name:type_voting, Index: #voting.type#)
-}.Custom(_contracts){
-    If(And(#optional.init_contract#!="",#optional.init_contract#!="NULL")){
-        P(Class: m0 h6, Body: #optional.init_contract#)
-    }
-    If(And(#optional.contract_accept#!="",#optional.contract_accept#!="NULL")){
-        P(Class: m0 h6, Body: #optional.contract_accept#)
-    }
-    If(And(#optional.contract_reject#!="",#optional.contract_reject#!="NULL")){
-        P(Class: m0 h6, Body: #optional.contract_reject#)
-    }
-}.Custom(_vq){
-    Div(text-center){
-        #voting.volume# / #voting.quorum#
-    }
 }.Custom(_name){
     LinkPage(Body: #voting.name#, Page: @1voting_template_view, PageParams: "TemplateId=#id#")
 }.Count(count)
@@ -54,7 +40,7 @@ Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){
-                Table(src, "$@1template$=_name,$@1voting_type$=_type,$@1participants$=_participants,$@1decision$=_decision,$@1contracts$=_contracts,$@1voting_volume$ / $@1voting_quorum$=_vq")
+                Table(src, "$@1template$=_name,$@1participants$=_participants,$@1decision$=_decision,$@1voting_type$=_type")
             }.ElseIf(#ecosystem_id#==1){
                 Form(Class: text-center h6){
                     Data(autofill, "value,description"){
