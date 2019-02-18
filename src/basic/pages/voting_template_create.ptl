@@ -3,24 +3,34 @@ DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id
 SetVar(name, "New voting").(typevoting, 0).(volume, 50).(quorum, 51).(vacancies, 1)
 
 If(#TemplateId#>0){
-    DBFind(@1voting_templates).WhereId(#TemplateId#).Vars(template)
-    SetVar(name, #template_title#)
-    SetVar(typevoting, #template_type_voting#)
-    SetVar(volume, #template_volume#)
-    SetVar(rating, #template_rating#)
-    SetVar(subj, #template_subject#)
-    SetVar(quorum, #template_quorum#)
-    SetVar(voters, #template_voters#)
-    SetVar(candidates, #template_candidates#)
-    SetVar(vacancies, #template_vacancies#)
-    SetVar(contract_init, #template_init_contract#)
-    SetVar(contract_accept, #template_contract_accept#)
-    SetVar(accept_params, #template_accept_params#)
-    SetVar(contract_reject, #template_contract_reject#)
-    SetVar(reject_params, #template_reject_params#)
-    If(GetVar(CountTypeVoters)==""){
-        SetVar(CountTypeVoters, #template_count_type_voters#)
+    DBFind(@1voting_templates).Where({"id": #TemplateId#, "ecosystem": #ecosystem_id#}).Columns("voting->count_type_voters,voting->name,voting->volume,voting->quorum,voting->type_decision,voting->type_participants,voting->type,voting->rating,subject->candidates,subject->vacancies,subject->voters,subject->contract_accept,subject->contract_reject,optional->contract_accept,optional->contract_reject,optional->init_contract,optional->contract_accept_params,optional->contract_reject_params,optional->init_contract_params").Vars(template)
+
+    If(#CountTypeVoters# == ""){
+        SetVar(CountTypeVoters, #template_voting_count_type_voters#)
     }
+    If(#TypeDecision# == ""){
+        SetVar(ValTypeDec, #template_voting_type_decision#)
+    }
+    If(#TypeParticipants# == ""){
+        SetVar(TypeParticipants, #template_voting_type_participants#)
+    }
+    SetVar(voters, #template_subject_voters#)
+    SetVar(name, #template_voting_name#)
+    SetVar(quorum, #template_voting_quorum#)
+    If(#template_voting_rating# == 1){
+        SetVar(rating, "true")
+    }
+    SetVar(volume, #template_voting_volume#)
+    SetVar(candidates, #template_subject_candidates#)
+    SetVar(vacancies, #template_subject_vacancies#)
+    SetVar(contract_accept, #template_subject_contract_accept#)
+    SetVar(contract_reject, #template_subject_contract_reject#)
+    SetVar(init_contract, #template_optional_init_contract#)
+    SetVar(init_params, #template_optional_init_contract_params#)
+    SetVar(optional_accept_contract, #template_optional_contract_accept#)
+    SetVar(optional_accept_params, #template_optional_contract_accept_params#)
+    SetVar(optional_reject_contract, #template_optional_contract_reject#)
+    SetVar(optional_reject_params, #template_optional_contract_reject_params#)
 }
 
 Form(){
@@ -205,7 +215,6 @@ Form(){
                     Div(col-md-3 mt-sm text-right){
                         Label(){
                             LangRes(@1contract_reject)
-                            Span(*,text-danger)
                         }
                     }
                     Div(col-md-9 text-left){
@@ -229,7 +238,7 @@ Form(){
                 Div(col-md-9 text-left){
                     Div(row){
                         Div(col-md-6){
-                            Input(Name: InitContract, Placeholder: $@1contract$, Value: #contract_init#)
+                            Input(Name: InitContract, Placeholder: $@1contract$, Value: #init_contract#)
                         }
                         Div(col-md-6){
                             Input(Name: ParamsInit, Placeholder: $@1arguments$, Value: #init_params#)
@@ -246,10 +255,10 @@ Form(){
                 Div(col-md-9 text-left){
                     Div(row){
                         Div(col-md-6){
-                            Input(Name: OptionalContractAccept, Placeholder: $@1contract$, Value: #contract_accept#)
+                            Input(Name: OptionalContractAccept, Placeholder: $@1contract$, Value: #optional_accept_contract#)
                         }
                         Div(col-md-6){
-                            Input(Name: OptionalParamsAccept, Placeholder: $@1arguments$, Value: #accept_params#)
+                            Input(Name: OptionalParamsAccept, Placeholder: $@1arguments$, Value: #optional_accept_params#)
                         }
                     }
                 }
@@ -263,10 +272,10 @@ Form(){
                 Div(col-md-9 text-left){
                     Div(row){
                         Div(col-md-6){
-                            Input(Name: OptionalContractReject, Placeholder: $@1contract$, Value: #contract_reject#)
+                            Input(Name: OptionalContractReject, Placeholder: $@1contract$, Value: #optional_reject_contract#)
                         }
                         Div(col-md-6){
-                            Input(Name: OptionalParamsReject, Placeholder: $@1arguments$, Value: #reject_params#)
+                            Input(Name: OptionalParamsReject, Placeholder: $@1arguments$, Value: #optional_reject_params#)
                         }
                     }
                 }
@@ -308,10 +317,10 @@ Form(){
                             3,$@1document$
                             4,$@1contract_run$
                         }
-                        RadioGroup(Name: TypeDecision, Value: #template_type_decision#, Source: numbers_type_decisions, ValueColumn: value, NameColumn: name)
+                        RadioGroup(Name: TypeDecision, Value: #ValTypeDec#, Source: numbers_type_decisions, ValueColumn: value, NameColumn: name)
                     }.Else{
                         AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_decisions, Source: procent_type_decisions)
-                        RadioGroup(Name: TypeDecision, Value: #template_type_decision#, Source: procent_type_decisions, ValueColumn: id, NameColumn: name)               
+                        RadioGroup(Name: TypeDecision, Value: #ValTypeDec#, Source: procent_type_decisions, ValueColumn: id, NameColumn: name)             
                     }
                 }
             }
@@ -326,7 +335,7 @@ Form(){
                 }
                 Div(col-md-9 text-left){
                     AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_participants, Source: src_typepart)
-                    Select(Name: TypeParticipants, Source: src_typepart, NameColumn: name, ValueColumn: id, Value: #template_type_participants#)
+                    Select(Name: TypeParticipants, Source: src_typepart, NameColumn: name, ValueColumn: id, Value: #TypeParticipants#)
                 }
             }
         }

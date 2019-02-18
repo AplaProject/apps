@@ -32,7 +32,7 @@ contract VotingTemplateRun {
         }
 
         if result == 0 {
-            warning LangRes("@1voting_type_invalid", "en")
+            warning Sprintf(LangRes("@1system_voting_can_not_start_from_x", "en"), $stack[0])
         }
     }
 
@@ -96,33 +96,18 @@ contract VotingTemplateRun {
 
         // contracts
         if $v_type_decision == 4 {
-            /*
-                // formal decision
-                checkInput($ContractAcceptParams, "Contract Accept Params")
-                checkInput($ContractRejectParams, "Contract Reject Params")
-                if $type_voting == 2{
-                    if $TableWritten == "@1ecosystems" || $TableWritten == "@1parameters"{
-                        $desc = Sprintf("%v: %v, %v: %v, %v: %v, %v: %v", LangRes("@1table", "en"), $TableWritten, LangRes("@1column", "en"), $ColumnName, LangRes("@1id", "en"), $RowId, LangRes("@1value", "en"), $NewValue)
-                    }else{
-                        $desc = Sprintf(LangRes("@1parameter", "en") + ": %v, " + LangRes("@1value", "en") + ": %v", $ColumnName, $NewValue)
-                    }
+            if GetContractByName($s_contract_accept) == 0 {
+                warning LangRes("@1accepted_contract_not_found", "en")
+            }
+            if Size($s_contract_reject) > 0 {
+                if GetContractByName($s_contract_reject) == 0 {
+                    warning LangRes("@1rejected_contract_not_found", "en")
                 }
-
-                if $type_voting == 1{
-                    checkInput($TableWritten, "TableWritten")
-                    checkInput($RowId, "RowId")
-                    $desc = Sprintf(LangRes("@1table", "en") + ": %v, " + LangRes("@1column", "en") + ": %v, " + LangRes("@1id", "en") + ": %v, " + LangRes("@1value", "en") + ": %v", $TableWritten, $ColumnName, $RowId, $NewValue)
-                }
-                if $RowId == "" || $RowId == "NULL"{
-                    $RowId = 0
-                }
-            */
+            }
         }
 
         if $v_type_participants == 3 {
             // if the type of the participants "in role" - check the role
-            var role map
-            role =
             if !DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $s_voters, "deleted": 0}).One("id") {
                 warning Sprintf(LangRes("@1voters_role_id_not_found", "en"), $s_voters)
             }
@@ -191,7 +176,6 @@ contract VotingTemplateRun {
                 reject_params["VotingId"] = votingId
                 reject_params["TemplateId"] = $TemplateId
             }
-            
             @1VotingSubjectContract("votingID,contract_accept,contract_accept_params,contract_reject,contract_reject_params,optional_accept_contract,optional_accept_params,optional_reject_contract,optional_reject_params",
                 votingId, $s_contract_accept, JSONEncode(accept_params), $s_contract_reject, JSONEncode(reject_params), $o_contract_accept, JSONEncode(o_accept_params), $o_contract_reject, JSONEncode(o_reject_params))
         }

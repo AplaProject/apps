@@ -147,63 +147,6 @@ contract VotingDecisionCheck {
                 }
             }
 
-
-
-            if $type_decision == 40000 {
-                var subject map
-                subject = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID}).Columns("id,results->percent_accepted,results->percent_rejected,subject->table,subject->table_id,subject->column,subject->column_value").Row()
-                if subject {
-                    var percent_accepted percent_rejected float
-                    percent_accepted = Float(subject["results.percent_accepted"])
-                    percent_rejected = Float(subject["results.percent_rejected"])
-                    if ( Int($voting["voting.count_type_voters"]) == 0 && percent_accepted >= Float($volume)   ) ||
-                       ( Int($voting["voting.count_type_voters"]) == 1 && percent_accepted >  percent_rejected ) {
-                        flag_decision = $ACCEPT
-
-                        var column string
-                        column = Str(subject["subject.column"])
-                        $colValue = Str(subject["subject.column_value"])
-                        // type of voting - custom
-                        if Int($voting["voting.type"]) == 1 {
-                            // ALWAYS CHECK THE PERMISSION
-                            var colType string
-                            colType = GetColumnType(subject["subject.table"], column)
-                            if colType == "number"{
-                                $colValue = Int($colValue)
-                            }
-                            if colType == "money"{
-                                $colValue = Money($colValue)
-                            }
-                            if colType == "double" {
-                                $colValue = Float($colValue)
-                            }
-                            var m map
-                            m[column] = $colValue
-                            DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
-                        }
-                        // type of voting - system
-                        if Int($voting["voting.type"]) == 2 {
-							if subject["subject.table"] == "@1ecosystems"{
-								var m map
-								m[column] = $colValue
-								DBUpdate(subject["subject.table"], Int(subject["subject.table_id"]), m)
-							} elif subject["subject.table"] == "@1parameters"{
-								var params map
-								params = JSONDecode($colValue)
-								params["Id"] = Int(params["Id"]) // workaround for "reflect: Call using float64 as type int64"
-								CallContract("@1EditParameter", params)
-							} else {
-								@1UpdateSysParam("Name,Value,VotingId", column, $colValue, $votingID)
-							}
-                        }
-                    } else {
-                        flag_decision = $REJECT
-                    }
-                }
-            }
-
-
-
             if flag_decision == $ACCEPT {
                 runContract($voting["optional.contract_accept"], $voting["optional.contract_accept_params"])    
             }
