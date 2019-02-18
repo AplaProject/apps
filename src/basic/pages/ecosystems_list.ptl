@@ -11,6 +11,19 @@ If(GetVar(search)){
 SetVar(where, {GetVar(w_search)})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, LangRes(@1ecosystem_name))SetVar(this_page, @1ecosystems_list).(this_table, @1ecosystems)
+Include(@1pager_header)
+
+SetTitle("$@1ecosystems$")
+Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1ecosystems_list_desc$"))
+AddToolButton(Title: $@1update_metrics$, Page: @1ecosystems_metrics_update, Icon: icon-refresh).Popup(Header: $@1update_metrics$, Width: "30")
+
+If(GetVar(search)){
+    SetVar(w_search, {"name": {"$ilike": "#search#"}})
+}
+SetVar(where, {GetVar(w_search)})
+
+Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, LangRes(@1ecosystem_name))
     Include(@1search)
 }
@@ -19,7 +32,10 @@ DBFind(@1buffer_data).Where({"ecosystem": #ecosystem_id#, "member_id": #key_id#,
 JsonToSource(src_metrics,#m_value#)
 
 DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
-SetVar(template_ves, AppParam(Ecosystem:1, App:#application_id#, Name: voting_template_ves))
+SetVar(template_id, AppParam(Ecosystem:1, App:#application_id#, Name: voting_template_ves))
+If(#template_id# > 0){
+    DBFind(@1voting_templates).Where({"ecosystem": #ecosystem_id#, "id": #template_id#}).Columns("subject->voters").Vars(template)
+}
 
 DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_id){
     Span(#id#)
@@ -35,12 +51,18 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
         }
     }
 }.Custom(valued){
-    If(#template_ves# > 0){
-        If(#is_valued# == 0){
+    If(#is_valued# == 0){
+        If(And(#template_subject_voters#>0,#template_subject_voters#==#role_id#)){
             Button(Body: $@1start_voting_ves$, Class: btn-xs btn-link, Page: @1voting_list, Contract: @1VotingRunVes, Params: "EcosystemId=#id#")
-        }.ElseIf(#is_valued#==1){
-            $@1is_valued$
-        }
+        }.Else{
+            If(#template_id# > 0){
+                Span($@1voting_not_participant$, text-muted)
+            }.Else{
+                Span($@1voting_template_not_found$, text-muted)
+            }
+        } 
+    }.ElseIf(#is_valued#==1){
+        $@1is_valued$
     }
 }.Count(count)
 
