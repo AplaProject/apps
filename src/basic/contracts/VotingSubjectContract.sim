@@ -4,9 +4,13 @@ contract VotingSubjectContract {
 
         contract_accept string
         contract_accept_params string "optional"
-
         contract_reject string
         contract_reject_params string "optional"
+
+        optional_accept_contract string "optional"
+        optional_accept_params string "optional"
+        optional_reject_contract string "optional"
+        optional_reject_params string "optional"
     }
     
     func safeJsonToMap(m string) map {
@@ -18,7 +22,7 @@ contract VotingSubjectContract {
     conditions {
         $STARTED = 3
         $FINISHED = 4
-        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $votingID, "status":[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("id,date_started,voting->type,flags->full_data").Row()
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $votingID, "status":[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("id,date_started,voting->type,flags->full_data,optional").Row()
         if !$voting {
             warning LangRes("@1voting_started_can_not_edit", "en")
         }
@@ -45,6 +49,18 @@ contract VotingSubjectContract {
         } else {
             DBInsert("@1votings_subject", {ecosystem:$ecosystem_id, voting_id:$votingID, subject:subject})
         }
+
+        var o_accept_params o_reject_params map
+        o_accept_params = safeJsonToMap($optional_accept_params)
+        o_reject_params = safeJsonToMap($optional_reject_params)
+
+        var optional map
+        optional = safeJsonToMap($voting["optional"])
+        optional["contract_accept"] = $optional_accept_contract
+        optional["contract_accept_params"] = o_accept_params
+        optional["contract_reject"] = $optional_reject_contract
+        optional["contract_reject_params"] = o_reject_params
+        DBUpdate("@1votings", $votingID, {optional:optional})
 
         @1VotingSubjectCheck("votingID", $votingID)
     }

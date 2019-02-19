@@ -17,15 +17,22 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 }
 
 DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
-SetVar(template_id, AppParam(Ecosystem:1, App:#application_id#, Name: voting_validators_template_id))
+SetVar(template_id, AppParam(Ecosystem:1, App:#application_id#, Name: voting_template_validators))
+If(#template_id# > 0){
+    DBFind(@1voting_templates).Where({"ecosystem": #ecosystem_id#, "id": #template_id#}).Columns("subject->voters").Vars(template)
+}
+
 DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_actions){
-    If(#template_id#>0){
+    If(And(#template_subject_voters#>0,#template_subject_voters#==#role_id#)){
         Form(btn-group pull-right){
-            Input(Name:KeyId, Type: hidden, Value: #candidate_key_id#)
-            Button(Contract: @1VotingValidatorCreate, Page: @1voting_list, Class: btn btn-default fa fa-play)
+            Button(Contract: @1VotingRunNewValidator, Params: "ValidatorId=#id#", Page: @1voting_list, Class: btn btn-default fa fa-play)
         }
     }.Else{
-        Span($@1voting_template_not_found$,text-muted)
+        If(#template_id# > 0){
+            Span($@1voting_not_participant$, text-muted)
+        }.Else{
+            Span($@1voting_template_not_found$, text-muted)
+        }
     }
 }.Custom(_date){
     DateTime(DateTime: #date_created#, Format: YYYY-MM-DD HH:MI)
@@ -39,11 +46,11 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
     Span(Class: h6, Body: #comment#)
 }.Custom(custom_username){
     SetVar(user_member_name, "")
-    DBFind(@1members).Where({"id": #commission_address#, "ecosystem": #ecosystem_id#}).Vars(user)
+    DBFind(@1members).Where({"id": #candidate_key_id#, "ecosystem": #ecosystem_id#}).Vars(user)
     If(GetVar(user_member_name)==""){
-        SetVar(user_member_name, Address(#commission_address#))
+        SetVar(user_member_name, Address(#candidate_key_id#))
     }
-    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#user_id#"){
+    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#candidate_key_id#"){
         If(#user_image_id#>0){
             Image(Src: Binary().ById(#user_image_id#), Class: img-circle).Style(height: 30px;width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
             Span(#user_member_name#)
