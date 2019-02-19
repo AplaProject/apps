@@ -11,7 +11,7 @@ contract VotingStatusUpdate {
         title = voting["voting.name"]
         id = Int(voting["id"])
         if voting["voting.type_participants"] == 5 {
-            voters = DBFind("@1votings_participants").Columns("member->role_id").Limit(250).Where({"ecosystem": $ecosystem_id, "voting_id": id, "decision": 0})
+            voters = DBFind("@1votings_participants").Columns("member->role_id").Limit(10000).Where({"ecosystem": $ecosystem_id, "voting_id": id, "decision": 0})
             lenVoters = Len(voters)
             while i < lenVoters {
                 var voter roleId params map
@@ -22,7 +22,7 @@ contract VotingStatusUpdate {
                 i = i + 1
             }
         } else {
-            voters = DBFind("@1votings_participants").Columns("member->member_id").Limit(250).Where({"ecosystem": $ecosystem_id, "voting_id": id, "decision": 0})
+            voters = DBFind("@1votings_participants").Columns("member->member_id").Limit(10000).Where({"ecosystem": $ecosystem_id, "voting_id": id, "decision": 0})
             lenVoters = Len(voters)
             while i < lenVoters {
                 var voter memberId params map
@@ -39,7 +39,7 @@ contract VotingStatusUpdate {
         if voting["voting.rating"] == 1 && voting["voting.type_participants"] != 5 {
             var id i lenVoters int voters array
             id = Int(voting["id"])
-            voters = DBFind("@1votings_participants").Columns("id,member->member_id").Limit(250).Where({"ecosystem": $ecosystem_id, "voting_id": id})
+            voters = DBFind("@1votings_participants").Columns("id,member->member_id").Limit(10000).Where({"ecosystem": $ecosystem_id, "voting_id": id})
             lenVoters = Len(voters)
 
             while i < lenVoters {
@@ -117,18 +117,15 @@ contract VotingStatusUpdate {
     }
 
     action {
-        var bt string
-        bt = BlockTime()
-
         //setting status INVALID
         changeVotings({status:$WAITING, "flags->full_data":0}, {"status":$INVALID})
         changeVotings({status:$WAITING, "progress->number_participants":0}, {"status":$INVALID})
         //setting status WAITING
         changeVotings({status:$INVALID, "flags->full_data":1, "progress->number_participants":{"$gt":0}}, {"status":$WAITING})
         //setting status STARTED
-        changeVotings({status:$INVALID, "date_started":{"$lte":bt}, "flags->full_data":1, "progress->number_participants":{"$gt":0}}, {"status":$STARTED})
-        changeVotings({status:$WAITING, "date_started":{"$lte":bt}}, {status:$STARTED})
+        changeVotings({status:$INVALID, "date_started":{"$lte":$block_time}, "flags->full_data":1, "progress->number_participants":{"$gt":0}}, {"status":$STARTED})
+        changeVotings({status:$WAITING, "date_started":{"$lte":$block_time}}, {status:$STARTED})
         //setting status FINISHED
-        changeVotings({status:$STARTED, "date_ended":{"$lte":bt}}, {"status":$FINISHED})
+        changeVotings({status:$STARTED, "date_ended":{"$lte":$block_time}}, {"status":$FINISHED})
     }
 }
