@@ -1,18 +1,18 @@
 SetVar(this_page, @1ts_sales).(this_table, @1ts_sales)
 Include(@1pager_header)
 
-DBFind(@1applications).Where({"ecosystem": #ecosystem_id#, "name": "Token sale"}).Columns("id").Vars(application)
-SetVar(admin_role_id, EcosysParam(Name:role_sale_admin))
-SetVar(manager_role_id, EcosysParam(Name:role_sale_manager))
-SetVar(seller_role_id, EcosysParam(Name:role_sale_seller))
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Token sale"}).Vars("app")
+SetVar(admin_role_id, AppParam(App: #app_id#, Name: "ts_role_sale_admin"))
+SetVar(manager_role_id, AppParam(App: #app_id#, Name: "ts_role_sale_manager"))
+SetVar(seller_role_id, AppParam(App: #app_id#, Name: "ts_role_sale_seller"))
 SetVar(STATUS_MANAGER,1).(STATUS_SELLER,2)
 
 SetTitle("$@1ts_sales$")
-If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
+If(And(#admin_role_id# > 0, #role_id# == #admin_role_id#)){
     AddToolButton(Title:$@1ts_add_transfer$, Page: @1ts_transfer_admin, Icon: icon-wallet).Popup(Header: $@1ts_add_transfer$, Width: "50")
 }
 
-If(GetVar(search)){
+If(#search#){
     SetVar(where, {"id": "#search#"})
 }.Else{
     SetVar(where, {"id": {"$gt": 0}})
@@ -41,15 +41,15 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
         Span(Class: text-bold h5, Body: LangRes(@1information))
     }.Popup(Header: $@1information$, Width: 35)
 }.Custom(_status){
-    SetVar(status_class, AppParam(App:#application_id#, Name:ts_statuses_classes, Index:#status#, Ecosystem: #ecosystem_id#))
+    SetVar(status_class, AppParam(App:#app_id#, Name:ts_statuses_classes, Index:#status#, Ecosystem: #ecosystem_id#))
     Div(#status_class#){
-        AppParam(App:#application_id#, Name:ts_statuses, Index:#status#, Ecosystem: #ecosystem_id#)
+        AppParam(App:#app_id#, Name:ts_statuses, Index:#status#, Ecosystem: #ecosystem_id#)
     }
 }.Custom(_action){
-    If(And(#status#==#STATUS_MANAGER#,#manager_role_id#>0,#role_id#==#manager_role_id#)){
+    If(And(#status# == #STATUS_MANAGER#, #manager_role_id# > 0, #role_id# == #manager_role_id#)){
         Button(Class: fa fa-play btn btn-primary, Page: @1ts_transfer_manager, PageParams: "SaleId=#id#")
     }
-    If(And(#status#==#STATUS_SELLER#,#seller_role_id#>0,#role_id#==#seller_role_id#)){
+    If(And(#status# == #STATUS_SELLER#, #seller_role_id# > 0, #role_id# == #seller_role_id#)){
         Button(Class: fa fa-play btn btn-primary, Page: @1ts_transfer_seller, PageParams: "SaleId=#id#")
     }
 }.Custom(_buyer){
@@ -78,7 +78,7 @@ Div(fullscreen){
                 Table(src, "$@1id$=_id,$@1key_id_investor$=_buyer,$@1wallets$=_wlts,$@1information$=_info,$@1investor_funds_transfer_date$=_btat,$@1created_at$=_cat,$@1status$=_status,=_action,=_amount")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1sales$ $@1not_founded$")
-            }                       
+            }
         }.Style(
             margin-top:-15px;
             tbody > tr:nth-of-type(odd) {

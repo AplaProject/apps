@@ -12,16 +12,16 @@ contract ValidatorRequest {
         if $ecosystem_id != 1 {
             warning LangRes("@1contract_first_ecosystem_only", "en")
         }
-        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $KeyId}).Row(){
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $KeyId}).Row() {
             warning LangRes("@1address_invalid", "en")
         }
     }
 
     action {
-        var roleParam string roleId int
-        roleParam = "role_candidate_for_validators"
-        roleId = Int(EcosysParam(roleParam))
-        if !DBFind("@1roles").Where({"ecosystem": 1, "id": roleId, "deleted": 0}).One("id"){
+        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
+        var roleId int
+        roleId = Int(AppParam(Int($system_app_id), "role_candidate_for_validators", $ecosystem_id))
+        if !DBFind("@1roles").Where({"ecosystem": 1, "id": roleId, "deleted": 0}).One("id") {
             warning Sprintf(LangRes("@1role_app_param_not_found", "en"), roleParam)
         }
         @1RolesAssign("rid,member_id", roleId, $key_id)

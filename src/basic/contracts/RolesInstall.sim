@@ -1,8 +1,26 @@
 contract RolesInstall {
-    data {}
+
+    func updateParam(name string, value int) {
+        var app_param map
+        app_param = DBFind("@1app_params").Where({"ecosystem": $ecosystem_id, "app_id": $app_id, "name": name}).Row()
+        if app_param {
+            var params map
+            params["Id"] = Int(app_param["id"])
+            params["Value"] = value
+            params["Conditions"] = "ContractConditions(\"MainCondition\")"
+            CallContract("@1EditAppParam", params)
+        } else {
+            var params map
+            params["ApplicationId"] = $app_id
+            params["Name"] = name
+            params["Value"] = value
+            params["Conditions"] = "ContractConditions(\"MainCondition\")"
+            CallContract("@1NewAppParam", params)
+        }
+    }
 
     func addRole(name string, withParticipant bool, managerId int) int{
-        var m param map paramName string id int
+        var m map paramName string id int
         m["role_name"] = name
         m["role_type"] = 3
         m["ecosystem"] = $ecosystem_id
@@ -22,14 +40,7 @@ contract RolesInstall {
             id = DBInsert("@1roles", m)
         }
         paramName = "role_" + Replace(ToLower(name), " ", "_")
-        param = Int(EcosysParam(paramName))
-        if param == 0{
-            var params map
-            params["Name"] = paramName
-            params["Value"] = id
-            params["Conditions"] = "ContractConditions(\"MainCondition\")"
-            CallContract("@1NewParameter", params)
-        }
+        updateParam(paramName, id)
 
         if withParticipant {
             var participant map
@@ -55,26 +66,20 @@ contract RolesInstall {
     }
 
     action {
+        $app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
         var managerId int
         managerId = addRole("Admin", true, 0)
         @1RolesAccessManager("Action,Rid,ManagerRid", "add", managerId, managerId)
         addRole("Developer", true, managerId)
 
-        if $ecosystem_id == 1{
+        if $ecosystem_id == 1 {
             addRole("Consensus", false, managerId)
             addRole("Candidate for validators", false, managerId)
             addRole("Validator", false, managerId)
             addRole("Investor with voting rights", false, managerId)
             addRole("Delegate", false, managerId)
         }
-        var role_creates_roles string
-        role_creates_roles = EcosysParam("role_creates_roles")
-        if !role_creates_roles {
-            var params map
-            params["Name"] = "role_creates_roles"
-            params["Value"] = 0
-            params["Conditions"] = "ContractConditions(\"MainCondition\")"
-            CallContract("@1NewParameter", params)
-        }
+
+        updateParam("role_creates_roles", 0)
     }
 }

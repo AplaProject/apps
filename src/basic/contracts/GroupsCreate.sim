@@ -33,18 +33,19 @@ contract GroupsCreate {
                 info LangRes("@1group_type_error", "en")
             }
         }
-        $check_access = EcosysParam("role_creates_groups")
+        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
+        $check_access = Int(AppParam(Int($system_app_id), "role_creates_groups", $ecosystem_id))
         if $check_access && Str($check_access) != "0" {
             var rids array
-            rids = JSONDecode("["+$check_access+"]")  
+            rids = JSONDecode("["+$check_access+"]")
             if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in":rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
                 warning LangRes("@1access_denied", "en")
             }
         } else {
             var admin_id int
-            admin_id = EcosysParam("role_admin")
+            admin_id = Int(AppParam(Int($system_app_id), "role_admin", $ecosystem_id))
             var rids array
-            rids = JSONDecode("["+admin_id+"]")  
+            rids = JSONDecode("["+admin_id+"]")
             if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
                 warning LangRes("@1access_denied", "en")
             }

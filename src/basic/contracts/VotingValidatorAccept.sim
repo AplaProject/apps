@@ -7,20 +7,21 @@ contract VotingValidatorAccept {
 
     func getRoleId(name string, warn bool) int {
         var rid int
-        rid = Int(EcosysParam(name))
-        if rid == 0 && warn{
-            warning Sprintf(LangRes("@1role_not_set_eco_parameter", "en"), name)
+        rid = Int(AppParam(Int($system_app_id), name, $ecosystem_id))
+        if rid == 0 && warn {
+            warning Sprintf(LangRes("@role_not_set_application_parameter", "en"), name)
         }
         return rid
     }
 
-    func conditions {
+    conditions {
+        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
         var prev string
         prev = $stack[0]
-        if Len($stack) > 2{
+        if Len($stack) > 2 {
             prev = $stack[Len($stack) - 2]
         }
-        if prev != "@1VotingDecisionCheck"{
+        if prev != "@1VotingDecisionCheck" {
             warning LangRes("@1contract_start_votingdecisioncheck_only", "en")
         }
 
@@ -30,7 +31,7 @@ contract VotingValidatorAccept {
         if !DBFind("@1voting_templates").Where({"ecosystem": $ecosystem_id, "id": templateId}).One("id"){
             warning LangRes("@1voting_template_not_found", "en")
         }
-        if $VotingTemplateId != templateId{
+        if $VotingTemplateId != templateId {
             warning LangRes("@1template_incorrect", "en")
         }
 
@@ -50,7 +51,7 @@ contract VotingValidatorAccept {
         }
     }
 
-    func action {
+    action {
         if $oldRoleRowId > 0 {
             @1RolesUnassign("row_id", $oldRoleRowId)
         }
