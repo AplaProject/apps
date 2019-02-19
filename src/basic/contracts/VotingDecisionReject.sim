@@ -18,12 +18,6 @@ contract VotingDecisionReject {
         }
     }
 
-    func getUnixDataEnd(d string) int {
-        d = Replace(d, "T", " ")
-        d = Replace(d, "Z", "")
-        return UnixDateTime(d)
-    }
-
     conditions {
         $INVALID = 1
         $WAITING = 2
@@ -39,7 +33,7 @@ contract VotingDecisionReject {
                 warning LangRes("@1voting_role_incorrect", "en")
             }
         }
-        if $voting["status"] == $FINISHED || $block_time > getUnixDataEnd($voting["date_ended"]) {
+        if $voting["status"] == $FINISHED || $block_time > Int($voting["date_ended"]) {
             warning LangRes("@1voting_expired_can_not_vote", "en")
         }
         if $voting["status"] != $STARTED {
@@ -82,7 +76,7 @@ contract VotingDecisionReject {
 
         if $voting["flags.decision"] != 1 {
             var m map
-            m["decision_date"] = BlockTime()
+            m["decision_date"] = $block_time
             m["decision"] = -1
             DBUpdate("@1votings_participants", Int($participant["id"]), m)
 
