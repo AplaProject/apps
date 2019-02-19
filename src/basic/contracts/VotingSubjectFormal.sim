@@ -23,11 +23,13 @@ contract VotingSubjectFormal {
     conditions {
         $STARTED = 3
         $FINISHED = 4
-        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $votingID, "status":[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("id,date_started,flags->full_data,voting->type,optional").Row()
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $votingID, "status":[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("id,date_started,flags->full_data,voting->type,optional,creator->member_id").Row()
         if !$voting {
             warning LangRes("@1voting_started_can_not_edit", "en")
         }
-
+        if $voting["creator.member_id"] != $key_id {
+            warning LangRes("@1access_denied", "en")
+        }
         if $voting["flags.full_data"] == 1 && $voting["voting.type"] == 2 {
             warning LangRes("@1system_voting_can_not_edit", "en")
         }

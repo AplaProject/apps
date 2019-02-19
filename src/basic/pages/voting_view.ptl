@@ -10,7 +10,7 @@ SetVar(this_page,"@1voting_view")
 
 Div(content-wrapper){
     If(#vID# > 0){
-        DBFind(@1votings).WhereId(#vID#).Columns("id,voting->rating,voting->name,voting->volume,voting->quorum,voting->type_participants,voting->type,voting->count_type_voters,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended,status").Vars(instance)
+        DBFind(@1votings).WhereId(#vID#).Columns("id,voting->rating,voting->name,voting->volume,voting->quorum,voting->type_participants,voting->type,voting->count_type_voters,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended,status,creator->member_id").Vars(instance)
         SetVar(type_decision,#instance_voting_type_decision#)
         SetVar(type_participants,#instance_voting_type_participants#)
 
@@ -25,6 +25,11 @@ Div(content-wrapper){
                     SetVar(notific_id,#notificcc_id#)
                     If(And(#notificcc_notification_type#==2,#notificcc_date_start_processing#=="")){
                         SetVar(isStartProcessing,1)
+                    }
+                }.Else{
+                    DBFind(@1votings_participants).Where({"ecosystem": #ecosystem_id#, "member->member_id": #key_id#, "voting_id": #vID#}).Columns("id,decision_date").Vars(md)
+                    If(And(#md_id#>0, #md_decision_date#=="")){
+                        SetVar(isVotingAllowed,1)
                     }
                 }
             }
@@ -142,7 +147,6 @@ Div(content-wrapper){
                             Div(row t6){
                                 Div(col-md-6 text-right){
                                     LangRes(@1role)
-                                    Span(Class: text-danger, Body:*)
                                 }
                                 Div(col-md-6 text-left){
                                     If(#instance_optional_role_id# > 0){
@@ -203,14 +207,28 @@ Div(content-wrapper){
                                 Div(col-md-12){
                                     If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==1)){
                                         If(#type_decision#==1){
-                                            Button(Class: btn btn-link, Page: @1voting_decision_candidates, PageParams: "vID=#vID#"){
-                                                Strong(LangRes(@1subject_voting_edit))
-                                            }.Popup(60, $@1subject_voting$)
+                                            If(#instance_creator_member_id#==#key_id#){
+                                                Button(Class: btn btn-link, Page: @1voting_decision_candidates, PageParams: "vID=#vID#"){
+                                                    Strong(LangRes(@1subject_voting_edit))
+                                                }.Popup(60, $@1subject_voting$)
+                                            }.Else{
+                                                DBFind(@1votings_subject).Where({"voting_id": #vID#, "subject->member_id": #key_id#}).Columns("id").Vars(already_candidate)
+                                                If(#already_candidate_id#>0){
+                                                    SetVar(hidden,hidden)
+                                                }.Else{
+                                                    SetVar(hidden,)
+                                                }
+                                                Div(#hidden#){
+                                                    Button(Body: $@1can_apply_voting$, Class: btn btn-link, Page: #this_page#, PageParams: "vID=#vID#", Contract: @1VotingSubjectCandidates, Params: "votingID=#vID#,memberID=#key_id#")
+                                                }
+                                            }
                                         }
-                                        If(#type_decision#==2){
-                                            Button(Class: btn btn-link, Page: @1voting_decision_election, PageParams: "vID=#vID#"){
-                                                Strong(LangRes(@1subject_voting_edit))
-                                            }.Popup(60, $@1subject_voting$)
+                                        If(#instance_creator_member_id#==#key_id#){
+                                            If(#type_decision#==2){
+                                                Button(Class: btn btn-link, Page: @1voting_decision_election, PageParams: "vID=#vID#"){
+                                                    Strong(LangRes(@1subject_voting_edit))
+                                                }.Popup(60, $@1subject_voting$)
+                                            }
                                         }
                                     }
                                 }
@@ -239,9 +257,11 @@ Div(content-wrapper){
                             Div(row mt-sm t6){
                                 Div(col-md-12){
                                     If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==1)){
-                                        Button(Class: btn btn-link, Page: @1voting_decision_document, PageParams: "vID=#vID#"){
-                                            Strong(LangRes(@1subject_voting_edit))
-                                        }.Popup(60, $@1subject_voting$)
+                                        If(#instance_creator_member_id#==#key_id#){
+                                            Button(Class: btn btn-link, Page: @1voting_decision_document, PageParams: "vID=#vID#"){
+                                                Strong(LangRes(@1subject_voting_edit))
+                                            }.Popup(60, $@1subject_voting$)
+                                        }
                                     }
                                 }
                             }
@@ -338,9 +358,11 @@ Div(content-wrapper){
                             Div(row mt-sm t6){
                                 Div(col-md-12){
                                     If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==1)){
-                                        Button(Class: btn btn-link, Page: @1voting_decision_formal, PageParams: "vID=#vID#"){
-                                            Strong(LangRes(@1subject_voting_edit))
-                                        }.Popup(60, $@1subject_voting$)
+                                        If(#instance_creator_member_id#==#key_id#){
+                                            Button(Class: btn btn-link, Page: @1voting_decision_formal, PageParams: "vID=#vID#"){
+                                                Strong(LangRes(@1subject_voting_edit))
+                                            }.Popup(60, $@1subject_voting$)
+                                        }
                                     }
                                 }
                             }
@@ -388,9 +410,11 @@ Div(content-wrapper){
                             Div(row mt-sm t6){
                                 Div(col-md-12){
                                     If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==1)){
-                                        Button(Class: btn btn-link, Page: @1voting_decision_contract, PageParams: "vID=#vID#"){
-                                            Strong(LangRes(@1subject_voting_edit))
-                                        }.Popup(60, $@1subject_voting$)
+                                        If(#instance_creator_member_id#==#key_id#){
+                                            Button(Class: btn btn-link, Page: @1voting_decision_contract, PageParams: "vID=#vID#"){
+                                                Strong(LangRes(@1subject_voting_edit))
+                                            }.Popup(60, $@1subject_voting$)
+                                        }
                                     }
                                 }
                             }
@@ -513,9 +537,11 @@ Div(content-wrapper){
                             Div(col-md-12){
                                 If(#instance_voting_type#==1){
                                     If(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#)){
-                                        Button(Class: btn btn-link text-bold, Page: @1voting_invite, PageParams: "vID=#vID#"){
-                                            LangRes(@1participants_add)
-                                        }.Popup(60, $@1participants_add$)
+                                        If(#instance_creator_member_id#==#key_id#){
+                                            Button(Class: btn btn-link text-bold, Page: @1voting_invite, PageParams: "vID=#vID#"){
+                                                LangRes(@1participants_add)
+                                            }.Popup(60, $@1participants_add$)
+                                        }
                                     }
                                 }
                             }
