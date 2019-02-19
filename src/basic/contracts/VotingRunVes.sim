@@ -1,0 +1,19 @@
+contract VotingRunVes {
+    data {
+        EcosystemId int
+    }
+
+    conditions {
+        $app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Basic"}).One("id"))
+        $templateId = Int(DBFind("@1app_params").Where({"app_id": $app_id, "name": "voting_template_ves", "ecosystem": $ecosystem_id}).One("value"))
+        if $templateId == 0 {
+            warning LangRes("@1template_id_not_found", "en")
+        }
+    }
+
+    action {
+        var pars map
+        pars["EcosystemId"] = $EcosystemId
+        @1VotingTemplateRun("TemplateId,Duration,ContractAcceptParams", $templateId, 14, JSONEncode(pars))
+    }
+}
