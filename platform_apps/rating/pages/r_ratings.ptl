@@ -1,23 +1,20 @@
 SetVar(this_page, @1r_ratings).(this_table, @1keys)
 Include(@1pager_header)
 
-SetTitle($@1r_rating$)
-Span(Class: text-muted h5 m0 mb ml-lg){
-    $@1ecosystem_members_list_desc$
-}
+SetTitle($@1r_ratings$)
+Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1r_desc$"))
 
-SetVar(isManager,0)
-SetVar(admin_role_id, EcosysParam(Name:role_admin))
-If(#role_id#>0){
-    If(#admin_role_id#==#role_id#){
-        SetVar(isManager,1)
-    }
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Ratings"}).Vars(application)
+SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: ratings_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+If(#admin_access_id# > 0){
+    SetVar(isManager,1)
 }
 If(#isManager#==1){
-    AddToolButton(Title:$@1r_rating_group$, Page: @1r_rating_group, Icon: icon-calendar).Popup(Header: $@1r_rating_group$, Width: "50")
+    AddToolButton(Title: $@1r_rating_group$, Page: @1r_rating_group, Icon: icon-drawer).Popup(Header: $@1r_rating_group$, Width: "50")
 }
 
-If(GetVar(search)){
+If(#search#){
     SetVar(where, {"ecosystem": #ecosystem_id#, "id": {"$neq":#guest_key#}, "deleted": 0, "id": AddressToId(#search#)})
 }.Else{
     SetVar(where, {"ecosystem": #ecosystem_id#, "id": {"$neq":#guest_key#}, "deleted": 0})
@@ -62,7 +59,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
     }
 }.Custom(_actions){
     If(#isManager#==1){
-        Button(Page:@1r_rating_member, PageParams: "MemberId=#id#", Class: btn btn-default fa fa-plus pull-right).Popup(Header:$@1r_change_rating$, Width: 50)
+        Button(Page:@1r_rating_member, PageParams: "MemberId=#id#", Class: btn bg-gray-lighter fa fa-plus pull-right).Popup(Header:$@1r_change_rating$, Width: 50)
     }
 }
 

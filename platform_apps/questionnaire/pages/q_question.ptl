@@ -7,8 +7,10 @@ DBFind(@1q_answers).Where({"question_id": #question_id#}).Count(answers)
 DBFind(@1q_answers).Where({"question_id": #question_id#, member:#key_id#}).Vars(your_answer).Count(a)
 DBFind(@1members).Where({"ecosystem": #question_ecosystem#}).Count(total)
 
-
-If(#role_id#==1){
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Questionnaire"}).Vars(application)
+SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: q_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+If(#admin_access_id# > 0){
     SetVar(permission,1)
 }
 
@@ -99,10 +101,10 @@ Div(content-wrapper){
                                     ArrayToSource(src, #question_answer#)
                                     ForList(Source: src, Index:ind){
                                         If(#a#==0){
-                                            Button(Body: #value#, Page: @1q_question, Class: btn btn-primary ml-sm mr-sm, Contract: @1QAnswer, PageParams: "q_id=#question_id#", Params: "question_id=#question_id#, answer_id=#ind#, decision=#value#, operation=CV, notific_id=#notific_id#")
+                                            Button(Body: #value#, Page: @1q_question, Class: btn btn-primary ml-sm mr-sm, Contract: @1QAnswer, PageParams: "q_id=#question_id#", Params: "question_id=#question_id#,answer_id=#ind#,decision=#value#,operation=CV")
                                         }
                                         If(And(#question_params_change#==true,#a#>0)){
-                                            Button(Body: #value#, Page: @1q_question, Class: btn btn-primary ml-sm mr-sm, Contract: @1QAnswer, PageParams: "q_id=#question_id#", Params: "id=#your_answer_id#, question_id=#question_id#, answer_id=#ind#, decision=#value#, operation=UV, notific_id=#notific_id#")
+                                            Button(Body: #value#, Page: @1q_question, Class: btn btn-primary ml-sm mr-sm, Contract: @1QAnswer, PageParams: "q_id=#question_id#", Params: "id=#your_answer_id#,question_id=#question_id#,answer_id=#ind#,decision=#value#,operation=UV")
                                         }
                                     }     
                                 }

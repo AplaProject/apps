@@ -2,11 +2,14 @@ SetVar(this_page, @1polls_list).(this_table, @1votings)
 Include(@1pager_header)
 
 SetTitle($@1polls$)
-If(EcosysParam(Ecosystem:1, Name: role_admin) == #role_id#){
-    AddToolButton(Title: $@1polls_templates$, Page: @1polls_templates, Icon: fa icon-pin)
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Polls"}).Vars(application)
+SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: polls_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+If(#admin_access_id#>0){
+    AddToolButton(Title: $@1polls_templates$, Page: @1polls_templates, Icon: icon-pin)
 }
 
-If(GetVar(page_par)){
+If(#page_par#){
     If(#page_par#==3){
         SetVar(type_filter, {"status":3})
     }.ElseIf(#page_par#==4){
@@ -18,14 +21,14 @@ If(GetVar(page_par)){
     SetVar(page_par, "0")
 }
 
-If(GetVar(search)){
-    SetVar(where, {"$and": [{"ecosystem": #ecosystem_id#}, {"deleted": 0}, {"voting->type": 3}, GetVar(type_filter), {"voting->name": {"$like": "#search#"}}]})
+If(#search#){
+    SetVar(where, {"$and": [{"ecosystem": #ecosystem_id#}, {"deleted": 0}, {"voting->type": 3}, #type_filter#, {"voting->name": {"$ilike": "#search#"}}]})
 }.Else{
-    SetVar(where, {"$and": [{"ecosystem": #ecosystem_id#}, {"deleted": 0}, {"voting->type": 3}, GetVar(type_filter)]})
+    SetVar(where, {"$and": [{"ecosystem": #ecosystem_id#}, {"deleted": 0}, {"voting->type": 3}, #type_filter#]})
 }
 
 Div(btn-group ml-lg mr-lg){
-    If(EcosysParam(Ecosystem:#ecosystem_id#, Name: role_admin) == #role_id#){
+    If(#admin_access_id#>0){
         Button(Body: Em(Class: fa fa-refresh) $@1update_votings_statuses$, Class: btn bg-gray ml-sm, Page: #this_page#, Contract: @1VotingStatusUpdate)
     }
     Div(text-right){
@@ -42,7 +45,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 }
 
 SetVar(WAITING,1).(VALID,2).(STARTED,3).(FINISHED,4).(INVALID,5)
-DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
+DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(basic_application)
 
 DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->success,flags->decision,flags->full_data,progress->percent_success,progress->number_participants,creator->member_id,creator->member_name,date_started,date_ended,deleted,status,voting->count_type_voters,voting->volume,progress->number_voters").Count(count_votings).Custom(_id){
     Span(Class: h5, Body: #id#)
@@ -51,7 +54,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
         Span(Class: h5 text-bold m0, Body: #voting.name#)
     }
 }.Custom(_participants){
-    SetVar(participants, AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_participants, Index: #voting.type_participants#))
+    SetVar(participants, AppParam(Ecosystem:1, App:#basic_application_id#, Name: type_voting_participants, Index: #voting.type_participants#))
     Div(h6 m0){
         If(Or(#status#==#STARTED#,#status#==#FINISHED#,#voting.type#==2)){
             #participants#
@@ -72,9 +75,9 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
         P(Class: #finished_class#, Body: DateTime(DateTime: #date_ended#, Format: "DD.MM.YYYY HH:MI"))
     }
 }.Custom(_status){
-    SetVar(status_class, AppParam(Ecosystem:1, App:#application_id#, Name:voting_statuses_classes, Index:#status#))
+    SetVar(status_class, AppParam(Ecosystem:1, App:#basic_application_id#, Name:voting_statuses_classes, Index:#status#))
     Div(#status_class#){
-        AppParam(Ecosystem:1, App:#application_id#, Name:voting_statuses, Index:#status#)
+        AppParam(Ecosystem:1, App:#basic_application_id#, Name:voting_statuses, Index:#status#)
     }
 }.Custom(_result){
     If(#flags.decision#==0){

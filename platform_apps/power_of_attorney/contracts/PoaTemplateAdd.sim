@@ -23,17 +23,14 @@ contract PoaTemplateAdd {
     }
 
     conditions {
-        var role_id_param string
-        role_id_param = EcosysParam("role_admin")
-        if Size(role_id_param) == 0 {
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Power of attorney"}).One("id")
+        var admin_ids int
+        admin_ids = AppParam(Int($app), "poa_admin_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+admin_ids+"]")  
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
             warning LangRes("@1poa_not_rights_to_create", "en") 
         }
-        var role_id int
-        role_id = Int(role_id_param)
-        
-        if !RoleAccess(role_id) {
-            warning LangRes("@1poa_not_rights_to_create", "en") 
-        }  
     }
     
     action {

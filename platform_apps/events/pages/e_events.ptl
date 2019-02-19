@@ -2,29 +2,21 @@ SetVar(this_page, @1e_events).(this_table, @1e_events)
 Include(@1pager_header)
 
 SetTitle($@1e_events$)
-Span(Class: text-muted h5 m0 mb ml-lg){
-    $@1e_desc$
-}
+Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1e_desc$"))
 
-SetVar(isManager,0)
-SetVar(admin_role_id, EcosysParam(Name:role_admin))
-If(#role_id#>0){
-    If(#admin_role_id#==#role_id#){
-        SetVar(isManager,1)
-    }
-}
-If(#isManager#==1){
-    AddToolButton(Title:$@1e_types$, Page: @1e_type_form, Icon: icon-plus).Popup(50, $@1e_types$)
-    AddToolButton(Title:$@1create$, Page: @1e_event_form, Icon: icon-calendar)
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Events"}).Vars(application)
+SetVar(admin_ids, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: events_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_ids#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+If(#admin_access_id#>0){
+    AddToolButton(Title: $@1e_types$, Page: @1e_type_form, Icon: icon-docs).Popup(50, $@1e_types$)
+    AddToolButton(Title: $@1e_new_event$, Page: @1e_event_form, Icon: icon-plus)
 }
 
 SetVar(where_type,)
-If(GetVar(search)){
-    SetVar(where, {"name": {"$like": "#search#"}})
-}.ElseIf(GetVar(Type)>0){
-    If(#Type#>0){
-        SetVar(where_type, {type:#Type#})
-    }
+If(#search#){
+    SetVar(where, {"name": {"$ilike": "#search#"}})
+}.ElseIf(#Type#>0){
+    SetVar(where_type, {type: #Type#})
     SetVar(where, {"ecosystem": #ecosystem_id#, #where_type#})
 }.Else{
     SetVar(where, {"ecosystem": #ecosystem_id#, "id":{"$neq": 0}}).(Type, 0)
@@ -32,14 +24,17 @@ If(GetVar(search)){
 
 Div(mr-lg text-right){
     Button(Page: @1e_events_filter, Class: btn bg-gray-lighter mr-sm, PageParams: "sort=#sort#,page_par=#page_par#,search=#search#,current_page=#current_page#", Body: Em(Class: fa fa-filter) $@1filter$).Popup(Header: $@1filter$, Width: "50")
-}
+    If(#Type#){
+        Button(Page: #this_page#, Class: btn bg-gray-lighter mr-sm, Body: Em(Class: fa fa-close))
+    }
+}.Style(margin-top: -28px; z-index: 1001;)
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, $@1name$)
     Include(@1search)
 }
 
-DBFind(#this_table#, src).Where(#where#).Order({starting_date: 1, id:1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,name,description,starting_date,type,event_address_json,event_address_json->address,responsible").Custom(_responsible){
+DBFind(#this_table#, src).Where(#where#).Order({"starting_date": 1, "id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,name,description,starting_date,type,event_address_json,event_address_json->address,responsible").Custom(_responsible){
     Address(#responsible#)
 }.Custom(_type){
     SetVar(t_name,)
@@ -52,7 +47,7 @@ DBFind(#this_table#, src).Where(#where#).Order({starting_date: 1, id:1}).Limit(#
 }.Custom(_address){
     Button(Body:#event_address_json.address#, Page: @1e_map, Class: btn btn-link p0 m0, PageParams: "Coords=#event_address_json#").Popup(50, $@1e_map$)
 }.Custom(_actions){
-    Button(Page: @1e_event_form, Class: btn btn-default fa fa-pencil pull-right, PageParams: "Id=#id#")
+    Button(Page: @1e_event_form, Class: btn bg-gray-lighter fa fa-edit pull-right, PageParams: "Id=#id#")
 }.Count(count)
 
 Div(fullscreen){
