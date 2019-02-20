@@ -1,34 +1,33 @@
 contract DelegateRefresh {
-    data {}
-    
+
     func notInArray(val string, arr array) bool {
         var i int
         // info arr
-        while i < Len(arr){
-            if val == arr[i]{
+        while i < Len(arr) {
+            if val == arr[i] {
                 return false
             }
             i = i + 1
         }
         return true
     }
-    
+
     func getRoleId(name string) int {
         var rid int
-        rid = Int(EcosysParam(name))
-        if rid == 0{
-            warning Sprintf(LangRes("@1role_not_set_eco_parameter", "en"), name)
+        rid = Int(AppParam(Int($system_app_id), name, $ecosystem_id))
+        if rid == 0 {
+            warning Sprintf(LangRes("@role_not_set_application_parameter", "en"), name)
         }
         return rid
     }
-    
+
     conditions {
         MainCondition()
+        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
         var roleId int
         roleId = getRoleId("role_delegate")
-
         $role = DBFind("@1roles").Where({"id": roleId, "deleted": 0}).Row()
-        if !$role{
+        if !$role {
             warning LangRes("@1role_not_found", "en")
         }
     }
@@ -57,7 +56,7 @@ contract DelegateRefresh {
         currentDelegates = DBFind("@1roles_participants").Where({"role->id": rid, "deleted": 0}).Columns("id,member->member_id")
         var delegate map id int
         i = 0
-        while i < Len(currentDelegates){
+        while i < Len(currentDelegates) {
             delegate = currentDelegates[i]
             if notInArray(delegate["member.member_id"], delegateIds){
                 id = Int(delegate["id"])

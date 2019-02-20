@@ -27,6 +27,7 @@ contract MembershipAdd {
     }
 
     conditions {
+        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
         if $memberskeys == "" {
             warning LangRes("@1public_key_empty", "en")
         }
@@ -35,9 +36,9 @@ contract MembershipAdd {
         $memberskeys = Replace($memberskeys, "\r", "")
 
         var admin_id int
-        admin_id = EcosysParam("role_admin")
-       
-        if !RoleAccess(Int(admin_id)) {
+        admin_id = Int(AppParam(Int($system_app_id), "role_admin", $ecosystem_id))
+
+        if !RoleAccess(admin_id) {
             warning LangRes("@1access_denied", "en")
         }
 

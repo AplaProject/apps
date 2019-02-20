@@ -1,31 +1,31 @@
-DBFind(@1applications).Where({"ecosystem": #ecosystem_id#, "name": "Token sale"}).Columns("id").Vars(application)
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Token sale"}).Vars("app")
 
-SetVar(this_page, ts_transfer_manager)
-SetVar(role_param, role_sale_manager)
-SetVar(needed_role_id, EcosysParam(Name:#role_param#))
+SetVar(this_page, "ts_transfer_manager")
+SetVar(role_param, "ts_role_sale_manager")
+SetVar(needed_role_id, AppParam(App: #app_id#, Name: #role_param#))
 
-SetVar(isStartProcessing,0)
-If(#notific_id#>0){
+SetVar(isStartProcessing, 0)
+If(#notific_id# > 0){
     DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("page_params->sale_id,date_start_processing,notification->type,processing_info->member_id,closed").Vars(note)
-    If(#note_date_start_processing#!=""){
+    If(#note_date_start_processing# != ""){
         SetVar(isStartProcessing,1)
     }
-}.ElseIf(GetVar(SaleId)!=""){
+}.ElseIf(#SaleId# != ""){
     DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "page_params->sale_id": #SaleId#, "closed": 0}).Columns("page_params->sale_id,date_start_processing,notification->type,processing_info->member_id,id").Vars(note)
-    SetVar(notific_id,#note_id#)
-    If(#note_date_start_processing#!=""){
-        SetVar(isStartProcessing,1)
+    SetVar(notific_id, #note_id#)
+    If(#note_date_start_processing# != ""){
+        SetVar(isStartProcessing, 1)
     }
 }
 SetVar(sale_id,0)
-If(#note_page_params_sale_id#>0){
+If(#note_page_params_sale_id# > 0){
     DBFind(@1ts_sales).Where({"id": #note_page_params_sale_id#}).Vars(sale)
     DBFind(@1ts_wallets).Where({"key_id_buyer": #sale_key_id_buyer#}).Vars(wallet)
 }
 
 Div(content-wrapper){
     Form(){
-        If(And(#needed_role_id#>0,#role_id#==#needed_role_id#,#sale_id#>0)){
+        If(And(#needed_role_id# > 0, #role_id# == #needed_role_id#, #sale_id# > 0)){
             Div(list-group-item){
                 Div(text-center text-bold h4 m0){
                     LangRes(@1ts_transfer_manager)
@@ -101,14 +101,14 @@ Div(content-wrapper){
             }
             If(#sale_status# == 1){
                 Div(list-group-item){
-                    If(And(#note_processing_info_member_id#==#key_id#,#isStartProcessing#==1)){
+                    If(And(#note_processing_info_member_id# == #key_id#, #isStartProcessing# == 1)){
                         Button(Body: $@1reject$, Class: btn btn-default, Page: ts_transfer_reject, PageParams: "RoleParam=#role_param#,notific_id=#notific_id#,back_page=#this_page#").Popup(50,"Rejected comment")
                         Button(Body: $@1accept$, Class: btn btn-primary pull-right, Page: ts_sales, Contract: TsTransferManager, Params: "SaleId=#sale_id#,NotificId=#notific_id#")
-                    }.ElseIf(#isStartProcessing#==1){
+                    }.ElseIf(#isStartProcessing# == 1){
                         Div(text-muted text-center){
                             process begin another manager
                         }
-                    }.ElseIf(#isStartProcessing#==0){
+                    }.ElseIf(#isStartProcessing# == 0){
                         Div(text-right){
                             Button(Body: $@1processing$, Class: btn btn-primary, Page: #this_page#, PageParams: "notific_id=#notific_id#", Contract: @1NotificationsProcess, Params: "notific_id=#notific_id#")
                         }
@@ -117,11 +117,11 @@ Div(content-wrapper){
             }
         }.Else{
             Div(list-group-item text-center h4){
-                If(#needed_role_id#>0){
-                    If(#needed_role_id#!=#role_id#){
+                If(#needed_role_id# > 0){
+                    If(#needed_role_id# != #role_id#){
                         DBFind(@1parameters).Where({"ecosystem": #ecosystem_id#, "name": #role_param#}).Vars(param)
                         Div(h4){
-                            This page only for role from parameter LinkPage(Page: @1params_edit, PageParams: "id=#param_id#,back_page=#this_page#", Body:#role_param#)
+                            This page only for role from parameter LinkPage(Page: @1params_edit, PageParams: "id=#param_id#,back_page=#this_page#", Body: #role_param#)
                         }
                     }
                 }.Else{
@@ -133,8 +133,8 @@ Div(content-wrapper){
                     }
                 }
 
-                If(#note_id_page_params_sale_id#>0){
-                    If(#sale_id#>0){}.Else{
+                If(#note_id_page_params_sale_id# > 0){
+                    If(#sale_id# > 0){}.Else{
                         Sale not found
                     }
                 }.Else{

@@ -3,14 +3,16 @@ Include(@1pager_header)
 
 SetTitle("$@1member_management$")
 Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1member_management_desc$"))
-If(And(#role_id# == EcosysParam(role_admin),#ecosystem_id# != 1)){
-    AddToolButton(Title: $@1members_add$, Page:@1ecosystem_add_members, Icon: icon-plus).Popup(50, $@1ecosystem_add_members$)
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars("system_app")
+SetVar(role_admin, AppParam(App: #system_app_id#, Name: "role_admin"))
+If(And(#role_id# == #role_admin#, #ecosystem_id# != 1)){
+    AddToolButton(Title: $@1members_add$, Page: @1ecosystem_add_members, Icon: icon-plus).Popup(50, $@1ecosystem_add_members$)
 }
 
-If(GetVar(search)){
+If(#search#){
     SetVar(w_search, {"id": AddressToId(#search#)})
 }
-SetVar(where, {"ecosystem": #ecosystem_id#, "id": {"$neq":#guest_key#}, {GetVar(w_search)}})
+SetVar(where, {"ecosystem": #ecosystem_id#, "id": {"$neq":#guest_key#}, {#w_search#}})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, LangRes(@1wallet))
@@ -36,7 +38,7 @@ DBFind(#this_table#, src).Where(#where#).Order({deleted:"1", id:"1"}).Limit(#pag
         SetVar(member_name, Address(#id#))
     }
 }.Custom(custom_member_id){
-    If(Or(#ecosystem_id# == 1, GetVar(custom_token_title) != "")){
+    If(Or(#ecosystem_id# == 1, #custom_token_title# != "")){
         Button(Class: btn-xs btn-link, Page: @1tokens_send, PageParams: "v_key_id=#id#,back_page=#this_page#"){
             Span(Class: h5 #style_text#, Body: Address(#id#))
         }.Popup(Header: $@1tokens_send$, Width: "50")
