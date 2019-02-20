@@ -9,7 +9,7 @@ contract TsTransferAdmin {
 
     func getRoleId(name string) int {
         var rid int
-        rid = Int(EcosysParam(name))
+        rid = Int(AppParam(Int($app_id), name, $ecosystem_id))
         if rid == 0 {
             warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), name)
         }
@@ -33,22 +33,22 @@ contract TsTransferAdmin {
         $FINISHED = 3
         $REJECTED = 4
         if $AmountApl <= 0 {
-            warning "invalid amount APLA"
+            warning "Invalid amount of APLA"
         }
 
         $transferredAt = UnixDateTime(dateAddTime($TransferredDate, $TransferredTime))
         if $transferredAt == 0 {
-            warning "invalid transfer datetime"
+            warning "Invalid transfer datetime"
         }
 
-        $appId = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Token sale"}).One("id"))
-        if $appId == 0 {
+        $app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Token sale"}).One("id"))
+        if $app_id == 0 {
             warning LangRes("@1app_not_found", "en")
         }
 
-        $currentRole = getRoleId("role_sale_admin")
+        $currentRole = getRoleId("ts_role_sale_admin")
         if !RoleAccess($currentRole) {
-            warning "this action allowed only for role id #" + $currentRole
+            warning "This action is allowed only for the role id #" + $currentRole
         }
 
         if $CurrencyType <= 0 || $CurrencyType > 3 {
@@ -83,7 +83,7 @@ contract TsTransferAdmin {
         }
 
         if !$wallet {
-            warning "Buyer wallet not found"
+            warning "Buyer wallet is not found"
         }
     }
 
@@ -104,7 +104,7 @@ contract TsTransferAdmin {
         title = Sprintf("Check sale id %v", saleId)
         page = "ts_transfer_manager"
         params["sale_id"] = saleId
-        $roleAplManager = getRoleId("role_sale_manager")
+        $roleAplManager = getRoleId("ts_role_sale_manager")
         @1NotificationsSend("rid,sender,text_header,page_name,params_map,closure_type,current_role_id", $roleAplManager, 2, title, page, params, 1, $currentRole)
     }
 }

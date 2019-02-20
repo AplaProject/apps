@@ -10,7 +10,7 @@ SetVar(this_page,"@1voting_view")
 
 Div(content-wrapper){
     If(#vID# > 0){
-        DBFind(@1votings).WhereId(#vID#).Columns("id,voting->rating,voting->name,voting->volume,voting->quorum,voting->type_participants,voting->type,voting->count_type_voters,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended,status").Vars(instance)
+        DBFind(@1votings).WhereId(#vID#).Columns("id,voting->rating,voting->name,voting->volume,voting->quorum,voting->type_participants,voting->type,voting->count_type_voters,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended,status,creator->member_id").Vars(instance)
         SetVar(type_decision,#instance_voting_type_decision#)
         SetVar(type_participants,#instance_voting_type_participants#)
 
@@ -25,6 +25,11 @@ Div(content-wrapper){
                     SetVar(notific_id,#notificcc_id#)
                     If(And(#notificcc_notification_type#==2,#notificcc_date_start_processing#=="")){
                         SetVar(isStartProcessing,1)
+                    }
+                }.Else{
+                    DBFind(@1votings_participants).Where({"ecosystem": #ecosystem_id#, "member->member_id": #key_id#, "voting_id": #vID#}).Columns("id,decision_date").Vars(md)
+                    If(And(#md_id#>0, #md_decision_date#=="")){
+                        SetVar(isVotingAllowed,1)
                     }
                 }
             }
@@ -50,7 +55,7 @@ Div(content-wrapper){
 
                     Div(list-group-item text-center){
                         P(Class: h3 text-bold m0, Body: #instance_voting_name# (#instance_id#))
-                        Div(row){
+                        Div(row mt-sm){
                             Div(col-md-12){
                                 Div(Class: t5 text-muted m0, Body: AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_decisions, Index: #type_decision#))
                             }
@@ -66,83 +71,12 @@ Div(content-wrapper){
                             }
                         }
                     }
-
                     Div(list-group-item text-center){
-                        Div(row t6){
-                            Div(col-md-6 text-right){
-                                LangRes(@1type)
-                            }
-                            Div(col-md-6 text-left){
-                                AppParam(Ecosystem:1, App:#application_id#, Name: type_voting, Index: #instance_voting_type#)
-                            }
-                        }
-                        Div(row t6){
-                            Div(col-md-6 text-right){
-                                LangRes(@1vote_count_type)
-                            }
-                            Div(col-md-6 text-left){
-                                If(#instance_voting_count_type_voters#==1){
-                                    $@1number_votes$
-                                }.Else{
-                                    $@1percent_votes$
-                                }
-                            }
-                        }
-                        Div(row t6){
-                            Div(col-md-6 text-right){
-                                LangRes(@1voting_rating)
-                            }
-                            Div(col-md-6 text-left){
-                                If(#instance_voting_rating#==1){
-                                    $@1yes$ Span(Class:text-muted, Body: ($@1voting_rating_desc$))
-                                }.Else{
-                                    $@1no$ Span(Class:text-muted, Body: ($@1voting_rating_not_used$))
-                                }
-                            }
-                        }
-                        If(Or(#type_decision#==1,#type_decision#==2,#type_decision#==3,#type_decision#==4)){
-                            Div(row t6){
-                                Div(col-md-6 text-right){
-                                    LangRes(@1contract_accept)
-                                }
-                                Div(col-md-6 text-left){
-                                    If(#instance_optional_contract_accept# == ""){
-                                        Span(Class: text-muted, Body: LangRes(@1optional))
-                                    }.Else{
-                                        #instance_optional_contract_accept#
-                                    }
-                                }
-                            }
-                            Div(row t6){
-                                Div(col-md-6 text-right){
-                                    LangRes(@1contract_reject)
-                                }
-                                Div(col-md-6 text-left){
-                                    If(#instance_optional_contract_reject# == ""){
-                                        Span(Class: text-muted, Body: LangRes(@1optional))
-                                    }.Else{
-                                        #instance_optional_contract_reject#
-                                    }
-                                }
-                            }
-                        }
-                        Div(row t6){
-                            Div(col-md-6 text-right){
-                                LangRes(@1filled)
-                            }
-                            Div(col-md-6 text-left){
-                                If(#instance_flags_full_data# == 1){
-                                    Span(Class: text-success, Body: LangRes(@1yes))
-                                }.Else{
-                                    Span(Class: text-danger, Body: LangRes(@1no))
-                                }
-                            }
-                        }
+                        P(Class: h5 text-bold m0 mb, Body: $@1voting_subject$)
                         If(Or(#type_decision#==1,#type_decision#==2)){
                             Div(row t6){
                                 Div(col-md-6 text-right){
                                     LangRes(@1role)
-                                    Span(Class: text-danger, Body:*)
                                 }
                                 Div(col-md-6 text-left){
                                     If(#instance_optional_role_id# > 0){
@@ -203,14 +137,28 @@ Div(content-wrapper){
                                 Div(col-md-12){
                                     If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==1)){
                                         If(#type_decision#==1){
-                                            Button(Class: btn btn-link, Page: @1voting_decision_candidates, PageParams: "vID=#vID#"){
-                                                Strong(LangRes(@1subject_voting_edit))
-                                            }.Popup(60, $@1subject_voting$)
+                                            If(#instance_creator_member_id#==#key_id#){
+                                                Button(Class: btn btn-link, Page: @1voting_decision_candidates, PageParams: "vID=#vID#"){
+                                                    Strong(LangRes(@1subject_voting_edit))
+                                                }.Popup(60, $@1subject_voting$)
+                                            }.Else{
+                                                DBFind(@1votings_subject).Where({"voting_id": #vID#, "subject->member_id": #key_id#}).Columns("id").Vars(already_candidate)
+                                                If(#already_candidate_id#>0){
+                                                    SetVar(hidden,hidden)
+                                                }.Else{
+                                                    SetVar(hidden,)
+                                                }
+                                                Div(#hidden#){
+                                                    Button(Body: $@1can_apply_voting$, Class: btn btn-link, Page: #this_page#, PageParams: "vID=#vID#", Contract: @1VotingSubjectCandidates, Params: "votingID=#vID#,memberID=#key_id#")
+                                                }
+                                            }
                                         }
-                                        If(#type_decision#==2){
-                                            Button(Class: btn btn-link, Page: @1voting_decision_election, PageParams: "vID=#vID#"){
-                                                Strong(LangRes(@1subject_voting_edit))
-                                            }.Popup(60, $@1subject_voting$)
+                                        If(#instance_creator_member_id#==#key_id#){
+                                            If(#type_decision#==2){
+                                                Button(Class: btn btn-link, Page: @1voting_decision_election, PageParams: "vID=#vID#"){
+                                                    Strong(LangRes(@1subject_voting_edit))
+                                                }.Popup(60, $@1subject_voting$)
+                                            }
                                         }
                                     }
                                 }
@@ -239,9 +187,11 @@ Div(content-wrapper){
                             Div(row mt-sm t6){
                                 Div(col-md-12){
                                     If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==1)){
-                                        Button(Class: btn btn-link, Page: @1voting_decision_document, PageParams: "vID=#vID#"){
-                                            Strong(LangRes(@1subject_voting_edit))
-                                        }.Popup(60, $@1subject_voting$)
+                                        If(#instance_creator_member_id#==#key_id#){
+                                            Button(Class: btn btn-link, Page: @1voting_decision_document, PageParams: "vID=#vID#"){
+                                                Strong(LangRes(@1subject_voting_edit))
+                                            }.Popup(60, $@1subject_voting$)
+                                        }
                                     }
                                 }
                             }
@@ -259,143 +209,72 @@ Div(content-wrapper){
                             }
                         }
                         If(#type_decision#==4){
-                            DBFind(@1votings_subject, src_voting_subject).Where({"voting_id": #vID#}).Columns("id,subject->description,subject->table,subject->table_id,subject->column,subject->column_value,results->percent_accepted").Vars(subject)
-
-                            If(#instance_voting_type#==1){
-                                Div(row t6){
-                                    Div(col-md-6 text-right){
-                                        LangRes(@1table_to_written)
-                                        Span(Class: text-danger, Body:*)
-                                    }
-                                    Div(col-md-6 text-left){
-                                        If(#subject_id# > 0){
-                                            #subject_subject_table#
-                                        }.Else{
-                                            Span(Class:text-danger, Body: LangRes(@1not_filled))
-                                        }
-                                    }
-                                }
-                                Div(row t6){
-                                    Div(col-md-6 text-right){
-                                        LangRes(@1row_id)
-                                        Span(Class: text-danger, Body:*)
-                                    }
-                                    Div(col-md-6 text-left){
-                                        If(#subject_id# > 0){
-                                            #subject_subject_table_id#
-                                        }.Else{
-                                            Span(Class:text-danger, Body: LangRes(@1not_filled))
-                                        }
-                                    }
-                                }
-                            }
-                            Div(row t6){
-                                Div(col-md-6 text-right){
-                                    If(#instance_voting_type#==1){
-                                        LangRes(@1column_name)
-                                    }.Else{
-                                        LangRes(@1parameter_name)
-                                    }
-                                    Span(Class: text-danger, Body:*)
-                                }
-                                Div(col-md-6 text-left){
-                                    If(#subject_id# > 0){
-                                        #subject_subject_column#
-                                    }.Else{
-                                        Span(Class:text-danger, Body: LangRes(@1not_filled))
-                                    }
-                                }
-                            }
-                            Div(row t6){
-                                Div(col-md-6 text-right){
-                                    Span(Body: LangRes(@1written_value))
-                                    Span(Class: text-danger, Body:*)
-                                }
-                                Div(col-md-6 text-left break){
-                                    If(#subject_id# > 0){
-                                        #subject_subject_column_value#
-                                    }.Else{
-                                        Span(Class:text-danger, Body: LangRes(@1not_filled))
-                                    }
-                                }
-                            }
-                            Div(row t6){
-                                Div(col-md-6 text-right){
-                                    LangRes(@1description)
-                                }
-                                Div(col-md-6 text-left break){
-                                    If(#subject_id# > 0){
-                                        If(#subject_subject_description# == ""){
-                                            Span(Class:text-muted, Body: LangRes(@1optional))
-                                        }.Else{
-                                            #subject_subject_description#
-                                        }
-                                    }.Else{
-                                        Span(Class:text-muted, Body: LangRes(@1optional))
-                                    }
-                                }
-                            }
-                            Div(row mt-sm t6){
-                                Div(col-md-12){
-                                    If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==1)){
-                                        Button(Class: btn btn-link, Page: @1voting_decision_formal, PageParams: "vID=#vID#"){
-                                            Strong(LangRes(@1subject_voting_edit))
-                                        }.Popup(60, $@1subject_voting$)
-                                    }
-                                }
-                            }
-                            Div(row mt-sm){
-                                Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
-                                    If(#isStartProcessing#==1){
-                                        Button(Body: LangRes(@1process), Class: btn btn-info text-capitalize, Contract: @1NotificationsProcess, Params: "notific_id=#notific_id#", Page: #this_page#, PageParams: "notific_id=#notific_id#")
-                                    }.Else{
-                                        If(#isVotingAllowed#==1){
-                                            Button(Body: LangRes(@1reject), Class: btn btn-danger pull-left, Contract: @1VotingDecisionReject, PageParams: "vID=#vID#", Page: #this_page#, Params: "RoleId=#role_id#")
-                                            Button(Body: LangRes(@1accept), Class: btn btn-success pull-right, Contract: @1VotingDecisionAccept, PageParams: "vID=#vID#", Page: #this_page#, Params: "RoleId=#role_id#")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        If(#type_decision#==5){
-                            DBFind(@1votings_subject, src_voting_subject).Where({"voting_id": #vID#}).Columns("id,subject->contract_accept,subject->contract_reject,results->percent_accepted").Vars(subject)
+                            DBFind(@1votings_subject, src_voting_subject).Where({"voting_id": #vID#}).Columns("id,subject->contract_accept,subject->contract_accept_params,subject->contract_reject,subject->contract_reject_params,results->percent_accepted").Vars(subject)
                             Div(row t6){
                                 Div(col-md-6 text-right){
                                     LangRes(@1contract_accept)
-                                    Span(Class: text-danger, Body:*)
                                 }
                                 Div(col-md-6 text-left){
-                                    If(#subject_id# > 0){
+                                    If(#subject_subject_contract_accept#){
                                         #subject_subject_contract_accept#
                                     }.Else{
                                         Span(Class:text-danger, Body: LangRes(@1not_filled))
                                     }
                                 }
                             }
-                            Div(row t6){
+                            If(#subject_subject_contract_accept#){
+                                Div(row t6){
+                                    Div(col-md-6 text-right){
+                                        LangRes(@1arguments)
+                                    }
+                                    Div(col-md-6 text-left arguments){
+                                        If(Or(#subject_subject_contract_accept_params#=="",#subject_subject_contract_accept_params#=={})){
+                                            Span(Class: text-muted, Body: LangRes(@1no))
+                                        }.Else{
+                                            #subject_subject_contract_accept_params#
+                                        }
+                                    }
+                                }
+                            }
+                            Div(row t6 mt-sm){
                                 Div(col-md-6 text-right){
                                     LangRes(@1contract_reject)
-                                    Span(Class: text-danger, Body:*)
                                 }
                                 Div(col-md-6 text-left){
-                                    If(#subject_id# > 0){
+                                    If(#subject_subject_contract_reject#){
                                         #subject_subject_contract_reject#
                                     }.Else{
-                                        Span(Class:text-danger, Body: LangRes(@1not_filled))
+                                        Span(Class: text-muted, Body: LangRes(@1no))
+                                    }
+                                }
+                            }
+                            If(#subject_subject_contract_reject#){
+                                Div(row t6){
+                                    Div(col-md-6 text-right){
+                                        LangRes(@1arguments)
+                                    }
+                                    Div(col-md-6 text-left arguments){
+                                        If(Or(#subject_subject_contract_reject_params#=="",#subject_subject_contract_reject_params#=={})){
+                                            Span(Class: text-muted, Body: LangRes(@1no))
+                                        }.Else{
+                                            #subject_subject_contract_reject_params#
+                                        }
                                     }
                                 }
                             }
                             Div(row mt-sm t6){
                                 Div(col-md-12){
                                     If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==1)){
-                                        Button(Class: btn btn-link, Page: @1voting_decision_contract, PageParams: "vID=#vID#"){
-                                            Strong(LangRes(@1subject_voting_edit))
-                                        }.Popup(60, $@1subject_voting$)
+                                        If(#instance_creator_member_id#==#key_id#){
+                                            Button(Class: btn btn-link, Page: @1voting_decision_contract, PageParams: "vID=#vID#"){
+                                                Strong(LangRes(@1subject_voting_edit))
+                                            }.Popup(60, $@1subject_voting$)
+                                        }
                                     }
                                 }
                             }
                             Div(row mt-sm){
-                                Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
+                                Div(col-sm-4 col-sm-offset-4 col-lg-4 col-lg-offset-4){
                                     If(#isStartProcessing#==1){
                                         Button(Body: LangRes(@1process), Class: btn btn-info text-capitalize, Contract: @1NotificationsProcess, Params: "notific_id=#notific_id#", Page: #this_page#, PageParams: "notific_id=#notific_id#")
                                     }.Else{
@@ -408,8 +287,16 @@ Div(content-wrapper){
                             }
                         }
                     }
-
                     Div(list-group-item text-center t6){
+                        P(Class: h5 text-bold m0 mb, Body: $@1voting$)
+                        Div(row){
+                            Div(col-md-6 text-right){
+                                LangRes(@1type)
+                            }
+                            Div(col-md-6 text-left){
+                                AppParam(Ecosystem:1, App:#application_id#, Name: type_voting, Index: #instance_voting_type#)
+                            }
+                        }
                         Div(row){
                             Div(col-md-6 text-right){
                                 LangRes(@1status)
@@ -428,6 +315,42 @@ Div(content-wrapper){
                                     If(#instance_progress_number_participants#==0){
                                         Div(Class: text-muted){(LangRes(@1voting_no_participants))}
                                     }
+                                }
+                            }
+                        }
+                        Div(row){
+                            Div(col-md-6 text-right){
+                                LangRes(@1vote_count_type)
+                            }
+                            Div(col-md-6 text-left){
+                                If(#instance_voting_count_type_voters#==1){
+                                    $@1number_votes$
+                                }.Else{
+                                    $@1percent_votes$
+                                }
+                            }
+                        }
+                        Div(row){
+                            Div(col-md-6 text-right){
+                                LangRes(@1voting_rating)
+                            }
+                            Div(col-md-6 text-left){
+                                If(#instance_voting_rating#==1){
+                                    $@1yes$ Span(Class:text-muted, Body: ($@1voting_rating_desc$))
+                                }.Else{
+                                    $@1no$ Span(Class:text-muted, Body: ($@1voting_rating_not_used$))
+                                }
+                            }
+                        }
+                        Div(row){
+                            Div(col-md-6 text-right){
+                                LangRes(@1filled)
+                            }
+                            Div(col-md-6 text-left){
+                                If(#instance_flags_full_data# == 1){
+                                    Span(Class: text-success, Body: LangRes(@1yes))
+                                }.Else{
+                                    Span(Class: text-danger, Body: LangRes(@1no))
                                 }
                             }
                         }
@@ -499,7 +422,6 @@ Div(content-wrapper){
                         Div(row){
                             Div(col-md-6 text-right){
                                 LangRes(@1participants)
-                                Span(Class: text-danger, Body:*)
                             }
                             Div(col-md-6 text-left){
                                 If(#instance_progress_number_participants# > 0){
@@ -507,15 +429,75 @@ Div(content-wrapper){
                                 }.Else{
                                     Span(Class:text-danger, Body: #instance_progress_number_participants#)
                                 }
+                                If(#instance_voting_type#==1){
+                                    If(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#)){
+                                        If(#instance_creator_member_id#==#key_id#){
+                                            Button(Class: btn-xs btn-link text-bold ml, Page: @1voting_invite, PageParams: "vID=#vID#"){
+                                                LangRes(@1participants_add)
+                                            }.Popup(60, $@1participants_add$)
+                                        }
+                                    }
+                                }
+                            }.Style(margin-top: -3px;)
+                        }
+                    }
+                    Div(list-group-item text-center){
+                        P(Class: h5 m0 mb){
+                             Span(Class: text-bold, Body: $@1params$)
+                             Span(Class: text-normal text-muted ml, Body: $@1optional$)
+                        }
+                        Div(row mt t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1contract_accept)
+                                Span(Class: text-muted ml, Body: LangRes(@1optional))
+                            }
+                            Div(col-md-6 text-left){
+                                If(#instance_optional_contract_accept# == ""){
+                                    Span(Class: text-muted, Body: LangRes(@1no))
+                                }.Else{
+                                    #instance_optional_contract_accept#
+                                }
+                            }
+                        }
+                        If(#instance_optional_contract_accept#){
+                            Div(row t6){
+                                Div(col-md-6 text-right){
+                                    LangRes(@1arguments)
+                                    Span(Class: text-muted ml, Body: LangRes(@1optional))
+                                }
+                                Div(col-md-6 text-left arguments){
+                                    If(Or(#instance_optional_contract_accept_params#=="",#instance_optional_contract_accept_params#=={})){
+                                        Span(Class: text-muted, Body: LangRes(@1no))
+                                    }.Else{
+                                        #instance_optional_contract_accept_params#
+                                    }
+                                }
                             }
                         }
                         Div(row mt-sm t6){
-                            Div(col-md-12){
-                                If(#instance_voting_type#==1){
-                                    If(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#)){
-                                        Button(Class: btn btn-link text-bold, Page: @1voting_invite, PageParams: "vID=#vID#"){
-                                            LangRes(@1participants_add)
-                                        }.Popup(60, $@1participants_add$)
+                            Div(col-md-6 text-right){
+                                LangRes(@1contract_reject)
+                                Span(Class: text-muted ml, Body: LangRes(@1optional))
+                            }
+                            Div(col-md-6 text-left){
+                                If(#instance_optional_contract_reject# == ""){
+                                    Span(Class: text-muted, Body: LangRes(@1no))
+                                }.Else{
+                                    #instance_optional_contract_reject#
+                                }
+                            }
+                        }
+                        If(#instance_optional_contract_reject#){
+                            Div(row t6){
+                                Div(col-md-6 text-right){
+                                    LangRes(@1arguments)
+                                    Span(Class: text-muted ml, Body: LangRes(@1optional))
+                                }
+                                Div(col-md-6 text-left arguments){
+                                    If(Or(#instance_optional_contract_reject_params#=="",#instance_optional_contract_reject_params#=={})){
+                                        Span(Class: text-muted, Body: LangRes(@1no))
+                                    }.Else{
+                                        #instance_optional_contract_reject_params#
                                     }
                                 }
                             }
@@ -538,4 +520,5 @@ Div(content-wrapper){
     .t5 {font-size:14px;}
     .t6 {font-size:12px;}
     .break {word-break: break-all;}
+    .arguments {word-wrap: break-word;}
 )

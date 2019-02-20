@@ -5,7 +5,7 @@ contract NotificationsBroadcast {
         Body string
         Popup string "optional"
     }
-    
+
     func getMemberInfo(kid int) map {
         var res member map
         member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
@@ -13,7 +13,7 @@ contract NotificationsBroadcast {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
-        }else{
+        } else {
             if DBFind("@1keys").Columns("id").Where({"ecosystem": $ecosystem_id, "id": kid}).Row() {
                 res["member_id"] = Str(kid)
                 res["member_name"] = IdToAddress(kid)
@@ -22,9 +22,9 @@ contract NotificationsBroadcast {
         }
         return res
     }
-    
+
     conditions {
-        if $RoleId !=1 {
+        if $RoleId != 1 {
             warning LangRes("@1admin_only_action", "en")
         }
         if $ecosystem_id != 1 {
@@ -36,7 +36,7 @@ contract NotificationsBroadcast {
             warning LangRes("@1other_ecosystems_not_found", "en")
         }
     }
-    
+
     action {
         var i lenIds int eco map ids array sender recipient params note map
         sender = getMemberInfo($key_id)
@@ -50,18 +50,19 @@ contract NotificationsBroadcast {
         }else{
             note["popup"] = 0
         }
-        
-        while i < $lenEcos{
+
+        while i < $lenEcos {
             eco = $ecos[i]
             var ecoId int
             ecoId = Int(eco["id"])
             if ecoId != 1 {
+                $system_app_id = DBFind("@1applications").Where({"ecosystem": ecoId, "name": "System"}).One("id")
                 var adminRoleId int
-                adminRoleId = Int(DBFind("@1parameters").Where({"ecosystem": ecoId, "name": "role_admin"}).One("value"))
+                adminRoleId = Int(AppParam(Int($system_app_id), "role_admin", $ecosystem_id))
                 ids = DBFind("@1roles_participants").Where({"ecosystem": ecoId, "role->id": adminRoleId, "role->type": 3}).Columns("member->member_id")
                 lenIds = Len(ids)
                 var i_ids int
-                while i_ids < lenIds{
+                while i_ids < lenIds {
                     recipient = ids[i_ids]
                     recipient = getMemberInfo(Int(recipient["member.member_id"]))
                     var m map

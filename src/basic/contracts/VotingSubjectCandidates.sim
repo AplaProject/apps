@@ -3,7 +3,7 @@ contract VotingSubjectCandidates {
         votingID int
         memberID int
     }
-    
+
     func getMemberInfo(kid int) map {
         var res member map
         member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
@@ -25,7 +25,15 @@ contract VotingSubjectCandidates {
     conditions {
         $STARTED = 3
         $FINISHED = 4
-        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $votingID}).Columns("id,optional->number_candidates,voting->type,flags->full_data,status").Row()
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $votingID}).Columns("id,optional->number_candidates,voting->type,flags->full_data,status,creator->member_id,voting->type_decision").Row()
+        if !$voting {
+            warning LangRes("@1voting_started_can_not_edit", "en")
+        }
+        if $voting["creator.member_id"] != $key_id {
+            if !($voting["voting.type_decision"] == 1 && $memberID == $key_id){ // тип "Добавление кандидатов по запросу" позволяет пользователю самому добавлять себя
+                warning LangRes("@1access_denied", "en")
+            }
+        }
         if $voting["status"] == $STARTED {
             warning LangRes("@1voting_started_can_not_add_candidates", "en")
         }

@@ -1,19 +1,6 @@
 contract TokensRefundAccept {
     data {
-        Id string
-    }
-    func closeNotes() {
-        var notes array
-        notes = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "page_name": "@1voting_view", "page_params->voting_id": $votingID})
-        var i int
-        while i < Len(notes){
-            var note map
-            note = notes[i]
-            var noteId int
-            noteId = Int(note["id"])
-            @1NotificationsClose("notific_id", noteId)
-            i = i + 1
-        }
+        RefundId int
     }
 
     conditions {
@@ -26,31 +13,45 @@ contract TokensRefundAccept {
             warning LangRes("@1contract_start_votingdecisioncheck_only", "en")
         }
 
-        $Id = Int($Id)
-        $tokenrefund = DBFind("tokens_refund").Where({"id": $Id}).Row()
+        $tokenrefund = DBFind("@1tokens_refund").Where({"id": $RefundId}).Row()
         if !$tokenrefund {
             warning LangRes("@1tokens_refund_not_found", "en")
         }
 
-        $victimId = Int($tokenrefund["victim_key_id"])
-        $attackerId = Int($tokenrefund["attacker_key_id"])
+        $RecipientId = Int($tokenrefund["victim_key_id"])
+        $SenderId = Int($tokenrefund["attacker_key_id"])
         $amount = Money($tokenrefund["amount"])
         $votingID = Int($tokenrefund["voting_id"])
+
+        if $amount <= 0 {
+            warning LangRes("@1amount_less_equal_zero", "en")
+        }
+        
+        var sender map
+        sender = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $SenderId}).Row()
+        if !sender{
+            warning LangRes("@1sender_invalid", "en")
+        }
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $RecipientId}).Row(){
+            warning LangRes("@1recipient_invalid", "en")
+        }
+        if sender["amount"] < $amount {
+            warning Sprintf(LangRes("@1sender_amount_not_enough", "en"), sender["amount"])
+        }
     }
 
     action {
-        closeNotes()
+        if $tokenrefund["result"] == 0  {
+            TokensLockoutMember("KeyId,Value", $RecipientId, 0)
+            TokensLockoutMember("KeyId,Value", $SenderId, 0)
 
-        // status - 0. Accounts blocked, 1. Discussion, 2. Vote, 3. Closed
-        // result - 0. Discussion and voting, 1. Cancelled, 2. Tokens returned
-        if $tokenrefund["result"] == 1 || $tokenrefund["result"] == 2 || $tokenrefund["status"] == 3 {
-            return
+            @1TokensTransfer("Amount,SenderId,RecipientId,Comment", $amount, $SenderId, $RecipientId, "Refund tokens")
+
+            var m map
+            m["status"] = 2
+            m["result"] = 2
+            m["closed_at"] = $block_time
+            DBUpdate("@1tokens_refund", Int($RefundId), m)
         }
-
-        TokensLockoutMember("KeyId,Value", $victimId, 0)
-        TokensLockoutMember("KeyId,Value", $attackerId, 0)
-        
-        TokensRefund("SenderId,RecipientId,Amount", $attackerId, $victimId, $amount)
-        DBUpdate("tokens_refund", $Id, {status:3, result:2})
     }
 }

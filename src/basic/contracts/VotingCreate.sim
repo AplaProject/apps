@@ -17,14 +17,14 @@ contract VotingCreate {
         end_date string "optional"
         end_time string "optional"
     }
-    
+
     func trimZeroTime(s string) string {
         if Contains(s, "T00:00:00Z") {
             s = Replace(s, "T00:00:00Z", "")
         }
         return s
     }
-    
+
     func dateAddTime(d, t string) string {
         var dt string
         if Size(t) == 5 {
@@ -32,11 +32,11 @@ contract VotingCreate {
         }
         return dt
     }
-    
+
     func isCalledFromPage() bool {
         return $stack[0] == Sprintf("@%v%v", $ecosystem_id, $this_contract)
     }
-    
+
     func fixDatetimes() {
         $date_started = UnixDateTime(dateAddTime($start_date, $start_time))
         $date_ended = UnixDateTime(dateAddTime($end_date, $end_time))
@@ -99,16 +99,12 @@ contract VotingCreate {
         }
         if $voting_type == 2 {
             var systemAllowed map
-            systemAllowed["@1VotingTokensRefundCreate"] = 1
-            systemAllowed["@1VotingTemplateRun"] = 1
-            systemAllowed["@1VotingNodeAdd"] = 1
-            systemAllowed["@1VotingNodeRemove"] = 1
-            systemAllowed["@1VotingVesCreate"] = 1
-            systemAllowed["@1VotingValidatorCreate"] = 1
-            systemAllowed["@1VotingNodeAdd"] = 1
-            systemAllowed["@1VotingParamCreate"] = 1
-            systemAllowed["@1VotingNodeRemove"] = 1
-            systemAllowed["@1VotingEcosysParam"] = 1
+            systemAllowed["@1VotingRunEditPlatformParam"] = 1
+            systemAllowed["@1VotingRunNewValidator"] = 1
+            systemAllowed["@1VotingRunRemoveValidator"] = 1
+            systemAllowed["@1VotingRunVes"] = 1
+            systemAllowed["@1VotingRunTokenRefund"] = 1
+            systemAllowed["@1VotingRunEditEcosysParam"] = 1
             if systemAllowed[$stack[0]] != 1 {
                 warning Sprintf(LangRes("@1system_voting_can_not_start_from_x", "en"), $stack[0])
             }
@@ -118,7 +114,7 @@ contract VotingCreate {
         if !$key {
             warning LangRes("@1ecosystem_not_member", "en")
         }
-
+ 
         fixDatetimes()
     }
 
@@ -132,7 +128,7 @@ contract VotingCreate {
         voting["volume"] = $volume
         voting["quorum"] = $quorum
         voting["count_type_voters"] = $count_type_voters
-        if $rating == "true" {
+        if $rating == "true" || $rating == "1" {
             voting["rating"] = 1
         } else {
             voting["rating"] = 0

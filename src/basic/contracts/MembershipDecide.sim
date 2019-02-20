@@ -5,6 +5,7 @@ contract MembershipDecide {
     }
 
     conditions {
+        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
         $request = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $notific_id}).Columns("id,closed,sender->member_id,page_params->ecosystem_id,page_params->ecosystem_sender").Row()
         var ecoId int
         ecoId = Int($request["page_params.ecosystem_id"])
@@ -14,8 +15,8 @@ contract MembershipDecide {
         }
 
         var admin_id int
-        admin_id = EcosysParam("role_admin")
-        if !RoleAccess(Int(admin_id)) {
+        admin_id = Int(AppParam(Int($system_app_id), "role_admin", $ecosystem_id))
+        if !RoleAccess(admin_id) {
             warning LangRes("@1access_denied", "en")
         }
     }
@@ -28,10 +29,9 @@ contract MembershipDecide {
             var pub string mid eco_id int
             mid = Int($request["sender.member_id"])
             eco_id = Int($request["page_params.ecosystem_id"])
-            pub = DBFind("@1keys").Where({"ecosystem": 1, "id": mid}).One("pub") 
+            pub = DBFind("@1keys").Where({"ecosystem": 1, "id": mid}).One("pub")
             DBInsert("@1keys", {id:mid, pub:pub, ecosystem:$ecosystem_id})
-        }
-        else{
+        } else {
             params["status"] = 0
         }
 

@@ -4,37 +4,40 @@ contract TsTransferReject {
         RoleParam string
         NotificId int
     }
-    func getRoleId(name string) int{
+
+    func getRoleId(name string) int {
         var rid int
-        rid = Int(EcosysParam(name))
-        if rid == 0{
+        rid = Int(AppParam(Int($app_id), name, $ecosystem_id))
+        if rid == 0 {
             warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), name)
         }
         return rid
     }
-    conditions{
+
+    conditions {
         $WAITING_MANAGER = 1
         $WAITING_SELLER = 2
         $FINISHED = 3
         $REJECTED = 4
 
-        if !($RoleParam == "role_sale_manager" || $RoleParam == "role_sale_seller"){
-            warning "invalid role parameter"
+        if !($RoleParam == "ts_role_sale_manager" || $RoleParam == "ts_role_sale_seller") {
+            warning "Invalid role parameter"
         }
+        $app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Token sale"}).One("id"))
         var role noteSaleId int note map
         role = getRoleId($RoleParam)
-        if !RoleAccess(role){
-            warning "this action allowed only for role id #" + role
+        if !RoleAccess(role) {
+            warning "This action is allowed only for the role id #" + role
         }
         note = DBFind("@1notifications").Where({"id": $NotificId}).Columns("page_params->sale_id,date_start_processing,notification->type").Row()
-        if !note{
-            warning "Notification not found"
+        if !note {
+            warning "Notification is not found"
         }
         $needProcessing = note["date_start_processing"] == ""
         noteSaleId = Int(note["page_params.sale_id"])
         $sale = DBFind("ts_sales").Where({"id": noteSaleId}).Row()
         if !$sale {
-            warning "Sale not found"
+            warning "Sale is not found"
         }
         $saleId = Int($sale["id"])
     }
@@ -49,13 +52,13 @@ contract TsTransferReject {
         body = $Comment
         params["sale_id"] = $saleId
         sale["status"] = $REJECTED
-        if $RoleParam == "role_sale_manager"{
+        if $RoleParam == "ts_role_sale_manager" {
             sale["key_id_sale_apl_manager"] = $key_id
             sale["manager_reject_comment"] = $Comment
             sale["manager_rejected_at"] = $time
             prevKeyId = Int($sale["key_id_sale_apl_admin"])
 
-        }elif $RoleParam == "role_sale_seller"{
+        } elif $RoleParam == "ts_role_sale_seller" {
             sale["key_id_seller"] = $key_id
             sale["seller_reject_comment"] = $Comment
             sale["seller_rejected_at"] = $time
