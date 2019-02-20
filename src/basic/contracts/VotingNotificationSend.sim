@@ -2,7 +2,7 @@ contract VotingNotificationSend {
     data {
         votingID int
     }
-    
+
     func safeJsonToMap(m string) map {
         var res map
         if Size(m) > 0 {
@@ -10,17 +10,15 @@ contract VotingNotificationSend {
         }
         return res
     }
-    
+
     conditions {
         $key_address = IdToAddress($key_id)
-        var bt string
-        bt = BlockTime()
-        $voting = DBFind("@1votings").Columns("id,date_ended").Where({"ecosystem": $ecosystem_id, "id": $votingID, "date_ended":[{"$gt": bt}]}).One("id")
+        $voting = DBFind("@1votings").Columns("id,date_ended").Where({"ecosystem": $ecosystem_id, "id": $votingID, "date_ended":[{"$gt": $block_time}]}).One("id")
         if !$voting {
             warning LangRes("@1voting_expired_can_not_notify", "en")
         }
 
-        $voting = DBFind("@1votings").Columns("voting->name,creator->address,flags->notifics,flags,date_started").Where({"ecosystem": $ecosystem_id, "id": $votingID, "date_started":[{"$gt": bt}]}).Row()
+        $voting = DBFind("@1votings").Columns("voting->name,creator->address,flags->notifics,flags,date_started").Where({"ecosystem": $ecosystem_id, "id": $votingID, "date_started":[{"$gt": $block_time}]}).Row()
         if !$voting {
             warning LangRes("@1voting_not_started", "en")
         }
