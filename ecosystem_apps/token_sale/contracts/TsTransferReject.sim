@@ -33,7 +33,10 @@ contract TsTransferReject {
         if !note {
             warning "Notification is not found"
         }
-        $needProcessing = note["date_start_processing"] == ""
+        $needProcessing = 0
+        if note["date_start_processing"] == 0 {
+            $needProcessing = 1
+        }
         noteSaleId = Int(note["page_params.sale_id"])
         $sale = DBFind("ts_sales").Where({"id": noteSaleId}).Row()
         if !$sale {
@@ -43,7 +46,7 @@ contract TsTransferReject {
     }
 
     action {
-        if $needProcessing {
+        if $needProcessing == 1 {
             @1NotificationsProcess("notific_id", $NotificId)
         }
         @1NotificationsClose("notific_id", $NotificId)
