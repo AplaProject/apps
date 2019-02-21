@@ -1,17 +1,17 @@
 contract GroupsDelete {
     data {
-        gr_id int
-        ops string
+        GroupId int
+        Ops string
     }
 
     conditions {
-        @1GroupsAccessCheck("gr_id", $gr_id)
+        @1GroupsAccessCheck("GroupId", $GroupId)
     }
 
     action {
         // delete all participants
         var participants array i int
-        participants = DBFind("@1groups_participants").Where({"groups_info->id": $gr_id, "deleted": 0}).Columns("id")
+        participants = DBFind("@1groups_participants").Where({"groups_info->id": $GroupId, "deleted": 0}).Columns("id")
         while i < Len(participants) {
             var p map
             p = participants[i]
@@ -20,13 +20,13 @@ contract GroupsDelete {
         }
 
         var m map
-        if $ops == "D" {
+        if $Ops == "D" {
             m["deleted"] = 1
             m["date_deleted"] = $block_time
         }
-        if $ops == "R" {
+        if $Ops == "R" {
             m["deleted"] = 0
         }
-        DBUpdate("@1groups", $gr_id, m)
+        DBUpdate("@1groups", $GroupId, m)
     }
 }

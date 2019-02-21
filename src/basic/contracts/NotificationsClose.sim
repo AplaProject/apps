@@ -1,6 +1,6 @@
 contract NotificationsClose {
     data {
-        notific_id int
+        NotificId int
     }
 
     func getPermission() int {
@@ -24,7 +24,7 @@ contract NotificationsClose {
 
 
     conditions {
-        $notify = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $notific_id}).Columns("id,date_start_processing,processing_info->member_id,closed,notification->type,recipient->member_id,recipient->role_id").Row()
+        $notify = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $NotificId}).Columns("id,date_start_processing,processing_info->member_id,closed,notification->type,recipient->member_id,recipient->role_id").Row()
         if !$notify {
             warning LangRes("@1notification_not_found", "en")
         }
@@ -62,12 +62,12 @@ contract NotificationsClose {
             return
         }
         if $notify["notification.type"] == 1 {
-            @1NotificationsProcess("notific_id", $notific_id)
+            @1NotificationsProcess("NotificId", $NotificId)
         }
         var m map
         m["date_closed"] = $block_time
         m["closed"] = 1
-        DBUpdate("@1notifications", $notific_id, m)
+        DBUpdate("@1notifications", $NotificId, m)
 
         if $notify["notification.type"] == 1 {
             UpdateNotifications($ecosystem_id, Int($notify["recipient.member_id"]))
