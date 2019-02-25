@@ -5,14 +5,13 @@ contract QOperations {
         Question string
         Answer string
         Operation string
-        Status int
         Notifications bool "optional"
         Hide bool "optional"
         Change bool "optional"
         AuGroups int "optional"
         AuRoles int "optional"
-        end_date string
-        end_time string
+        EndDate string
+        EndTime string
     }
 
     func trimZeroTime(s string) string {
@@ -31,7 +30,7 @@ contract QOperations {
     }
 
     func expToTimestamp() {
-        $ext_string = dateAddTime($end_date, $end_time)
+        $ext_string = dateAddTime($EndDate, $EndTime)
         if $block_time > UnixDateTime($ext_string) {
             warning LangRes("@1ending_date_invalid", "en")
         }
@@ -39,7 +38,7 @@ contract QOperations {
 
     conditions {
         $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Questionnaire"}).One("id")
-        var admin_ids int
+        var admin_ids string
         admin_ids = AppParam(Int($app), "q_admin_role", $ecosystem_id)
         var rids array
         rids = JSONDecode("["+admin_ids+"]")
@@ -53,7 +52,7 @@ contract QOperations {
             i = 0
             while i < Len($groups) {
                 if $groups[i] == $AuRoles {
-                    warning LangRes("@1q_error_groups", "en") 
+                    warning LangRes("@1q_error_groups", "en")
                 }
                 i = i + 1
             }
@@ -64,22 +63,22 @@ contract QOperations {
             i = 0
             while i < Len($roles) {
                 if $roles[i] == $AuRoles {
-                    warning LangRes("@1q_error_roles", "en") 
+                    warning LangRes("@1q_error_roles", "en")
                 }
                 i = i + 1
             }
-        } 
+        }
         if $Operation == "AA" {
             if $Answer == "" {
-                warning LangRes("@1q_error_blank", "en") 
+                warning LangRes("@1q_error_blank", "en")
             }
         }
         if $Operation == "C" {
             if $Description == "" {
-                warning LangRes("@1q_error_blank", "en") 
+                warning LangRes("@1q_error_blank", "en")
             }
             if $Question == "" {
-                warning LangRes("@1q_error_blank", "en") 
+                warning LangRes("@1q_error_blank", "en")
             }
             expToTimestamp()
             if $block_time > UnixDateTime($ext_string) {
@@ -228,7 +227,7 @@ contract QOperations {
                 q["au_groups"] = JSONEncode(audience)
             }
             DBUpdate("@1q_list", $Id, q)
-        }        
+        }
         if $Operation == "T" {
             q["init"] = $key_id
             q["status"] = 1
