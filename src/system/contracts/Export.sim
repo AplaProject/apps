@@ -8,11 +8,13 @@ contract Export {
         res["data"] = items
         return JSONEncodeIndent(res, "    ")
     }
+
     func mapping(res map, resKey string, item map itemKey string){
         if item[itemKey] {
             res[resKey] = Str(item[itemKey])
         }
     }
+
     func prepareItem(item map, type string) string {
         var res map
         res["Type"] = type
@@ -33,7 +35,7 @@ contract Export {
         colsMap = JSONDecode(columnsJSON)
         columns = GetMapKeys(colsMap)
         var i int
-        while i < Len(columns){
+        while i < Len(columns) {
             if Size(columns[i]) > 0 {
                 var col map
                 col["name"] = columns[i]
@@ -49,21 +51,21 @@ contract Export {
     func exportTable(type string, result array) array {
         var items array limit offset i lenItems int item map
         limit = 250
-        while true{
+        while true {
             var rows array where map
             if type == "menu" {
                 if Len($menus_names) > 0 {
                     where["name"] = {"$in": $menus_names}
                     where["ecosystem"] = $ecosystem_id
                 }
-            }else{
+            } else {
                 where["app_id"] = $AppID
                 where["ecosystem"] = $ecosystem_id
             }
             if where {
                 var tbl string
                 tbl = "@1" + Str(type)
-                if (tbl == "@1languages"){
+                if tbl == "@1languages" {
                     rows = DBFind(tbl).Limit(limit).Offset(offset).Where({"ecosystem": $ecosystem_id})
                 } else {
                     rows = DBFind(tbl).Limit(limit).Offset(offset).Where(where)
@@ -75,7 +77,7 @@ contract Export {
                     items = Append(items, rows[i])
                     i = i + 1
                 }
-            }else{
+            } else {
                 break
             }
             offset = offset + limit
@@ -99,14 +101,14 @@ contract Export {
     conditions {
         var buf app map
         buf = DBFind("@1buffer_data").Columns("id,value->app_id,value->app_name").Where({"member_id": $key_id, "key": "export", "ecosystem": $ecosystem_id}).Row()
-        if !buf{
+        if !buf {
             warning LangRes("@1app_not_selected", "en")
         }
         $AppID = Int(buf["value.app_id"])
         $AppName = Str(buf["value.app_name"])
 
         app = DBFind("@1applications").Columns("id,conditions").Where({"id": $AppID, "ecosystem": $ecosystem_id}).Row()
-        if !app{
+        if !app {
             warning LangRes("@1app_not_found", "en")
         }
         $AppConditions = app["conditions"]
@@ -120,7 +122,6 @@ contract Export {
         items = exportTable("pages", items)
         items = exportTable("contracts", items)
         items = exportTable("blocks", items)
-        //items = exportTable("languages", items)
         items = exportTable("app_params", items)
         items = exportTable("tables", items)
         items = exportTable("menu", items)
