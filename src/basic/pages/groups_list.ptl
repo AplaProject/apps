@@ -71,7 +71,7 @@ DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": "1", "id": "1"
     }.Else{
         SetVar(access,)
     }
-    If(And(#group_access# != "NULL", #group_access# != "", #group_access# != "[]")){
+    If(And(#group_access#!="NULL",#group_access# != "",#group_access#!=[])){
         DBFind(@1roles,src_access_list).Where({"id": {"$in": #group_access#}}).Columns("id,role_name").Count(access_count).Order(role_name)
         Div(#style_text# breaker){
             ForList(src_access_list){
@@ -90,14 +90,14 @@ DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": "1", "id": "1"
     Div(text-right button-group text-nowrap){
         If(#access# == "done"){
             If(#deleted# == 0){
-                Button(Class: btn bg-gray-lighter, Contract: @1GroupsDelete, Params: "ops=D,gr_id=#id#", Page: @1groups_list){
+                Button(Class: btn bg-gray-lighter, Contract: @1GroupsDelete, Params: "Ops=D,GroupId=#id#", Page: @1groups_list){
                     Em(Class: text-danger fa fa-1x fa-trash)
                 }.Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
-                Button(Class: btn bg-gray-lighter mh-sm, PageParams: "gr_id=#id#", Page: @1groups_create){
+                Button(Class: btn bg-gray-lighter mh-sm, PageParams: "GroupId=#id#", Page: @1groups_create){
                     Em(Class: text-default fa fa-1x fa-edit)
                 }.Popup(50, $@1edit_group$)
             }.ElseIf(#deleted# == 1){
-                Button(Class: btn bg-gray-lighter mh-sm, Contract: @1GroupsDelete, Params: "ops=R,gr_id=#id#", Page: @1groups_list){
+                Button(Class: btn bg-gray-lighter mh-sm, Contract: @1GroupsDelete, Params: "Ops=R,GroupId=#id#", Page: @1groups_list){
                     Em(Class: text-info fa fa-1x fa-recycle)
                 }
             }
@@ -113,11 +113,11 @@ DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": "1", "id": "1"
     If(#deleted# == 0){
         DBFind("@1groups_participants").Columns("id,groups_info,groups_info->id,deleted,member,member->member_id").Where({"groups_info->id": #id#, "deleted": 0, "member->member_id": #key_id#}).Vars(j_l).Count(check_membership)
         If(And(#group_type# == 1, #check_membership# == 0)){
-            Button(Body: $@1join_the_group$, Class: btn btn-link pull-right, Contract: @1GroupsAssign, Page: @1groups_view, PageParams: "v_group_id=#id#", Params: "gr_id=#id#,member_id=#key_id#")
+            Button(Body: $@1join_the_group$, Class: btn btn-link pull-right, Contract: @1GroupsAssign, Page: @1groups_view, PageParams: "v_group_id=#id#", Params: "GroupId=#id#,MemberId=#key_id#")
         }.ElseIf(And(#group_type# == 1,#check_membership# == 1)){
-            Button(Body: $@1leave_the_group$, Class: btn btn-link pull-right, Contract: @1GroupsUnassign, Page: @1groups_list, Params:"row_id=#j_l_id#")
+            Button(Body: $@1leave_the_group$, Class: btn btn-link pull-right, Contract: @1GroupsUnassign, Page: @1groups_list, Params:"RowId=#j_l_id#")
         }.ElseIf(And(#group_type# == 2,#check_membership# == 0)){
-            Button(Body: $@1send_request$, Class: btn btn-link pull-right, Contract: @1GroupRequestMembership, Page: @1groups_view, PageParams:"v_group_id=#id#", Params: "gr_id=#id#")
+            Button(Body: $@1send_request$, Class: btn btn-link pull-right, Contract: @1GroupRequestMembership, Page: @1groups_view, PageParams:"v_group_id=#id#", Params: "GroupId=#id#")
         }
     }
 }.Custom(gr_info){

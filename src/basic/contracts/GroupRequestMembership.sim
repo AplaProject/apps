@@ -1,10 +1,10 @@
 contract GroupRequestMembership {
     data {
-        gr_id int
+        GroupId int
     }
 
     conditions {
-        $group = DBFind("@1groups").Where({"id": $gr_id}).Columns("id,deleted,group_type,group_name,image_id,creator->member_id,group_access,group_name").Row()
+        $group = DBFind("@1groups").Where({"id": $GroupId}).Columns("id,deleted,group_type,group_name,image_id,creator->member_id,group_access,group_name").Row()
         if !$group {
             warning LangRes("@1group_not_found", "en")
         }
@@ -14,11 +14,11 @@ contract GroupRequestMembership {
         if $group["deleted"] == 1 {
             warning LangRes("@1group_deleted_request_impossible", "en")
         }
-        $check_join = DBFind("@1groups_participants").Where({"deleted": 0, "member->member_id": $key_id, "groups_info->id": $gr_id, "ecosystem": $ecosystem_id}).Columns("id,deleted,member,member->member_id,groups_info,groups_info->id,ecosystem").One("id")
+        $check_join = DBFind("@1groups_participants").Where({"deleted": 0, "member->member_id": $key_id, "groups_info->id": $GroupId, "ecosystem": $ecosystem_id}).Columns("id,deleted,member,member->member_id,groups_info,groups_info->id,ecosystem").One("id")
         if $check_join {
             warning LangRes("@1already_group", "en")
         }
-        $check_send_notific = DBFind("@1notifications").Where({"sender->member_id": $key_id, "page_params->gr_id": $gr_id, "closed": 0, "ecosystem": $ecosystem_id}).Columns("id,closed,ecosystem,sender,sender->member_id,page_params->gr_id").One("id")
+        $check_send_notific = DBFind("@1notifications").Where({"sender->member_id": $key_id, "page_params->gr_id": $GroupId, "closed": 0, "ecosystem": $ecosystem_id}).Columns("id,closed,ecosystem,sender,sender->member_id,page_params->gr_id").One("id")
         if $check_send_notific {
             info LangRes("@1request_to_group", "en")
         }
@@ -28,7 +28,7 @@ contract GroupRequestMembership {
         var gr_ids array i int icon header body page ecoName string
 
         var params map
-        params["gr_id"] = $gr_id
+        params["gr_id"] = $GroupId
         params["member_id"] = $key_id
         icon = "icon icon-user-follow"
         header = "New request"
@@ -40,12 +40,12 @@ contract GroupRequestMembership {
             while i < Len(gr_ids) {
                 var id_role int
                 id_role = Int(gr_ids[i])
-                @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,eco_id,closure_type", id_role, 1, icon, header, body, page, params, $ecosystem_id,1)
+                @1NotificationsSend("Rid,Sender,Icon,Header,Body,Page,Params,EcosystemId,Closure", id_role, 1, icon, header, body, page, params, $ecosystem_id,1)
                 i = i + 1
             }
         } else{
             $creator_id = Int($group["creator.member_id"])
-            @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,eco_id", $creator_id, 1, icon, header, body, page, params, $ecosystem_id)
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params,EcosystemId", $creator_id, 1, icon, header, body, page, params, $ecosystem_id)
         }
     }
 }

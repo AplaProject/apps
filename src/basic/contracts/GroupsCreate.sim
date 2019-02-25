@@ -1,9 +1,9 @@
 contract GroupsCreate {
     data {
-        group_name string "optional"
-        group_type int "optional"
-        group_information string "optional"
-        gr_id int "optional"
+        GroupName string "optional"
+        GroupType int "optional"
+        GroupInfo string "optional"
+        GroupId int "optional"
     }
 
     func getMemberInfo(kid int) map {
@@ -25,19 +25,19 @@ contract GroupsCreate {
     }
 
     conditions {
-        if $gr_id == 0 {
-            if $group_name == "" {
+        if $GroupId == 0 {
+            if $GroupName == "" {
                 info LangRes("@1group_name_cannot_be_empty", "en")
             }
-            if $group_type == 0 {
+            if $GroupType == 0 {
                 info LangRes("@1group_type_error", "en")
             }
         }
         $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
-        $check_access = Int(AppParam(Int($system_app_id), "role_creates_groups", $ecosystem_id))
-        if $check_access && Str($check_access) != "0" {
+        $check_access = AppParam(Int($system_app_id), "role_creates_groups", $ecosystem_id)
+        if $check_access != "" {
             var rids array
-            rids = JSONDecode("["+$check_access+"]")
+            rids = JSONDecode("[" + $check_access + "]")
             if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in":rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
                 warning LangRes("@1access_denied", "en")
             }
@@ -45,18 +45,18 @@ contract GroupsCreate {
             var admin_id string
             admin_id = AppParam(Int($system_app_id), "role_admin", $ecosystem_id)
             var rids array
-            rids = JSONDecode("["+admin_id+"]")
+            rids = JSONDecode("[" + admin_id + "]")
             if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
                 warning LangRes("@1access_denied", "en")
             }
         }
-        if $group_name == DBFind("@1groups").Where({"ecosystem": $ecosystem_id, "group_name": $group_name}).One("group_name") {
+        if $GroupName == DBFind("@1groups").Where({"ecosystem": $ecosystem_id, "group_name": $GroupName}).One("group_name") {
             warning LangRes("@1group_name_already", "en")
         }
     }
 
     action {
-        if $gr_id == 0 {
+        if $GroupId == 0 {
             var roles_access_arr array, buffer map
             buffer = DBFind("@1buffer_data").Where({"ecosystem": $ecosystem_id, "member_id": $key_id, "key": "group_access"}).Columns("id,value,value->groups_access").Row()
             if buffer {
@@ -71,17 +71,17 @@ contract GroupsCreate {
 
             var m map
             m["creator"] = getMemberInfo($key_id)
-            m["group_name"] = $group_name
-            m["group_type"] = $group_type
+            m["group_name"] = $GroupName
+            m["group_type"] = $GroupType
             m["date_created"] = $block_time
             m["group_access"] = JSONEncode(roles_access_arr)
-            m["group_info"] = $group_information
+            m["group_info"] = $GroupInfo
             m["ecosystem"] = $ecosystem_id
             DBInsert("@1groups", m)
         } else {
             var m map
-            m["group_info"] = $group_information
-            DBUpdate("@1groups",$gr_id, m)
+            m["group_info"] = $GroupInfo
+            DBUpdate("@1groups",$GroupId, m)
         }
     }
 }

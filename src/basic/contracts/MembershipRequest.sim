@@ -1,6 +1,6 @@
 contract MembershipRequest {
     data {
-        ecosystem_num int
+        EcosystemId int
     }
 
     conditions {
@@ -8,25 +8,25 @@ contract MembershipRequest {
             warning LangRes("@1contract_first_ecosystem_only", "en")
         }
 
-        if $ecosystem_num == 1 {
+        if $EcosystemId == 1 {
             warning LangRes("@1impossible_for_platform_ecosystem", "en")
         }
 
-        if !DBFind("@1ecosystems").Where({"id": $ecosystem_num}).One("id"){
-            warning Sprintf(LangRes("@1template_eco_not_exist", "en"), $ecosystem_num)
+        if !DBFind("@1ecosystems").Where({"id": $EcosystemId}).One("id"){
+            warning Sprintf(LangRes("@1template_eco_not_exist", "en"), $EcosystemId)
         }
 
-        if DBFind("@1keys").Where({"id": $key_id, "ecosystem": $ecosystem_num}) {
+        if DBFind("@1keys").Where({"id": $key_id, "ecosystem": $EcosystemId}) {
             warning LangRes("@1member_added_before", "en")
         }
 
-        $free_membership = Int(DBFind("@1parameters").Where({"ecosystem": $ecosystem_num, "name": "free_membership"}).One("value"))
+        $free_membership = Int(DBFind("@1parameters").Where({"ecosystem": $EcosystemId, "name": "free_membership"}).One("value"))
         if $free_membership == 0 {
-            if DBFind("@1notifications").Where({"ecosystem": $ecosystem_num, "page_params->ecosystem_id": $ecosystem_num, "sender->member_id": $key_id, "closed": 0, "page_name": "@1membership_admin_view"}).Row(){
+            if DBFind("@1notifications").Where({"ecosystem": $EcosystemId, "page_params->ecosystem_id": $EcosystemId, "sender->member_id": $key_id, "closed": 0, "page_name": "@1membership_admin_view"}).Row(){
                 warning LangRes("@1request_sent_already", "en")
             }
 
-            $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_num, "name": "System"}).One("id")
+            $system_app_id = DBFind("@1applications").Where({"ecosystem": $EcosystemId, "name": "System"}).One("id")
             $admin_id = Int(AppParam(Int($system_app_id), "role_admin", $ecosystem_id))
             if $admin_id == 0 {
                 warning LangRes("@1recipient_role_not_found", "en")
@@ -37,28 +37,28 @@ contract MembershipRequest {
     action {
         if $free_membership == 0 {
             var notific_params map
-            notific_params["ecosystem_id"] = $ecosystem_num
+            notific_params["ecosystem_id"] = $EcosystemId
             notific_params["ecosystem_sender"] = $ecosystem_id
 
-            @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id", $admin_id, 1, "icon icon-user-follow", LangRes("@1membership_request_new", "en"), LangRes("@1details_view", "en"), "@1membership_admin_view", notific_params,1,$ecosystem_num)
+            @1NotificationsSend("Rid,Sender,Icon,Header,Body,Page,Params,Closure,EcosystemId", $admin_id, 1, "icon icon-user-follow", LangRes("@1membership_request_new", "en"), LangRes("@1details_view", "en"), "@1membership_admin_view", notific_params,1,$EcosystemId)
         }
         if $free_membership == 1 {
             var pub string
             pub = DBFind("@1keys").Where({"ecosystem": 1, "id": $key_id}).One("pub")
-            DBInsert("@1keys", {id:$key_id, pub:pub, ecosystem:$ecosystem_num})
+            DBInsert("@1keys", {id:$key_id, pub:pub, ecosystem:$EcosystemId})
 
             var params map
-            params["ecosystem_id"] = $ecosystem_num
+            params["ecosystem_id"] = $EcosystemId
             params["status"] = 1
 
             var icon header body page ecoName string
-            ecoName = DBFind("@1ecosystems").Where({"id": $ecosystem_num}).One("name")
+            ecoName = DBFind("@1ecosystems").Where({"id": $EcosystemId}).One("name")
             icon = "icon icon-user-follow"
             header = LangRes("@1request_approved", "en")
-            body = Sprintf(LangRes("@1ecosystem_request_approved", "en"), ecoName, $ecosystem_num)
+            body = Sprintf(LangRes("@1ecosystem_request_approved", "en"), ecoName, $EcosystemId)
             page = "@1membership_user_view"
 
-            @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,eco_id", $key_id, 1, icon, header, body, page, params, $ecosystem_id)
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params,EcosystemId", $key_id, 1, icon, header, body, page, params, $ecosystem_id)
         }
     }
 }

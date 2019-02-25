@@ -1,7 +1,7 @@
 contract RolesAssign {
     data {
-        rid int
-        member_id int
+        Rid int
+        MemberId int
     }
 
     func getMemberInfo(kid int) map {
@@ -23,7 +23,7 @@ contract RolesAssign {
     }
 
     conditions {
-        $role = DBFind("@1roles").Where({"id": $rid}).Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Row()
+        $role = DBFind("@1roles").Where({"id": $Rid}).Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Row()
         if (Int($role["role_type"]) == 2){
             warning LangRes("@1elective_role_voting_only", "en")
         }
@@ -31,7 +31,7 @@ contract RolesAssign {
             warning LangRes("@1role_not_found", "en")
         }
 
-        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $member_id}).Row() {
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $MemberId}).Row() {
             warning LangRes("@1key_not_found", "en")
         }
 
@@ -50,12 +50,12 @@ contract RolesAssign {
         specRules["@1InvestorRefresh"] = 1
 
         if specRules[prev_contract] != 1 {
-            @1RolesAccessCheck("rid", $rid)
+            @1RolesAccessCheck("Rid", $Rid)
         }
     }
 
     action {
-        if DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": $rid, "member->member_id": $member_id, "deleted": 0}).One("id") {
+        if DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": $Rid, "member->member_id": $MemberId, "deleted": 0}).One("id") {
             // do not re-assign and do not warning because this contract may be called for other
             return
         }
@@ -65,7 +65,7 @@ contract RolesAssign {
         role["name"] = $role["role_name"]
         role["image_id"] = $role["image_id"]
 
-        member = getMemberInfo($member_id)
+        member = getMemberInfo($MemberId)
         appointer = getMemberInfo($key_id)
         var m map
         m["role"] = role
