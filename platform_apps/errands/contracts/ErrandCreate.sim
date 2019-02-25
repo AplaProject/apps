@@ -7,7 +7,6 @@ contract ErrandCreate {
         ErrandName string
         ErrandText string
         RoleTypeErrand int "optional"
-
         EndDate string
         EndTime string "optional"
     }
@@ -35,18 +34,17 @@ contract ErrandCreate {
         $date_ended = dateAddTime($EndDate, $EndTime)
 
         if UnixDateTime($date_ended) == 0 { // invalid datetimes
-            if isCalledFromPage(){
-                var errs array
+            if isCalledFromPage() {
                 if Size($EndDate) < 10 {
-                    error LangRes("@1ending_date_invalid", "en")
+                    warning LangRes("@1ending_date_invalid", "en")
                 }
                 if Size($EndTime) < 5 {
-                    error LangRes("@1invalid_time_end", "en")
+                    warning LangRes("@1invalid_time_end", "en")
                 }
             }
         }
         if UnixDateTime($date_ended) < $block_time{
-            error LangRes("@1starting_date_invalid", "en")
+            warning LangRes("@1starting_date_invalid", "en")
         }
     }
 
@@ -82,7 +80,7 @@ contract ErrandCreate {
             $check_member = DBFind("@1members").Where({"id": $MemberId, "ecosystem": $ecosystem_id}).One("id")
             if (Int($check_member) == 0){
                 if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $MemberId}).Columns("id").Row() {
-                    error LangRes("@1member_not_found", "en")
+                    warning LangRes("@1member_not_found", "en")
                 }
             }
             if $EndDate == "" {
@@ -126,7 +124,7 @@ contract ErrandCreate {
                 errands = DBFind("@1roles_participants").Columns("id,role->id,member->member_id,ecosystem,deleted").Where({"role->id": $RecRoleId, "deleted": 0, "ecosystem": $ecosystem_id})
                 lenErrands = Len(errands)
                 if lenErrands == 0 {
-                    info(LangRes("@1recipient_role_no_members", "en"))
+                    info LangRes("@1recipient_role_no_members", "en")
                 }
                 while i < lenErrands{
                     v = errands[i]
