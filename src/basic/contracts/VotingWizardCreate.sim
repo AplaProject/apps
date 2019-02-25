@@ -44,7 +44,7 @@ contract VotingWizardCreate {
     }
 
     action {
-        var create_map subject_map invite_map m map votingID i int
+        var create_map subject_map invite_map m map voting_id i int
 
         create_map["Name"] = $Name
         create_map["Type"] = $Type
@@ -60,9 +60,9 @@ contract VotingWizardCreate {
         create_map["EndDate"] = $EndDate
         create_map["EndTime"] = $EndTime
 
-        votingID = CallContract("@1VotingCreate", create_map)
+        voting_id = CallContract("@1VotingCreate", create_map)
 
-        subject_map["votingID"] = votingID
+        subject_map["VotingId"] = voting_id
 
         if $ExecuteContract == "yes" || $TypeDecision == 4 {
             subject_map["ContractAccept"] = $ContractAccept
@@ -72,7 +72,7 @@ contract VotingWizardCreate {
         }
 
         if $TypeDecision == 1 && $Apply == 1 {
-            m["VotingId"] = votingID
+            m["VotingId"] = voting_id
             m["MemberId"] = 0
             CallContract("@1VotingSubjectCandidates", m)
             subject_map["RoleId"] = Int($RoleId)
@@ -83,7 +83,7 @@ contract VotingWizardCreate {
             candidates_list = Split($Candidates, ",")
             i = 0
             while i < Len(candidates_list) {
-                m["VotingId"] = votingID
+                m["VotingId"] = voting_id
                 m["MemberId"] = Int(candidates_list[i])
                 CallContract("@1VotingSubjectCandidates", m)
                 i = i + 1
@@ -99,9 +99,9 @@ contract VotingWizardCreate {
         }
 
         if Str($MemberParticipants) != "0" {
-            sendInvites(votingID, $MemberParticipants, "member")
+            sendInvites(voting_id, $MemberParticipants, "member")
         } elif Str($RoleParticipants) != "0" {
-            sendInvites(votingID, $RoleParticipants, "role")
+            sendInvites(voting_id, $RoleParticipants, "role")
         }
         DBUpdateExt("@1buffer_data", {"key": "voting_wizard_buffer", "member_id": $key_id, "ecosystem": $ecosystem_id}, {"value": "{}"})
     }
