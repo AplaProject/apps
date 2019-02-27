@@ -31,9 +31,14 @@ contract GroupRequestDecide {
         page = "@1groups_request_view"
         member = Int($notific["sender.member_id"])
         if $notific["recipient.role_id"] > 0 {
+            var check_send_notific array v map n_id int
+            check_send_notific = DBFind("@1notifications").Columns("id,closed,ecosystem,sender,sender->member_id,page_params->gr_id,page_params->member_id").Where({"sender->member_id":member,"page_params->gr_id":$gr_id,"page_params->member_id":member,"closed":0,"ecosystem":$ecosystem_id})
+            while i < Len(check_send_notific) {
+                v = check_send_notific[i]
+                @1NotificationsProcess("NotificId", Int(v["id"]))
+                @1NotificationsClose("NotificId", Int(v["id"]))
+            }
             @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params,EcosystemId,CurrentRid", member, 2, icon, header, body, page, params, $ecosystem_id, Int($notific["recipient.role_id"]))
-            @1NotificationsProcess("NotificId", $NotificId)
-            @1NotificationsClose("NotificId", $NotificId)
         } else{
             @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params,EcosystemId", member, 1, icon, header, body, page, params, $ecosystem_id)
             @1NotificationsClose("NotificId", $NotificId)
