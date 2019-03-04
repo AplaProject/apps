@@ -1,11 +1,11 @@
 contract NotificationsClose {
     data {
-        notific_id int
+        NotificId int
     }
 
     func getPermission() int {
         var array_permissions array result i int prevContract string
-        array_permissions = ["@1TokensRefundAccept", "@1TokensRefundReject", "@1VotingDecisionCheck", "@1VotingDelete", "@1ExOTC", "@1ExMatchingOTC"]
+        array_permissions = ["@1TokensRefundAccept", "@1TokensRefundReject", "@1VotingDecisionCheck", "@1VotingDelete", "@1QAnswer", "@1QOperations", "@1ErrandDelete", "@1GroupRequestDecide"]
 
         prevContract = $stack[0]
         if Len($stack) > 2 {
@@ -22,9 +22,8 @@ contract NotificationsClose {
         return result
     }
 
-
     conditions {
-        $notify = DBFind("@1notifications").Where({ecosystem:$ecosystem_id, id:$notific_id}).Columns("id,date_start_processing,processing_info->member_id,closed,notification->type,recipient->member_id,recipient->role_id").Row()
+        $notify = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $NotificId}).Columns("id,date_start_processing,processing_info->member_id,closed,notification->type,recipient->member_id,recipient->role_id").Row()
         if !$notify {
             warning LangRes("@1notification_not_found", "en")
         }
@@ -47,13 +46,13 @@ contract NotificationsClose {
 
         // checking role notification
         if $notify["notification.type"] == 2 && flag_permission == 0 {
-            if $notify["date_start_processing"] == "" {
+            if $notify["date_start_processing"] == 0 {
                 warning LangRes("@1notification_processing_not_started", "en")
             }
 
             if $notify["processing_info.member_id"] != $key_id {
                 warning LangRes("@1notice_processing_started_another_member", "en")
-            }     
+            }
         }
     }
 
@@ -62,12 +61,12 @@ contract NotificationsClose {
             return
         }
         if $notify["notification.type"] == 1 {
-            @1NotificationsProcess("notific_id", $notific_id)
+            @1NotificationsProcess("NotificId", $NotificId)
         }
         var m map
-        m["date_closed"] = BlockTime()
+        m["date_closed"] = $block_time
         m["closed"] = 1
-        DBUpdate("@1notifications", $notific_id, m)
+        DBUpdate("@1notifications", $NotificId, m)
 
         if $notify["notification.type"] == 1 {
             UpdateNotifications($ecosystem_id, Int($notify["recipient.member_id"]))

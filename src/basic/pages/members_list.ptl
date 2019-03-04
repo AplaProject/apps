@@ -3,14 +3,16 @@ Include(@1pager_header)
 
 SetTitle("$@1ecosystem_members$")
 Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1ecosystem_members_list_desc$"))
-If(And(#role_id# == EcosysParam(role_admin),#ecosystem_id# != 1)){
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars("system_app")
+SetVar(role_admin, AppParam(App: #system_app_id#, Name: "role_admin"))
+If(And(#role_id# == #role_admin#, #ecosystem_id# != 1)){
     AddToolButton(Title: $@1members_add$, Page:@1ecosystem_add_members, Icon: icon-plus).Popup(50, $@1ecosystem_add_members$)
 }
 
-If(GetVar(search)){
-    SetVar(where, {ecosystem:#ecosystem_id#, id:{"$neq":#guest_key#}, deleted:0, id:AddressToId(#search#)})
+If(#search#){
+    SetVar(where, {"ecosystem": #ecosystem_id#, "id": {"$neq":#guest_key#}, "deleted": 0, "id": AddressToId(#search#)})
 }.Else{
-    SetVar(where, {ecosystem:#ecosystem_id#, id:{"$neq":#guest_key#}, deleted:0}).(search,)
+    SetVar(where, {"ecosystem": #ecosystem_id#, "id": {"$neq":#guest_key#}, "deleted": 0})
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
@@ -25,7 +27,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
     SetVar(Name: style_link, Value: "text-primary")
     Span(Class: h6 text-muted, Body: #id#)
     SetVar(m_id, 0)
-    DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#id#}).Vars(m)
+    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Vars(m)
     If(Or(#m_id#>0,#m_id#<0)){
         SetVar(image_id, #m_image_id#)
         SetVar(member_name, #m_member_name#)
@@ -34,7 +36,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
         SetVar(member_name, Address(#id#))
     }
 }.Custom(custom_member_id){
-    If(Or(#ecosystem_id# == 1, GetVar(custom_token_title) != "")){
+    If(Or(#ecosystem_id# == 1, #custom_token_title# != "")){
         Button(Class: btn-xs btn-link, Page: @1tokens_send, PageParams: "v_key_id=#id#"){
             Span(Class: h5, Body: Address(#id#))
         }.Popup(Header: $@1tokens_send$, Width: "50")
@@ -62,7 +64,7 @@ Div(fullscreen){
                 Table(src, "$@1name$=custom_username,$@1wallet$=custom_member_id")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1members$ $@1not_founded$")
-            }                       
+            }
         }.Style(
             margin-top:-15px;
             tbody > tr:nth-of-type(odd) {

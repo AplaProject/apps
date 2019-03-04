@@ -1,30 +1,29 @@
 contract VotingCreate {
     data {
-        voting_name string
-        voting_type int
-        type_participants int
-        type_decision int
+        Name string
+        Type int
+        TypeParticipants int
+        TypeDecision int
 
-        quorum int
-        rating string "optional"
-        volume int "optional"
-
-        count_type_voters string "optional"
-        description string "optional"
-        interval string "optional"
-        start_date string "optional"
-        start_time string "optional"
-        end_date string "optional"
-        end_time string "optional"
+        Quorum int
+        Rating string "optional"
+        Volume int "optional"
+        CountTypeVoters string "optional"
+        Description string "optional"
+        Interval string "optional"
+        StartDate string "optional"
+        StartTime string "optional"
+        EndDate string "optional"
+        EndTime string "optional"
     }
-    
+
     func trimZeroTime(s string) string {
         if Contains(s, "T00:00:00Z") {
             s = Replace(s, "T00:00:00Z", "")
         }
         return s
     }
-    
+
     func dateAddTime(d, t string) string {
         var dt string
         if Size(t) == 5 {
@@ -32,46 +31,44 @@ contract VotingCreate {
         }
         return dt
     }
-    
+
     func isCalledFromPage() bool {
         return $stack[0] == Sprintf("@%v%v", $ecosystem_id, $this_contract)
     }
-    
-    func fixDatetimes() {
-        $date_started = dateAddTime($start_date, $start_time)
-        $date_ended = dateAddTime($end_date, $end_time)
 
-        if UnixDateTime($date_started) == 0 || UnixDateTime($date_ended) == 0 { // invalid datetimes
-            if isCalledFromPage(){
+    func fixDatetimes() {
+        $date_started = UnixDateTime(dateAddTime($StartDate, $StartTime))
+        $date_ended = UnixDateTime(dateAddTime($EndDate, $EndTime))
+
+        if $date_started == 0 || $date_ended == 0 { // invalid datetimes
+            if isCalledFromPage() {
                 var errs array
-                if Size($start_date) < 10 {
+                if Size($StartDate) < 10 {
                     errs = Append(errs, "starting date")
                 }
-                if Size($start_time) < 5 {
+                if Size($StartTime) < 5 {
                     errs = Append(errs, "starting time")
                 }
-                if Size($end_date) < 10 {
+                if Size($EndDate) < 10 {
                     errs = Append(errs, "ending date")
                 }
-                if Size($end_time) < 5 {
+                if Size($EndTime) < 5 {
                     errs = Append(errs, "ending time")
                 }
                 warning Sprintf(LangRes("@1voting_creation_error_x_unspecified", "en"), Join(errs, ", "))
-            }else{
+            } else {
                 $date_started = $block_time
-                $interval = Int($interval)
-                if $interval == 0 {
-                    $interval = 3
+                $Interval = Int($Interval)
+                if $Interval == 0 {
+                    $Interval = 3
                 }
-                $date_ended = $date_started + 3600 * 24 * $interval
-                $date_started = DateTime($date_started)
-                $date_ended = DateTime($date_ended)
+                $date_ended = $date_started + 3600 * 24 * $Interval
             }
         }
-        if UnixDateTime($date_started) < $block_time{
+        if $date_started < $block_time {
             warning LangRes("@1starting_date_invalid", "en")
         }
-        if UnixDateTime($date_started) >= UnixDateTime($date_ended){
+        if $date_started >= $date_ended {
             warning LangRes("@1ending_date_invalid", "en")
         }
     }
@@ -82,40 +79,37 @@ contract VotingCreate {
         $STARTED = 3
         $FINISHED = 4
 
-        if (($type_decision == 1 || $type_decision == 2) && $count_type_voters == 1){
+        if (($TypeDecision == 1 || $TypeDecision == 2) && $CountTypeVoters == 1) {
             info LangRes("@1voting_type_not_suitable", "en")
         }
-        if ($quorum < 1) || ($quorum > 100) {
-            warning Sprintf(LangRes("@1quorum_range_must_be", "en"), $quorum)
+        if ($Quorum < 1) || ($Quorum > 100) {
+            warning Sprintf(LangRes("@1quorum_range_must_be", "en"), $Quorum)
         }
-        if $count_type_voters == 0 && $type_decision != 1 && $type_decision != 2 {
-            if ($volume < 1) || ($volume > 100) {
-                warning Sprintf(LangRes("@1volume_range_must_be", "en"), $volume)
+        if $CountTypeVoters == 0 && $TypeDecision != 1 && $TypeDecision != 2 {
+            if ($Volume < 1) || ($Volume > 100) {
+                warning Sprintf(LangRes("@1volume_range_must_be", "en"), $Volume)
             }
         }
-        if $count_type_voters == 1 {
-            if $quorum < 1 {
+        if $CountTypeVoters == 1 {
+            if $Quorum < 1 {
                 info LangRes("@1voters_number_less_one", "en")
             }
-            $volume = 0
+            $Volume = 0
         }
-        if $voting_type == 2 {
-            var specRules map
-            specRules["@1VotingTokensRefundCreate"] = 1
-            specRules["@1VotingTemplateRun"] = 1
-            specRules["@1VotingNodeAdd"] = 1
-            specRules["@1VotingNodeRemove"] = 1
-            specRules["@1VotingVesCreate"] = 1
-            specRules["@1VotingValidatorCreate"] = 1
-            specRules["@1VotingNodeAdd"] = 1
-            specRules["@1VotingParamCreate"] = 1
-            specRules["@1VotingNodeRemove"] = 1
-            if specRules[$stack[0]] != 1 {
+        if $Type == 2 {
+            var systemAllowed map
+            systemAllowed["@1VotingRunEditPlatformParam"] = 1
+            systemAllowed["@1VotingRunNewValidator"] = 1
+            systemAllowed["@1VotingRunRemoveValidator"] = 1
+            systemAllowed["@1VotingRunVes"] = 1
+            systemAllowed["@1VotingRunTokenRefund"] = 1
+            systemAllowed["@1VotingRunEditEcosysParam"] = 1
+            if systemAllowed[$stack[0]] != 1 {
                 warning Sprintf(LangRes("@1system_voting_can_not_start_from_x", "en"), $stack[0])
             }
         }
 
-        $key = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$key_id}).Row()
+        $key = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $key_id}).Row()
         if !$key {
             warning LangRes("@1ecosystem_not_member", "en")
         }
@@ -125,15 +119,15 @@ contract VotingCreate {
 
     action {
         var voting progress flags creator map votingId int
-        voting["name"] = $voting_name
-        voting["type"] = $voting_type
-        voting["description"] = $description
-        voting["type_participants"] = $type_participants
-        voting["type_decision"] = $type_decision
-        voting["volume"] = $volume
-        voting["quorum"] = $quorum
-        voting["count_type_voters"] = $count_type_voters
-        if $rating == "true" {
+        voting["name"] = $Name
+        voting["type"] = $Type
+        voting["description"] = $Description
+        voting["type_participants"] = $TypeParticipants
+        voting["type_decision"] = $TypeDecision
+        voting["volume"] = $Volume
+        voting["quorum"] = $Quorum
+        voting["count_type_voters"] = $CountTypeVoters
+        if $Rating == "true" || $Rating == "1" {
             voting["rating"] = 1
         } else {
             voting["rating"] = 0
@@ -159,13 +153,13 @@ contract VotingCreate {
         m["status"] = $INVALID
         m["date_started"] = $date_started
         m["date_ended"] = $date_ended
-        m["ecosystem"] = $ecosystem_id,
+        m["ecosystem"] = $ecosystem_id
 
         votingId = DBInsert("@1votings", m)
 
         // if all members are voting participants
-        if $type_participants == 1 {
-            @1VotingInvite("votingID,var_id", votingId, 0)
+        if $TypeParticipants == 1 {
+            @1VotingInvite("VotingId,VarId", votingId, 0)
         }
 
         var buffer_data map

@@ -6,24 +6,24 @@ contract LrSettings {
         RoleDepart3 int
     }
 
-    conditions{
+    conditions {
         AdminCondition()
     }
 
-    func updateParam(name string, id int) {
-        if id > 0 {
-            var param paramsNew map app_id int
-            app_id = DBFind("@1applications").Where({ecosystem: $ecosystem_id, name: "Land registry"}).One("id")
-            if app_id > 0 {
-                param = DBFind("@1app_params").Where({ecosystem: $ecosystem_id, app_id: app_id, name: name}).Row()
-                paramsNew["Value"] = Str(id)
+    func updateParam(name string, value int) {
+        if value > 0 {
+            var param paramsNew map
+            if $app_id > 0 {
+                param = DBFind("@1app_params").Where({"ecosystem": $ecosystem_id, "app_id": $app_id, "name": name}).Row()
                 if param {
                     paramsNew["Id"] = Int(param["id"])
+                    paramsNew["Value"] = Str(value)
                     paramsNew["Conditions"] = param["conditions"]
                     CallContract("@1EditAppParam", paramsNew)
                 } else {
-                    paramsNew["App"] = Str(app_id)
+                    paramsNew["ApplicationId"] = $app_id
                     paramsNew["Name"] = name
+                    paramsNew["Value"] = Str(value)
                     paramsNew["Conditions"] = "ContractConditions(\"AdminCondition\")"
                     CallContract("@1NewAppParam", paramsNew)
                 }
@@ -34,6 +34,7 @@ contract LrSettings {
     }
 
     action {
+        $app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Land registry"}).One("id")
         updateParam("lr_admin_role", $RoleAdmin)
         updateParam("lr_bank_role", $RoleBank)
         updateParam("lr_depart2_role", $RoleDepart2)

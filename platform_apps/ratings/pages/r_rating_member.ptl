@@ -1,0 +1,95 @@
+SetVar(this_page, @1r_rating_member).(back_page, @1r_ratings)
+DBFind(@1e_types, types).Where({"ecosystem": #ecosystem_id#}).Columns("id,name")
+
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Ratings"}).Vars(application)
+SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: ratings_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+If(#admin_access_id# > 0){
+    SetVar(isManager,1)
+}
+
+Form(){
+    If(#isManager#==1){
+        Div(row){
+            Div(col-sm-4 mt-sm text-bold text-right){
+                Label(For:Member){
+                    $@1r_member$
+                }
+            }
+            Div(col-sm-8 text-left){
+                Div(input-group){
+                    If(#MemberId#!=""){
+                        SetVar(Member, Address(#MemberId#))
+                        Input(Name: Member, Disabled: 1, Value: #Member#)
+                    }.Else{
+                        Input(Name: Member, Disabled: 1, Value: "xxxx-xxxx-xxxx-xxxx-xxxx")
+                    }
+                    Div(input-group-btn){
+                        Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=#this_page#,back_header=$@1send$,EcosystemId=#ecosystem_id#,Id=#Id#").Popup(Header: $@1member$, Width: "50")
+                    }
+                }
+            }
+        }
+        If(#MemberId#!=""){
+            Div(row mt-sm){
+                Div(col-sm-4 mt-sm text-right){
+                    Label(For:Amount){
+                        $@1r_amount$
+                    }
+                }
+                Div(col-sm-8 text-left){
+                    Input(Name: Amount, Type: number)
+                }
+            }
+            DBFind(@1e_events, events).Where({"ecosystem": #ecosystem_id#}).Limit(10).Order("created_at").Columns("name,id")
+            Div(row mt-sm){
+                Div(col-sm-4 mt-sm text-right){
+                    Label(For:LastEvent){
+                        $@1r_last_events$
+                    }
+                }
+                Div(col-sm-8 mt-sm text-left){
+                    Input(Name: LastEvent, Type: "checkbox", Value: "true", Class: m0 ml-sm)
+                }
+            }
+            Div(row mt-sm){
+                Div(col-sm-4 mt-sm text-right){
+                    Label(For:EventId){
+                        $@1r_event$
+                    }
+                }
+                Div(col-sm-8 text-left){
+                    Select(Name: EventId, Source: events, NameColumn: name, ValueColumn: id)
+                }
+            }.Hide(LastEvent=false)
+
+            Div(row mt-sm){
+                Div(col-sm-4 mt-sm text-right){
+                    Label(For:EventType){
+                        $@1r_event_type$
+                    }
+                }
+                Div(col-sm-8 text-left){
+                    Select(Name: EventType, Source: types, NameColumn: name, ValueColumn: id)
+                }
+            }.Hide(LastEvent=true)
+            Div(row mt-sm){
+                Div(col-sm-4 mt-sm text-right){
+                    Label(For:EventId){
+                        $@1r_event_id$
+                    }
+                }
+                Div(col-sm-8 text-left){
+                    Input(Name: EventId, Type: number)
+                }
+            }.Hide(LastEvent=true)
+            Button(Body: $@1save$, Class: btn btn-primary pull-right mt, Page: #back_page#, Contract: @1RUpdate)
+        }
+    }
+    Button(Body: $@1back$, Class: btn btn-default pull-right mt, Page: #back_page#)
+}.Style(
+    .buttons {
+        border: 1px solid #dde6e9;
+        padding: 6px 16px;
+    }
+)

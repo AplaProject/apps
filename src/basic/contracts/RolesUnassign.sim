@@ -1,17 +1,17 @@
 contract RolesUnassign {
     data {
-        row_id int
+        RowId int
     }
 
     conditions {
         var assigned map roleId int
-        assigned = DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, id:$row_id, deleted:0 }).Columns("id,role->id").Row()
+        assigned = DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "id": $RowId, "deleted": 0}).Columns("id,role->id").Row()
         if !assigned {
             warning LangRes("@1role_participant_not_found", "en")
         }
         var buffer_id int
         buffer_id = Int(assigned["role.id"])
-        roleId = Int(DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:buffer_id}).One("id"))
+        roleId = Int(DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": buffer_id}).One("id"))
         if roleId == 0 {
             warning LangRes("@1role_not_found_in_registry", "en")
         }
@@ -23,21 +23,18 @@ contract RolesUnassign {
         }
         specialRules["@1VotingValidatorAccept"] = 1
         specialRules["@1DelegateRefresh"] = 1
-        specialRules["@1CandidateValidatorRequest"] = 1
+        specialRules["@1ValidatorRequest"] = 1
         specialRules["@1InvestorRefresh"] = 1
-        specialRules["@1VotingTokensRefundCreate"] = 1
-        specialRules["@1sysparams_ValidatorResign"] = 1
 
         if specialRules[prev_contract] != 1 {
-            @1RolesAccessCheck("rid", roleId)
+            @1RolesAccessCheck("Rid", roleId)
         }
     }
 
     action {
-        // delete the member
         var m map
-        m["deleted"] = 1
-        m["date_deleted"] = BlockTime()
-        DBUpdate("@1roles_participants", $row_id, m)
+        m["deleted"] = $block_time
+        m["date_deleted"] = $block_time
+        DBUpdate("@1roles_participants", $RowId, m)
     }
 }

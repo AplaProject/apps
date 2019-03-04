@@ -1,0 +1,32 @@
+contract GroupsDelete {
+    data {
+        GroupId int
+        Ops string
+    }
+
+    conditions {
+        @1GroupsAccessCheck("GroupId", $GroupId)
+    }
+
+    action {
+        // delete all participants
+        var participants array i int
+        participants = DBFind("@1groups_participants").Where({"groups_info->id": $GroupId, "deleted": 0}).Columns("id")
+        while i < Len(participants) {
+            var p map
+            p = participants[i]
+            @1GroupsUnassign("RowId", Int(p["id"]))
+            i = i + 1
+        }
+
+        var m map
+        if $Ops == "D" {
+            m["deleted"] = 1
+            m["date_deleted"] = $block_time
+        }
+        if $Ops == "R" {
+            m["deleted"] = 0
+        }
+        DBUpdate("@1groups", $GroupId, m)
+    }
+}

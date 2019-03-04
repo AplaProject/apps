@@ -1,6 +1,6 @@
 contract MembershipAdd {
     data {
-        memberskeys string
+        Keys string
     }
 
     func addPub(pub string) {
@@ -17,7 +17,7 @@ contract MembershipAdd {
         if k_id == 0 {
             warning LangRes("@1public_key_invalid", "en")
         }
-        $check_user = DBFind("@1keys").Where({id:k_id, ecosystem:$ecosystem_id})
+        $check_user = DBFind("@1keys").Where({"id": k_id, "ecosystem": $ecosystem_id})
         if $check_user {
             warning LangRes("@1key_already_exists", "en")
         }
@@ -27,29 +27,30 @@ contract MembershipAdd {
     }
 
     conditions {
-        if $memberskeys == "" {
+        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
+        if $Keys == "" {
             warning LangRes("@1public_key_empty", "en")
         }
-        $memberskeys = Replace($memberskeys, " ", "")
-        $memberskeys = Replace($memberskeys, "\n", "")
-        $memberskeys = Replace($memberskeys, "\r", "")
+        $Keys = Replace($Keys, " ", "")
+        $Keys = Replace($Keys, "\n", "")
+        $Keys = Replace($Keys, "\r", "")
 
         var admin_id int
-        admin_id = EcosysParam("role_admin")
-       
-        if !RoleAccess(Int(admin_id)) {
+        admin_id = Int(AppParam(Int($system_app_id), "role_admin", $ecosystem_id))
+
+        if !RoleAccess(admin_id) {
             warning LangRes("@1access_denied", "en")
         }
 
-        if ($ecosystem_id == 1) {
+        if $ecosystem_id == 1 {
             warning LangRes("@1impossible_for_platform_ecosystem", "en")
         }
     }
 
     action {
-        if Contains($memberskeys, ",") {
+        if Contains($Keys, ",") {
             var pub_array array
-            pub_array = Split($memberskeys, ",")
+            pub_array = Split($Keys, ",")
 
             var i int
             while i < Len(pub_array) {
@@ -59,7 +60,7 @@ contract MembershipAdd {
                 i = i + 1
             }
         } else {
-            addPub($memberskeys)
+            addPub($Keys)
         }
     }
 }

@@ -1,0 +1,65 @@
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Errands"}).Vars("app")
+
+SetVar(this_page, "@1errand_settings").(errands_access,0).(errands_admin_role,0)
+SetVar(errands_access, AppParam(App: #app_id#, Name: "errands_access"))
+SetVar(errands_admin_role, AppParam(App: #app_id#, Name: "errands_admin_role"))
+
+DBFind("@1roles", src_roles).Where({"ecosystem": #ecosystem_id#, "deleted": 0}).Columns("role_name,id").Limit(100)
+
+SetVar(row,"row mt-sm").(col_left,"col-sm-4 text-right mt-sm").(col_right,"col-sm-8 text-left")
+
+Div(content-wrapper){
+    Div(row){
+        Div(col-lg-6 col-lg-offset-3 col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1){
+            Form(panel panel-primary){
+                Div(panel-body){
+                    Div(text-center text-bold h4 m0){
+                        LangRes(@1errands_settings)
+                    }
+                    Div(text-center text-muted){
+                        LangRes(@1errands_settings_description)
+                    }
+                    Div(row mt-lg){
+                        Div(#col_left#){
+                            Label(){
+                                LangRes(@1errands_access_role)
+                            }
+                        }
+                        Div(#col_right#){
+                            Select(Name: RoleAccess, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #errands_access#)
+                            Div(m0 h6 text-muted){
+                                SetVar(r_name, $@1role_not_found$)
+                                If(#errands_access# > 0){
+                                    DBFind("@1roles").Where({"ecosystem": #ecosystem_id#, "id": #errands_access#}).Columns("role_name").Vars(r)
+                                    SetVar(r_name, #r_role_name#)
+                                }
+                                LangRes(@1current_value): #r_name#
+                            }
+                        }
+                    }
+                    Div(#row#){
+                        Div(#col_left#){
+                            Label(){
+                                LangRes(@1errands_admin_role)
+                            }
+                        }
+                        Div(#col_right#){
+                            Select(Name: RoleAdmin, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #errands_admin_role#)
+                            Div(m0 h6 text-muted){
+                                SetVar(r_name, $@1role_not_found$)
+                                If(#errands_admin_role# > 0){
+                                    DBFind("@1roles").Where({"ecosystem": #ecosystem_id#, "id": #errands_admin_role#}).Columns("role_name").Vars(r)
+                                    SetVar(r_name, #r_role_name#)
+                                }
+                                LangRes(@1current_value): #r_name#
+                            }
+                        }
+                    }
+                }
+                Div(panel-footer text-right){
+                    Button(Body: $@1apply_settings$, Class: btn btn-primary, Page: #this_page#, Contract: @1ErrandSettings)
+                }
+            }
+        }
+    }
+}

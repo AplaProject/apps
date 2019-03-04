@@ -3,44 +3,42 @@ contract RolesAccessManager {
         Action string
         Rid int
         ManagerRid string "optional"
-
-        //filled inputs
-        role_name string "optional"
-        role_type int "optional"
+        Name string "optional"
+        Type int "optional"
     }
-    
+
     func updateAccess(ra array) {
         var roles_access string
         roles_access = JSONEncode(ra)
         DBUpdate("@1roles", $Rid, {"roles_access": roles_access})
     }
-    
+
     func updateBufferAccess(ra array) {
         var roles_access string
         roles_access = JSONEncode(ra)
         var filled map
         filled["roles_access"] = roles_access
-        filled["role_name"] = $role_name
-        filled["role_type"] = $role_type
-        
+        filled["role_name"] = $Name
+        filled["role_type"] = $Type
+
         if !$buffer_id {
             DBInsert("@1buffer_data", {ecosystem:$ecosystem_id, "member_id": $key_id, "key": "roles_access", "value": filled})
         } else {
             DBUpdate("@1buffer_data", Int($buffer_id), {"value": filled})
         }
     }
-    
+
     conditions {
         $ManagerRid = Int($ManagerRid)
         if $Rid > 0 {
-            @1RolesAccessCheck("rid", $Rid)
+            @1RolesAccessCheck("Rid", $Rid)
 
-            $role = DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:$Rid}).Columns("id,roles_access").Row()
+            $role = DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $Rid}).Columns("id,roles_access").Row()
             if !$role {
                 warning LangRes("@1role_not_found", "en")
             }
             if $ManagerRid > 0 {
-                if !DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:$ManagerRid}).One("id") {
+                if !DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $ManagerRid}).One("id") {
                     warning LangRes("@1role_not_found", "en")
                 }
             }
@@ -58,7 +56,7 @@ contract RolesAccessManager {
             $buffer_id = 0
             $ids = []
             var buffer map
-            buffer = DBFind("@1buffer_data").Where({ecosystem:$ecosystem_id, "member_id": $key_id, "key": "roles_access"}).Columns("id,value,value->roles_access").Row()
+            buffer = DBFind("@1buffer_data").Where({"ecosystem": $ecosystem_id, "member_id": $key_id, "key": "roles_access"}).Columns("id,value,value->roles_access").Row()
             if buffer {
                 $buffer_managers = buffer["value.roles_access"]
                 $buffer_id = buffer["id"]
@@ -79,7 +77,7 @@ contract RolesAccessManager {
             var i int, idsNew array
             if $Action == "remove" {
                 while i < Len($ids) {
-                    if $ids[i] != $ManagerRid{
+                    if $ids[i] != $ManagerRid {
                         idsNew = Append(idsNew, $ids[i])
                     }
                     i = i + 1
@@ -93,7 +91,7 @@ contract RolesAccessManager {
             if $Action == "add" {
                 var double bool
                 while i < Len($ids) {
-                    if $ids[i] == $ManagerRid{
+                    if $ids[i] == $ManagerRid {
                         double = true
                     }
                     i = i + 1

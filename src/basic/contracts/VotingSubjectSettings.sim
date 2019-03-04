@@ -1,16 +1,14 @@
 contract VotingSubjectSettings {
     data {
-        votingID int
-
-        roleID int
-        vacancies int
-
-        contract_accept string "optional"
-        contract_accept_params string "optional"
-        contract_reject string "optional"
-        contract_reject_params string "optional"
+        VotingId int
+        RoleId int
+        Vacancies int
+        ContractAccept string "optional"
+        ContractAcceptParams string "optional"
+        ContractReject string "optional"
+        ContractRejectParams string "optional"
     }
-    
+
     func safeJsonToMap(m string) map {
         var res map
         if Size(m) > 0 { res = JSONToMap(m) }
@@ -18,23 +16,25 @@ contract VotingSubjectSettings {
     }
 
     conditions {
-        if $vacancies < 1 {
+        if $Vacancies < 1 {
             warning LangRes("@1vacancies_number_less_one", "en")
         }
 
         $STARTED = 3
         $FINISHED = 4
-        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("optional,voting->type,flags->full_data").Row()
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $VotingId, "status":[{"$neq": $STARTED},{"$neq": $FINISHED}]}).Columns("optional,voting->type,flags->full_data,creator->member_id").Row()
 
         if !$voting {
             warning LangRes("@1voting_started_can_not_edit", "en")
         }
-
+        if $voting["creator.member_id"] != $key_id {
+            warning LangRes("@1access_denied", "en")
+        }
         if $voting["flags.full_data"] == 1 && $voting["voting.type"] == 2 {
             warning LangRes("@1system_voting_can_not_edit", "en")
         }
         var role map
-        role = DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:$roleID, deleted:0}).Row()
+        role = DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $RoleId, "deleted": 0}).Row()
         if !role {
             warning LangRes("@1specified_role_not_found", "en")
         }
@@ -48,18 +48,18 @@ contract VotingSubjectSettings {
         var optional map
         optional = safeJsonToMap($voting["optional"])
 
-        optional["contract_accept"] = $contract_accept
-        optional["contract_accept_params"] = safeJsonToMap($contract_accept_params)
-        optional["contract_reject"] = $contract_reject
-        optional["contract_reject_params"] = safeJsonToMap($contract_reject_params)
-        optional["role_id"] = $roleID
-        optional["role_vacancies"] = $vacancies
+        optional["contract_accept"] = $ContractAccept
+        optional["contract_accept_params"] = safeJsonToMap($ContractAcceptParams)
+        optional["contract_reject"] = $ContractReject
+        optional["contract_reject_params"] = safeJsonToMap($ContractRejectParams)
+        optional["role_id"] = $RoleId
+        optional["role_vacancies"] = $Vacancies
 
-        DBUpdate("@1votings", $votingID, {optional:optional})
+        DBUpdate("@1votings", $VotingId, {optional:optional})
 
-        $subject_map = DBFind("@1votings_subject").Where({ecosystem:$ecosystem_id, voting_id:$votingID}).Row()
+        $subject_map = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId}).Row()
         if $subject_map {
-            @1VotingSubjectCheck("votingID", $votingID)
-        } 
+            @1VotingSubjectCheck("VotingId", $VotingId)
+        }
     }
 }

@@ -1,0 +1,33 @@
+contract TsFreeWalletAdd {
+    data {
+        WalletBtc string
+        WalletEth string
+    }
+
+    conditions {
+        $app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Token sale"}).One("id")
+        var adminRoleId int adminRoleName string
+        adminRoleId = Int(AppParam(Int($app_id), "ts_role_sale_admin", $ecosystem_id))
+        adminRoleName = DBFind("@1roles").Where({"id": adminRoleId}).One("role_name")
+
+        if adminRoleId == 0 {
+            warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), "ts_role_sale_admin")
+        }
+
+        if !RoleAccess(adminRoleId) {
+            warning Sprintf(LangRes("x_role_only_action", "en"), adminRoleName)
+        }
+
+        if DBFind("ts_wallets").Where({"wallet_btc": $WalletBtc}).One("id") {
+            warning Sprintf(LangRes("wallet_btc_exists", "en"), $WalletBtc)
+        }
+
+        if DBFind("ts_wallets").Where({"wallet_eth": $WalletEth}).One("id") {
+            warning Sprintf(LangRes("wallet_eth_exists", "en"), $WalletEth)
+        }
+    }
+
+    action {
+        DBInsert("ts_wallets", {"wallet_btc": $WalletBtc, "wallet_eth": $WalletEth})
+    }
+}

@@ -1,5 +1,5 @@
 If(#vID# == ""){
-    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "member_id" :#key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
+    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
     If(#buffer_value_voting_id#>0){
         SetVar(vID, #buffer_value_voting_id#)
     }
@@ -8,11 +8,11 @@ If(#vID# > 0){
     If(#candidates#==""){
         SetVar(candidates,0)
     }
-    If(GetVar(back_page)){}.Else{
+    If(#back_page#){}.Else{
         SetVar(back_page,@1voting_view)
     }
     DBFind(@1votings, src_voting).WhereId(#vID#).Columns("id,voting->name,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params").Vars(instance)
-    DBFind(@1votings_subject, src_subject).Where({voting_id:#vID#}).Columns("id,subject->member_id,subject->member_name").Custom(_address){
+    DBFind(@1votings_subject, src_subject).Where({"voting_id": #vID#}).Columns("id,subject->member_id,subject->member_name").Custom(_address){
         SetVar(candidates,"#candidates#,#subject.member_id#")
         Address(#subject.member_id#)
     }.Custom(_member){
@@ -21,17 +21,10 @@ If(#vID# > 0){
         }
     }
 
-    DBFind(@1keys,src_keys).Where({"ecosystem":#ecosystem_id#, {$and: [{id:{"$neq":#guest_key#}}, {id:{$nin:[#candidates#]}}]}}).Columns("id").Count(members_count).Custom(_name){
-        DBFind(@1members).Where({ecosystem:#ecosystem_id#, id:#id#}).Columns("id,member_name").Count(have_name).Vars(m)
-        Address(#id#)
-        If(#have_name#>0){
-            " (#m_member_name#)"
-        }
-    }
-
-    DBFind(@1roles,src_roles).Where({ecosystem:#ecosystem_id#, role_type:2, deleted:0}).Columns("id,role_name").Count(elective_roles_count)
+    DBFind(@1roles,src_roles).Where({"ecosystem": #ecosystem_id#, "role_type": 2, "deleted": 0}).Columns("id,role_name").Count(elective_roles_count)
     If(#elective_roles_count#>0){
         Form(){
+            Input(Name: VotingId, Type: hidden, Value: #vID#)
             Div(form-group){
                 Div(row){
                     Div(col-md-3 mt-sm text-right){
@@ -40,20 +33,17 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 mc-sm text-left){
-                        If(#members_count#>0){
-                            Div(input-group){
-                                Select(Name: memberID, Source: src_keys, NameColumn: _name, ValueColumn: id)
-                                Div(input-group-btn){
-                                    Button(Class: btn bg-gray-lighter fa fa-plus buttons, Page: @1voting_decision_election, PageParams: "vID=#vID#,back_page=#back_page#", Contract: @1VotingSubjectCandidates).Popup(50, $@1subject_voting$)
-                                }.Style(
-                                    .buttons{
-                                        border: 1px solid #dde6e9;
-                                        padding: 6px 16px;
-                                    }
-                                )
+                        Div(input-group){
+                            If(#MemberId#!=""){
+                                SetVar(AddressMemberId, Address(#MemberId#))
                             }
-                        }.Else{
-                            Input(Name: voting_all_members, Class: mb, Disabled: 1, Value: "$@1voting_all_keys_added$")
+                            Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #AddressMemberId#)
+                            Div(input-group-btn){
+                                Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=@1voting_decision_election,back_header=$@1voting_subject$,EcosystemId=#ecosystem_id#,Id=#vID#").Popup(Header: $@1member$, Width: "50")
+                                If(#MemberId#!=""){
+                                    Button(Class: btn bg-gray-lighter fa fa-plus buttons, Page: @1voting_decision_election, PageParams: "vID=#vID#,back_page=#back_page#", Contract: @1VotingSubjectCandidates, Params:"MemberId=#MemberId#").Popup(50, $@1subject_voting$)
+                                }
+                            }
                         }
                     }
                 }
@@ -73,7 +63,7 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 mb-sm text-left){
-                        Select(Name: roleID, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #instance_optional_role_id#)
+                        Select(Name: RoleId, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #instance_optional_role_id#)
                     }
                 }
 
@@ -84,7 +74,7 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 mc-sm text-left){
-                        Input(Name: vacancies, Class: form-control, Type: Number, Value: #instance_optional_role_vacancies#)
+                        Input(Name: Vacancies, Class: form-control, Type: Number, Value: #instance_optional_role_vacancies#)
                     }
                 }
             }
@@ -96,8 +86,8 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 mb-sm text-left){
-                        Input(Name: contract_accept, Value: #instance_optional_contract_accept#, Placeholder: "$@1contract_accept_des$").Validate(minLength:3, maxLength:255)
-                        InputErr(Name: contract_accept, minLength: $@1validate_name$, maxLength: $@1validate_name$)
+                        Input(Name: ContractAccept, Value: #instance_optional_contract_accept#, Placeholder: "$@1contract_accept_des$").Validate(minLength:3, maxLength:255)
+                        InputErr(Name: ContractAccept, minLength: $@1validate_name$, maxLength: $@1validate_name$)
                     }
                 }
                 Div(row){
@@ -107,7 +97,7 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 mb-sm text-left){
-                        Input(Name: contract_accept_params, Value: #instance_optional_contract_accept_params#, Placeholder: "$@1contract_params_des$")
+                        Input(Name: ContractAcceptParams, Value: #instance_optional_contract_accept_params#, Placeholder: "$@1contract_params_des$")
                     }
                 }
                 Div(row){
@@ -117,8 +107,8 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 mb-sm text-left){
-                        Input(Name: contract_reject, Value: #instance_optional_contract_reject#, Placeholder: "$@1contract_reject_des$").Validate(minLength:3, maxLength:255)
-                        InputErr(Name: contract_reject, minLength: $@1validate_name$, maxLength: $@1validate_name$)
+                        Input(Name: ContractReject, Value: #instance_optional_contract_reject#, Placeholder: "$@1contract_reject_des$").Validate(minLength:3, maxLength:255)
+                        InputErr(Name: ContractReject, minLength: $@1validate_name$, maxLength: $@1validate_name$)
                     }
                 }
                 Div(row){
@@ -128,11 +118,10 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 mc-sm text-left){
-                        Input(Name: contract_reject_params, Value: #instance_optional_contract_reject_params#, Placeholder: "$@1contract_params_des$")
+                        Input(Name: ContractRejectParams, Value: #instance_optional_contract_reject_params#, Placeholder: "$@1contract_params_des$")
                     }
-                } 
+                }
             }
-            Input(Name: votingID, Type: hidden, Value: #vID#)
             If(#toPageInvite#==1){
                 Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: @1voting_invite, PageParams: "vID=#vID#", Contract: @1VotingSubjectSettings).Popup(60, $@1participants_add$)
             }.Else{

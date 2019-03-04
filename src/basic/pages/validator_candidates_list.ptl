@@ -1,0 +1,84 @@
+SetVar(this_page, @1validator_candidates_list).(this_table, @1validator_candidates)
+Include(@1pager_header)
+
+SetTitle("$@1validators$")
+Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1sysparams_candidates_list_desc$"))
+AddToolButton(Title: $@1create_request$, Icon: icon-plus, Page: @1validator_candidates_create).Popup(50, $@1sysparams_candidate_validators_form$)
+
+If(#search#){
+    SetVar(where, {{"host_ip": {"$ilike": "#search#"}}, "deleted": 0})
+}.Else{
+    SetVar(where, {"deleted": 0})
+}
+
+Div(list-group-item ml-lg mr-lg pt-lg){
+    SetVar(search_name, LangRes(@1host_ip))
+    Include(@1search)
+}
+
+DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
+SetVar(template_id, AppParam(Ecosystem:1, App:#application_id#, Name: voting_template_validators))
+If(#template_id# > 0){
+    DBFind(@1voting_templates).Where({"ecosystem": #ecosystem_id#, "id": #template_id#}).Columns("subject->voters").Vars(template)
+}
+
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_actions){
+    If(And(#template_subject_voters#>0,#template_subject_voters#==#role_id#)){
+        Form(btn-group pull-right){
+            Button(Contract: @1VotingRunNewValidator, Params: "ValidatorId=#id#", Page: @1voting_list, Class: btn btn-default fa fa-play)
+        }
+    }.Else{
+        If(#template_id# > 0){
+            Span($@1voting_not_participant$, text-muted)
+        }.Else{
+            Span($@1voting_template_not_found$, text-muted)
+        }
+    }
+}.Custom(_date){
+    DateTime(DateTime: #date_created#, Format: YYYY-MM-DD HH:MI)
+}.Custom(_tcp_address){
+    Span(Class: h6, Body: #tcp_address#)
+}.Custom(_api_address){
+    Span(Class: h6, Body: #api_address#)
+}.Custom(_description){
+    Span(Class: h6, Body: #description#)
+}.Custom(_comment){
+    Span(Class: h6, Body: #comment#)
+}.Custom(custom_username){
+    SetVar(user_member_name, "")
+    DBFind(@1members).Where({"id": #candidate_key_id#, "ecosystem": #ecosystem_id#}).Vars(user)
+    If(#user_member_name##==""){
+        SetVar(user_member_name, Address(#candidate_key_id#))
+    }
+    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#candidate_key_id#"){
+        If(#user_image_id#>0){
+            Image(Src: Binary().ById(#user_image_id#), Class: img-circle).Style(height: 30px;width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
+            Span(#user_member_name#)
+        }.Else{
+            Div(){
+                Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                Span(#user_member_name#)
+            }.Style(display:flex; align-items:center;)
+        }
+    }
+}.Count(count)
+
+Div(fullscreen){
+    Div(table-responsive ml-lg mr-lg){
+        Div(list-group-item){
+            If(#count# > 0){
+                Table(src, "$@1name$=custom_username,$@1api_address$=_api_address,$@1tcp_address$=_tcp_address,$@1hardware_description$=_description,$@1comment$=_comment,$@1date_created$=_date,$@1voting$=_actions")
+            }.Else{
+                Div(Class: text-center h4 text-muted, Body: "$@1sysparams_candidates$ $@1not_founded$")
+            }
+        }.Style(
+            margin-top:-15px;
+            tbody > tr:nth-of-type(odd) {
+                background-color: #f8f9fc;
+            }
+        )
+    }
+}
+Div(mt-sm ml-lg mr-sm mb-sm){
+    Include(@1pager)
+}

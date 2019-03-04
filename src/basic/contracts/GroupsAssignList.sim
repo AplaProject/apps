@@ -1,0 +1,54 @@
+contract GroupsAssignList {
+    data {
+        Keys string
+        GroupId int
+    }
+
+    func addPub(pub_key string) {
+        if HasPrefix(pub_key, "04") {
+            pub_key = Substr(pub_key, 2, Size(pub_key) - 2)
+        }
+        if Size(pub_key) < 128 {
+            warning LangRes("@1key_too_short", "en")
+        }
+        if Size(pub_key) > 128 {
+            warning LangRes("@1key_too_long", "en")
+        }
+
+        var k_id int
+        k_id = PubToID(pub_key)
+        if k_id == 0 {
+            warning LangRes("@1public_key_invalid", "en")
+        }
+        $check_user = DBFind("@1keys").Where({"id": k_id, "ecosystem": $ecosystem_id})
+        if !$check_user {
+            warning Sprintf("%v: " + "key not found", pub_key)
+        }
+
+        @1GroupsAssign("GroupId,MemberId",$GroupId,k_id)
+    }
+
+    conditions {
+        if $Keys == "" {
+            warning LangRes("@1public_key_empty", "en")
+        }
+        $Keys = Replace($Keys, " ", "")
+        $Keys = Replace($Keys, "\n", "")
+        $Keys = Replace($Keys, "\r", "")
+    }
+
+    action {
+        if Contains($Keys, ",") {
+            var pub_array array i int
+            pub_array = Split($Keys, ",")
+            while i < Len(pub_array) {
+                var pub_key string
+                pub_key = Str(pub_array[i])
+                addPub(pub_key)
+                i = i + 1
+            }
+        } else {
+            addPub($Keys)
+        }
+    }
+}

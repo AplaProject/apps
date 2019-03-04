@@ -1,26 +1,26 @@
 contract ValidatorResign {
-    data {}
 
     func getRoleId(name string) int {
         var rid int
-        rid = Int(EcosysParam(name))
-        if rid == 0{
-            warning Sprintf(LangRes("@1role_not_set_eco_parameter", "en"), name)
+        rid = Int(AppParam(Int($system_app_id), name, $ecosystem_id))
+        if rid == 0 {
+            warning Sprintf(LangRes("@role_not_set_application_parameter", "en"), name)
         }
         return rid
     }
 
     conditions {
+        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
         var roleValidatorId int
         roleValidatorId = getRoleId("role_validator")
         if !RoleAccess(roleValidatorId) {
             warning LangRes("@1not_validator_can_not_run", "en")
         }
-        $assigned = DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, "member->member_id":$key_id, "role->id":roleValidatorId, deleted:0}).One("id")
+        $assigned = DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "member->member_id": $key_id, "role->id": roleValidatorId, "deleted": 0}).One("id")
     }
 
     action {
-        @1RolesUnassign("row_id", Int($assigned))
+        @1RolesUnassign("RowId", Int($assigned))
         @1NodeRemoveByKey()
     }
 }

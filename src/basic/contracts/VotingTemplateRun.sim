@@ -3,12 +3,9 @@ contract VotingTemplateRun {
         TemplateId int
         Duration int
 
-        KeyId int "optional"
-        TableWritten string "optional"
-        RowId string "optional"
-        ColumnName string "optional"
-        NewValue string "optional"
         TextDocument string "optional"
+        ContractAcceptParams string "optional"
+        ContractRejectParams string "optional"
     }
 
     func checkInput(value, name string) {
@@ -17,181 +14,178 @@ contract VotingTemplateRun {
         }
     }
 
-    func emptyOrValue(value string) string {
-        if value == "NULL" {
-            value = ""
+    func getPermission() {
+        var array_permissions array result i int prevContract string
+        array_permissions = ["@1VotingRunEditPlatformParam", "@1VotingRunNewValidator", "@1VotingRunRemoveValidator", "@1VotingRunVes", "@1VotingRunTokenRefund", "@1VotingRunEditEcosysParam"]
+
+        prevContract = $stack[0]
+        if Len($stack) > 2 {
+            prevContract = $stack[Len($stack) - 2]
         }
-        return value
+        while i < Len(array_permissions) {
+            var contract_name string
+            contract_name = array_permissions[i]
+            if contract_name==prevContract {
+                result = 1
+            }
+            i = i + 1
+        }
+
+        if result == 0 {
+            warning Sprintf(LangRes("@1system_voting_can_not_start_from_x", "en"), $stack[0])
+        }
     }
 
     conditions {
-        $template = DBFind("@1voting_templates").Where({ecosystem:$ecosystem_id, id:$TemplateId}).Row()
-        if !$template{
+        $template = DBFind("@1voting_templates").Where({"ecosystem": $ecosystem_id, "id": $TemplateId}).Columns("voting->count_type_voters,voting->name,voting->volume,voting->quorum,voting->type_decision,voting->type_participants,voting->type,voting->rating,subject->candidates,subject->vacancies,subject->voters,subject->contract_accept,subject->contract_reject,optional->contract_accept,optional->contract_reject,optional->init_contract,optional->contract_accept_params,optional->contract_reject_params,optional->init_contract_params").Row()
+        if !$template {
             warning LangRes("@1voting_template_not_found", "en")
         }
-        if $KeyId != 0{
-            $keyFind = DBFind("@1keys").Where({ecosystem:$ecosystem_id, id:$KeyId}).Row()
-            if !$keyFind{
-                warning LangRes("@1key_not_found", "en")
-            }
-        }
-        if $Duration <= 0{
+
+        $v_name = Sprintf("%v [" + LangRes("@1template_id", "en") + ": %v]", $template["voting.name"], $TemplateId)
+        $v_count_type_voters = Int($template["voting.count_type_voters"])
+        $v_volume = Int($template["voting.volume"])
+        $v_quorum = Int($template["voting.quorum"])
+        $v_type_decision = Int($template["voting.type_decision"])
+        $v_type_participants = Int($template["voting.type_participants"])
+        $v_type = Int($template["voting.type"])
+        $v_rating = $template["voting.rating"]
+
+        $s_candidates = Int($template["subject.candidates"])
+        $s_vacancies = $template["subject.vacancies"]
+        $s_voters = Int($template["subject.voters"])
+        $s_contract_accept = $template["subject.contract_accept"]
+        $s_contract_reject = $template["subject.contract_reject"]
+        
+        $o_contract_accept = $template["optional.contract_accept"]
+        $o_contract_reject = $template["optional.contract_reject"]
+        $o_init_contract = $template["optional.init_contract"]
+        $o_contract_accept_params = $template["optional.contract_accept_params"]
+        $o_contract_reject_params = $template["optional.contract_reject_params"]
+        $o_init_contract_params = $template["optional.init_contract_params"]
+        
+        $desc = Sprintf(LangRes("@1template", "en") + " #%v", $TemplateId)       
+        if $Duration <= 0 {
             $Duration = 3
         }
 
-        $voters = $template["voters"]
-        $candidates = $template["candidates"]
-        $votingName = Sprintf("%v [" + LangRes("@1template_id", "en") + ": %v]", $template["title"], $TemplateId)
-        $volume = Int($template["volume"])
-        $quorum = Int($template["quorum"])
-        $type_voting = Int($template["type_voting"])
-        $participants = Int($template["type_participants"])
-        $decision = Int($template["type_decision"])
-        $vacancies = Int($template["vacancies"])
-        $countTypeVoters = Int($template["count_type_voters"])
-
-        $desc = Sprintf(LangRes("@1template", "en") + " #%v", $TemplateId)
-        if $type_voting < 1 || $type_voting > 3 {
+        if $v_type < 1 || $v_type > 3 {
             warning LangRes("@1voting_type_invalid", "en")
         }
-        if $type_voting == 2 {
-            var prev string systemAllowed map
-            systemAllowed["@1VotingVesCreate"] = 1
-            systemAllowed["@1VotingValidatorCreate"] = 1
-            systemAllowed["@1VotingNodeAdd"] = 1
-            systemAllowed["@1VotingParamCreate"] = 1
-            systemAllowed["@1VotingNodeRemove"] = 1
-            prev = $stack[0]
-            if Len($stack) > 1 {
-                prev = $stack[Len($stack) - 2]
+
+        if $v_type == 2 {
+            getPermission()
+
+            // check duplicated
+            if DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "voting->name": $v_name, "voting->type": 2, "flags->decision": {"$nin": ["1", "-1"]}, "deleted": 0}).Row() {
+                warning LangRes("@1same_voting_created", "en")
             }
-            if systemAllowed[prev] != 1 {
-                warning LangRes("@1voting_type_invalid", "en")
+        } 
+
+        // candidates
+        if $v_type_decision == 1 || $v_type_decision == 2 {
+            if !DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $s_candidates, "deleted": 0}).One("id") {
+                warning Sprintf(LangRes("@1candidate_role_id_not_found", "en"), $s_candidates)
             }
         }
-        $contractAccept = emptyOrValue($template["contract_accept"])
-        $acceptParams = emptyOrValue($template["accept_params"])
-        $contractReject = emptyOrValue($template["contract_reject"])
-        $rejectParams = emptyOrValue($template["reject_params"])
 
-        if $decision == 1 || $decision == 2 {
-            // role-candidates
-            checkInput($candidates, "Candidate role")
-            var candidate map
-            candidate = DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:$candidates, deleted:0}).Row()
-            if !candidate {
-                warning Sprintf(LangRes("@1candidate_role_id_not_found", "en"), $candidates)
-            }
-            $candidateId = Int(candidate["id"])
-        }
-
-        if $decision == 3 {
-            // document approval
+        // document
+        if $v_type_decision == 3 {
             checkInput($TextDocument, "TextDocument")
         }
 
-        if $decision == 4 {
-            // formal decision
-            checkInput($ColumnName, "ColumnName")
-            checkInput($NewValue, "NewValue")
-            if $type_voting == 2{
-                if $TableWritten == "@1ecosystems"{
-                    $desc = Sprintf("%v: %v, %v: %v, %v: %v, %v: %v", LangRes("@1table", "en"), $TableWritten, LangRes("@1column", "en"), $ColumnName, LangRes("@1id", "en"), $RowId, LangRes("@1value", "en"), $NewValue)
-                }else{
-                    $desc = Sprintf(LangRes("@1parameter", "en") + ": %v, " + LangRes("@1value", "en") + ": %v", $ColumnName, $NewValue)
+        // contracts
+        if $v_type_decision == 4 {
+            if GetContractByName($s_contract_accept) == 0 {
+                warning LangRes("@1accepted_contract_not_found", "en")
+            }
+            if Size($s_contract_reject) > 0 {
+                if GetContractByName($s_contract_reject) == 0 {
+                    warning LangRes("@1rejected_contract_not_found", "en")
                 }
             }
-
-            if $type_voting == 1{
-                checkInput($TableWritten, "TableWritten")
-                checkInput($RowId, "RowId")
-                $desc = Sprintf(LangRes("@1table", "en") + ": %v, " + LangRes("@1column", "en") + ": %v, " + LangRes("@1id", "en") + ": %v, " + LangRes("@1value", "en") + ": %v", $TableWritten, $ColumnName, $RowId, $NewValue)
-            }
-            if $RowId == "" || $RowId == "NULL"{
-                $RowId = 0
-            }
-
-        }
-        // check duplicated
-        if DBFind("@1votings").Where({ecosystem:$ecosystem_id, "voting->name":$votingName, "voting->type":2, "flags->decision":{"$nin":["1", "-1"]}, deleted:0}).Row(){
-            warning LangRes("@1same_voting_created", "en")
         }
 
-
-        if $participants == 3 {
+        if $v_type_participants == 3 {
             // if the type of the participants "in role" - check the role
-            var role map
-            role = DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:$voters, deleted:0}).Row()
-            if !role {
-                warning Sprintf(LangRes("@1voters_role_id_not_found", "en"), $voters)
+            if !DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $s_voters, "deleted": 0}).One("id") {
+                warning Sprintf(LangRes("@1voters_role_id_not_found", "en"), $s_voters)
             }
-            $roleId = Int(role["id"])
-            if !DBFind("@1roles_participants").Where({ecosystem:$ecosystem_id, deleted:0, "role->id":$roleId, "member->member_id":$key_id}).Row(){
+            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": $s_voters, "member->member_id": $key_id}).One("id") {
                 warning LangRes("@1role_not_involved", "en")
             }
         }
     }
 
     action {
-        var initContract string
-        initContract = $template["init_contract"]
-
-        if initContract != "" && initContract != "NULL" {
-            var initParam map
-            if $decision == 4 && $type_voting == 2 {
-                // voting for new value of sysparam
-                initParam["Name"] = $ColumnName
-                initParam["Value"] = $NewValue
-            } else {
-                initParam["KeyId"] = $KeyId
+        // start init contract
+        if Size($o_init_contract) > 0 {
+            var params map
+            if Size($o_init_contract_params) > 0 {
+                params = JSONToMap($o_init_contract_params)
             }
-            CallContract(initContract, initParam)
+            params["TemplateId"] = $TemplateId
+            CallContract($o_init_contract, params)
         }
 
+        // creating a vote
         var votingId int
-        votingId = @1VotingCreate("voting_name,voting_type,description,type_participants,type_decision,volume,quorum,interval,count_type_voters", $votingName, $type_voting, $desc, $participants, $decision, $volume, $quorum, $Duration, $countTypeVoters)
+        votingId = @1VotingCreate("Name,Type,TypeParticipants,TypeDecision,Quorum,Rating,Volume,CountTypeVoters,Description,Interval", 
+            $v_name, $v_type, $v_type_participants, $v_type_decision, $v_quorum, $v_rating, $v_volume, $v_count_type_voters, $desc, $Duration)
 
-        if votingId == 0 {
-            warning LangRes("@1voting_creation_error", "en")
+        // new optional parameters
+        var o_accept_params o_reject_params map
+        if Size($o_contract_accept) > 0 {
+            if Size($o_contract_accept_params) > 0 {
+                o_accept_params = JSONToMap($o_contract_accept_params)
+            }
+            o_accept_params["VotingId"] = votingId
+            o_accept_params["TemplateId"] = $TemplateId
         }
-        // the default argument for Contract
-        var defaultParams string
-        defaultParams = Sprintf(`{"VotingTemplateId":"%v","KeyId":"%v","VotingId":"%v"}`, $TemplateId, $KeyId, votingId)
-
-        if Size($acceptParams) == 0{
-            $acceptParams = defaultParams
-        }
-        if Size($rejectParams) == 0{
-            $rejectParams = defaultParams
-        }
-
-        if $decision == 1 || $decision == 2{
-            // 1. Role candidates with the registration of participants on request
-            // 2. Role candidates with manual registration of the participants
-            @1VotingSubjectCandidates("votingID,memberID", votingId, $KeyId)
-            @1VotingSubjectSettings("votingID,roleID,vacancies,contract_accept,contract_accept_params,contract_reject,contract_reject_params", votingId, $candidateId, $vacancies, $contractAccept, $acceptParams, $contractReject,$rejectParams)
-        }
-        if $decision == 3 {
-            // Document approval
-            @1VotingSubjectDocument("votingID,text_document,contract_accept,contract_accept_params,contract_reject,contract_reject_params", votingId,$TextDocument, $contractAccept, $acceptParams, $contractReject, $rejectParams)
+        if Size($o_contract_reject) > 0 {
+            if Size($o_contract_reject_params) > 0 {
+                o_reject_params = JSONToMap($o_contract_reject_params)
+            }
+            o_reject_params["VotingId"] = votingId
+            o_reject_params["TemplateId"] = $TemplateId
         }
 
-        if $decision == 4 {
-            // Formal decision
-            @1VotingSubjectFormal("votingID,description,table_to_written,row_id,column_name,written_value,contract_accept,contract_accept_params,contract_reject,contract_reject_params",votingId, $desc, $TableWritten, $RowId, $ColumnName, $NewValue, $contractAccept, $acceptParams, $contractReject, $rejectParams)
-
+        // setting the subject of the vote
+        if $v_type_decision == 1 || $v_type_decision == 2 {
+            @1VotingSubjectCandidates("VotingId,MemberId", votingId, $key_id)
+            @1VotingSubjectSettings("VotingId,RoleId,Vacancies,ContractAccept,ContractAcceptParams,ContractReject,ContractRejectParams", 
+                votingId, $s_candidates, $s_vacancies, $o_contract_accept, JSONEncode(o_accept_params), $o_contract_reject, JSONEncode(o_reject_params))
+        }
+        if $v_type_decision == 3 {
+            @1VotingSubjectDocument("VotingId,TextDocument,ContractAccept,ContractAcceptParams,ContractReject,ContractRejectParams", 
+                votingId, $TextDocument, $o_contract_accept, JSONEncode(o_accept_params), $o_contract_reject, JSONEncode(o_reject_params))
+        }
+        if $v_type_decision == 4 {
+            var accept_params reject_params map
+            if Size($s_contract_accept) > 0 {
+                if Size($ContractAcceptParams) > 0 {
+                    accept_params = JSONToMap($ContractAcceptParams)
+                }
+                accept_params["VotingId"] = votingId
+                accept_params["TemplateId"] = $TemplateId
+            }
+            if Size($s_contract_reject) > 0 {
+                if Size($ContractRejectParams) > 0 {
+                    reject_params = JSONToMap($ContractRejectParams)
+                }
+                reject_params["VotingId"] = votingId
+                reject_params["TemplateId"] = $TemplateId
+            }
+            @1VotingSubjectContract("VotingId,ContractAccept,ContractAcceptParams,ContractReject,ContractRejectParams,OptionalAcceptContract,OptionalAcceptParams,OptionalRejectContract,OptionalRejectParams",
+                votingId, $s_contract_accept, JSONEncode(accept_params), $s_contract_reject, JSONEncode(reject_params), $o_contract_accept, JSONEncode(o_accept_params), $o_contract_reject, JSONEncode(o_reject_params))
         }
 
-        if $decision == 5 {
-            // Execution of the contract
-            @1VotingSubjectContract("votingID,contract_accept,contract_accept_params,contract_reject,contract_reject_params",votingId,$contractAccept, $acceptParams, $contractReject, $rejectParams)
-        }
-        if $participants == 3 {
-            // participants: "by role"
-            @1VotingInvite("votingID,var_id", votingId, $roleId)
-        }
-        if $participants == 1 {
+        // setting the participants of the vote
+        if $v_type_participants == 1 {
             // if the participants are "all", the invite has already occurred in "@1VotingCreate"
+        }
+        if $v_type_participants == 3 {
+            @1VotingInvite("VotingId,VarId", votingId, $s_voters)
         }
     }
 }

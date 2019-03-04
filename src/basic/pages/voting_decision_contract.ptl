@@ -1,17 +1,17 @@
 If(#vID# == ""){
-    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "member_id" :#key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
+    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
     If(#buffer_value_voting_id#>0){
         SetVar(vID, #buffer_value_voting_id#)
         SetVar(toPageInvite, 1)
     }
 }
 If(#vID# > 0){
-    If(GetVar(back_page)){}.Else{
+    If(#back_page#){}.Else{
         SetVar(back_page,@1voting_view)
     }
 
     DBFind(@1votings, src_voting).WhereId(#vID#).Columns("id,voting->name").Vars(instance)
-    DBFind(@1votings_subject, src_subject).Where({voting_id:#vID#}).Columns("id,subject->contract_accept,subject->contract_reject,subject->contract_accept_params,subject->contract_reject_params").Vars(prefix)
+    DBFind(@1votings_subject, src_subject).Where({"voting_id": #vID#}).Columns("id,subject->contract_accept,subject->contract_reject,subject->contract_accept_params,subject->contract_reject_params").Vars(prefix)
 
     If(#prefix_id#>0){
     }.Else{
@@ -22,6 +22,7 @@ If(#vID# > 0){
     }
 
     Form(){
+        Input(Name: VotingId, Type: hidden, Value: #vID#)
         Div(row){
             Div(col-md-3 mt-sm text-right){
                 Label(){
@@ -29,8 +30,8 @@ If(#vID# > 0){
                 }
             }
             Div(col-md-9 mb-sm text-left){
-                Input(Name: contract_accept, Value: #prefix_subject_contract_accept#, Placeholder: "$@1contract_accept_des$").Validate(minLength:3, maxLength:255)
-                InputErr(Name: contract_accept, minLength: $@1validate_name$, maxLength: $@1validate_name$)
+                Input(Name: ContractAccept, Value: #prefix_subject_contract_accept#, Placeholder: "$@1contract_accept_des$").Validate(minLength:3, maxLength:255)
+                InputErr(Name: ContractAccept, minLength: $@1validate_name$, maxLength: $@1validate_name$)
             }
         }
         Div(row){
@@ -40,7 +41,7 @@ If(#vID# > 0){
                 }
             }
             Div(col-md-9 mb-sm text-left){
-                Input(Name: contract_accept_params, Value: #prefix_subject_contract_accept_params#, Placeholder: "$@1contract_params_des$")
+                Input(Name: ContractAcceptParams, Value: #prefix_subject_contract_accept_params#, Placeholder: "$@1contract_params_des$")
             }
         }
         Div(form-group){
@@ -51,8 +52,8 @@ If(#vID# > 0){
                     }
                 }
                 Div(col-md-9 mb-sm text-left){
-                    Input(Name: contract_reject, Value: #prefix_subject_contract_reject#, Placeholder: "$@1contract_reject_des$").Validate(minLength:3, maxLength:255)
-                    InputErr(Name: contract_reject, minLength: $@1validate_name$, maxLength: $@1validate_name$)
+                    Input(Name: ContractReject, Value: #prefix_subject_contract_reject#, Placeholder: "$@1contract_reject_des$").Validate(minLength:3, maxLength:255)
+                    InputErr(Name: ContractReject, minLength: $@1validate_name$, maxLength: $@1validate_name$)
                 }
             }
             Div(row){
@@ -62,11 +63,10 @@ If(#vID# > 0){
                     }
                 }
                 Div(col-md-9 text-left){
-                    Input(Name: contract_reject_params, Value: #prefix_subject_contract_reject_params#, Placeholder: "$@1contract_params_des$")
+                    Input(Name: ContractRejectParams, Value: #prefix_subject_contract_reject_params#, Placeholder: "$@1contract_params_des$")
                 }
             }
         }
-        Input(Name: votingID, Type: hidden, Value: #vID#)
         If(#toPageInvite#==1){
             Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: @1voting_invite, PageParams: "vID=#vID#", Contract: @1VotingSubjectContract).Popup(60, $@1participants_add$)
         }.Else{

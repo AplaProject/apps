@@ -1,0 +1,33 @@
+Form(){
+    SetVar(this_page, @1q_question_log).(this_table, @1q_answers)
+    Include(@1pager_header)
+    DBFind(@1q_list).Where({"id": #q_id#}).Columns("id").Vars(q)
+
+    If(#a_id#>0){
+        SetVar(where, {"question_id": #q_id#, "answer_id": #a_id#})
+    }.Else{
+        SetVar(where, {"question_id": #q_id#})
+    }
+
+    DBFind(@1q_answers,src_a).Where(#where#).Limit(#pager_limit#).Custom(ans){
+        #answer_id# : #decision#
+    }.Custom(c_m){
+        Address(#member#)
+    }.Custom(time){
+        DateTime(#lastmodified#,HH:MI DD.MM.YYYY)
+    }.Count(a)
+
+    Div(row form-group){
+        Div(col-sm-12){
+            Table(Source: src_a, Columns:"$@1q_answer_member$=c_m,$@1q_date_lastmodified$=time,$@1q_answer$=ans")
+            Div(mt-sm ml-lg mr-sm mb-sm){
+                Include(@1pager)
+            }
+        }
+    }
+    Div(row mt){
+        Div(col-md-12 text-center){
+            Button(Body: LangRes(@1back), Class: btn btn-default, Page: @1q_listing)
+        }
+    }
+}
