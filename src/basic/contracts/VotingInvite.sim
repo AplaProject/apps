@@ -1,7 +1,7 @@
 contract VotingInvite {
     data {
         VotingId int
-        VarId int //0, member_id, role_id
+        VarId int //0, member_id, role_id, group_id
     }
 
     func addVotingParticipant(votingId int, k_id int, r_id int) {
@@ -56,7 +56,6 @@ contract VotingInvite {
                 warning LangRes("@1member_added_before", "en")
             }
         }
-
         if $type_participants == 3 {
             isAdded = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId}).One("id")
             if isAdded {
@@ -78,6 +77,15 @@ contract VotingInvite {
             }
             if Len(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": $VarId, "deleted": 0})) == 0 {
                 warning LangRes("@1roles_participants_not_found", "en")
+            }
+        }
+        if $type_participants == 6 {
+            isAdded = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId}).One("id")
+            if isAdded {
+                warning LangRes("@1voting_one_group_allowed", "en")
+            }
+            if Len(DBFind("@1groups_participants").Where({"ecosystem": $ecosystem_id, "groups_info->id": $VarId, "deleted": 0})) == 0 {
+                warning LangRes("@1groups_participants_not_found", "en")
             }
         }
     }
@@ -128,6 +136,17 @@ contract VotingInvite {
             rl = DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $VarId}).Row()
             addVotingParticipant($VotingId, 0, Int(rl["id"]))
             $number_participants = $number_participants + 1
+        }
+        if $type_participants == 6 { // one group
+            var groups array
+            groups = DBFind("@1groups_participants").Where({"ecosystem": $ecosystem_id, "groups_info->id": $VarId, "deleted": 0}).Columns("member->member_id").Order("id")
+            while i < Len(groups) {
+                var group m map
+                group = groups[i]
+                addVotingParticipant($VotingId, Int(group["member.member_id"]), 0)
+                $number_participants = $number_participants + 1
+                i = i + 1
+            }
         }
 
         var v map
