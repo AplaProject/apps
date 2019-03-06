@@ -1,19 +1,19 @@
 contract VotingDecisionReject {
     data {
-        votingID int
+        VotingId int
         RoleId int
     }
 
     func closeNotification() {
         var role_id_search int
-        role_id_search = Int(DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->role_id": $RoleId, "page_params->voting_id": $votingID, "closed": 0}).One("id"))
+        role_id_search = Int(DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->role_id": $RoleId, "page_params->voting_id": $VotingId, "closed": 0}).One("id"))
         if role_id_search > 0 {
-            @1NotificationsClose("notific_id", role_id_search)
+            @1NotificationsClose("NotificId", role_id_search)
         } else {
             var id int
-            id = Int(DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_params->voting_id": $votingID, "closed": 0}).One("id"))
+            id = Int(DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_params->voting_id": $VotingId, "closed": 0}).One("id"))
             if id > 0 {
-                @1NotificationsClose("notific_id", id)
+                @1NotificationsClose("NotificId", id)
             }
         }
     }
@@ -24,7 +24,7 @@ contract VotingDecisionReject {
         $STARTED = 3
         $FINISHED = 4
 
-        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $votingID}).Columns("id,flags->decision,flags->notifics,voting->type_participants,voting->role_id,status,date_ended").Row()
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $VotingId}).Columns("id,flags->decision,flags->notifics,voting->type_participants,voting->role_id,status,date_ended").Row()
         if !$voting {
             warning LangRes("@1voting_not_found", "en")
         }
@@ -39,16 +39,16 @@ contract VotingDecisionReject {
         if $voting["status"] != $STARTED {
             warning LangRes("@1voting_not_started", "en")
         }
-        $subject = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID}).Columns("id,number_accept,results->rating_accepted,results->rating_rejected").Row()
+        $subject = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId}).Columns("id,number_accept,results->rating_accepted,results->rating_rejected").Row()
         if !$subject {
             warning LangRes("@1voting_subject_not_found", "en")
         }
 
         if Int($voting["voting.type_participants"]) != 5 {
-            $participant = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "member->member_id": $key_id, "decision": 0}).Columns("id,rating").Row()
+            $participant = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId, "member->member_id": $key_id, "decision": 0}).Columns("id,rating").Row()
         }
         if Int($voting["voting.type_participants"]) == 5 {
-            $participant = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "member->member_id": 0, "member->role_id": $RoleId, "decision": 0}).Columns("id,rating").Row()
+            $participant = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId, "member->member_id": 0, "member->role_id": $RoleId, "decision": 0}).Columns("id,rating").Row()
         }
         if !$participant {
             warning LangRes("@1voting_not_participant", "en")
@@ -69,7 +69,7 @@ contract VotingDecisionReject {
                 DBUpdate("@1votings_participants", Int($participant["id"]), {"member":member_json})
             }
         }
-        
+
         if $voting["flags.notifics"] == 1 {
             closeNotification()
         }
@@ -83,7 +83,7 @@ contract VotingDecisionReject {
             var p map
             var rating_accepted rating_rejected summ_rating int
             rating_accepted = Int($subject["results.rating_accepted"])
-            rating_rejected = Int($subject["results.rating_rejected"]) + Int($participant["rating"]) 
+            rating_rejected = Int($subject["results.rating_rejected"]) + Int($participant["rating"])
             summ_rating = rating_accepted + rating_rejected
             var percent_accepted percent_rejected int
             percent_accepted = (Float(rating_accepted)*Float(100))/Float(summ_rating)
@@ -94,7 +94,7 @@ contract VotingDecisionReject {
             p["results->percent_rejected"] = percent_rejected
             DBUpdate("@1votings_subject", Int($subject["id"]), p)
 
-            @1VotingUpdate("votingID", $votingID)
+            @1VotingUpdate("VotingId", $VotingId)
         }
     }
 }

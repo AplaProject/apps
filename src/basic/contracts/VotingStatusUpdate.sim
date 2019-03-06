@@ -3,11 +3,7 @@ contract VotingStatusUpdate {
 
     func notificationSend(voting map) {
         var title string id i lenVoters int voters array
-        if Int(voting["voting.type"]) == 3 {
-            $page_name = "@1polls_view"
-        } else {
-            $page_name = "@1voting_view"
-        }
+        $page_name = "@1voting_view"
         title = voting["voting.name"]
         id = Int(voting["id"])
         if voting["voting.type_participants"] == 5 {
@@ -18,7 +14,7 @@ contract VotingStatusUpdate {
                 voter = voters[i]
                 roleId = Int(voter["member.role_id"])
                 params["voting_id"] = id
-                @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type", roleId, 1, "fa-check", LangRes("@1voting", "en"), title, $page_name, params,1)
+                @1NotificationsSend("Rid,Sender,Icon,Header,Body,Page,Params,Closure", roleId, 1, "fa-check", LangRes("@1voting", "en"), title, $page_name, params, 1)
                 i = i + 1
             }
         } else {
@@ -29,7 +25,7 @@ contract VotingStatusUpdate {
                 voter = voters[i]
                 memberId = Int(voter["member.member_id"])
                 params["voting_id"] = id
-                @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map", memberId, 1, "fa-check", LangRes("@1voting", "en"), title, $page_name, params)
+                @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-check", LangRes("@1voting", "en"), title, $page_name, params)
                 i = i + 1
             }
         }
@@ -50,7 +46,9 @@ contract VotingStatusUpdate {
                 var where rating map
                 where[$rating_wallet] = IdToAddress(memberId)
                 where["ecosystem"] = $ecosystem_id
-                rating = DBFind($rating_table).Columns($request_columns).Where(where).Row()
+                if GetColumnType($rating_table, $rating_amount) != "" {
+                    rating = DBFind($rating_table).Columns($request_columns).Where(where).Row()
+                }
 
                 var rating_amount_i int rating_amount_f float
                 rating_amount_f = Float(rating[$rating_amount]) * Float($rating_weight)
@@ -60,7 +58,6 @@ contract VotingStatusUpdate {
                 rating_amount_f = 1 + Log(rating_amount_f)
                 rating_amount_i = Int(rating_amount_f * 1000)
 
-                //Println("wallet: " + Str(IdToAddress(memberId)) + "  rating_f: " + Str(rating_amount_f) + "  rating_i: " + Str(rating_amount_i))
                 DBUpdate("@1votings_participants", Int(voter["id"]), {rating: rating_amount_i})
                 i = i + 1
             }
@@ -85,8 +82,25 @@ contract VotingStatusUpdate {
         }
     }
 
-    conditions {
+    func checkPrev(names array) {
+        var i lenNames int prev string
+        lenNames = Len(names)
+        prev = $stack[0]
+        if Len($stack) > 2 {
+            prev = $stack[Len($stack) - 2]
+        }
+        while i < lenNames {
+            if prev == names[i] {
+                return
+            }
+            i = i + 1
+        }
         @1AdminCondition()
+    }
+
+    conditions {
+        checkPrev(["@1VotingSubjectCheck", "@1VotingInvite"])
+
         $INVALID = 1
         $WAITING = 2
         $STARTED = 3

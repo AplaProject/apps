@@ -6,8 +6,8 @@ contract InvestorRefresh {
     func notInArray(val string, arr array) bool {
         var i lenArr int
         lenArr = Len(arr)
-        while i < lenArr{
-            if val == Str(arr[i]){
+        while i < lenArr {
+            if val == Str(arr[i]) {
                 return false
             }
             i = i + 1
@@ -18,24 +18,26 @@ contract InvestorRefresh {
     func getParamInt(id int, name string) int {
         var param int
         param = Int(AppParam(id, name, 1))
-        if param == 0{
+        if param == 0 {
             warning Sprintf(LangRes("@1application_parameter_not_set", "en"), name)
         }
         return param
     }
+
     func getRoleId(name string) int {
         var rid int
-        rid = Int(EcosysParam(name))
-        if rid == 0{
-            warning Sprintf(LangRes("@1role_not_set_eco_parameter", "en"), name)
+        rid = Int(AppParam(Int($system_app_id), name, $ecosystem_id))
+        if rid == 0 {
+            warning Sprintf(LangRes("@role_not_set_application_parameter", "en"), name)
         }
         return rid
     }
 
     conditions {
+        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
         var appId int
         appId = Int(DBFind("@1applications").Where({"ecosystem": 1, "name": "Basic", "deleted": 0}).One("id"))
-        if appId == 0{
+        if appId == 0 {
             warning LangRes("@1app_not_found", "en")
         }
 
@@ -48,7 +50,7 @@ contract InvestorRefresh {
 
         roleInvestorId = getRoleId("role_investor_with_voting_rights")
         $roleId = Int(DBFind("@1roles").Where({"id": roleInvestorId, "deleted": 0}).One("id"))
-        if $roleId == 0{
+        if $roleId == 0 {
             warning LangRes("@1investor_role_not_found_or_removed", "en")
         }
 
@@ -85,7 +87,7 @@ contract InvestorRefresh {
                 mid = assignedIds[i]
                 assigned = DBFind("@1roles_participants").Where({"member->member_id": mid, "role->id": $roleId}).Row()
                 if assigned {
-                    @1RolesUnassign("row_id", Int(assigned["id"]))
+                    @1RolesUnassign("RowId", Int(assigned["id"]))
                 }
             }
             i = i + 1
@@ -97,7 +99,7 @@ contract InvestorRefresh {
                 var id int
                 id = Int(investorsIds[i])
                 if DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": id}).Row(){
-                    @1RolesAssign("rid,member_id", $roleId, id)
+                    @1RolesAssign("Rid,MemberId", $roleId, id)
                 }
             }
             i = i + 1

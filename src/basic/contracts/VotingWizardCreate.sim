@@ -1,43 +1,31 @@
 contract VotingWizardCreate {
     data {
-        voting_name string
-        voting_type int
-        type_participants int
-        type_decision int
-
-        volume int "optional"
-        quorum int
-        rating string "optional"
-
-        count_type_voters string "optional"
-        description string "optional"
-        interval string "optional"
-        start_date string "optional"
-        start_time string "optional"
-        end_date string "optional"
-        end_time string "optional"
-        
-        member_participants string "optional"
-        role_participants string "optional"
-
-        execute_contract string "optional"
-        contract_accept string "optional"
-        contract_accept_params string "optional"
-        contract_reject string "optional"
-        contract_reject_params string "optional"
-
-        text_document string "optional"
-
-        subject_description string "optional"
-        table_to_written string "optional"
-        row_id string "optional"
-        column_name string "optional"
-        written_value string "optional"
-
-        candidates string "optional"
-        apply string "optional"
-        role_id string "optional"
-        vacancies string "optional"
+        Name string
+        Type int
+        TypeParticipants int
+        TypeDecision int
+        Volume int "optional"
+        Quorum int
+        Rating string "optional"
+        CountTypeVoters string "optional"
+        Description string "optional"
+        Interval string "optional"
+        StartDate string "optional"
+        StartTime string "optional"
+        EndDate string "optional"
+        EndTime string "optional"
+        MemberParticipants string "optional"
+        RoleParticipants string "optional"
+        ExecuteContract string "optional"
+        ContractAccept string "optional"
+        ContractAcceptParams string "optional"
+        ContractReject string "optional"
+        ContractRejectParams string "optional"
+        TextDocument string "optional"
+        Candidates string "optional"
+        Apply string "optional"
+        RoleId string "optional"
+        Vacancies string "optional"
     }
 
     func sendInvites(voting int, participants string, type string) {
@@ -47,90 +35,73 @@ contract VotingWizardCreate {
         while i < Len(participants_list) {
             current_participant = Int(participants_list[i])
             if type == "member" || Len(DBFind("@1roles_participants").Where({ecosystem: $ecosystem_id, "role->id": current_participant, deleted:0})) != 0 {
-                m["votingID"] = voting
-                m["var_id"] = current_participant
+                m["VotingId"] = voting
+                m["VarId"] = current_participant
                 CallContract("@1VotingInvite", m)
             }
             i = i + 1
         }
     }
-    
+
     action {
-        var create_map subject_map invite_map m map votingID i int
+        var create_map subject_map invite_map m map voting_id i int
 
-        create_map["voting_name"] = $voting_name
-        create_map["voting_type"] = $voting_type
-        create_map["type_participants"] = $type_participants
-        create_map["type_decision"] = $type_decision
-        create_map["volume"] = $volume
-        create_map["quorum"] = $quorum
-        create_map["rating"] = $rating
-        create_map["count_type_voters"] = $count_type_voters
-        create_map["description"] = $description
-        create_map["start_date"] = $start_date
-        create_map["start_time"] = $start_time
-        create_map["end_date"] = $end_date
-        create_map["end_time"] = $end_time
+        create_map["Name"] = $Name
+        create_map["Type"] = $Type
+        create_map["TypeParticipants"] = $TypeParticipants
+        create_map["TypeDecision"] = $TypeDecision
+        create_map["Volume"] = $Volume
+        create_map["Quorum"] = $Quorum
+        create_map["Rating"] = $Rating
+        create_map["CountTypeVoters"] = $CountTypeVoters
+        create_map["Description"] = $Description
+        create_map["StartDate"] = $StartDate
+        create_map["StartTime"] = $StartTime
+        create_map["EndDate"] = $EndDate
+        create_map["EndTime"] = $EndTime
 
-        votingID = CallContract("@1VotingCreate", create_map)
+        voting_id = CallContract("@1VotingCreate", create_map)
 
-        subject_map["votingID"] = votingID
+        subject_map["VotingId"] = voting_id
 
-        if $execute_contract == "yes" || $type_decision == 5 {
-            subject_map["contract_accept"] = $contract_accept
-            subject_map["contract_accept_params"] = $contract_accept_params
-            subject_map["contract_reject"] = $contract_reject
-            subject_map["contract_reject_params"] = $contract_reject_params
+        if $ExecuteContract == "yes" || $TypeDecision == 4 {
+            subject_map["ContractAccept"] = $ContractAccept
+            subject_map["ContractAcceptParams"] = $ContractAcceptParams
+            subject_map["ContractReject"] = $ContractReject
+            subject_map["ContractRejectParams"] = $ContractRejectParams
         }
 
-        if $type_decision == 1 && $apply == 1 {
-        
-            m["votingID"] = votingID
-            m["memberID"] = 0
+        if $TypeDecision == 1 && $Apply == 1 {
+            m["VotingId"] = voting_id
+            m["MemberId"] = 0
             CallContract("@1VotingSubjectCandidates", m)
-
-            subject_map["roleID"] = Int($role_id)
-            subject_map["vacancies"] = Int($vacancies)
+            subject_map["RoleId"] = Int($RoleId)
+            subject_map["Vacancies"] = Int($Vacancies)
             CallContract("@1VotingSubjectSettings", subject_map)
-
-        } elif $type_decision == 2 && Str($candidates) != "0" {
-            
+        } elif $TypeDecision == 2 && Str($Candidates) != "0" {
             var candidates_list array
-            candidates_list = Split($candidates, ",")
+            candidates_list = Split($Candidates, ",")
             i = 0
             while i < Len(candidates_list) {
-                m["votingID"] = votingID
-                m["memberID"] = Int(candidates_list[i])
+                m["VotingId"] = voting_id
+                m["MemberId"] = Int(candidates_list[i])
                 CallContract("@1VotingSubjectCandidates", m)
                 i = i + 1
             }
-            
-            subject_map["roleID"] = Int($role_id)
-            subject_map["vacancies"] = Int($vacancies)
+            subject_map["RoleId"] = Int($RoleId)
+            subject_map["Vacancies"] = Int($Vacancies)
             CallContract("@1VotingSubjectSettings", subject_map)
-
-        } elif $type_decision == 3 {
-
-            subject_map["text_document"] = $text_document
+        } elif $TypeDecision == 3 {
+            subject_map["TextDocument"] = $TextDocument
             CallContract("@1VotingSubjectDocument", subject_map)
-
-        } elif $type_decision == 4 {
-
-            subject_map["description"] = $subject_description
-            subject_map["table_to_written"] = $table_to_written
-            subject_map["row_id"] = $row_id
-            subject_map["column_name"] = $column_name
-            subject_map["written_value"] = $written_value
-            CallContract("@1VotingSubjectFormal", subject_map)
-            
-        } elif $type_decision == 5 {
+        } elif $TypeDecision == 4 {
             CallContract("@1VotingSubjectContract", subject_map)
         }
 
-        if Str($member_participants) != "0" {
-            sendInvites(votingID, $member_participants, "member")
-        } elif Str($role_participants) != "0" {
-            sendInvites(votingID, $role_participants, "role")
+        if Str($MemberParticipants) != "0" {
+            sendInvites(voting_id, $MemberParticipants, "member")
+        } elif Str($RoleParticipants) != "0" {
+            sendInvites(voting_id, $RoleParticipants, "role")
         }
         DBUpdateExt("@1buffer_data", {"key": "voting_wizard_buffer", "member_id": $key_id, "ecosystem": $ecosystem_id}, {"value": "{}"})
     }

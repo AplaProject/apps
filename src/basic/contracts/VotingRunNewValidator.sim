@@ -1,0 +1,145 @@
+contract VotingRunNewValidator {
+    data {
+        ValidatorId int
+    }
+
+    func warn(name, detail string) {
+        warning Sprintf(LangRes("@1x_invalid", "en") + " (%v)", name, detail)
+    }
+
+    func checkApiAddress(addr string) {
+        var name string
+        name = LangRes("@1api_address", "en")
+        if Size(addr) == 0 {
+            warn(name, "size")
+        }
+        if !(HasPrefix(addr, "http://") || HasPrefix(addr, "https://")) {
+            warn(name, "protocol")
+        }
+        if Contains(addr, " ") {
+            warn(name, "space")
+        }
+        addr = Replace(addr, "http://", "")
+        addr = Replace(addr, "https://", "")
+        var parts array
+        if Contains(addr, ":") {
+            parts = Split(addr, ":")
+            if Len(parts) > 2 {
+                warn(name, ":")
+            }
+            var port string
+            port = parts[1]
+            if port <= 0 {
+                warn(name, "port")
+            }
+            addr = parts[0]
+        }
+    }
+
+    func checkTcpAddress(addr string) {
+        var name string
+        name = LangRes("@1tcp_address", "en")
+        if Size(addr) == 0 {
+            warn(name, "size")
+        }
+        if Contains(addr, " ") {
+            warn(name, "space")
+        }
+        var parts array
+        if Contains(addr, ":") {
+            parts = Split(addr, ":")
+            if Len(parts) > 2 {
+                warn(name, ":")
+            }
+            var port string
+            port = parts[1]
+            if port <= 0 {
+                warn(name, "port")
+            }
+        }
+    }
+
+    func checkPub(pub string) {
+        if PubToID(pub) == 0 {
+            warning LangRes("@1public_key_invalid", "en")
+        }
+    }
+
+    func checkKeyId(keyid int) {
+        var existed map
+        existed = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": keyid}).Row()
+        if !existed {
+            warning LangRes("@1key_not_found", "en")
+        }
+    }
+
+    func getNodesJSON() string {
+        var nodes string
+        nodes = SysParamString("full_nodes")
+        if Size(nodes) < 100 {
+            nodes = "[]"
+        }
+        return nodes
+    }
+
+    func appendFirstNode(nodes array) array {
+        var first string firstNode map
+        first = AppParam($app_id, "first_node", 1)
+        if !HasPrefix(first, "{") || Size(first) < 100 {
+            warning LangRes("@1first_node_invalid", "en")
+        }
+        firstNode = JSONDecode(first)
+        checkTcpAddress(firstNode["tcp_address"])
+        checkApiAddress(firstNode["api_address"])
+        checkKeyId(Int(firstNode["key_id"]))
+        checkPub(firstNode["public_key"])
+        nodes = Append(nodes, firstNode)
+        return nodes
+    }
+
+    conditions {
+        $app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Basic"}).One("id"))
+        $templateId = Int(DBFind("@1app_params").Where({"app_id": $app_id, "name": "voting_template_validators", "ecosystem": $ecosystem_id}).One("value"))
+        if $templateId == 0 {
+            warning LangRes("@1template_id_not_found", "en")
+        }
+
+        $validator = DBFind("@1validator_candidates").Where({"id": $ValidatorId, "deleted": 0}).Row()
+        if !$validator {
+            warning LangRes("@1candidate_not_found", "en")
+        }
+
+        $TcpAddress = $validator["tcp_address"]
+        $ApiAddress = $validator["api_address"]
+        $KeyId = $validator["candidate_key_id"]
+        $PubKey = $validator["pub_key"]
+
+        checkKeyId(Int($KeyId))
+        checkPub($PubKey)
+        checkApiAddress($ApiAddress)
+        checkTcpAddress($TcpAddress)
+    }
+
+    action {
+        var nodes array new_node map
+        new_node["tcp_address"] = $TcpAddress
+        new_node["api_address"] = $ApiAddress
+        new_node["key_id"] = Str($KeyId)
+        new_node["public_key"] = $PubKey
+        nodes = JSONDecode(getNodesJSON())
+        if Len(nodes) == 0 {
+            nodes = appendFirstNode(nodes)
+        }
+        nodes = Append(nodes, new_node)
+
+        @1DelegateRefresh()
+
+        var pars map
+        pars["Name"] = "full_nodes"
+        pars["Value"] = JSONEncode(nodes)
+        pars["ValidatorId"] = Str($KeyId)
+        pars["flag"] = "add"
+
+        @1VotingTemplateRun("TemplateId,Duration,ContractAcceptParams", $templateId, 14, JSONEncode(pars))
+    }
+}

@@ -1,10 +1,11 @@
 contract ErrandStatusUpdate {
+
     conditions {
         $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Errands"}).One("id")
-        var admin_ids int
+        var admin_ids string
         admin_ids = AppParam(Int($app), "errands_admin_role", $ecosystem_id)
         var rids array
-        rids = JSONDecode("["+admin_ids+"]")  
+        rids = JSONDecode("["+admin_ids+"]")
         if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
             warning LangRes("@1access_denied", "en")
         }
@@ -18,9 +19,9 @@ contract ErrandStatusUpdate {
         errands = DBFind("@1notifications").Columns("id,page_params->date_end,page_params->type,page_params->status").Where({"page_params->type": "task", "page_params->date_end": {"$lte": bt}, "page_params->status": 0})
         lenErrands = Len(errands)
         page_params_edit["page_params->status"] = -1
-        while i < lenErrands{
+        while i < lenErrands {
             v = errands[i]
-            @1NotificationsUpdateParams("page_params,notific_id", page_params_edit, Int(v["id"]))
+            @1NotificationsUpdateParams("Params,NotificId", page_params_edit, Int(v["id"]))
             i = i + 1
         }
     }

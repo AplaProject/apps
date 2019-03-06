@@ -1,108 +1,94 @@
+SetVar(this_page, @1voting_template_create)
 DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
-SetVar(template_id, 0)
-SetVar(title,"New voting").(typevoting,0).(volume,50).(quorum,51).(subj,).(voters,).(candidates,).(vacancies,1).(contract_init,).(contract_accept,).(accept_params,).(contract_reject,).(reject_params,)
+SetVar(name, "New voting").(typevoting, 0).(volume, 50).(quorum, 51).(vacancies, 1)
+
 If(#TemplateId#>0){
-    DBFind(@1voting_templates).WhereId(#TemplateId#).Vars(template)
-    SetVar(title, #template_title#)
-    SetVar(typevoting, #template_type_voting#)
-    SetVar(volume, #template_volume#)
-    SetVar(subj, #template_subject#)
-    SetVar(quorum, #template_quorum#)
-    SetVar(voters, #template_voters#)
-    SetVar(candidates, #template_candidates#)
-    SetVar(vacancies, #template_vacancies#)
-    SetVar(contract_init, #template_init_contract#)
-    SetVar(contract_accept, #template_contract_accept#)
-    SetVar(accept_params, #template_accept_params#)
-    SetVar(contract_reject, #template_contract_reject#)
-    SetVar(reject_params, #template_reject_params#)
-    If(GetVar(CountTypeVoters)==""){
-        SetVar(CountTypeVoters, #template_count_type_voters#)
+    DBFind(@1voting_templates).Where({"id": #TemplateId#, "ecosystem": #ecosystem_id#}).Columns("voting->count_type_voters,voting->name,voting->volume,voting->quorum,voting->type_decision,voting->type_participants,voting->type,voting->rating,subject->candidates,subject->vacancies,subject->voters,subject->contract_accept,subject->contract_reject,optional->contract_accept,optional->contract_reject,optional->init_contract,optional->contract_accept_params,optional->contract_reject_params,optional->init_contract_params").Vars(template)
+
+    If(#CountTypeVoters# == ""){
+        SetVar(CountTypeVoters, #template_voting_count_type_voters#)
     }
-}
-
-If(#TypeDecision#>0){
-    SetVar(typedec,#TypeDecision#)
-}.Else{
-    SetVar(typedec,0)
-}
-If(#TypeParticipants#>0){
-    SetVar(typepart,#TypeParticipants#)
-}.Else{
-    SetVar(typepart,0)
-}
-
-SetVar(col_right,"col-sm-8 mb-sm text-left")
-SetVar(col_right_nob,"col-sm-8 text-left")
-SetVar(col_left,"col-sm-4 mt-sm text-right")
-
-SetVar(this_page,@1voting_template_create)
-If(GetVar(CountTypeVoters)==""){
-    SetVar(CountTypeVoters,0)
+    If(#TypeDecision# == ""){
+        SetVar(ValTypeDec, #template_voting_type_decision#)
+    }
+    If(#TypeParticipants# == ""){
+        SetVar(TypeParticipants, #template_voting_type_participants#)
+    }
+    SetVar(voters, #template_subject_voters#)
+    SetVar(name, #template_voting_name#)
+    SetVar(quorum, #template_voting_quorum#)
+    If(#template_voting_rating# == 1){
+        SetVar(rating, "true")
+    }
+    SetVar(volume, #template_voting_volume#)
+    SetVar(candidates, #template_subject_candidates#)
+    SetVar(vacancies, #template_subject_vacancies#)
+    SetVar(contract_accept, #template_subject_contract_accept#)
+    SetVar(contract_reject, #template_subject_contract_reject#)
+    SetVar(init_contract, #template_optional_init_contract#)
+    SetVar(init_params, #template_optional_init_contract_params#)
+    SetVar(optional_accept_contract, #template_optional_contract_accept#)
+    SetVar(optional_accept_params, #template_optional_contract_accept_params#)
+    SetVar(optional_reject_contract, #template_optional_contract_reject#)
+    SetVar(optional_reject_params, #template_optional_contract_reject_params#)
 }
 
 Form(){
-    If(#typedec#>0){
+    If(#TypeDecision#>0){
         Div(list-group-item){
             Div(row){
-                Div(#col_left#){
-                    Label(For: TypeParticipants){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
                         LangRes(@1vote_count_type)
                         Span(*,text-danger)
                     }
                 }
-                Div(#col_right#){
-                    If(GetVar(CountTypeVoters)==0){
-                        Input(Name: InputCountTypeVoters, Disabled: 1, Value: $@1percent_votes$)
-                    }.ElseIf(GetVar(CountTypeVoters)==1){
+                Div(col-md-9 text-left){
+                    If(#CountTypeVoters#==1){
                         Input(Name: InputCountTypeVoters, Disabled: 1, Value: $@1number_votes$)
+                        Input(Name: CountTypeVoters, Type: hidden, Value: 1)
+                    }.Else{
+                        Input(Name: InputCountTypeVoters, Disabled: 1, Value: $@1percent_votes$)
+                        Input(Name: CountTypeVoters, Type: hidden, Value: 0)
                     }
-                    Input(Name: CountTypeVoters, Type: hidden, Value: #CountTypeVoters#)
                 }
             }
-            Div(row){
-                Div(#col_left#){
-                    Label(For: TypeDecision){
-                        LangRes(@1decision)
+            Div(row mt-sm){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        LangRes(@1voting_subject)
                         Span(*,text-danger)
                     }
                 }
-                Div(#col_right_nob#){
-                    SetVar(var_type_voting_decisions, AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_decisions, Index: #typedec#))
+                Div(col-md-9 text-left){
+                    SetVar(var_type_voting_decisions, AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_decisions, Index: #TypeDecision#))
                     Input(Name: Input_TypeVotingDecisions, Disabled: 1, Value: #var_type_voting_decisions#)
-                    Input(Name: TypeDecision, Type: hidden, Value: #typedec#)
+                    Input(Name: TypeDecision, Type: hidden, Value: #TypeDecision#)
                 }
             }
-        }
-        Div(list-group-item){
-            Div(row){
-                Div(#col_left#){
-                    Label(For: TypeParticipants){
+            Div(row mt-sm){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
                         LangRes(@1participants)
                         Span(*,text-danger)
                     }
                 }
-                If(#typepart#==3){
-                     SetVar(col_right_n1, #col_right#)
-                }.Else{
-                    SetVar(col_right_n1, #col_right_nob#)
-                }
-                Div(#col_right_n1#){
-                    SetVar(var_type_voting_participants, AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_participants, Index: #typepart#))
-                    Input(Name: InputTypeVotingParticipants, Disabled: 1, Value: #var_type_voting_participants#)
-                    Input(Name: TypeParticipants, Type: hidden, Value: #typepart#)
+                Div(col-md-9 text-left){
+                    SetVar(var_type_participants, AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_participants, Index: #TypeParticipants#))
+                    Input(Name: InputTypeVotingParticipants, Disabled: 1, Value: #var_type_participants#)
+                    Input(Name: TypeParticipants, Type: hidden, Value: #TypeParticipants#)
                 }
             }
-            If(#typepart#==3){
-                Div(row){
-                    Div(#col_left#){
-                        Label(For: Voters){
+            If(#TypeParticipants#==3){
+                Div(row mt-sm){
+                    Div(col-md-3 mt-sm text-right){
+                        Label(){
                             LangRes(@1voters_role)
                             Span(*,text-danger)
                         }
                     }
-                    Div(#col_right_nob#){
-                        DBFind(@1roles,src_roles1).Where({"ecosystem": #ecosystem_id#, "deleted": 0}).Order(id).Custom(name){
+                    Div(col-md-9 text-left){
+                        DBFind(@1roles, src_roles1).Where({"ecosystem": #ecosystem_id#, "deleted": 0}).Order(id).Custom(name){
                             #role_name#
                         }
                         Select(Name: Voters, Source: src_roles1, NameColumn: name, ValueColumn: id, Value: #voters#)
@@ -112,98 +98,94 @@ Form(){
         }
         Div(list-group-item){
             Div(row){
-                Div(#col_left#){
-                    Label(For: Title){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
                         LangRes(@1name)
                         Span(*,text-danger)
                     }
                 }
-                Div(#col_right#){
-                    Input(Name: Title, Value: #title#)
+                Div(col-md-9 text-left){
+                    Input(Name: VotingName, Value: #name#)
                 }
             }
-            Div(row){
-                Div(#col_left#){
-                    Label(For: TypeVoting){
-                        LangRes(@1voting_type)
-                        Span(*,text-danger)
-                    }
-                }
-                Div(#col_right#){
-                    AppParam(Ecosystem:1, App:#application_id#, Name: type_voting, Source: src_typevoting)
-                    Select(Name: TypeVoting, Source: src_typevoting, NameColumn: name, ValueColumn: id, Value: #typevoting#)
-                }
-            }
-            Div(row){
-                Div(#col_left#){
-                    Label(For: Volume){
-                        LangRes(@1voting_volume)
-                        Span(*,text-danger)
-                    }
-                }
-                Div(#col_right#){
-                    Input(Name: Volume, Type: number, Value: #volume#).Validate(minLength: 1)
-                    InputErr(Name: Volume, minLength: Please enter Volume)
-                    If(GetVar(CountTypeVoters)==0){
-                        P(Class: m0 h6 text-muted, Body: $@1voting_volume_desc$)
-                    }.ElseIf(GetVar(CountTypeVoters)==1){
-                        P(Class: m0 h6 text-muted, Body: $@1voting_volume_number_desc$)
-                    }
-                }
-            }
-            SetVar(hide_quorum,)
-            If(GetVar(CountTypeVoters)==1){
-                SetVar(hide_quorum,"hidden")
-            }
-            Div(row #hide_quorum#){
-                Div(#col_left#){
-                    Label(For: Quorum){
+            Div(row mt-sm){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
                         LangRes(@1voting_quorum)
                         Span(*,text-danger)
                     }
                 }
-                Div(#col_right#){
-                    Input(Name: Quorum, Type: number, Value: #quorum#).Validate(minLength: 1)
-                    InputErr(Name: Quorum, minLength: Please enter Quorum)
-                    P(Class: m0 h6 text-muted, Body: $@1voting_quorum_desc$)
-                }
-            }
-            If(Or(#typedec#==1,#typedec#==2)){
-                SetVar(col_right_n2, #col_right#)
-            }.Else{
-                SetVar(col_right_n2, #col_right_nob#)
-            }
-            Div(row){
-                Div(#col_left#){
-                    Label(For: Subject){
-                        LangRes(@1voting_subject)
-                        Span(*,text-danger)
+                Div(col-md-9 text-left){
+                    If(#CountTypeVoters#==1){
+                        Input(Name: Quorum, Value: #quorum#, Type: number)
+                        Div(m0 h6 text-muted){
+                            $@1voting_quorum_number_desc$
+                        }
+                    }.Else{
+                        Input(Name: Quorum, Value: #quorum#, Type: number)
+                        Div(m0 h6 text-muted){
+                            $@1voting_quorum_desc$
+                        }
                     }
                 }
-                Div(#col_right_n2#){
-                    Input(Name: Subject, Value: #subj#)
+            }
+            If(Or(#TypeParticipants#==1,#TypeParticipants#==2,#TypeParticipants#==3,#TypeParticipants#==4)){
+                Div(row mt-sm){
+                    Div(col-md-3 mt-sm text-right){
+                        Label(){
+                            LangRes(@1voting_rating)
+                            Span(*,text-danger)
+                        }
+                    }
+                    Div(col-md-9 mt-sm text-left){
+                        Input(Name: Rating, Placeholder: $@1voting_rating_desc$, Type: checkbox, Value: #rating#, Class: m0 text-muted)
+                    }
                 }
             }
-            If(Or(#typedec#==1,#typedec#==2)){
+        }
+        If(Or(#CountTypeVoters#==1,#TypeDecision#==1,#TypeDecision#==2)){
+            SetVar(hide_volume, 1)
+        }
+        If(#hide_volume# != 1){
+            Div(list-group-item){
                 Div(row){
-                    Div(#col_left#){
-                        Label(For: Vacancies){
+                    Div(col-md-3 mt-sm text-right){
+                        Label(){
+                            LangRes(@1voting_volume)
+                            Span(*,text-danger)
+                        }
+                    }
+                    Div(col-md-9 text-left){
+                        Input(Name: Volume, Value: #volume#, Type: number)
+                        Div(m0 h6 text-muted){
+                            $@1voting_volume_desc$
+                        }
+                    }
+                }
+            }
+        }
+
+        If(Or(#TypeDecision#==1,#TypeDecision#==2)){
+            Div(list-group-item){
+                Div(row){
+                    Div(col-md-3 mt-sm text-right){
+                        Label(){
                             LangRes(@1vacancies)
                             Span(*,text-danger)
                         }
                     }
-                    Div(#col_right#){
+                    Div(col-md-9 text-left){
                         Input(Name: Vacancies, Value: #vacancies#, Type: number)
                     }
                 }
-                Div(row){
-                    Div(#col_left#){
-                        Label(For: Candidates){
+                Div(row mt-sm){
+                    Div(col-md-3 mt-sm text-right){
+                        Label(){
                             LangRes(@1candidates_role)
                             Span(*,text-danger)
                         }
                     }
-                    Div(#col_right_nob#){
+                    Div(col-md-9 text-left){
                         DBFind(@1roles,src_roles2).Where({"role_type": 2, "ecosystem": #ecosystem_id#, "deleted": 0}).Order(id).Custom(name){
                             #role_name#
                         }
@@ -212,116 +194,156 @@ Form(){
                 }
             }
         }
+        If(#TypeDecision#==4){
+            Div(list-group-item){
+                Div(row mt-sm){
+                    Div(col-md-3 mt-sm text-right){
+                        Label(){
+                            LangRes(@1contract_accept)
+                            Span(*,text-danger)
+                        }
+                    }
+                    Div(col-md-9 text-left){
+                        Div(row){
+                            Div(col-md-12){
+                                Input(Name: ContractAccept, Placeholder: $@1contract$, Value: #contract_accept#)
+                            }
+                        }
+                    }
+                }
+                Div(row mt-sm){
+                    Div(col-md-3 mt-sm text-right){
+                        Label(){
+                            LangRes(@1contract_reject)
+                        }
+                    }
+                    Div(col-md-9 text-left){
+                        Div(row){
+                            Div(col-md-12){
+                                Input(Name: ContractReject, Placeholder: $@1contract$, Value: #contract_reject#)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Div(list-group-item){
             Div(row){
-                Div(#col_left#){
-                    Label(For: InitContract){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
                         LangRes(@1voting_init_contract)
                     }
                 }
-                Div(#col_right#){
-                    Input(Name: InitContract, Value: #contract_init#)
-                    P(Class: m0 h6 text-muted, Body: $@1voting_init_contract_desc$)
-                }
-            }
-            Div(row){
-                Div(#col_left#){
-                    Label(For: ContractAccept){
-                        LangRes(@1voting_contract_accept)
-                    }
-                }
-                Div(#col_right#){
+                Div(col-md-9 text-left){
                     Div(row){
                         Div(col-md-6){
-                            Input(Name: ContractAccept, Placeholder: $@1contract$, Value: #contract_accept#)
+                            Input(Name: InitContract, Placeholder: $@1contract$, Value: #init_contract#)
                         }
                         Div(col-md-6){
-                            Input(Name: ParamsAccept, Placeholder: $@1arguments$, Value: #accept_params#)
+                            Input(Name: ParamsInit, Placeholder: $@1arguments$, Value: #init_params#)
                         }
                     }
                 }
             }
-            Div(row){
-                Div(#col_left#){
-                    Label(For: ContractReject){
-                        LangRes(@1voting_contract_reject)
+            Div(row mt-sm){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        LangRes(@1contract_accept)
                     }
                 }
-                Div(#col_right_nob#){
+                Div(col-md-9 text-left){
                     Div(row){
                         Div(col-md-6){
-                            Input(Name: ContractReject, Placeholder: $@1contract$, Value: #contract_reject#)
+                            Input(Name: OptionalContractAccept, Placeholder: $@1contract$, Value: #optional_accept_contract#)
                         }
                         Div(col-md-6){
-                            Input(Name: ParamsReject, Placeholder: $@1arguments$, Value: #reject_params#)
+                            Input(Name: OptionalParamsAccept, Placeholder: $@1arguments$, Value: #optional_accept_params#)
+                        }
+                    }
+                }
+            }
+            Div(row mt-sm){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        LangRes(@1contract_reject)
+                    }
+                }
+                Div(col-md-9 text-left){
+                    Div(row){
+                        Div(col-md-6){
+                            Input(Name: OptionalContractReject, Placeholder: $@1contract$, Value: #optional_reject_contract#)
+                        }
+                        Div(col-md-6){
+                            Input(Name: OptionalParamsReject, Placeholder: $@1arguments$, Value: #optional_reject_params#)
                         }
                     }
                 }
             }
         }
         Button(Body: LangRes(@1create), Class: btn btn-primary pull-right mt, Page: @1voting_templates_list, Contract: @1VotingTemplateCreate)
-        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: #this_page#, PageParams: "TemplateId=#TemplateId#").Popup(50, $@1voting_template_create$)
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: #this_page#, PageParams: "TemplateId=#TemplateId#").Popup(60, $@1voting_template_create$)
     }.Else{
-        Div(row){
-            Div(#col_left#){
-                Label(){
-                    LangRes(@1vote_count_type)
-                    Span(*,text-danger)
-                }
-            }
-            Div(#col_right#){
-                If(GetVar(CountTypeVoters)==0){
-                    Button(Body: $@1percent_votes$, Page: #this_page#, PageParams: "CountTypeVoters=0,TemplateId=#TemplateId#,TypeParticipants=Val(TypeParticipants)", Class: btn btn-primary disabled mr-lg).Popup(50, $@1voting_template_create$)
-                    Button(Body: $@1number_votes$, Page: #this_page#, PageParams: "CountTypeVoters=1,TemplateId=#TemplateId#,TypeParticipants=Val(TypeParticipants)", Class: btn btn-primary).Popup(50, $@1voting_template_create$)    
-                }.ElseIf(GetVar(CountTypeVoters)==1){
-                    Button(Body: $@1percent_votes$, Page: #this_page#, PageParams: "CountTypeVoters=0,TemplateId=#TemplateId#,TypeParticipants=Val(TypeParticipants)", Class: btn btn-primary mr-lg).Popup(50, $@1voting_template_create$)
-                    Button(Body: $@1number_votes$, Page: #this_page#, PageParams: "CountTypeVoters=1,TemplateId=#TemplateId#,TypeParticipants=Val(TypeParticipants)", Class: btn btn-primary disabled).Popup(50, $@1voting_template_create$)
-                }
-            }
-        }
-        Div(row){
-            Div(col-sm-4 mt-lg mb-lg text-right){
-                Label(For: #name#){
-                    LangRes(@1decision)
-                    Span(*,text-danger)
-                }
-            }
-            Div(#col_right#){
-                If(GetVar(CountTypeVoters)==0){
-                    AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_decisions, Source: procent_type_decisions)
-                    RadioGroup(Name: TypeDecision, Value: #template_type_decision#, Source: procent_type_decisions, ValueColumn: id, NameColumn: name)
-                }.ElseIf(GetVar(CountTypeVoters)==1){
-                    Data(numbers_type_decisions,"value,name"){
-                        3,$@1document$
-                        4,$@1database_write$
-                        5,$@1contract_run$
+        Div(list-group-item){
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        LangRes(@1vote_count_type)
+                        Span(*,text-danger)
                     }
-                    RadioGroup(Name: TypeDecision, Value: #template_type_decision#, Source: numbers_type_decisions, ValueColumn: value, NameColumn: name)
-                }.Else{
-                    Div(mt-lg mb-lg text-warning){
-                        $@1please_select$ "$@1vote_count_type$"
+                }
+                Div(col-md-9 mt-sm text-left){
+                    If(#CountTypeVoters#==1){
+                        Button(Body: $@1percent_votes$, Page: #this_page#, PageParams: "CountTypeVoters=0,TemplateId=#TemplateId#", Class: btn-xs btn-default mr-lg).Popup(60, $@1voting_template_create$)
+                        Button(Body: $@1number_votes$, Page: #this_page#, PageParams: "CountTypeVoters=1,TemplateId=#TemplateId#", Class: btn-xs btn-primary disabled).Popup(60, $@1voting_template_create$)
+                    }.Else{
+                        Button(Body: $@1percent_votes$, Page: #this_page#, PageParams: "CountTypeVoters=0,TemplateId=#TemplateId#", Class: btn-xs btn-primary disabled mr-lg).Popup(60, $@1voting_template_create$)
+                        Button(Body: $@1number_votes$, Page: #this_page#, PageParams: "CountTypeVoters=1,TemplateId=#TemplateId#", Class: btn-xs btn-default).Popup(60, $@1voting_template_create$)    
                     }
                 }
             }
         }
-        Div(row){
-            Div(#col_left#){
-                Label(For: #name#){
-                    LangRes(@1participants)
-                    Span(*,text-danger)
+        Div(list-group-item){
+            Div(row){
+                Div(col-md-3 mt text-right){
+                    Label(){
+                        LangRes(@1voting_subject)
+                        Span(*,text-danger)
+                    }
+                }
+                Div(col-md-9 text-left){
+                    If(#CountTypeVoters#==1){
+                        Data(numbers_type_decisions, "value,name"){
+                            3,$@1document$
+                            4,$@1contract_run$
+                        }
+                        RadioGroup(Name: TypeDecision, Value: #ValTypeDec#, Source: numbers_type_decisions, ValueColumn: value, NameColumn: name)
+                    }.Else{
+                        AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_decisions, Source: procent_type_decisions)
+                        RadioGroup(Name: TypeDecision, Value: #ValTypeDec#, Source: procent_type_decisions, ValueColumn: id, NameColumn: name)             
+                    }
                 }
             }
-            Div(#col_right#){
-                AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_participants, Source: src_typepart)
-                Select(Name: TypeParticipants, Source: src_typepart, NameColumn: name, ValueColumn: id, Value: #template_type_participants#)
+        }
+        Div(list-group-item){
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        LangRes(@1participants)
+                        Span(*,text-danger)
+                    }
+                }
+                Div(col-md-9 text-left){
+                    AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_participants, Source: src_typepart)
+                    Select(Name: TypeParticipants, Source: src_typepart, NameColumn: name, ValueColumn: id, Value: #TypeParticipants#)
+                }
             }
         }
-
-        Button(Body: LangRes(@1next), Class: btn btn-primary pull-right mt, Page: #this_page#, PageParams: "TemplateId=#TemplateId#,TypeDecision=Val(TypeDecision),TypeParticipants=Val(TypeParticipants),CountTypeVoters=#CountTypeVoters#").Popup(50, $@1voting_template_create$)
+        Button(Body: LangRes(@1next), Class: btn btn-primary pull-right mt, Page: #this_page#, PageParams: "CountTypeVoters=#CountTypeVoters#,TypeDecision=Val(TypeDecision),TypeParticipants=Val(TypeParticipants),TemplateId=#TemplateId#").Popup(60, $@1voting_template_create$)
         If(#TemplateId#>0){
-            Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1voting_template_start, PageParams: "TemplateId=#TemplateId#")
+            Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1voting_template_view, PageParams: "TemplateId=#TemplateId#")
         }.Else{
             Button(Body: LangRes(@1back), Class: btn btn-default pull-right mt, Page: @1voting_templates_list)
-        }   
+        }
     }
 }

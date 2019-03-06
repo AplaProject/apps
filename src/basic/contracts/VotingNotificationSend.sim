@@ -1,6 +1,6 @@
 contract VotingNotificationSend {
     data {
-        votingID int
+        VotingId int
     }
 
     func safeJsonToMap(m string) map {
@@ -12,12 +12,12 @@ contract VotingNotificationSend {
     }
 
     conditions {
-        $voting = DBFind("@1votings").Columns("id,date_ended").Where({"ecosystem": $ecosystem_id, "id": $votingID, "date_ended":[{"$gt": $block_time}]}).One("id")
+        $voting = DBFind("@1votings").Columns("id,date_ended").Where({"ecosystem": $ecosystem_id, "id": $VotingId, "date_ended":[{"$gt": $block_time}]}).One("id")
         if !$voting {
             warning LangRes("@1voting_expired_can_not_notify", "en")
         }
 
-        $voting = DBFind("@1votings").Columns("voting->name,creator->member_id,flags->notifics,flags,date_started").Where({"ecosystem": $ecosystem_id, "id": $votingID, "date_started":[{"$gt": $block_time}]}).Row()
+        $voting = DBFind("@1votings").Columns("voting->name,creator->member_id,flags->notifics,flags,date_started").Where({"ecosystem": $ecosystem_id, "id": $VotingId, "date_started":[{"$gt": $block_time}]}).Row()
         if !$voting {
             warning LangRes("@1voting_not_started", "en")
         }
@@ -33,18 +33,18 @@ contract VotingNotificationSend {
 
     action {
         var participants array
-        participants = DBFind("@1votings_participants").Limit(10000).Where({"ecosystem": $ecosystem_id, "voting_id": $votingID, "decision": 0})
+        participants = DBFind("@1votings_participants").Limit(10000).Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId, "decision": 0})
         var i int
         while i < Len(participants) {
             var participant member params map
             participant = participants[i]
             member = safeJsonToMap(participant["member"])
-            params["voting_id"] = $votingID
-            @1NotificationsSend("member_id,sender,icon_name,text_header,text_body,page_name,params_map,rid,closure_type", Int(member["member_id"]), 1, "fa-check", LangRes("@1voting", "en"), $voting_name, "voting_view", JSONEncode(params), 0, 0)
+            params["voting_id"] = $VotingId
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", Int(member["member_id"]), 1, "fa-check", LangRes("@1voting", "en"), $voting_name, "voting_view", JSONEncode(params))
 
             i = i + 1
         }
 
-        DBUpdate("@1votings", $votingID, {"flags->notifics":1})
+        DBUpdate("@1votings", $VotingId, {"flags->notifics": 1})
     }
 }

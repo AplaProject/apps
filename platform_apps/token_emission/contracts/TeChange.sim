@@ -1,0 +1,38 @@
+contract TeChange {
+    data {
+        TypeChange string
+        Value int
+    }
+
+    conditions {
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Token emission"}).One("id")
+        var admin_ids string
+        admin_ids = AppParam(Int($app), "te_admin_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+admin_ids+"]")
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+            warning LangRes("@1access_denied", "en")
+        }
+
+        $item = DBFind("@1ecosystems").WhereId($ecosystem_id).Row()
+        if !$item {
+            warning LangRes("@1emission_not_found", "en")
+        }
+
+        if $Value < 1 || $Value > 2  {
+            warning LangRes("@1value_between_1_and_2", "en")
+        }
+    }
+
+    action {
+        var m map
+        if $TypeChange == "emission" {
+            m["type_emission"] = $Value
+        }
+        if $TypeChange == "withdraw" {
+            m["type_withdraw"] = $Value
+        }
+
+        DBUpdate("@1ecosystems", $ecosystem_id, m)
+    }
+}

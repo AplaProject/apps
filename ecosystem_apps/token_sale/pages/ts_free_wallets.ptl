@@ -2,12 +2,13 @@ SetVar(this_page, @1ts_free_wallets).(this_table, @1ts_wallets)
 Include(@1pager_header)
 
 SetTitle("$@1ts_free_wallets$")
-SetVar(admin_role_id, EcosysParam(Name:role_sale_admin))
-If(And(#admin_role_id#>0,#role_id#==#admin_role_id#)){
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Token sale"}).Vars("app")
+SetVar(admin_role_id, AppParam(App: #app_id#, Name: "ts_role_sale_admin"))
+If(And(#admin_role_id# > 0, #role_id# == #admin_role_id#)){
     AddToolButton(Title:$@1ts_free_wallet_add$, Page: @1ts_free_wallet_add, Icon: icon-wallet).Popup(Header: $@1ts_free_wallet_add$, Width: "50")
 }
 
-If(GetVar(search)){
+If(#search#){
     SetVar(where, {"$and": [{"deleted":0}, {"key_id_buyer":0}, {"$or":[{"wallet_btc": {"$ilike": "#search#"}}, {"wallet_eth": {"$ilike": "#search#"}}]}]})
 }.Else{
     SetVar(where, {"$and": [{"deleted":0}, {"key_id_buyer":0}]})
@@ -24,8 +25,8 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
     Span(#wallet_eth#)
 }.Custom(action){
     Div(pull-right){
-        If(#deleted#==0){
-            Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, Contract: @1TsFreeWalletDelete, Params: "wallet_id=#id#", Page: @1ts_free_wallets).Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+        If(#deleted# == 0){
+            Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, Contract: @1TsFreeWalletDelete, Params: "WalletId=#id#", Page: @1ts_free_wallets).Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
         }
     }
 }.Count(count)
@@ -37,7 +38,7 @@ Div(fullscreen){
                 Table(src, "$@1id$=id,$@1ts_wallet_btc$=_btc,$@1ts_wallet_eth$=_eth,=action")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1ts_free_wallets$ $@1not_founded$")
-            }                       
+            }
         }.Style(
             margin-top:-15px;
             tbody > tr:nth-of-type(odd) {

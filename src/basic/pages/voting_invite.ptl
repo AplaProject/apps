@@ -1,17 +1,17 @@
+If(#Id# > 0){
+    SetVar(vID, #Id#)
+}
+If(Id==""){
+    SetVar(Id, 0)
+}
+
 If(#vID# > 0){
     Form(){
-        If(#member_participants# == ""){
-            SetVar(member_participants,0)
-        }
-        If(#role_participants# == ""){
-            SetVar(role_participants,0)
-        }
-        If(GetVar(back_page)){}.Else{
+        If(#back_page#==""){
             SetVar(back_page,@1voting_view)
         }
         DBFind(@1votings).WhereId(#vID#).Columns("id,voting->name,voting->type_participants").Vars(instance)
         DBFind(@1votings_participants, src_participants).Where({"voting_id": #vID#}).Columns("id,member->member_id,member->member_name,member->role_id,member->member->member_id,member->member->member_name").Count(participants_count).Custom(_id){
-            SetVar(member_participants,"#member_participants#,#member.member_id#")
             Address(#member.member_id#)
         }.Custom(_name){
             LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#member.member_id#", Body: #member.member_name#)
@@ -20,9 +20,6 @@ If(#vID# > 0){
         }.Custom(_member_roles){
             SetVar(rl_id,0)
             DBFind(@1roles).Columns("id,role_name,image_id").WhereId(#member.role_id#).Vars(rl)
-            If(#rl_id# > 0){
-                SetVar(role_participants,"#role_participants#,#rl_id#")
-            }
             LinkPage(Class: text-primary h5 text-bold, Page: @1roles_view, PageParams: "v_role_id=#rl_id#"){
                 If(#rl_image_id#>0){
                     Image(Src: Binary().ById(#rl_image_id#), Class: mr-sm).Style(width: 30px; border: 1px solid #5A5D63;)
@@ -47,62 +44,69 @@ If(#vID# > 0){
             }
         }
         If(#instance_voting_type_participants# != 1){
-            Div(row){
+            Div(row mb){
+                Input(Name: VotingId, Type: hidden, Value: #vID#)
                 If(#instance_voting_type_participants# == 2){
-                    DBFind(@1keys,src_keys).Where({"ecosystem": #ecosystem_id#, {"$and": [{"id":{"$neq": #guest_key#}}, {"id":{"$nin":[#member_participants#]}}]}}).Columns("id").Count(keys_count).Custom(_name){
-                        SetVar(m_member_name,)
-                        DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Columns("id,member_name").Count(have_name).Vars(m)
-                        Address(#id#)
-                        If(#have_name# > 0){
-                            " (#m_member_name#)"
+                    Div(col-md-3 mt-sm text-right){
+                        Label(){
+                            LangRes(@1member)
+                            Span(Class: text-danger, Body:*)
                         }
                     }
-                    SetVar(source,src_keys)
-                    SetVar(select_label,$@1member$)
-                    SetVar(hint,$@1select_member$)
-                }.ElseIf(#instance_voting_type_participants# > 2){
-                    DBFind(@1roles, src_roles).Where({"ecosystem": #ecosystem_id#, "deleted": 0, "id": {"$nin":[#role_participants#]}}).Count(roles_count).Columns("id,role_name").Custom(_name){
-                        Span(#role_name#)
-                    }
-                    SetVar(source,src_roles)
-                    SetVar(select_label,$@1role$)
-                    SetVar(hint,$@1select_role$)
-                }
-                Div(col-md-2 mt-sm text-right){
-                    Label(){
-                        Span(#select_label#)
-                        Span(*, text-danger)
-                    }
-                }
-                Div(col-md-10 text-left){
-                    If(GetVar(participants_count) == ""){
-                        SetVar(participants_count,0)
-                    }
-                    If(GetVar(roles_count) == ""){
-                        SetVar(roles_count,0)
-                    }
-                    If(Or(And(#instance_voting_type_participants#==2,#keys_count#>0),And(#instance_voting_type_participants#==3,#participants_count#==0),And(#instance_voting_type_participants#>3,#roles_count#>0))){
+                    Div(col-md-9 text-left){
+                        If(#MemberId# == ""){
+                            SetVar(MemberId, 0)
+                        }.Else{
+                            Input(Name: VarId, Type: hidden, Value: #MemberId#)
+                        }
                         Div(input-group){
-                            Select(Name: var_id, Source: #source#, NameColumn: _name, ValueColumn: id)
+                            If(Or(#MemberId#>0,#MemberId#<0)){
+                                SetVar(AddressMemberId, Address(#MemberId#))
+                                SetVar(Id, #MemberId#)
+                            }
+                            Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #AddressMemberId#)
                             Div(input-group-btn){
-                                Input(Name: votingID, Type: hidden, Value: #vID#)
-                                Button(Class: btn bg-gray-lighter fa fa-plus buttons, Page: @1voting_invite, PageParams: "vID=#vID#,back_page=#back_page#", Contract: @1VotingInvite).Popup(50, $@1participants_add$)
+                                Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=@1voting_invite,back_header=$@1participants_add$,EcosystemId=#ecosystem_id#,Id=#vID#").Popup(Header: $@1member$, Width: "50")
                             }
                         }
-                        Div(Class: m0 h6 text-muted, Body: #hint#)
-                    }.ElseIf(#instance_voting_type_participants#==3){
-                        Input(Name: one_role_allowed, Class: mb, Disabled: 1, Value: "$@1voting_one_role_allowed$")
-                    }.ElseIf(#instance_voting_type_participants#>3){
-                        Input(Name: one_role_allowed, Class: mb, Disabled: 1, Value: "$@1voting_all_roles_added$")
-                    }.Else{
-                        Input(Name: voting_all_members, Class: mb, Disabled: 1, Value: "$@1voting_all_keys_added$")
+                    }
+                }.ElseIf(#instance_voting_type_participants# > 2){
+                    Div(col-md-3 mt-sm text-right){
+                        Label(){
+                            LangRes(@1role)
+                            Span(Class: text-danger, Body:*)
+                        }
+                    }
+                    Div(col-md-9 text-left){
+                        If(RoleId == ""){
+                            SetVar(RoleId, 0)
+                            SetVar(RoleName, "")
+                        }.Else{
+                            Input(Name: VarId, Type: hidden, Value: #RoleId#)
+                        }
+                        Div(input-group){
+                            If(#RoleId#>0){
+                                SetVar(Id, #RoleId#)
+                                DBFind(@1roles).WhereId(#RoleId#).Columns("role_name").Vars(r)
+                            }
+
+                            Input(Name: m_name, Disabled: 1, Value: #r_role_name#)
+                            Div(input-group-btn){
+                                Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_role, PageParams:"back_page=@1voting_invite,back_header=$@1participants_add$,EcosystemId=#ecosystem_id#,Id=#vID#").Popup(Header: $@1role$, Width: "50")
+                            }
+                        }
                     }
                 }
             }
         }
-        Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: #back_page#, PageParams: "vID=#vID#")
+        Div(text-right){
+            Button(Body: $@1back$, Class: btn btn-default, Page: #back_page#, PageParams: "vID=#vID#")
+            If(Or(#AddressMemberId#!="",#RoleId#!="")){
+                Button(Body: $@1send$, Class: btn btn-primary, Page: @1voting_invite, PageParams: "vID=#vID#,back_page=#back_page#", Contract: @1VotingInvite).Popup(50, $@1participants_add$)
+            }
+        }
     }.Style(
-        .buttons{
+        .buttons {
             border: 1px solid #dde6e9;
             padding: 6px 16px;
         }

@@ -4,10 +4,13 @@ contract EditParameter {
         Value string "optional"
         Conditions string "optional"
     }
+
     func onlyConditions() bool {
         return $Conditions && !$Value
     }
+
     conditions {
+        $Id = Int($Id)
         RowConditions("@1parameters", $Id, onlyConditions())
         if $Conditions {
             ValidateCondition($Conditions, $ecosystem_id)
@@ -16,7 +19,7 @@ contract EditParameter {
         $Name = DBFind("@1parameters").Where({"id": $Id, "ecosystem": $ecosystem_id}).One("name")
         if $Name == "founder_account" {
             if !DBFind("@1members").Where({"id": $Value, "ecosystem": $ecosystem_id}).One("id") {
-                 warning Sprintf(LangRes("@1template_user_not_found", "en"), $Value)
+                warning Sprintf(LangRes("@1template_user_not_found", "en"), $Value)
             }
         }
         if $Name == "max_block_user_tx" || $Name == "money_digit" || $Name == "max_sum" || $Name == "min_page_validate_count" || $Name == "max_page_validate_count" {

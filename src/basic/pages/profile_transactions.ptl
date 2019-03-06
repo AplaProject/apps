@@ -10,11 +10,11 @@ If(#ecosystem_id# == 1){
     SetVar(token_title, #custom_token_title#)
 }
 
-If(GetVar(wallet) == ""){
+If(#wallet# == ""){
     SetVar(wallet, 0)
 }
 
-If(GetVar(new_filter)){
+If(#new_filter#){
     If(#show_fees#!="true"){
         SetVar(filter1, {"type": {"$neq": 1}})
     }
@@ -32,23 +32,23 @@ If(GetVar(new_filter)){
     }.ElseIf(#upper_limit#>0){
         SetVar(filter3, {"amount": {"$lte": Calculate(Exp: #upper_limit#*1000000000000000000, Type: money)}})
     }
-    SetVar(filters, {"$and": [{"ecosystem":#ecosystem_id#}, GetVar(filter1), GetVar(filter2), GetVar(filter3)]})
+    SetVar(filters, {"$and": [{"ecosystem":#ecosystem_id#}, #filter1#, #filter2#, #filter3#]})
     SetVar(page_par, #filters#)
-}.ElseIf(GetVar(page_par)){
+}.ElseIf(#page_par#){
     SetVar(filters, #page_par#)
 }.Else{
     SetVar(filters, {"$and": [{"ecosystem":#ecosystem_id#}, {"type": {"$neq": 1}}, {"$or": [{"sender_id":#key_id#}, {"recipient_id":#key_id#}]}]})
 }
 
-If(GetVar(search)){
-    SetVar(where, {"$and": [GetVar(filters), {"comment": {"$ilike": "#search#"}}]})
+If(#search#){
+    SetVar(where, {"$and": [#filters#, {"comment": {"$ilike": "#search#"}}]})
 }.Else{
-    SetVar(where, GetVar(filters))
+    SetVar(where, #filters#)
 }
 
 Div(mr-lg text-right){
     Button(Page: @1profile_transactions_filter, Class: btn bg-gray-lighter mr-sm, PageParams: "show_fees=#show_fees#,MemberId=#wallet#,lower_limit=#lower_limit#,upper_limit=#upper_limit#", Body: Em(Class: fa fa-filter) $@1filter$).Popup(Header: $@1filter$, Width: "50")
-    If(GetVar(page_par)){
+    If(#page_par#){
         Button(Page: #this_page#, Class: btn bg-gray-lighter mr-sm, Body: Em(Class: fa fa-close))
     }
 }.Style(margin-top: -33px; z-index: 1001;)
@@ -82,7 +82,7 @@ Div(fullscreen){
                 Table(src_history, "$@1block$=block_id,$@1sender$=sender_wallet,$@1recipient$=recipient_wallet,$@1amount$=amount_apl,$@1comment$=comment,$@1type$=_type")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1transactions_history_empty$")
-            }                       
+            }
         }.Style(
             margin-top:-15px;
             tbody > tr:nth-of-type(odd) {

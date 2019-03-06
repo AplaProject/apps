@@ -1,15 +1,15 @@
 contract ErrandDecision {
     data {
-        errand_decision int
-        errand_id int
-        answer_recipient string
+        ErrandDecision int
+        ErrandId int
+        AnswerRecipient string
     }
 
     conditions {
-        if $answer_recipient == "" {
+        if $AnswerRecipient == "" {
             info LangRes("@1empty_answer", "en")
         }
-        $errand_map = DBFind("@1notifications").Where({"id": $errand_id}).Columns("id,processing_info,processing_info->member_id,page_params,page_params->name,page_params->text,page_params->type,page_params->date_end,closed,recipient->role_id,recipient->member_id,page_params->recipient_type,sender->role_id").Row()
+        $errand_map = DBFind("@1notifications").Where({"id": $ErrandId}).Columns("id,processing_info,processing_info->member_id,page_params,page_params->name,page_params->text,page_params->type,page_params->date_end,closed,recipient->role_id,recipient->member_id,page_params->recipient_type,sender->role_id").Row()
         if Int($errand_map["page_params.recipient_type"]) == 0 { //role errand
             if !RoleAccess(Int($errand_map["recipient.role_id"])) {
                 warning LangRes("@1access_denied", "en")
@@ -36,30 +36,31 @@ contract ErrandDecision {
         answer_map["text"] = $errand_map["page_params.text"]
         answer_map["type"] = $errand_map["page_params.type"]
         answer_map["date_end"] = $errand_map["page_params.date_end"]
-        answer_map["answer"] = $answer_recipient
-        
-        if $errand_decision == 1 {
+        answer_map["answer"] = $AnswerRecipient
+
+        if $ErrandDecision == 1 {
             answer_map["status"] = 1
         } else {
             answer_map["status"] = -1
         }
         var page_params_edit map
         page_params_edit["page_params"] = answer_map
-       
-        @1NotificationsUpdateParams("page_params,notific_id",page_params_edit,$errand_id)
-        
+
+        @1NotificationsUpdateParams("Params,NotificId",page_params_edit,$ErrandId)
+
         if Int($errand_map["page_params.recipient_type"]) == 0 {
             var info_errand map
-            info_errand["decision_errand_id"] = $errand_id
+            info_errand["decision_errand_id"] = $ErrandId
             info_errand["type"] = "task_decision"
-            @1NotificationsSend("current_role_id,rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id",Int($errand_map["recipient.role_id"]),Int($errand_map["sender.role_id"]), 2, "icon icon-envelope-open", "Decision by errand", LangRes("@1details_view", "en"), "@1errand_view",info_errand,1,$ecosystem_id)
-        }
-        else{
+            @1NotificationsSend("CurrentRid,Rid,Sender,Icon,Header,Body,Page,Params,Closure,EcosystemId",
+                Int($errand_map["recipient.role_id"]), Int($errand_map["sender.role_id"]), 2, "icon icon-envelope-open", "Decision by errand", LangRes("@1details_view", "en"), "@1errand_view", info_errand, 1, $ecosystem_id)
+        } else {
             var info_errand map
-            info_errand["decision_errand_id"] = $errand_id
+            info_errand["decision_errand_id"] = $ErrandId
             info_errand["type"] = "task_decision"
-            @1NotificationsSend("rid,sender,icon_name,text_header,text_body,page_name,params_map,closure_type,eco_id",Int($errand_map["sender.role_id"]), 1, "icon icon-envelope-open", "Decision by errand", LangRes("@1details_view", "en"), "@1errand_view",info_errand,1,$ecosystem_id)
+            @1NotificationsSend("Rid,Sender,Icon,Header,Body,Page,Params,Closure,EcosystemId",
+                Int($errand_map["sender.role_id"]), 1, "icon icon-envelope-open", "Decision by errand", LangRes("@1details_view", "en"), "@1errand_view", info_errand, 1, $ecosystem_id)
         }
-        @1NotificationsClose("notific_id", $errand_id) 
+        @1NotificationsClose("NotificId", $ErrandId)
     }
 }

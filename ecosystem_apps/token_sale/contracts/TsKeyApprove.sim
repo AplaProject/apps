@@ -1,8 +1,8 @@
 contract TsKeyApprove {
     data {
-        public_key string
-        key_type string
-        current_role_id int
+        PublicKey string
+        KeyType string
+        CurrentRoleId int
     }
 
     func getFreeWallet() int {
@@ -16,13 +16,13 @@ contract TsKeyApprove {
 
         if count_wallets == 1 {
             var managerRoleId int
-            managerRoleId = Int(EcosysParam("role_sale_manager"))
+            managerRoleId = Int(AppParam(Int($app_id), "ts_role_sale_manager", $ecosystem_id))
             if managerRoleId > 0 {
                 var params map title page body string
                 title = LangRes("@1ts_free_wallets_ended", "en")
                 body = LangRes("@1ts_free_wallets_need", "en")
                 page = "@1ts_notification"
-                @1NotificationsSend("rid,sender,text_header,text_body,page_name,params_map,closure_type,current_role_id", managerRoleId, 2, title, body, page, params, 1, $current_role_id)
+                @1NotificationsSend("Rid,Sender,Header,Body,Page,Params,Closure,CurrentRid", managerRoleId, 2, title, body, page, params, 1, $CurrentRoleId)
             }
         }
 
@@ -31,19 +31,20 @@ contract TsKeyApprove {
     }
 
     conditions {
-        if $public_key == "" {
+        $app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Token sale"}).One("id")
+        if $PublicKey == "" {
             warning LangRes("@1public_key_empty", "en")
         }
 
-        $public_key = Replace($public_key, " ", "")
-        if Size($public_key) < 128 {
+        $PublicKey = Replace($PublicKey, " ", "")
+        if Size($PublicKey) < 128 {
             warning LangRes("@1key_too_short", "en")
         }
-        if Size($public_key) > 130 {
+        if Size($PublicKey) > 130 {
             warning LangRes("@1key_too_long", "en")
         }
 
-        $userKey = PubToID($public_key)
+        $userKey = PubToID($PublicKey)
         if $userKey == 0 {
             warning LangRes("@1public_key_invalid", "en")
         }
@@ -57,11 +58,11 @@ contract TsKeyApprove {
         }
 
         var snapSwapRoleId int snapSwapRoleName string
-        snapSwapRoleId = Int(EcosysParam("role_snapswap"))
+        snapSwapRoleId = Int(AppParam(Int($app_id), "ts_role_snapswap", $ecosystem_id))
         snapSwapRoleName = DBFind("@1roles").Where({"id": snapSwapRoleId}).One("role_name")
 
         if snapSwapRoleId == 0 {
-            warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), "role_snapswap")
+            warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), "ts_role_snapswap")
         }
 
         if !RoleAccess(snapSwapRoleId) {
@@ -71,23 +72,23 @@ contract TsKeyApprove {
 
     action {
         var pub_bytes bytes
-        pub_bytes = HexToPub($public_key)
+        pub_bytes = HexToPub($PublicKey)
         DBInsert("@1keys", {"id": $userKey, "pub": pub_bytes, "ecosystem": 1})
         var start_balance money
         start_balance = Money(1000000000000000)
         @1TokensSend("Recipient,Amount", IdToAddress($userKey), start_balance)
 
-        if $key_type == "investor" {
+        if $KeyType == "investor" {
             $wallet_id = getFreeWallet()
-            $pub_short_buyer = Substr($public_key, 0, 12) + "..." + Substr($public_key, Size($public_key) - 12, 12)
-            DBUpdate("ts_wallets", $wallet_id, {"key_id_buyer": $userKey, "created_at": $block_time, "pub_buyer": $public_key, "pub_short_buyer": $pub_short_buyer})
+            $pub_short_buyer = Substr($PublicKey, 0, 12) + "..." + Substr($PublicKey, Size($PublicKey) - 12, 12)
+            DBUpdate("ts_wallets", $wallet_id, {"key_id_buyer": $userKey, "created_at": $block_time, "pub_buyer": $PublicKey, "pub_short_buyer": $pub_short_buyer})
 
             // new user notification
             var params map title page body string
             title = LangRes("@1ts_hello_user_description", "en")
             body = LangRes("@1ts_read_contract", "en")
             page = "@1ts_buyer_contract"
-            @1NotificationsSend("member_id,sender,text_header,text_body,page_name,params_map,closure_type,current_role_id", $userKey, 2, title, body, page, params, 1, $current_role_id)
+            @1NotificationsSend("MemberId,Sender,Header,Body,Page,Params,Closure,CurrentRid", $userKey, 2, title, body, page, params, 1, $CurrentRoleId)
         }
     }
 }

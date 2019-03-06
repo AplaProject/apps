@@ -1,8 +1,8 @@
 contract NotificationsProcess {
     data {
-        notific_id int
+        NotificId int
     }
-    
+
     func getMemberInfo(kid int) map {
         var res member map
         member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
@@ -10,7 +10,7 @@ contract NotificationsProcess {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
-        }else{
+        } else {
             member = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
             if member {
                 res["member_id"] = member["id"]
@@ -20,14 +20,14 @@ contract NotificationsProcess {
         }
         return res
     }
-    
+
     conditions {
-        $notify = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $notific_id}).Columns("recipient->role_id,sender->type,date_start_processing").Row()
+        $notify = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $NotificId}).Columns("recipient->role_id,sender->type,date_start_processing").Row()
         if !$notify {
             warning LangRes("@1notification_not_found", "en")
         }
 
-        if $notify["sender.type"] == 2{
+        if $notify["sender.type"] == 2 {
             if Int($notify["date_start_processing"]) != 0 {
                 warning LangRes("@1notification_processing_started_already", "en")
             }
@@ -38,7 +38,7 @@ contract NotificationsProcess {
                     warning LangRes("@1notification_not_part_of_role", "en")
                 }
             }
-        }else{
+        } else {
             if $notify["sender.type"] != 1 {
                 warning LangRes("@1notification_type_not_found", "en")
             }
@@ -49,6 +49,6 @@ contract NotificationsProcess {
         var model map
         model["processing_info"] = getMemberInfo($key_id)
         model["date_start_processing"] = $block_time
-        DBUpdate("@1notifications", $notific_id, model)
+        DBUpdate("@1notifications", $NotificId, model)
     }
 }

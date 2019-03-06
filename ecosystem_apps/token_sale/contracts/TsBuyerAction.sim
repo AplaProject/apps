@@ -2,40 +2,42 @@ contract TsBuyerAction {
     data {
         Action string
     }
-    conditions{
+
+    conditions {
+        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
         var basicAppId int
         basicAppId = Int(DBFind("@1applications").Where({"ecosystem": 1, "name": "Basic"}).One("id"))
-        if basicAppId == 0{
+        if basicAppId == 0 {
             warning LangRes("@1app_not_found", "en")
         }
-        $roleConsensus = Int(EcosysParam("role_consensus"))
-        if $roleConsensus == 0{
+        $roleConsensus = Int(AppParam(Int($system_app_id), "role_consensus", $ecosystem_id))
+        if $roleConsensus == 0 {
             warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), "role_consensus")
         }
         $wallet = DBFind("ts_wallets").Where({"key_id_buyer": $key_id, "rejected_at": 0}).Row()
-        if !$wallet{
+        if !$wallet {
             warning "Buyer wallet not found"
         }
     }
 
     action {
-        if $Action == "accept"{
+        if $Action == "accept" {
             DBUpdate("ts_wallets", Int($wallet["id"]), {signed_at:$time})
             // role Apla Consensus notification
             var params map title string
             title = Sprintf("Buyer %v signed contract", IdToAddress($key_id))
             params["wallet_id"] = $wallet["id"]
-            @1NotificationsSend("rid,sender,text_header,page_name,params_map,closure_type", $roleConsensus, 1, title, "ts_consensus_contract", params, 1)
+            @1NotificationsSend("Rid,Sender,Header,Page,Params,Closure", $roleConsensus, 1, title, "ts_consensus_contract", params, 1)
 
-        }elif $Action == "reject"{
+        } elif $Action == "reject" {
             DBUpdate("ts_wallets", Int($wallet["id"]), {rejected_at:$time})
         }
 
         var notes array i int note map
         notes = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_name": "@1ts_buyer_contract", "closed": 0}).Columns("id")
-        while i < Len(notes){
+        while i < Len(notes) {
             note = notes[i]
-            @1NotificationsClose("notific_id",Int(note["id"]))
+            @1NotificationsClose("NotificId",Int(note["id"]))
             i = i + 1
         }
     }

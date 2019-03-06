@@ -7,8 +7,9 @@ If(#role_id#>0){
 }.Else{
     SetTitle($@1role_notifics$)
 }
-SetVar(role_admin, EcosysParam(Ecosystem:1, Name: role_admin))
-If(And(#role_id#==#role_admin#,#ecosystem_id#==1)){
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars("system_app")
+SetVar(role_admin, AppParam(App: #system_app_id#, Name: "role_admin"))
+If(And(#role_id# == #role_admin#, #ecosystem_id# == 1)){
     DBFind(@1ecosystems).Count(ecos_count)
     If(#ecos_count#>1){
         AddToolButton(Title: $@1broadcast$, Page: @1notifications_broadcast, Icon: icon-plus).Popup(Header: $@1notifications_broadcast$, Width: "50")
@@ -16,7 +17,7 @@ If(And(#role_id#==#role_admin#,#ecosystem_id#==1)){
 }
 AddToolButton(Title: $@1send$, Page: @1notifications_roles_send, Icon: icon-plus).Popup(Header: $@1send$, Width: "50")
 
-If(GetVar(search)){
+If(#search#){
     SetVar(where, {"ecosystem": #ecosystem_id#, "recipient->role_id": #role_id#, {"$and": [{"notification->type":2}, {"$or": [{"sender->member_name":{"$ilike": "#search#"}}, {"sender->role_name":{"$ilike": "#search#"}}]}]}})
 }.Else{
     SetVar(where, {"ecosystem": #ecosystem_id#, "notification->type": 2, "recipient->role_id": #role_id#})
@@ -69,10 +70,12 @@ DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"},{id:"-1"}]).Limit(#
     }
 }.Custom(_date){
     Div(#style_text# h6 m0){DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI")}
-    Div(#style_text# h6 m0){DateTime(DateTime: #date_closed#, Format: "DD.MM.YYYY HH:MI")}
+    If(#date_closed# != 0){
+        Div(#style_text# h6 m0){DateTime(DateTime: #date_closed#, Format: "DD.MM.YYYY HH:MI")}
+    }
 }.Custom(_processing){
     Div(Class: #style_text# h6 m0){
-        If(#date_start_processing# == NULL){
+        If(#date_start_processing# == 0){
            $@1not_started$
         }.Else{
             Span(LangRes(@1started_by) #processing_info.member_name#)
@@ -82,7 +85,7 @@ DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"},{id:"-1"}]).Limit(#
 }.Custom(_status){
     If(#closed# == 0){
         Span(Class: #style_text#){
-            If(#date_start_processing# == NULL){
+            If(#date_start_processing# == 0){
                 LangRes(@1active)
             }.Else{
                 LangRes(@1processing)
@@ -95,9 +98,9 @@ DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"},{id:"-1"}]).Limit(#
     Div(text-right){
         If(#closed# == 0){
             If(#date_start_processing# == NULL){
-                Button(Class: btn btn-default fa fa-play, Contract: @1NotificationsProcess, Params: "notific_id=#id#", Page: @1notifications_list, PageParams: "type=1").Alert(Text: "$@1want_start_processing_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                Button(Class: btn btn-default fa fa-play, Contract: @1NotificationsProcess, Params: "NotificId=#id#", Page: @1notifications_list, PageParams: "type=1").Alert(Text: "$@1want_start_processing_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
             }.Else{
-                Button(Class: btn btn-default fa fa-trash, Contract: @1NotificationsClose, Params: "notific_id=#id#", Page: @1notifications_list, PageParams: "type=1").Alert(Text: "$@1want_close_notification$", ConfirmButton:$@1yes$, CancelButton: $@1no$, Icon: question)
+                Button(Class: btn btn-default fa fa-trash, Contract: @1NotificationsClose, Params: "NotificId=#id#", Page: @1notifications_list, PageParams: "type=1").Alert(Text: "$@1want_close_notification$", ConfirmButton:$@1yes$, CancelButton: $@1no$, Icon: question)
             }
         }
     }
@@ -112,7 +115,7 @@ Div(fullscreen){
                 Div(Class: text-center h4 text-muted, Body: "$@1role_notifics$ $@1not_founded$")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1role_not_selected$")
-            }                     
+            }
         }.Style(
             margin-top:-15px;
             tbody > tr:nth-of-type(odd) {

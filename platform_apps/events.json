@@ -3,10 +3,21 @@
     "conditions": "ContractConditions(\"@1DeveloperCondition\")",
     "data": [
         {
+            "Name": "admin_menu",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "MenuItem(Title: \"$@1e_settings$\", Page: @1e_settings, Icon: \"icon-wrench\")",
+            "Type": "menu"
+        },
+        {
             "Name": "default_menu",
             "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
-            "Value": "MenuItem(Title: $@1e_events$, Page: @1e_events, Icon: \"icon-calendar\")",
+            "Value": "MenuItem(Title: \"$@1e_events$\", Page: @1e_events, Icon: \"icon-calendar\")",
             "Type": "menu"
+        },
+        {
+            "Name": "e_admin_role",
+            "Trans": "{\"en\": \"Events admin\", \"ru\": \"Администратор Мероприятий\"}",
+            "Type": "languages"
         },
         {
             "Name": "e_create_type",
@@ -114,6 +125,16 @@
             "Type": "languages"
         },
         {
+            "Name": "e_settings",
+            "Trans": "{\"en\": \"Events settings\", \"ru\": \"Настройки Мероприятий\"}",
+            "Type": "languages"
+        },
+        {
+            "Name": "e_settings_description",
+            "Trans": "{\"en\": \"Correspondence of Events application roles to ecosystem roles\", \"ru\": \"Соответствие ролей приложения Мероприятия ролям экосистемы\"}",
+            "Type": "languages"
+        },
+        {
             "Name": "e_spb",
             "Trans": "{\"en\": \"Saint-Petersburg\", \"ru\": \"Санкт-Петербург\"}",
             "Type": "languages"
@@ -161,15 +182,15 @@
             "Type": "tables"
         },
         {
-            "Name": "events_admin_role",
+            "Name": "config",
             "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
-            "Value": "0",
+            "Value": "{\n    \"name\": \"Events\",\n    \"conditions\": \"ContractConditions(\\\"DeveloperCondition\\\")\",\n    \"data\": [\n        {\n            \"Name\": \"default_menu\",\n            \"Conditions\": \"ContractConditions(\\\"DeveloperCondition\\\")\",\n            \"Value\": \"MenuItem(Title: \\\"$@1e_events$\\\", Page: @1e_events, Icon: \\\"icon-calendar\\\")\",\n            \"Type\": \"menu\"\n        },\n        {\n            \"Name\": \"admin_menu\",\n            \"Conditions\": \"ContractConditions(\\\"DeveloperCondition\\\")\",\n            \"Value\": \"MenuItem(Title: \\\"$@1e_settings$\\\", Page: @1e_settings, Icon: \\\"icon-wrench\\\")\",\n            \"Type\": \"menu\"\n        },\n        {\n            \"Name\": \"events_admin_role\",\n            \"Conditions\": \"ContractConditions(\\\"DeveloperCondition\\\")\",\n            \"Value\": \"0\",\n            \"Type\": \"app_params\"\n        }\n    ]\n}",
             "Type": "app_params"
         },
         {
-            "Name": "events_config",
+            "Name": "events_admin_role",
             "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
-            "Value": "{\n    \"name\": \"Events\",\n    \"conditions\": \"ContractConditions(\\\"DeveloperCondition\\\")\",\n    \"data\": [\n        {\n            \"Name\": \"default_menu\",\n            \"Conditions\": \"ContractConditions(\\\"DeveloperCondition\\\")\",\n            \"Value\": \"MenuItem(Title: $@1e_events$, Page: @1e_events, Icon: \\\"icon-calendar\\\")\",\n            \"Type\": \"menu\"\n        },\n        {\n            \"Name\": \"events_admin_role\",\n            \"Conditions\": \"ContractConditions(\\\"DeveloperCondition\\\")\",\n            \"Value\": \"0\",\n            \"Type\": \"app_params\"\n        }\n    ]\n}",
+            "Value": "0",
             "Type": "app_params"
         },
         {
@@ -201,6 +222,13 @@
             "Type": "pages"
         },
         {
+            "Name": "e_settings",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "DBFind(\"@1applications\").Where({\"ecosystem\": #ecosystem_id#, \"name\": \"Events\"}).Vars(\"app\")\n\nSetVar(this_page, \"@1e_settings\").(events_admin_role,0)\nSetVar(events_admin_role, AppParam(App: #app_id#, Name: \"events_admin_role\"))\n\nDBFind(\"@1roles\", src_roles).Where({\"ecosystem\": #ecosystem_id#, \"deleted\": 0}).Columns(\"role_name,id\").Limit(100)\n\nSetVar(row,\"row mt-sm\").(col_left,\"col-sm-4 text-right mt-sm\").(col_right,\"col-sm-8 text-left\")\n\nDiv(content-wrapper){\n    Div(row){\n        Div(col-lg-6 col-lg-offset-3 col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1){\n            Form(panel panel-primary){\n                Div(panel-body){\n                    Div(text-center text-bold h4 m0){\n                        LangRes(@1e_settings)\n                    }\n                    Div(text-center text-muted){\n                        LangRes(@1e_settings_description)\n                    }\n                    Div(row mt-lg){\n                        Div(#col_left#){\n                            Label(){\n                                LangRes(@1e_admin_role)\n                            }\n                        }\n                        Div(#col_right#){\n                            Select(Name: RoleAdmin, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #events_admin_role#)\n                            Div(m0 h6 text-muted){\n                                SetVar(r_name, $@1role_not_found$)\n                                If(#events_admin_role# > 0){\n                                    DBFind(\"@1roles\").Where({\"ecosystem\": #ecosystem_id#, \"id\": #events_admin_role#}).Columns(\"role_name\").Vars(r)\n                                    SetVar(r_name, #r_role_name#)\n                                }\n                                LangRes(@1current_value): #r_name#\n                            }\n                        }\n                    }\n                }\n                Div(panel-footer text-right){\n                    Button(Body: $@1apply_settings$, Class: btn btn-primary, Page: #this_page#, Contract: @1ESettings)\n                }\n            }\n        }\n    }\n}",
+            "Menu": "admin_menu",
+            "Type": "pages"
+        },
+        {
             "Name": "e_type_form",
             "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
             "Value": "SetVar(this_page, @1e_type_form).(back_page, @1e_events)\nSetVar(t_name,)\n\nDBFind(@1e_types, t).Where({\"ecosystem\": #ecosystem_id#}).Columns(\"id,name\")\nSetVar(types_json,`\"0\":\"$@1e_new_type$\"`)\nForList(t){\n    SetVar(types_json,`#types_json#,\"#id#\":\"#name#\"`)\n}\nJsonToSource(types,{#types_json#})\n\nForm(){\n    Div(row){\n        Div(col-sm-3 mt-sm text-right text-bold){\n            $@1e_type$\n        }\n        Div(col-sm-9 text-left){\n            Select(Name: Type, Source: types, NameColumn: value, ValueColumn: key, Value: #Type#)\n            Span(Class: text-muted h6 m0, Body: $@1e_types_dec$)\n        }\n    }\n    Div(row mt){\n        Div(col-sm-3 mt-sm text-right text-bold){\n            $@1name$\n        }\n        Div(col-sm-9 text-left){\n            Input(Name: Name, Value: #t_name#)\n        }\n    }\n    Div(mt){\n        Div(){\n            Button(Body: $@1e_create_type$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: @1EType, Params: \"Id=0\")\n        }.Show(Type=0)\n        Div(){\n            Button(Body: $@1e_edit_type$, Class: btn btn-primary pull-right, Page: #back_page#, Contract: @1EType, Params: \"Id=Val(Type)\")\n        }.Hide(Type=0)\n        Button(Body: $@1back$, Class: btn btn-default pull-right, Page: #back_page#)\n    }\n}",
@@ -210,13 +238,19 @@
         {
             "Name": "EEvent",
             "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
-            "Value": "contract EEvent {\n    data {\n        Id int \"optional\"\n        Name string\n        Description string\n        Type int\n        StartingDate string\n        StartingTime string\n        EventAddress string\n        Responsible int\n    }\n\n    func dateAddTime(d, t string) string {\n        var dt string\n        if Contains(d, \"T00:00:00Z\") {\n            d = Replace(d, \"T00:00:00Z\", \"\")\n        }\n        if Size(t) == 5 {\n            dt = Sprintf(\"%v %v:00\", d, t)\n        }\n        return dt\n    }\n\n    conditions{\n        $app = DBFind(\"@1applications\").Where({\"ecosystem\": $ecosystem_id, \"name\": \"Events\"}).One(\"id\")\n        var admin_ids int\n        admin_ids = AppParam(Int($app), \"events_admin_role\", $ecosystem_id)\n        var rids array\n        rids = JSONDecode(\"[\"+admin_ids+\"]\")  \n        if !DBFind(\"@1roles_participants\").Where({\"ecosystem\": $ecosystem_id, \"role->id\": {\"$in\": rids}, \"member->member_id\": $key_id, \"deleted\": 0}).Row() {\n            warning LangRes(\"@1access_denied\", \"en\")\n        }\n\n        if $Id > 0 {\n            var event map\n            event = DBFind(\"@1e_events\").Where({\"id\": $Id, \"ecosystem\": $ecosystem_id}).Row()\n            if !event{\n                warning LangRes(\"@1e_event_not_found\", \"en\")\n            }\n            if event[\"starting_date\"] < $block_time {\n                warning LangRes(\"@1e_event_not_editable\", \"en\")\n            }\n        }\n\n        $date = UnixDateTime(dateAddTime($StartingDate, $StartingTime))\n        if $date == 0 {\n            warning LangRes(\"@1starting_date_invalid\", \"en\")\n        }\n\n        if !DBFind(\"@1keys\").Where({\"ecosystem\": $ecosystem_id, \"id\": $Responsible}).Row(){\n            warning LangRes(\"@1e_responsible_not_found\", \"en\")\n        }\n    }\n\n    action {\n        var addr map encAddr string\n        addr = JSONDecode($EventAddress)\n        addr[\"zoom\"] = 11\n        encAddr = JSONEncode(addr)\n\n        var m map\n        m = {name:$Name, description:$Description, type:$Type, starting_date:$date, event_address_json:encAddr, responsible:$Responsible}\n        if $Id > 0 {\n            DBUpdate(\"@1e_events\", $Id, m)\n        } else {\n            m[\"created_at\"] = $block_time\n            m[\"ecosystem\"] = $ecosystem_id\n            DBInsert(\"@1e_events\", m)\n        }\n    }\n}",
+            "Value": "contract EEvent {\n    data {\n        Id int \"optional\"\n        Name string\n        Description string\n        Type int\n        StartingDate string\n        StartingTime string\n        EventAddress string\n        Responsible int\n    }\n\n    func dateAddTime(d, t string) string {\n        var dt string\n        if Contains(d, \"T00:00:00Z\") {\n            d = Replace(d, \"T00:00:00Z\", \"\")\n        }\n        if Size(t) == 5 {\n            dt = Sprintf(\"%v %v:00\", d, t)\n        }\n        return dt\n    }\n\n    conditions{\n        $app = DBFind(\"@1applications\").Where({\"ecosystem\": $ecosystem_id, \"name\": \"Events\"}).One(\"id\")\n        var admin_ids string\n        admin_ids = AppParam(Int($app), \"events_admin_role\", $ecosystem_id)\n        var rids array\n        rids = JSONDecode(\"[\"+admin_ids+\"]\")\n        if !DBFind(\"@1roles_participants\").Where({\"ecosystem\": $ecosystem_id, \"role->id\": {\"$in\": rids}, \"member->member_id\": $key_id, \"deleted\": 0}).Row() {\n            warning LangRes(\"@1access_denied\", \"en\")\n        }\n\n        if $Id > 0 {\n            var event map\n            event = DBFind(\"@1e_events\").Where({\"id\": $Id, \"ecosystem\": $ecosystem_id}).Row()\n            if !event {\n                warning LangRes(\"@1e_event_not_found\", \"en\")\n            }\n            if event[\"starting_date\"] < $block_time {\n                warning LangRes(\"@1e_event_not_editable\", \"en\")\n            }\n        }\n\n        $date = UnixDateTime(dateAddTime($StartingDate, $StartingTime))\n        if $date == 0 {\n            warning LangRes(\"@1starting_date_invalid\", \"en\")\n        }\n\n        if !DBFind(\"@1keys\").Where({\"ecosystem\": $ecosystem_id, \"id\": $Responsible}).Row() {\n            warning LangRes(\"@1e_responsible_not_found\", \"en\")\n        }\n    }\n\n    action {\n        var addr map encAddr string\n        addr = JSONDecode($EventAddress)\n        addr[\"zoom\"] = 11\n        encAddr = JSONEncode(addr)\n\n        var m map\n        m = {\"name\": $Name, \"description\": $Description, \"type\": $Type, \"starting_date\": $date, \"event_address_json\": encAddr, \"responsible\": $Responsible}\n        if $Id > 0 {\n            DBUpdate(\"@1e_events\", $Id, m)\n        } else {\n            m[\"created_at\"] = $block_time\n            m[\"ecosystem\"] = $ecosystem_id\n            DBInsert(\"@1e_events\", m)\n        }\n    }\n}",
+            "Type": "contracts"
+        },
+        {
+            "Name": "ESettings",
+            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
+            "Value": "contract ESettings {\n    data {\n        RoleAdmin int\n    }\n\n    conditions {\n        AdminCondition()\n    }\n\n    func updateParam(name string, value int) {\n        if value > 0 {\n            var param paramsNew map\n            if $app_id > 0 {\n                param = DBFind(\"@1app_params\").Where({\"ecosystem\": $ecosystem_id, \"app_id\": $app_id, \"name\": name}).Row()\n                if param {\n                    paramsNew[\"Id\"] = Int(param[\"id\"])\n                    paramsNew[\"Value\"] = Str(value)\n                    paramsNew[\"Conditions\"] = param[\"conditions\"]\n                    CallContract(\"@1EditAppParam\", paramsNew)\n                } else {\n                    paramsNew[\"ApplicationId\"] = $app_id\n                    paramsNew[\"Name\"] = name\n                    paramsNew[\"Value\"] = Str(value)\n                    paramsNew[\"Conditions\"] = \"ContractConditions(\\\"AdminCondition\\\")\"\n                    CallContract(\"@1NewAppParam\", paramsNew)\n                }\n            } else {\n                warning LangRes(\"@1app_not_found\", \"en\")\n            }\n        }\n    }\n\n    action {\n        $app_id = DBFind(\"@1applications\").Where({\"ecosystem\": $ecosystem_id, \"name\": \"Events\"}).One(\"id\")\n        updateParam(\"events_admin_role\", $RoleAdmin)\n    }\n}",
             "Type": "contracts"
         },
         {
             "Name": "EType",
             "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
-            "Value": "contract EType {\n    data {\n        Id int \"optional\"\n        Name string\n    }\n\n    conditions{\n        $app = DBFind(\"@1applications\").Where({\"ecosystem\": $ecosystem_id, \"name\": \"Events\"}).One(\"id\")\n        var admin_ids int\n        admin_ids = AppParam(Int($app), \"events_admin_role\", $ecosystem_id)\n        var rids array\n        rids = JSONDecode(\"[\"+admin_ids+\"]\")  \n        if !DBFind(\"@1roles_participants\").Where({\"ecosystem\": $ecosystem_id, \"role->id\": {\"$in\": rids}, \"member->member_id\": $key_id, \"deleted\": 0}).Row() {\n            warning LangRes(\"@1access_denied\", \"en\")\n        }\n\n        if DBFind(\"@1e_types\").Where({\"name\": $Name, \"ecosystem\": $ecosystem_id}).Row() {\n            warning LangRes(\"e_type_name_exists\", \"en\")\n        }\n\n        if $Id > 0 {\n            if !DBFind(\"@1e_types\").Where({\"id\": $Id, \"ecosystem\": $ecosystem_id}).Row() {\n                warning LangRes(\"e_type_not_found\", \"en\")\n            }\n        }\n    }\n\n    action {\n        if $Id > 0 {\n            DBUpdate(\"@1e_types\", $Id, {name: $Name})\n        } else {\n            DBInsert(\"@1e_types\", {name: $Name, ecosystem: $ecosystem_id})\n        }\n    }\n}",
+            "Value": "contract EType {\n    data {\n        Id int \"optional\"\n        Name string\n    }\n\n    conditions{\n        $app = DBFind(\"@1applications\").Where({\"ecosystem\": $ecosystem_id, \"name\": \"Events\"}).One(\"id\")\n        var admin_ids string\n        admin_ids = AppParam(Int($app), \"events_admin_role\", $ecosystem_id)\n        var rids array\n        rids = JSONDecode(\"[\"+admin_ids+\"]\")\n        if !DBFind(\"@1roles_participants\").Where({\"ecosystem\": $ecosystem_id, \"role->id\": {\"$in\": rids}, \"member->member_id\": $key_id, \"deleted\": 0}).Row() {\n            warning LangRes(\"@1access_denied\", \"en\")\n        }\n\n        if DBFind(\"@1e_types\").Where({\"name\": $Name, \"ecosystem\": $ecosystem_id}).Row() {\n            warning LangRes(\"e_type_name_exists\", \"en\")\n        }\n\n        if $Id > 0 {\n            if !DBFind(\"@1e_types\").Where({\"id\": $Id, \"ecosystem\": $ecosystem_id}).Row() {\n                warning LangRes(\"e_type_not_found\", \"en\")\n            }\n        }\n    }\n\n    action {\n        if $Id > 0 {\n            DBUpdate(\"@1e_types\", $Id, {\"name\": $Name})\n        } else {\n            DBInsert(\"@1e_types\", {\"name\": $Name, \"ecosystem\": $ecosystem_id})\n        }\n    }\n}",
             "Type": "contracts"
         }
     ]

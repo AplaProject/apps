@@ -1,25 +1,24 @@
 contract ErrandDelete {
     data {
-        errand_id int
+        ErrandId int
     }
 
     conditions {
         $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Errands"}).One("id")
-        var admin_ids int
+        var admin_ids string
         admin_ids = AppParam(Int($app), "errands_admin_role", $ecosystem_id)
         var rids array
-        rids = JSONDecode("["+admin_ids+"]")  
+        rids = JSONDecode("["+admin_ids+"]")
         if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
             warning LangRes("@1access_denied", "en")
         }
     }
 
     action {
-        var page_params_edit errand_map map
+        var page_params_edit map
         page_params_edit["page_params->type"] = "deleted"
         
-        @1NotificationsUpdateParams("page_params,notific_id",page_params_edit,$errand_id)
-        errand_map = DBFind("@1notifications").Where({"id": $errand_id}).Columns("date_start_processing,page_params->recipient_type").Row()
-        @1NotificationsClose("notific_id", $errand_id)
+        @1NotificationsUpdateParams("Params,NotificId", page_params_edit, $ErrandId)
+        @1NotificationsClose("NotificId", $ErrandId)
     }
 }

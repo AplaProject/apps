@@ -1,21 +1,21 @@
 contract QAnswer {
     data {
-        id int "optional"
-        operation string
-        question_id int
-        decision string
-        answer_id int
+        Id int "optional"
+        Operation string
+        QuestionId int
+        Decision string
+        AnswerId int
     }
 
     conditions {
-        $question = DBFind("@1q_list").Where({"id": $question_id}).Columns("deleted,status,params->change,au_roles,au_groups,expired").Row()
+        $question = DBFind("@1q_list").Where({"id": $QuestionId}).Columns("deleted,status,params->change,au_roles,au_groups,expired").Row()
         if $question["deleted"] == 1 {
             warning LangRes("@1q_error_cannot", "en")
         }
         if $question["status"] != 1 {
             warning LangRes("@1q_error_cannot", "en")
         }
-        if $operation == "UV" {
+        if $Operation == "UV" {
             if $question["params.change"] != "true" {
                 warning LangRes("@1q_error_revoting", "en")
             }
@@ -38,10 +38,10 @@ contract QAnswer {
 
     action {
         var notes array i int note map
-        notes = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_name": "@1q_question", "page_params->id": $question_id, "closed": 0}).Columns("id")
-        while i < Len(notes){
+        notes = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_name": "@1q_question", "page_params->id": $QuestionId, "closed": 0}).Columns("id")
+        while i < Len(notes) {
             note = notes[i]
-            @1NotificationsClose("notific_id", Int(note["id"]))
+            @1NotificationsClose("NotificId", Int(note["id"]))
             i = i + 1
         }
 
@@ -50,19 +50,19 @@ contract QAnswer {
             m["expired"] = $block_time
             m["status"] = 2
             m["lastmodified"] = $block_time
-            DBUpdate("@1q_list", $question_id, m)
+            DBUpdate("@1q_list", $QuestionId, m)
         } else {
             m["member"] = $key_id
-            m["decision"] = $decision
-            m["answer_id"] = $answer_id
+            m["decision"] = $Decision
+            m["answer_id"] = $AnswerId
             m["ecosystem"] = $ecosystem_id
             m["lastmodified"] = $block_time
-            m["question_id"] = $question_id
-            if $operation == "CV" {
+            m["question_id"] = $QuestionId
+            if $Operation == "CV" {
                 DBInsert("@1q_answers", m)
             }
-            if $operation == "UV" {
-                DBUpdate("@1q_answers", $id, m)
+            if $Operation == "UV" {
+                DBUpdate("@1q_answers", $Id, m)
             }
         }
     }
