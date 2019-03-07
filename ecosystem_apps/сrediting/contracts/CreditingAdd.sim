@@ -1,0 +1,81 @@
+contract CreditingAdd {
+    data {
+        Id int "optional"
+        Amount money
+        Term string
+        StartDate string
+        StartTime string
+        EndDate string
+        EndTime string
+        Description string "optional"
+    }
+
+    func trimZeroTime(s string) string {
+        if Contains(s, "T00:00:00Z") {
+            s = Replace(s, "T00:00:00Z", "")
+        }
+        return s
+    }
+
+    func dateAddTime(d, t string) string {
+        var dt string
+        if Size(t) == 5 {
+            dt = Sprintf("%v %v:00", trimZeroTime(d), t)
+        }
+        return dt
+    }
+
+    func fixDatetimes() {
+        $date_started = UnixDateTime(dateAddTime($StartDate, $StartTime))
+        $date_ended = UnixDateTime(dateAddTime($EndDate, $EndTime))
+
+        if $date_started == 0 || $date_ended == 0 { // invalid datetimes
+            var errs array
+            if Size($StartDate) < 10 {
+                errs = Append(errs, "starting date")
+            }
+            if Size($StartTime) < 5 {
+                errs = Append(errs, "starting time")
+            }
+            if Size($EndDate) < 10 {
+                errs = Append(errs, "ending date")
+            }
+            if Size($EndTime) < 5 {
+                errs = Append(errs, "ending time")
+            }
+            warning Sprintf(LangRes("@1voting_creation_error_x_unspecified", "en"), Join(errs, ", "))
+        }
+        if $date_started < $block_time {
+            warning LangRes("@1starting_date_invalid", "en")
+        }
+        if $date_started >= $date_ended {
+            warning LangRes("@1ending_date_invalid", "en")
+        }
+    }
+
+    conditions {
+        fixDatetimes()
+    }
+
+    action {
+        var m map
+        if Int($Id) == 0 {
+            m["borrower"] = IdToAddress($key_id)
+            m["status"] = 0
+            m["deleted"] = 0
+            m["date_created"] = $block_time       
+        }
+
+        m["amount"] = $Amount
+        m["term"] = $Term
+        m["date_started"] = $date_started
+        m["date_ended"] = $date_ended
+        m["description"] = $Description
+
+        if Int($Id) == 0 {
+            DBInsert("crediting_requests", m)
+        } else {
+            DBUpdate("crediting_requests", Int($Id), m)
+        }
+    }
+}
