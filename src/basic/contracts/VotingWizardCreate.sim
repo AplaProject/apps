@@ -16,10 +16,11 @@ contract VotingWizardCreate {
         EndTime string "optional"
         MemberParticipants string "optional"
         RoleParticipants string "optional"
+        GroupParticipants string "optional"
         ExecuteContract string "optional"
-        ContractAccept string "optional"
+        ContractAcceptName string "optional"
         ContractAcceptParams string "optional"
-        ContractReject string "optional"
+        ContractRejectName string "optional"
         ContractRejectParams string "optional"
         TextDocument string "optional"
         Candidates string "optional"
@@ -34,7 +35,14 @@ contract VotingWizardCreate {
         i = 0
         while i < Len(participants_list) {
             current_participant = Int(participants_list[i])
-            if type == "member" || Len(DBFind("@1roles_participants").Where({ecosystem: $ecosystem_id, "role->id": current_participant, deleted:0})) != 0 {
+            var participants_count int
+            if type == "role" {
+                participants_count = Len(DBFind("@1roles_participants").Where({ecosystem: $ecosystem_id, "role->id": current_participant, deleted: 0}))
+            } elif type == "group" {
+                participants_count = Len(DBFind("@1groups_participants").Where({ecosystem: $ecosystem_id, "groups_info->id": current_participant, deleted: 0}))
+            }
+            
+            if type == "member" || participants_count != 0  {
                 m["VotingId"] = voting
                 m["VarId"] = current_participant
                 CallContract("@1VotingInvite", m)
@@ -64,11 +72,16 @@ contract VotingWizardCreate {
 
         subject_map["VotingId"] = voting_id
 
-        if $ExecuteContract == "yes" || $TypeDecision == 4 {
-            subject_map["ContractAcceptName"] = $ContractAccept
+        if $TypeDecision == 4 {
+            subject_map["ContractAcceptName"] = $ContractAcceptName
             subject_map["ContractAcceptParams"] = $ContractAcceptParams
-            subject_map["ContractRejectName"] = $ContractReject
+            subject_map["ContractRejectName"] = $ContractRejectName
             subject_map["ContractRejectParams"] = $ContractRejectParams
+        } elif $ExecuteContract == "yes" {
+            subject_map["OptContractAcceptName"] = $ContractAcceptName
+            subject_map["OptContractAcceptParams"] = $ContractAcceptParams
+            subject_map["OptContractRejectName"] = $ContractRejectName
+            subject_map["OptContractRejectParams"] = $ContractRejectParams
         }
 
         if $TypeDecision == 1 && $Apply == 1 {
@@ -98,10 +111,12 @@ contract VotingWizardCreate {
             CallContract("@1VotingSubjectContract", subject_map)
         }
 
-        if Str($MemberParticipants) != "0" {
+        if Str($MemberParticipants) != "0" && $TypeParticipants != 1 {
             sendInvites(voting_id, $MemberParticipants, "member")
         } elif Str($RoleParticipants) != "0" {
             sendInvites(voting_id, $RoleParticipants, "role")
+        } elif Str($GroupParticipants) != "0" {
+            sendInvites(voting_id, $GroupParticipants, "group")
         }
         DBUpdateExt("@1buffer_data", {"key": "voting_wizard_buffer", "member_id": $key_id, "ecosystem": $ecosystem_id}, {"value": "{}"})
     }
