@@ -1,0 +1,35 @@
+contract CreditingBid {
+    data {
+        RequestId int
+        Rate int
+    }
+
+    conditions {
+        // check_access
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Сrediting"}).One("id")
+        $check_access = AppParam(Int($app), "crediting_creditor_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+$check_access+"]")
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+            warning LangRes("@1access_denied", "en")
+        }
+
+        var request map status int
+        request = DBFind("crediting_requests").Where({"id": $RequestId}).Row()
+        status = Int(request["status"])
+
+        //check status
+        if status != 1 {
+            warning LangRes("@1access_denied", "en")
+        }
+    }
+
+    action {
+        var m map
+        m["creditor"] = IdToAddress($key_id)
+        m["date_created"] = $block_time  
+        m["rate"] = $Rate
+        m["request_id"] = $RequestId
+        DBInsert("crediting_offers", m)
+    }
+}

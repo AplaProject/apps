@@ -1,0 +1,172 @@
+DBFind(@1applications).Where({"ecosystem": #ecosystem_id#, "name": "Сrediting"}).Columns("name,id").Vars(application)
+
+If(#Id#>0){
+    DBFind(crediting_requests).Where({"id": #Id#}).Vars(request)
+    SetVar(borrower_id, AddressToId(#request_borrower#))
+}
+
+Div(content-wrapper){
+    If(#request_id# > 0){
+        Div(row){
+            Div(col-lg-10 col-lg-offset-1){
+                Form(panel panel-primary){
+                    Div(list-group-item text-center){
+                        P(Class: h3 text-bold m0, Body: $crediting$)
+                        Div(row){
+                            Div(col-md-12){
+                                Div(Class: t5 text-muted m0, Body: #request_description#)
+                            }
+                        }
+                    }
+                    Div(list-group-item text-center){
+                        P(Class: h5 text-center text-bold m0 mb mt-sm, Body: $@1information$)
+                        Div(row mb mt-lg t6){
+                            Div(col-md-6 mt-sm text-right){
+                                LangRes(crediting_borrower)
+                            }
+                            Div(col-md-6 text-left){
+                                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #borrower_id#}).Columns("member_info->information").Vars(member)
+                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#member_id#"){
+                                    Div(){
+                                        Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                                        Span(){
+                                            P(Class: h5 m0 text-bold, Body: #request_borrower#)
+                                            P(Class: h6 m0, Body: #member_member_info_information#)
+                                        }
+                                    }.Style(display:flex; align-items:center;)
+                                }
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes($amount$)
+                            }
+                            Div(col-md-6 text-left){
+                                 Span(Body: Money(#request_amount#))
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes($crediting_term$)
+                            }
+                            Div(col-md-6 text-left){
+                                Span(Body: #request_term#)
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1date_start)
+                            }
+                            Div(col-md-6 text-left){
+                                DateTime(DateTime: #request_date_started#, Format: "DD.MM.YYYY HH:MI")
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1date_end)
+                            }
+                            Div(col-md-6 text-left){
+                                DateTime(DateTime: #request_date_ended#, Format: "DD.MM.YYYY HH:MI")
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1created)
+                            }
+                            Div(col-md-6 text-left){
+                                DateTime(DateTime: #request_date_created#, Format: "DD.MM.YYYY HH:MI")
+                            }
+                        }
+                        Div(row t6){
+                            Div(col-md-6 text-right){
+                                LangRes(@1status)
+                            }
+                            Div(col-md-6 text-left){
+                                If(#request_status#==-2){
+                                    Span(Class: text-muted, Body: LangRes(crediting_blocked))
+                                }.ElseIf(#request_status#==-1){
+                                    Span(Class: text-muted, Body: LangRes(crediting_removed))
+                                }.ElseIf(#request_status#==0){
+                                    Span(Class: text-warning, Body: LangRes(crediting_waiting))
+                                }.ElseIf(#request_status#==1){
+                                    Span(Class:  text-success, Body: LangRes(crediting_auction))
+                                }.ElseIf(#request_status#==2){
+                                    Span(Class: text-primary, Body: LangRes(crediting_signing))
+                                }.ElseIf(#request_status#==3){
+                                    Span(Class: text-danger, Body: LangRes(crediting_rejected))
+                                }.ElseIf(#request_status#==4){
+                                    Span(Class: text-normal, Body: LangRes(crediting_finished))
+                                }
+                            }
+                        }
+                    }
+                    If(#request_status# == 1){
+                        DBFind(crediting_offers, offers).Where({"request_id": #Id#}).Order({"rate": 1, "date_created": 1}).Custom(custom_creditor){
+                            SetVar(creditor_id, AddressToId(#creditor#))
+                            DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #creditor_id#}).Columns("member_info->information").Vars(c)
+                            LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#c_id#"){
+                                Div(){
+                                    Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                                    Span(){
+                                        P(Class: h5 m0 text-bold, Body: #creditor#)
+                                        P(Class: h6 m0, Body: #c_member_info_information#)
+                                    }
+                                }.Style(display:flex; align-items:center;)
+                            }
+                        }.Custom(custom_date){
+                            Span(Class: h6 text-muted, Body: DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI"))
+                        }.Custom(custom_rate){
+                            Span(Class: pull-right, Body: $crediting_rate$ - Strong(#rate# %))
+                        }.Count(cnt)
+
+                        SetVar(creditor_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crediting_creditor_role))
+                        DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#creditor_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(creditor_access)
+
+                        If(Or(#creditor_access_id#>0,#cnt#>0)){
+                            Div(list-group-item){
+                                P(Class: h5 text-center text-bold m0 mb mt-sm, Body: $crediting_bid_list$)
+                                If(#creditor_access_id# > 0){
+                                    Div(row mt-lg){
+                                        Div(col-lg-8 col-lg-offset-2){
+                                            Div(input-group){
+                                                Div(input-group-addon){
+                                                    $crediting_rate$
+                                                }
+                                                Input(Name: Rate, Type: number)
+                                                Div(input-group-btn){
+                                                    Button(Class: btn btn-primary mtl buttons, Page: crediting_view, PageParams: "Id=#Id#", Body: Em(Class: fa fa-search) $crediting_bid$, Contract: CreditingBid, Params: "RequestId=#Id#")
+                                                }
+                                            }
+                                        }.Style(
+                                            .buttons{border: 1px solid #dde6e9;}
+                                        )
+                                    }
+                                }
+                                Div(row mt){
+                                    Div(col-lg-8 col-lg-offset-2){
+                                        Table(offers, "$crediting_creditor$=custom_creditor,$crediting_bid_date$=custom_date,=custom_rate")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Div(list-group-item text-center){
+                        Button(Body: LangRes(@1back), Class: btn bg-gray-lighter ml-sm buttons, Page: crediting_list)
+                    }
+                }.Style(
+                        .buttons{border: 1px solid #dde6e9;}
+                    )
+            }
+        }
+    }.Else{
+        Div(col-md-12 alert alert-danger text-center){
+            LangRes(@1attention)
+        }
+    }
+}.Style(
+    .t3 {font-size:24px;}
+    .t4 {font-size:18px;}
+    .t5 {font-size:14px;}
+    .t6 {font-size:12px;}
+    .break {word-break: break-all;}
+)

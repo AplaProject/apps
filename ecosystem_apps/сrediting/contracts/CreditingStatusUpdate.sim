@@ -1,0 +1,43 @@
+contract CreditingStatusUpdate {
+    data {}
+
+    func changeStatus(from, to map) {
+        var requests array i int req map
+        requests = DBFind("crediting_requests").Where(from)
+
+        while i < Len(requests) {
+            req = requests[i]
+            //if to["status"] == $STARTED {
+            //}
+            DBUpdate("crediting_requests", Int(req["id"]), to)
+            i = i + 1
+        }
+    }
+
+    conditions {
+        $BLOCKED = -2
+        $REMOVED = -1
+        $WAITING = 0
+        $AUCTION = 1
+        $SIGNING = 2
+        $REJECTED = 3
+        $FINISHED = 4
+
+        // check_access
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Сrediting"}).One("id")
+        $check_access = AppParam(Int($app), "crediting_admin_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+$check_access+"]")
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+            warning LangRes("@1access_denied", "en")
+        }
+    }
+
+    action {
+        //setting status AUCTION
+        changeStatus({"status": $WAITING, "deleted": 0, "date_started": {"$lte": $block_time}}, {"status": $AUCTION})
+
+        //setting status SIGNING
+        changeStatus({"status": $AUCTION, "deleted": 0, "date_ended": {"$lte": $block_time}}, {"status": $SIGNING})
+    }
+}
