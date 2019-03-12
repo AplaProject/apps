@@ -1,14 +1,21 @@
-SetVar(this_page,@1message_create)
+SetVar(this_page, @1message_create)
 
 If(#EcosystemId# == ""){
     SetVar(EcosystemId, #ecosystem_id#)
 }
-
 If(#MemberId# == ""){
     SetVar(MemberId, 0)
 }
 
-If(Or(#MemberId#>0,#MemberId#<0)){
+If(#RoleId#){
+    SetVar(broadcast_type_value, "role")
+}.ElseIf(#GroupId#){
+    SetVar(broadcast_type_value, "group")
+}.Else{
+    SetVar(broadcast_type_value, "member")
+}
+
+If(Or(#MemberId# > 0, #MemberId# < 0)){
     SetVar(AddressMemberId, Address(#MemberId#))
 }.Else{
     SetVar(AddressMemberId,)
@@ -16,46 +23,86 @@ If(Or(#MemberId#>0,#MemberId#<0)){
 
 Form(){
     Div(row){
-        Div(col-md-3 mt text-right){
-            Label(){
-                Span(Body: LangRes(@1broadcast))
-            }
-        }
-        Div(col-md-9 text-left){
-            Input(Name: "broadcast", Type: "checkbox", Value: "false")
-        }
-    }
-    Div(row){
         Div(col-md-3 mt-sm text-right){
             Label(){
-                Span(Body: LangRes(@1recipient)).(Class: text-danger, Body:*)
+                Span(Body: LangRes(@1recipient)).(Class: text-danger, Body: *)
             }
         }
         Div(col-md-9 text-left){
-            Input(Name: MemberId, Type:hidden, Value: #MemberId#)
+            Data(src_broadcast_type, "type,translation"){
+                member,$@1member$
+                role,$@1role$
+                group,$@1group$
+            }
+            Select(Name: broadcast_type, Source: src_broadcast_type, NameColumn: translation, ValueColumn: type, Value: #broadcast_type_value#)
+        }
+    }
+    Div(row mt){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1member)).(Class: text-danger, Body: *)
+            }
+        }
+        Div(col-md-9 text-left){
+            Input(Name: MemberId, Type: hidden, Value: #MemberId#)
             Div(input-group){
                 Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #AddressMemberId#)
                 Div(input-group-btn){
-                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=#this_page#,back_header=$@1message_create$,EcosystemId=#EcosystemId#").Popup(Header: $@1member$, Width: "50")
-                }.Style(
-                    .buttons {
-                        border: 1px solid #dde6e9;
-                        padding: 6px 16px;
-                    }
-                )
-            }
-        }.Show("broadcast=false")
-        Div(col-md-9 text-left){
-            DBFind(@1roles,source_roles).Where({"ecosystem": #ecosystem_id#, "deleted": 0}).Columns("id,role_name").Count(roles_count)
-            If(#roles_count#>0){
-                Select(Name: Rid, Source: source_roles, NameColumn: role_name, ValueColumn: id)
-            }.Else{
-                Div(mt-sm){
-                    $@1roles$ $@1not_founded$
+                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams: "back_page=#this_page#,back_header=$@1message_create$,EcosystemId=#EcosystemId#").Popup(Header: $@1member$, Width: "50")
                 }
             }
-        }.Show("broadcast=true")
-    }
+        }
+    }.Show("broadcast_type=member")
+    Div(row mt){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1role)).(Class: text-danger, Body: *)
+            }
+        }
+        Div(col-md-9 text-left){
+            If(RoleId == ""){
+                SetVar(RoleId, 0)
+                SetVar(RoleName, "")
+            }.Else{
+                Input(Name: Rid, Type: hidden, Value: #RoleId#)
+            }
+            Div(input-group){
+                If(#RoleId# > 0){
+                    SetVar(Id, #RoleId#)
+                    DBFind(@1roles).WhereId(#RoleId#).Columns("role_name").Vars(r)
+                }
+                Input(Name: m_name, Disabled: 1, Value: #r_role_name#)
+                Div(input-group-btn){
+                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_role, PageParams: "back_page=@1message_create,back_header=$@1message_create$,EcosystemId=#ecosystem_id#,Id=#vID#").Popup(Header: $@1role$, Width: "50")
+                }
+            }
+        }
+    }.Show("broadcast_type=role")
+    Div(row mt){
+        Div(col-md-3 mt-sm text-right){
+            Label(){
+                Span(Body: LangRes(@1group)).(Class: text-danger, Body: *)
+            }
+        }
+        Div(col-md-9 text-left){
+            If(GroupId == ""){
+                SetVar(GroupId, 0)
+                SetVar(GroupName, "")
+            }.Else{
+                Input(Name: GroupId, Type: hidden, Value: #GroupId#)
+            }
+            Div(input-group){
+                If(#GroupId# > 0){
+                    SetVar(Id, #GroupId#)
+                    DBFind(@1groups).WhereId(#GroupId#).Columns("group_name").Vars(g)
+                }
+                Input(Name: m_name, Disabled: 1, Value: #g_group_name#)
+                Div(input-group-btn){
+                    Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_group, PageParams: "back_page=@1message_create,back_header=$@1message_create$,EcosystemId=#ecosystem_id#,Id=#vID#").Popup(Header: $@1group$, Width: "50")
+                }
+            }
+        }
+    }.Show("broadcast_type=group")
     Div(row mt){
         Div(col-md-3 mt-sm text-right){
             Label(){
@@ -84,12 +131,20 @@ Form(){
     Div(row mt){
         Div(col-md-12){
             Div(){
-                Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1messages_list, Contract: @1NotificationsSend, Params: "Rid=0,CurrentRid=#role_id#")
-            }.Show("broadcast=false")
+                Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1messages_list, Contract: @1NotificationsSend, Params: "Rid=0,GroupId=0,CurrentRid=#role_id#")
+            }.Show("broadcast_type=member")
             Div(){
-                Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1messages_list, Contract: @1NotificationsSend, Params: "MemberId=0,CurrentRid=#role_id#,Closure=2")
-            }.Show("broadcast=true")
+                Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1messages_list, Contract: @1NotificationsSend, Params: "MemberId=0,GroupId=0,CurrentRid=#role_id#,Closure=2")
+            }.Show("broadcast_type=role")
+            Div(){
+                Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1messages_list, Contract: @1NotificationsSend, Params: "MemberId=0,Rid=0,CurrentRid=#role_id#")
+            }.Show("broadcast_type=group")
             Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: @1messages_list)
         }
     }
-}
+}.Style(
+    .buttons {
+        border: 1px solid #dde6e9;
+        padding: 6px 16px;
+    }
+)

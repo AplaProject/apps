@@ -2,6 +2,7 @@ contract NotificationsSend {
     data {
         MemberId int "optional"
         Rid int "optional"
+        GroupId int "optional"
         Closure int "optional"
         Sender int
         Icon string "optional"
@@ -50,7 +51,7 @@ contract NotificationsSend {
             sender["member_name"] = $senderMember["member_name"]
             sender["image_id"] = $senderMember["image_id"]
         } else {
-            if $Sender == 2 && $senderRole{
+            if $Sender == 2 && $senderRole {
                 // send from role
                 sender["type"] = $Sender
                 sender["role_id"] = $senderRole["id"]
@@ -86,17 +87,25 @@ contract NotificationsSend {
             $Icon = "icon-envelope"
         }
         if $MemberId != 0 {
-            if !DBFind("@1keys").Where({"ecosystem": $EcosystemId, "id": $MemberId}).Row(){
+            if !DBFind("@1keys").Where({"ecosystem": $EcosystemId, "id": $MemberId}).Row() {
                 warning LangRes("@1key_not_found", "en")
             }
-            $notify_type = 1 // is "member"
+            $notify_type = 1
         } elif $Rid > 0 {
-            $notify_type = 2 // is "role"
+            $notify_type = 2
             if !DBFind("@1roles").Where({"ecosystem": $EcosystemId, "id": $Rid}).One("id") {
                 warning $this_contract + ": " + LangRes("@1recipient_role_not_found", "en")
             }
             if !DBFind("@1roles_participants").Where({"ecosystem": $EcosystemId, "role->id": $Rid, "deleted": 0}).One("id") {
                 warning $this_contract + ": " + LangRes("@1recipient_role_no_members", "en")
+            }
+        } elif $GroupId > 0 {
+            $notify_type = 1
+            if !DBFind("@1groups").Where({"ecosystem": $EcosystemId, "id": $GroupId}).One("id") {
+                warning $this_contract + ": " + LangRes("@1recipient_group_not_found", "en")
+            }
+            if !DBFind("@1groups_participants").Where({"ecosystem": $EcosystemId, "groups_info->id": $GroupId, "deleted": 0}).One("id") {
+                warning $this_contract + ": " + LangRes("@1recipient_group_no_members", "en")
             }
         } else {
             warning $this_contract + ": " + LangRes("@1notification_type_not_defined", "en")
@@ -140,6 +149,17 @@ contract NotificationsSend {
                     UpdateNotifications($EcosystemId, Int(p["member.member_id"]))
                     i = i + 1
                 }
+            }
+        } elif $GroupId > 0 {
+            var participants array
+            participants = DBFind("@1groups_participants").Where({"ecosystem": $EcosystemId, "groups_info->id": $GroupId, "deleted": 0}).Columns("member->member_id")
+            var i int
+            while i < Len(participants) {
+                var p map
+                p = participants[i]
+                sendNotify(getMemberInfo(Int(p["member.member_id"]), $EcosystemId))
+                UpdateNotifications($EcosystemId, Int(p["member.member_id"]))
+                i = i + 1
             }
         }
     }
