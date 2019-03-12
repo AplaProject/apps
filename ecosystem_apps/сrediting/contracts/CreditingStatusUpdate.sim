@@ -13,8 +13,54 @@ contract CreditingStatusUpdate {
             rate = offers["rate"]
             offer_date = offers["date_created"]
             DBUpdate("crediting_requests", request_id, {"creditor": creditor, "rate": rate, "offer_id": offer_id, "offer_date": offer_date})
+
+            var memberId int
+            var header body string params map 
+            memberId = AddressToId(request["borrower"])
+            header = "Signature for auction №" + Str(request_id)
+            body = "Your signature is required!"
+            params["crediting_id"] = request_id
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-edit", header, body, "crediting_view", params)
         }
         return offer_id
+    }
+
+    func sendNotesAuctionStarted(request map) {
+        var request_id i int subs_arr array
+        request_id = Int(request["id"])
+        subs_arr = DBFind("crediting_subs").Columns("creditor").Limit(10000).Where({"request_id": request_id, "deleted": 0})
+        while i < Len(subs_arr) {
+            var sub_map memberId int
+            sub_map = subs_arr[i]
+            memberId = AddressToId(sub_map["creditor"])
+
+            var header body string params map 
+            header = "Auction №" + Str(request_id) + " started"
+            body = "You can bid now!"
+            params["crediting_id"] = request_id
+            params["optional"] = 1
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-check", header, body, "crediting_view", params)
+            i = i + 1
+        }
+    }
+
+    func sendNotesAuctionFinished(request map) {
+        var request_id i int subs_arr array
+        request_id = Int(request["id"])
+        subs_arr = DBFind("crediting_subs").Columns("creditor").Limit(10000).Where({"request_id": request_id, "deleted": 0})
+        while i < Len(subs_arr) {
+            var sub_map memberId int
+            sub_map = subs_arr[i]
+            memberId = AddressToId(sub_map["creditor"])
+
+            var header body string params map 
+            header = "Auction №" + Str(request_id) + " finished"
+            body = "You can't bid anymore!"
+            params["crediting_id"] = request_id
+            params["optional"] = 1
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-close", header, body, "crediting_view", params)
+            i = i + 1
+        }
     }
 
     func changeStatus(from, to map) {
@@ -24,9 +70,13 @@ contract CreditingStatusUpdate {
         while i < Len(requests) {
             req = requests[i]
             if to["status"] == $SIGNING {
+                sendNotesAuctionFinished(req)
                 if findWinner(req) == 0 {
                     to["status"] = $REJECTED
                 }
+            }
+            if to["status"] == $AUCTION {
+                sendNotesAuctionStarted(req)
             }
             DBUpdate("crediting_requests", Int(req["id"]), to)
             i = i + 1

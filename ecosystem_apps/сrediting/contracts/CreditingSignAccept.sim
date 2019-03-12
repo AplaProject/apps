@@ -3,6 +3,17 @@ contract CreditingSignAccept {
         Id int
     }
 
+    func closeMyNotes() {
+        var notes array i int
+        notes = DBFind("@1notifications").Where({"closed": 0, "ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_name": "crediting_view", "page_params->crediting_id": $Id})
+        while i < Len(notes){
+            var note map
+            note = notes[i]
+            @1NotificationsClose("NotificId", Int(note["id"]))
+            i = i + 1
+        }
+    }
+
     conditions {
         var request map status int
         request = DBFind("crediting_requests").Where({"id": $Id}).Row()
@@ -28,11 +39,21 @@ contract CreditingSignAccept {
     }
 
     action {
+        closeMyNotes()
+
         var m map
         if AddressToId($borrower) == $key_id {
             m["sign_borrower"] = $block_time
             m["pub_borrower"] = $pub
             $sign_borrower = $block_time
+
+            var memberId int
+            var header body string params map 
+            memberId = AddressToId($creditor)
+            header = "Signature for auction №" + Str($Id)
+            body = "Your signature is required!"
+            params["crediting_id"] = $Id
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-edit", header, body, "crediting_view", params)
         }
         if AddressToId($creditor) == $key_id {
             m["sign_creditor"] = $block_time

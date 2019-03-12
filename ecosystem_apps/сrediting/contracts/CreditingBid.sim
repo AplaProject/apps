@@ -4,6 +4,36 @@ contract CreditingBid {
         Rate int
     }
 
+    func closeMyNotes() {
+        var notes array i int
+        notes = DBFind("@1notifications").Where({"closed": 0, "ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_name": "crediting_view", "page_params->crediting_id": $RequestId})
+        while i < Len(notes){
+            var note map
+            note = notes[i]
+            @1NotificationsClose("NotificId", Int(note["id"]))
+            i = i + 1
+        }
+    }
+
+    func sendNotesNewBid() {
+        var i int subs_arr array
+        $KeyId = IdToAddress($key_id)
+        subs_arr = DBFind("crediting_subs").Columns("creditor").Limit(10000).Where({"creditor": {"$neq": $KeyId}, "request_id": $RequestId, "deleted": 0})
+        while i < Len(subs_arr) {
+            var sub_map memberId int
+            sub_map = subs_arr[i]
+            memberId = AddressToId(sub_map["creditor"])
+
+            var header body string params map 
+            header = "New bid on auction №" + Str($RequestId)
+            body = "Check auction for information"
+            params["crediting_id"] = $RequestId
+            params["optional"] = 1
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-fire", header, body, "crediting_view", params)
+            i = i + 1
+        }
+    }
+
     conditions {
         // check_access
         $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Сrediting"}).One("id")
@@ -25,6 +55,9 @@ contract CreditingBid {
     }
 
     action {
+        closeMyNotes()
+        sendNotesNewBid()
+
         var m map
         m["creditor"] = IdToAddress($key_id)
         m["date_created"] = $block_time  

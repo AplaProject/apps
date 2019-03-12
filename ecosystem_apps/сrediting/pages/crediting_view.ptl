@@ -1,4 +1,12 @@
 DBFind(@1applications).Where({"ecosystem": #ecosystem_id#, "name": "Сrediting"}).Columns("name,id").Vars(application)
+SetVar(creditor_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crediting_creditor_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#creditor_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(creditor_access)
+
+If(#notific_id#>0){
+    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("page_params->crediting_id,page_params->optional").Vars(notific)
+    SetVar(Id, #notific_page_params_crediting_id#)
+    SetVar(notific_optional, #notific_page_params_optional#)
+}
 
 If(#Id#>0){
     DBFind(crediting_requests).Where({"id": #Id#}).Vars(request)
@@ -120,9 +128,6 @@ Div(content-wrapper){
                             Span(Class: pull-right, Body: $crediting_rate$ - Strong(#rate# %))
                         }.Count(cnt)
 
-                        SetVar(creditor_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crediting_creditor_role))
-                        DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#creditor_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(creditor_access)
-
                         If(Or(#creditor_access_id#>0,#cnt#>0)){
                             Div(list-group-item){
                                 P(Class: h5 text-center text-bold m0 mb mt-sm, Body: $crediting_bid_list$)
@@ -152,10 +157,10 @@ Div(content-wrapper){
                         }
                     }
                     If(Or(#request_status#==2,#request_status#==4)){
-                        If(And(#request_sign_borrower#!=0,#request_sign_creditor#!=0)){
-                            SetVar(hh, 160)
+                        If(Or(And(#creditor_id#==#key_id#,#request_sign_borrower#>0,#request_sign_creditor#==0),And(#borrower_id#==#key_id#,#request_sign_borrower#==0,#request_sign_creditor#==0))){
+                            SetVar(hh, 210)
                         }.Else{
-                             SetVar(hh, 210)
+                             SetVar(hh, 160)  
                         }
                         Div(list-group-item){
                             P(Class: h5 text-center text-bold m0 mb mt-sm, Body: $crediting_offer$)
@@ -282,8 +287,32 @@ Div(content-wrapper){
                             }
                         }
                     }
-                    Div(list-group-item text-center){
-                        Button(Body: LangRes(@1back), Class: btn bg-gray-lighter ml-sm buttons, Page: crediting_list)
+                    Div(list-group-item){
+                        Button(Class: btn bg-gray-lighter ml-sm buttons, Page: crediting_list){
+                            Span(Em(Class: fa fa-chevron-left fa-1x)
+                            Span(Class: ml-sm, Body: LangRes(@1back))
+                        }
+                        If(#notific_optional# == 1){
+                            Button(Class: btn bg-gray-lighter ml-sm buttons pull-right, Contract: @1NotificationsClose, Params: "NotificId=#notific_id#", Page: crediting_view, PageParams: "Id=#Id#"){
+                                Span(Em(Class: fa fa-flag fa-1x)
+                                Span(Class: ml-sm, Body: LangRes(@1mark_read))
+                            }
+                        }
+                        If(#creditor_access_id#>0){
+                            SetVar(current_address, Address(#key_id#))
+                            DBFind("crediting_subs", fsdf).Where({"request_id": #Id#, "creditor": #current_address#, "deleted": 0}).Vars(sub)
+                            If(#sub_id#>0){
+                                Button(Class: btn bg-gray-lighter ml-sm buttons pull-right, Page: crediting_view, PageParams: "Id=#Id#", Contract: CreditingSubscribe, Params: "Id=#Id#"){
+                                    Span(Em(Class: fa fa-close fa-1x)
+                                    Span(Class: ml-sm, Body: LangRes(crediting_unsubscribe))
+                                }
+                            }.Else{
+                                Button(Class: btn bg-gray-lighter ml-sm buttons pull-right, Page: crediting_view, PageParams: "Id=#Id#", Contract: CreditingSubscribe, Params: "Id=#Id#"){
+                                    Span(Em(Class: fa fa-check fa-1x)
+                                    Span(Class: ml-sm, Body: LangRes(crediting_subscribe))
+                                }
+                            }
+                        } 
                     }
                 }.Style(
                     .buttons{border: 1px solid #dde6e9;}
