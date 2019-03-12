@@ -3,6 +3,7 @@ DBFind(@1applications).Where({"ecosystem": #ecosystem_id#, "name": "Сrediting"}
 If(#Id#>0){
     DBFind(crediting_requests).Where({"id": #Id#}).Vars(request)
     SetVar(borrower_id, AddressToId(#request_borrower#))
+    SetVar(creditor_id, AddressToId(#request_creditor#))
 }
 
 Div(content-wrapper){
@@ -25,13 +26,13 @@ Div(content-wrapper){
                                 LangRes(crediting_borrower)
                             }
                             Div(col-md-6 text-left){
-                                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #borrower_id#}).Columns("member_info->information").Vars(member)
-                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#member_id#"){
+                                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #borrower_id#}).Columns("member_info->information").Vars(borrower)
+                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#borrower_id#"){
                                     Div(){
                                         Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
                                         Span(){
                                             P(Class: h5 m0 text-bold, Body: #request_borrower#)
-                                            P(Class: h6 m0, Body: #member_member_info_information#)
+                                            P(Class: h6 m0, Body: #borrower_member_info_information#)
                                         }
                                     }.Style(display:flex; align-items:center;)
                                 }
@@ -39,7 +40,7 @@ Div(content-wrapper){
                         }
                         Div(row t6){
                             Div(col-md-6 text-right){
-                                LangRes($amount$)
+                                LangRes($@1amount$)
                             }
                             Div(col-md-6 text-left){
                                  Span(Body: Money(#request_amount#))
@@ -150,12 +151,143 @@ Div(content-wrapper){
                             }
                         }
                     }
+                    If(Or(#request_status#==2,#request_status#==4)){
+                        If(And(#request_sign_borrower#!=0,#request_sign_creditor#!=0)){
+                            SetVar(hh, 160)
+                        }.Else{
+                             SetVar(hh, 210)
+                        }
+                        Div(list-group-item){
+                            P(Class: h5 text-center text-bold m0 mb mt-sm, Body: $crediting_offer$)
+                            Div(row t6){
+                                Div(col-md-6 text-right){
+                                    LangRes($crediting_rate$)
+                                }
+                                Div(col-md-6 text-left){
+                                    Span(Body: #request_rate# % )
+                                }
+                            }
+                            Div(row t6){
+                                Div(col-md-6 text-right){
+                                    LangRes(crediting_offer_date)
+                                }
+                                Div(col-md-6 text-left){
+                                    DateTime(DateTime: #request_offer_date#, Format: "DD.MM.YYYY HH:MI")
+                                }
+                            }
+                            Div(row){
+                                Div(col-md-6){
+                                    P(Class: h5 text-center text-bold m0 mb mt-sm, Body: $crediting_borrower$)
+                                    Div(list-group-item text-center mb-lg ml-lg){
+                                        Div(row mb mt-sm t6){
+                                            Div(col-sm-8 col-sm-offset-4 text-left){
+                                                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #borrower_id#}).Columns("member_info->information").Vars(borrower)
+                                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#borrower_id#"){
+                                                    Div(){
+                                                        Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                                                        Span(){
+                                                            P(Class: h5 m0 text-bold, Body: #request_borrower#)
+                                                            P(Class: h6 m0, Body: #borrower_member_info_information#)
+                                                        }
+                                                    }.Style(display:flex; align-items:center;)
+                                                }
+                                                
+                                            }
+                                        }
+                                        Div(row t6 mt-lg){
+                                            Div(col-md-12 text-center){
+                                                Div(Class: text-bold, Body: LangRes(crediting_signature))
+                                                If(#request_pub_borrower# != ""){
+                                                    Div(Class: preview, Body: #request_pub_borrower#)
+                                                }.Else{
+                                                     Div(Class: preview, Body: LangRes(crediting_waiting))
+                                                }
+                                            }
+                                        }
+                                        Div(row t6 mt){
+                                            Div(col-md-12 text-center){
+                                                Div(Class: text-bold, Body: LangRes(@1signed_at))
+                                                If(#request_sign_borrower# != 0){
+                                                    Div(Body: DateTime(DateTime: #request_sign_borrower#, Format: "DD.MM.YYYY HH:MI")) 
+                                                }.Else{
+                                                     Div(Class: preview, Body: LangRes(crediting_waiting))
+                                                }
+                                            }
+                                        }
+                                        If(#request_status#==2){
+                                            If(And(#borrower_id#==#key_id#,#request_sign_borrower#==0,#request_sign_creditor#==0)){
+                                                Div(row mt-lg){
+                                                    Div(col-sm-6 col-sm-offset-3 col-lg-6 col-lg-offset-3){
+                                                        Button(Body: LangRes(@1reject), Class: btn btn-danger pull-left, Contract: CreditingSignReject, Params: "Id=#Id#", Page: crediting_view, PageParams: "Id=#Id#")
+                                                        Button(Body: LangRes(@1accept), Class: btn btn-success pull-right, Contract: CreditingSignAccept, Params: "Id=#Id#", Page: crediting_view, PageParams: "Id=#Id#")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }.Style(
+                                        height: #hh#px;
+                                    )
+                                }
+                                Div(col-md-6){
+                                    P(Class: h5 text-center text-bold m0 mb mt-sm, Body: $crediting_creditor$)
+                                    Div(list-group-item text-center mb-lg ml-lg){
+                                        Div(row mb mt-sm t6){
+                                            Div(col-sm-8 col-sm-offset-4 text-left){
+                                                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #creditor_id#}).Columns("member_info->information").Vars(creditor)
+                                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#creditor_id#"){
+                                                    Div(){
+                                                        Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                                                        Span(){
+                                                            P(Class: h5 m0 text-bold, Body: #request_creditor#)
+                                                            P(Class: h6 m0, Body: #creditor_member_info_information#)
+                                                        }
+                                                    }.Style(display:flex; align-items:center;)
+                                                }
+                                            }
+                                        }
+                                        Div(row t6 mt-lg){
+                                            Div(col-md-12 text-center){
+                                                Div(Class: text-bold, Body: LangRes(crediting_signature))
+                                                If(#request_pub_creditor# != ""){
+                                                    Div(Class: preview, Body: #request_pub_creditor#)
+                                                }.Else{
+                                                    Div(Class: preview, Body: LangRes(crediting_waiting))
+                                                }
+                                            }
+                                        }
+                                        Div(row t6 mt){
+                                            Div(col-md-12 text-center){
+                                                Div(Class: text-bold, Body: LangRes(@1signed_at))
+                                                If(#request_sign_creditor# != 0){
+                                                    Div(Body: DateTime(DateTime: #request_sign_creditor#, Format: "DD.MM.YYYY HH:MI"))
+                                                }.Else{
+                                                    Div(Class: preview, Body: LangRes(crediting_waiting))
+                                                }
+                                            }
+                                        }
+                                        If(#request_status#==2){
+                                            If(And(#creditor_id#==#key_id#,#request_sign_borrower#>0,#request_sign_creditor#==0)){
+                                                Div(row mt-lg){
+                                                    Div(col-sm-6 col-sm-offset-3 col-lg-6 col-lg-offset-3){
+                                                        Button(Body: LangRes(@1reject), Class: btn btn-danger pull-left, Contract: CreditingSignReject, Params: "Id=#Id#", Page: crediting_view, PageParams: "Id=#Id#")
+                                                        Button(Body: LangRes(@1accept), Class: btn btn-success pull-right, Contract: CreditingSignAccept, Params: "Id=#Id#", Page: crediting_view, PageParams: "Id=#Id#")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }.Style(
+                                        height: #hh#px;
+                                    )
+                                }
+                            }
+                        }
+                    }
                     Div(list-group-item text-center){
                         Button(Body: LangRes(@1back), Class: btn bg-gray-lighter ml-sm buttons, Page: crediting_list)
                     }
                 }.Style(
-                        .buttons{border: 1px solid #dde6e9;}
-                    )
+                    .buttons{border: 1px solid #dde6e9;}
+                )
             }
         }
     }.Else{
@@ -164,6 +296,11 @@ Div(content-wrapper){
         }
     }
 }.Style(
+    .preview {
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+    }
     .t3 {font-size:24px;}
     .t4 {font-size:18px;}
     .t5 {font-size:14px;}

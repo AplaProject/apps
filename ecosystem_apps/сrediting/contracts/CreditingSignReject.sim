@@ -1,29 +1,29 @@
-contract CreditingDel {
+contract CreditingSignReject {
     data {
         Id int
     }
 
     conditions {
-        var request map borrower string status int
+        var request map status int
         request = DBFind("crediting_requests").Where({"id": $Id}).Row()
-        borrower = request["borrower"]
+        $borrower = request["borrower"]
+        $creditor = request["creditor"]
         status = Int(request["status"])
 
         //check status
-        if status != 0 {
+        if status != 2 {
             warning LangRes("@1access_denied", "en")
         }
 
-        //check borrower
-        if AddressToId(borrower) != $key_id {
+        //check borrower && creditor
+        if AddressToId($borrower) != $key_id && AddressToId($creditor) != $key_id {
             warning LangRes("@1access_denied", "en")
         }
     }
 
     action {
         var m map
-		m["status"] = -1
-		m["deleted"] = $block_time    
+		m["status"] = 3  
         DBUpdate("crediting_requests", Int($Id), m)
     }
 }

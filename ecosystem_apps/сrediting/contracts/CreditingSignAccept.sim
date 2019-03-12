@@ -1,0 +1,48 @@
+contract CreditingSignAccept {
+    data {
+        Id int
+    }
+
+    conditions {
+        var request map status int
+        request = DBFind("crediting_requests").Where({"id": $Id}).Row()
+        $borrower = request["borrower"]
+        $creditor = request["creditor"]
+
+        $sign_creditor = request["sign_creditor"]
+        $sign_borrower = request["sign_borrower"]
+        status = Int(request["status"])
+
+        //check status
+        if status != 2 {
+            warning LangRes("@1access_denied", "en")
+        }
+
+        //check borrower && creditor
+        if AddressToId($borrower) != $key_id && AddressToId($creditor) != $key_id {
+            warning LangRes("@1access_denied", "en")
+        }
+
+        $pub = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $key_id}).One("pub")
+        $pub = PubToHex($pub) 
+    }
+
+    action {
+        var m map
+        if AddressToId($borrower) == $key_id {
+            m["sign_borrower"] = $block_time
+            m["pub_borrower"] = $pub
+            $sign_borrower = $block_time
+        }
+        if AddressToId($creditor) == $key_id {
+            m["sign_creditor"] = $block_time
+            m["pub_creditor"] = $pub
+            $sign_creditor = $block_time
+        }
+
+        if $sign_borrower > 0 && $sign_creditor > 0 {
+		    m["status"] = 4
+        }
+        DBUpdate("crediting_requests", Int($Id), m)
+    }
+}

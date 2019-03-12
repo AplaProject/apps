@@ -1,14 +1,33 @@
 contract CreditingStatusUpdate {
     data {}
 
+    func findWinner(request map) int {
+        var request_id int offers map
+        request_id = Int(request["id"])
+        offers = DBFind("crediting_offers").Where({"request_id": request_id}).Order({"rate": 1, "date_created": 1}).Row()
+
+        var creditor string rate offer_id offer_date int
+        if offers {
+            offer_id = offers["id"]
+            creditor = offers["creditor"]
+            rate = offers["rate"]
+            offer_date = offers["date_created"]
+            DBUpdate("crediting_requests", request_id, {"creditor": creditor, "rate": rate, "offer_id": offer_id, "offer_date": offer_date})
+        }
+        return offer_id
+    }
+
     func changeStatus(from, to map) {
         var requests array i int req map
         requests = DBFind("crediting_requests").Where(from)
 
         while i < Len(requests) {
             req = requests[i]
-            //if to["status"] == $STARTED {
-            //}
+            if to["status"] == $SIGNING {
+                if findWinner(req) == 0 {
+                    to["status"] = $REJECTED
+                }
+            }
             DBUpdate("crediting_requests", Int(req["id"]), to)
             i = i + 1
         }
