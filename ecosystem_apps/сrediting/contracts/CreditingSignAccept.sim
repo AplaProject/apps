@@ -19,6 +19,8 @@ contract CreditingSignAccept {
         request = DBFind("crediting_requests").Where({"id": $Id}).Row()
         $borrower = request["borrower"]
         $creditor = request["creditor"]
+        $rate = request["rate"]
+        $amount = request["amount"]
 
         $sign_creditor = request["sign_creditor"]
         $sign_borrower = request["sign_borrower"]
@@ -48,7 +50,7 @@ contract CreditingSignAccept {
             $sign_borrower = $block_time
 
             var memberId int
-            var header body string params map 
+            var header body string params map
             memberId = AddressToId($creditor)
             header = "Signature for auction №" + Str($Id)
             body = "Your signature is required!"
@@ -62,6 +64,16 @@ contract CreditingSignAccept {
         }
 
         if $sign_borrower > 0 && $sign_creditor > 0 {
+            $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Сrediting"}).One("id")
+            $commission_wallet = AppParam(Int($app), "crediting_commission_wallet", $ecosystem_id)
+
+            if $commission_wallet != "0" {
+                var commission money
+                commission = Money($amount) * Money($rate) / Money(100) / Money(10)
+                @1TokensSend("Recipient,Amount", Str($commission_wallet), Money(commission))
+            }
+
+            @1TokensSend("Recipient,Amount", Str($borrower), Money($amount))
 		    m["status"] = 4
         }
         DBUpdate("crediting_requests", Int($Id), m)
