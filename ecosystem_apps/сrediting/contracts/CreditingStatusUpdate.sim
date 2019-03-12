@@ -1,0 +1,112 @@
+contract CreditingStatusUpdate {
+    data {}
+
+    func findWinner(request map) int {
+        var request_id int offers map
+        request_id = Int(request["id"])
+        offers = DBFind("crediting_offers").Where({"request_id": request_id}).Order({"rate": 1, "date_created": 1}).Row()
+
+        var creditor string rate offer_id offer_date int
+        if offers {
+            offer_id = offers["id"]
+            creditor = offers["creditor"]
+            rate = offers["rate"]
+            offer_date = offers["date_created"]
+            DBUpdate("crediting_requests", request_id, {"creditor": creditor, "rate": rate, "offer_id": offer_id, "offer_date": offer_date})
+
+            var memberId int
+            var header body string params map 
+            memberId = AddressToId(request["borrower"])
+            header = "Signature for auction №" + Str(request_id)
+            body = "Your signature is required!"
+            params["crediting_id"] = request_id
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-edit", header, body, "crediting_view", params)
+        }
+        return offer_id
+    }
+
+    func sendNotesAuctionStarted(request map) {
+        var request_id i int subs_arr array
+        request_id = Int(request["id"])
+        subs_arr = DBFind("crediting_subs").Columns("creditor").Limit(10000).Where({"request_id": request_id, "deleted": 0})
+        while i < Len(subs_arr) {
+            var sub_map memberId int
+            sub_map = subs_arr[i]
+            memberId = AddressToId(sub_map["creditor"])
+
+            var header body string params map 
+            header = "Auction №" + Str(request_id) + " started"
+            body = "You can bid now!"
+            params["crediting_id"] = request_id
+            params["optional"] = 1
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-check", header, body, "crediting_view", params)
+            i = i + 1
+        }
+    }
+
+    func sendNotesAuctionFinished(request map) {
+        var request_id i int subs_arr array
+        request_id = Int(request["id"])
+        subs_arr = DBFind("crediting_subs").Columns("creditor").Limit(10000).Where({"request_id": request_id, "deleted": 0})
+        while i < Len(subs_arr) {
+            var sub_map memberId int
+            sub_map = subs_arr[i]
+            memberId = AddressToId(sub_map["creditor"])
+
+            var header body string params map 
+            header = "Auction №" + Str(request_id) + " finished"
+            body = "You can't bid anymore!"
+            params["crediting_id"] = request_id
+            params["optional"] = 1
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-close", header, body, "crediting_view", params)
+            i = i + 1
+        }
+    }
+
+    func changeStatus(from, to map) {
+        var requests array i int req map
+        requests = DBFind("crediting_requests").Where(from)
+
+        while i < Len(requests) {
+            req = requests[i]
+            if to["status"] == $SIGNING {
+                sendNotesAuctionFinished(req)
+                if findWinner(req) == 0 {
+                    to["status"] = $REJECTED
+                }
+            }
+            if to["status"] == $AUCTION {
+                sendNotesAuctionStarted(req)
+            }
+            DBUpdate("crediting_requests", Int(req["id"]), to)
+            i = i + 1
+        }
+    }
+
+    conditions {
+        $BLOCKED = -2
+        $REMOVED = -1
+        $WAITING = 0
+        $AUCTION = 1
+        $SIGNING = 2
+        $REJECTED = 3
+        $FINISHED = 4
+
+        // check_access
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Сrediting"}).One("id")
+        $check_access = AppParam(Int($app), "crediting_admin_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+$check_access+"]")
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+            warning LangRes("@1access_denied", "en")
+        }
+    }
+
+    action {
+        //setting status AUCTION
+        changeStatus({"status": $WAITING, "deleted": 0, "date_started": {"$lte": $block_time}}, {"status": $AUCTION})
+
+        //setting status SIGNING
+        changeStatus({"status": $AUCTION, "deleted": 0, "date_ended": {"$lte": $block_time}}, {"status": $SIGNING})
+    }
+}

@@ -1,0 +1,116 @@
+contract CreditingAdd {
+    data {
+        Id int "optional"
+        Amount money
+        Term string
+        StartDate string
+        StartTime string
+        EndDate string
+        EndTime string
+        Description string "optional"
+    }
+
+    func trimZeroTime(s string) string {
+        if Contains(s, "T00:00:00Z") {
+            s = Replace(s, "T00:00:00Z", "")
+        }
+        return s
+    }
+
+    func dateAddTime(d, t string) string {
+        var dt string
+        if Size(t) == 5 {
+            dt = Sprintf("%v %v:00", trimZeroTime(d), t)
+        }
+        return dt
+    }
+
+    func fixDatetimes() {
+        $date_started = UnixDateTime(dateAddTime($StartDate, $StartTime))
+        $date_ended = UnixDateTime(dateAddTime($EndDate, $EndTime))
+
+        if $date_started == 0 || $date_ended == 0 { // invalid datetimes
+            var errs array
+            if Size($StartDate) < 10 {
+                errs = Append(errs, "starting date")
+            }
+            if Size($StartTime) < 5 {
+                errs = Append(errs, "starting time")
+            }
+            if Size($EndDate) < 10 {
+                errs = Append(errs, "ending date")
+            }
+            if Size($EndTime) < 5 {
+                errs = Append(errs, "ending time")
+            }
+            warning Sprintf(LangRes("сrediting_creation_error", "en"), Join(errs, ", "))
+        }
+        if $date_started < $block_time {
+            warning LangRes("@1starting_date_invalid", "en")
+        }
+        if $date_started >= $date_ended {
+            warning LangRes("@1ending_date_invalid", "en")
+        }
+    }
+
+    conditions {
+        // check_access
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Сrediting"}).One("id")
+        $check_access = AppParam(Int($app), "crediting_borrower_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+$check_access+"]")
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+            warning LangRes("@1access_denied", "en")
+        }
+
+        var request map borrower string status int
+        request = DBFind("crediting_requests").Where({"id": $Id}).Row()
+        borrower = request["borrower"]
+        status = Int(request["status"])
+
+        //check status
+        if status != 0 {
+            warning LangRes("@1access_denied", "en")
+        }
+
+        //check borrower
+        if Int($Id) > 0 {
+            if AddressToId(borrower) != $key_id {
+                 warning LangRes("@1access_denied", "en")
+            }
+        }
+
+        //check amount
+        if $Amount == 0 {
+            warning LangRes("@1amount_zero", "en")
+        }
+        if $Amount < 0 {
+            warning LangRes("@1amount_less_zero", "en")
+        }
+
+        //check date
+        fixDatetimes()
+    }
+
+    action {
+        var m map
+        if Int($Id) == 0 {
+            m["borrower"] = IdToAddress($key_id)
+            m["status"] = 0
+            m["deleted"] = 0
+            m["date_created"] = $block_time       
+        }
+
+        m["amount"] = $Amount
+        m["term"] = $Term
+        m["date_started"] = $date_started
+        m["date_ended"] = $date_ended
+        m["description"] = $Description
+
+        if Int($Id) == 0 {
+            DBInsert("crediting_requests", m)
+        } else {
+            DBUpdate("crediting_requests", Int($Id), m)
+        }
+    }
+}

@@ -1,0 +1,163 @@
+SetVar(this_page, crediting_list).(this_table, crediting_requests)
+Include(@1pager_header)
+
+SetTitle("$crediting$")
+Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$crediting_desc$"))
+
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Сrediting"}).Vars(application)
+SetVar(admin_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crediting_admin_role))
+SetVar(creditor_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crediting_creditor_role))
+SetVar(borrower_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crediting_borrower_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#creditor_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(creditor_access)
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#borrower_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(borrower_access)
+
+If(#borrower_access_id# > 0){
+    AddToolButton(Title: $@1add$, Page: crediting_add, Icon: icon-plus).Popup(60, $crediting_add$)
+}
+
+If(#page_par#==0){
+    SetVar(type_filter, {"status": 0})
+}.ElseIf(#page_par#==1){
+    SetVar(type_filter, {"status": 1})
+}.ElseIf(#page_par#==2){
+    SetVar(type_filter, {"status": 2})
+}.ElseIf(#page_par#==3){
+    SetVar(type_filter, {"status": 3})
+}.ElseIf(#page_par#==4){
+    SetVar(type_filter, {"status": 4})
+}
+
+If(#creditor_access_id# > 0){
+    SetVar(global_access, 1)
+    SetVar(role_where, {"deleted": 0})
+}.ElseIf(#borrower_access_id# > 0){
+    SetVar(global_access, 1)
+    SetVar(role_where, {"borrower": Address(#key_id#)})
+}.ElseIf(#admin_access_id# > 0){
+    SetVar(global_access, 1)
+}
+
+If(#global_access# == 1){
+    If(#search#){
+        SetVar(where, {"$and": [#role_where#, #type_filter#, {"borrower": {"$ilike": "#search#"}}]})
+    }.Else{
+        SetVar(where, {"$and": [#role_where#, #type_filter#]})
+    }
+
+    Div(mr-lg text-right){
+        If(#admin_access_id# > 0){
+            Button(Body: Em(Class: fa fa-refresh) $@1update_statuses$, Class: btn bg-gray mr-lg, Page: #this_page#, Contract: CreditingStatusUpdate)
+        }
+        Button(Page: crediting_filter, Class: btn bg-gray-lighter mr-sm, PageParams: "page_par=#page_par#,search=#search#,current_page=#current_page#", Body: Em(Class: fa fa-filter) $@1filter$).Popup(Header: $@1filter$, Width: "30")
+        If(#type_filter#){
+            Button(Page: #this_page#, PageParams: "page_par=NULL,search=#search#", Class: btn bg-gray-lighter mr-sm, Body: Em(Class: fa fa-close))
+        }
+    }.Style(margin-top: -28px; z-index: 1001;)
+
+    Div(list-group-item ml-lg mr-lg pt-lg){
+        SetVar(search_name, LangRes(crediting_borrower))
+        Include(@1search)
+    }
+
+    DBFind(#this_table#, src).Where(#where#).Order({"deleted": 1, "id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(custom_id){
+        If(#deleted# == 0){
+            SetVar(Name: style_text, Value: "text-normal")
+            SetVar(Name: style_link, Value: "text-primary")
+        }.Else{
+            SetVar(Name: style_text, Value: "text-muted")
+            SetVar(Name: style_link, Value: "text-muted")
+        }
+        SetVar(borrower_id, AddressToId(#borrower#))
+        Span(Class: #style_text#, Body: #id#)
+    }.Custom(custom_borrower){
+        DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #borrower_id#}).Columns("member_info->information").Vars(member)
+        LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#member_id#"){
+            Div(){
+                Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                Span(){
+                    P(Class: h5 m0 text-bold, Body: #borrower#)
+                    P(Class: h6 m0, Body: #member_member_info_information#)
+                }
+            }.Style(display:flex; align-items:center;)
+        }
+    }.Custom(custom_amount){
+        Span(Class: #style_text#, Body: Money(#amount#))
+    }.Custom(custom_term){
+        Span(Class: #style_text#, Body: #term#)
+    }.Custom(custom_date){
+        P(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_started#, Format: "DD.MM.YYYY HH:MI"))
+        P(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_ended#, Format: "DD.MM.YYYY HH:MI"))
+    }.Custom(custom_created){
+        P(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI"))
+    }.Custom(custom_status){
+        If(#status#==-2){
+            Span(Class: text-muted, Body: LangRes(crediting_blocked))
+        }.ElseIf(#status#==-1){
+            Span(Class: text-muted, Body: LangRes(crediting_removed))
+        }.ElseIf(#status#==0){
+            Span(Class: text-warning, Body: LangRes(crediting_waiting))
+        }.ElseIf(#status#==1){
+            Span(Class: text-success, Body: LangRes(crediting_auction))
+        }.ElseIf(#status#==2){
+            Span(Class: text-primary, Body: LangRes(crediting_signing))
+        }.ElseIf(#status#==3){
+            Span(Class: text-danger, Body: LangRes(crediting_rejected))
+        }.ElseIf(#status#==4){
+            Span(Class: text-normal, Body: LangRes(crediting_finished))
+        }
+    }.Custom(custom_view){
+        Div(button-group text-nowrap){
+            Button(Class: btn bg-gray-lighter ml-sm buttons, PageParams: "Id=#id#", Page: crediting_view){
+                Em(Class: #style_link# fa fa-1x fa-info)
+                Span(Class: #style_link# ml-sm, Body: $@1view$)
+            }
+        }.Style(
+            .buttons{border: 1px solid #dde6e9;}
+        )
+    }.Custom(actions){
+        Div(text-right button-group text-nowrap){
+            If(And(#deleted#==0,#status#==0,#borrower_id#==#key_id#)){
+                Button(Class: btn bg-gray-lighter buttons, Contract: CreditingDel, Params: "Id=#id#", Page: #this_page#){
+                    Em(Class: text-danger fa fa-1x fa-trash)
+                }.Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                Button(Class: btn bg-gray-lighter ml-sm buttons, PageParams: "Id=#id#", Page: crediting_add){
+                    Em(Class: text-default fa fa-1x fa-edit)
+                }.Popup(60, $crediting_edit$)
+            }
+            If(And(#deleted#==0,#admin_access_id#>0)){
+                Button(Class: btn btn-danger buttons, Contract: CreditingBlock, Params: "Id=#id#", Page: #this_page#){
+                    Em(Class: fa fa-1x fa-trash)
+                }.Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+            }
+        }.Style(
+            .buttons{border: 1px solid #dde6e9;}
+        )
+    }.Count(count)
+
+    Div(fullscreen){
+        Div(table-responsive ml-lg mr-lg){
+            Div(list-group-item){
+                If(#count# > 0){
+                    Table(src, "$@1id$=custom_id,$@1view$=custom_view,$crediting_borrower$=custom_borrower,$amount$=custom_amount,$crediting_term$=custom_term,$@1date_start$ / $@1date_end$=custom_date,$@1created$=custom_created,$@1status$=custom_status,=actions")
+                }.Else{
+                    Div(Class: text-center h4 text-muted, Body: "$crediting$ $@1not_founded$")
+                }
+            }.Style(
+                margin-top:-15px;
+                tbody > tr:nth-of-type(odd) {
+                    background-color: #f8f9fc;
+                }
+            )
+        }
+    }
+    Div(mt-sm ml-lg mr-sm mb-sm){
+        Include(@1pager)
+    }
+}.Else{
+    Div(row ml-lg mr-lg){
+        Div(md-12 alert alert-warning text-center){
+            Span(Body: LangRes(crediting_attention))
+        }
+    }
+}

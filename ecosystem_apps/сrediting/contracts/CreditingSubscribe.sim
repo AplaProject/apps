@@ -1,0 +1,22 @@
+contract CreditingSubscribe {
+    data {
+        Id int
+    }
+
+    conditions {
+        $KeyId = IdToAddress($key_id)
+        $request = DBFind("crediting_subs").Where({"request_id": $Id, "creditor": $KeyId, "deleted": 0}).One("id")
+    }
+
+    action {
+        var m map
+        if $request {
+            m["deleted"] = $block_time
+            DBUpdate("crediting_subs", Int($request), m)
+        } else {
+            m["request_id"] = $Id
+            m["creditor"] = $KeyId
+            DBInsert("crediting_subs", m)
+        }
+    }
+}
