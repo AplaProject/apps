@@ -1,0 +1,42 @@
+contract CreditingSignReject {
+    data {
+        Id int
+    }
+
+    func closeMyNotes() {
+        var notes array i int
+        notes = DBFind("@1notifications").Where({"closed": 0, "ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_name": "crediting_view", "page_params->crediting_id": $Id})
+        while i < Len(notes){
+            var note map
+            note = notes[i]
+            @1NotificationsClose("NotificId", Int(note["id"]))
+            i = i + 1
+        }
+    }
+
+    conditions {
+        var request map status int
+        request = DBFind("crediting_requests").Where({"id": $Id}).Row()
+        $borrower = request["borrower"]
+        $creditor = request["creditor"]
+        status = Int(request["status"])
+
+        //check status
+        if status != 2 {
+            warning LangRes("@1access_denied", "en")
+        }
+
+        //check borrower && creditor
+        if AddressToId($borrower) != $key_id && AddressToId($creditor) != $key_id {
+            warning LangRes("@1access_denied", "en")
+        }
+    }
+
+    action {
+        closeMyNotes()
+
+        var m map
+		m["status"] = 3  
+        DBUpdate("crediting_requests", Int($Id), m)
+    }
+}

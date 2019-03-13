@@ -1,0 +1,52 @@
+contract AppInstall {
+    data {
+        ApplicationId int
+    }
+
+    conditions {
+        $check_app = DBFind("@1applications").Columns("id,ecosystem,name,conditions").Where({"id": $ApplicationId, "ecosystem": 1}).Row()
+        if !$check_app["id"] {
+            warning LangRes("@1item_not_found", "en")
+        }
+
+        $check_config = DBFind("@1app_params").Where({"app_id": $ApplicationId, "ecosystem": 1, "name": "config"}).Row()
+        if !$check_config["id"] {
+            warning LangRes("@1config_not_find", "en")
+        }
+        $application_config = Str($check_config["value"])
+
+        var config_map map
+        config_map = JSONDecode($application_config)
+        $app_name = Str(config_map["name"])
+        $app_condition = Str(config_map["conditions"])
+        $app_data = config_map["data"]
+    }
+
+    action {
+        //new_app
+        if !DBFind("@1applications").Columns("id,ecosystem,name").Where({"name": $app_name, "ecosystem": $ecosystem_id}).One("id") {
+            @1NewApplication("Name,Conditions", $app_name, $app_condition)
+        }
+
+        //buffer data for import contract
+        var app_ins map
+        app_ins["app_name"] = $app_name
+
+        $import_id = DBFind("@1buffer_data").Where({"member_id": $key_id, "key": "import_info", "ecosystem": $ecosystem_id}).One("id")
+        if $import_id {
+            $import_id = Int($import_id)
+            DBUpdate("@1buffer_data", $import_id, {"value": app_ins})
+        } else {
+            DBInsert("@1buffer_data", {"member_id": $key_id, "key": "import_info", "value": app_ins, "ecosystem": $ecosystem_id})
+        }
+
+        //import
+        var i int
+        while i < Len($app_data) {
+            $one_item = $app_data[i]
+            $one_item_arr = "[" + JSONEncode($one_item) + "]"
+            Import("Data", $one_item_arr)
+            i = i + 1
+        }
+    }
+}

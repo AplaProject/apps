@@ -1,0 +1,114 @@
+contract LrDepartChecks {
+    data {
+        ObjectId int
+        LegalStatus int "optional"
+        EncumbranceCertificate int "optional"
+        TaxReceiptAndBills int "optional"
+        GovernmentPrice money "optional"
+        MarketPrice money "optional"
+        RoleId int
+    }
+
+    conditions {
+        $app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Land registry"}).One("id")
+        $depart2_role = Int(AppParam(Int($app_id), "lr_depart2_role", $ecosystem_id))
+        $depart3_role = Int(AppParam(Int($app_id), "lr_depart3_role", $ecosystem_id))
+
+        if $app_id > 0 {
+            if $depart2_role == 0 || $depart3_role == 0 || AppParam(Int($app_id), "lr_admin_role", $ecosystem_id) == 0 || AppParam(Int($app_id), "lr_bank_role", $ecosystem_id) == 0 {
+                info LangRes("lr_all_roles_needed", "en")
+            }
+        } else {
+            warning LangRes("@1app_not_found", "en")
+        }
+    }
+
+    action {
+        var object status m map
+
+        if $RoleId == $depart2_role {
+            object = DBFind("land_registry").WhereId($ObjectId).Row()
+            if object["status"] {
+                var depart3_status map
+                depart3_status = JSONDecode(object["status"])
+                if depart3_status["tax_receipt_and_bills"] {
+                    status["tax_receipt_and_bills"] = depart3_status["tax_receipt_and_bills"]
+                }
+            }
+            status["legal_status"] = $LegalStatus
+            status["encumbrance_certificate"] = $EncumbranceCertificate
+            m["modification_date"] = $block_time
+            m["status"] = status
+            DBUpdate("land_registry", $ObjectId, m)
+
+            // closing all opened role notifications
+            var opened map i int
+            opened = DBFind("@1notifications").Where({"recipient->role_id": $depart2_role, "page_params->object_id": $ObjectId, "closed": 0, "ecosystem": $ecosystem_id})
+
+            while i < Len(opened) {
+                var current map current_id int
+                current = opened[i]
+                current_id = Int(current["id"])
+                @1NotificationsProcess("NotificId", current_id)
+                @1NotificationsClose("NotificId", current_id)
+                i = i + 1
+            }
+        }
+        if $RoleId == $depart3_role {
+            object = DBFind("land_registry").WhereId($ObjectId).Row()
+            if object["status"] {
+                var depart2_status map
+                depart2_status = JSONDecode(object["status"])
+                if depart2_status["legal_status"] {
+                    status["legal_status"] = depart2_status["legal_status"]
+                }
+                if depart2_status["encumbrance_certificate"] {
+                    status["encumbrance_certificate"] = depart2_status["encumbrance_certificate"]
+                }
+            }
+
+            status["tax_receipt_and_bills"] = $TaxReceiptAndBills
+            m["government_price"] = $GovernmentPrice
+            m["market_price"] = $MarketPrice
+            m["modification_date"] = $block_time
+            m["status"] = status
+            DBUpdate("land_registry", $ObjectId, m)
+
+            // closing all opened role notifications
+            var opened map i int
+            opened = DBFind("@1notifications").Where({"recipient->role_id": $depart3_role, "page_params->object_id": $ObjectId, "closed": 0, "ecosystem": $ecosystem_id})
+
+            while i < Len(opened) {
+                var current map current_id int
+                current = opened[i]
+                current_id = Int(current["id"])
+                @1NotificationsProcess("NotificId", current_id)
+                @1NotificationsClose("NotificId", current_id)
+                i = i + 1
+            }
+        }
+
+        // checking if the object is ready for sale
+        object = DBFind("land_registry").WhereId($ObjectId).Row()
+        if Money(object["price"]) > 0 && Money(object["market_price"]) > 0 && Money(object["government_price"]) > 0 && object["deleted"] != 1 {
+            var status_map map
+            status_map = JSONDecode(object["status"])
+            if status_map["legal_status"] == 1 && status_map["encumbrance_certificate"] == 1 && status_map["tax_receipt_and_bills"] == 1 {
+                // notification to the object owner
+                var n params map
+                n["Sender"] = 1
+                n["Page"] = "lr_view"
+                n["Icon"] = "fa fa-bell-o"
+                n["Popup"] = "true"
+                n["MemberId"] = object["owner_id"]
+                n["Header"] = LangRes("lr_object_status", "en")
+                n["Body"] = LangRes("lr_checks_successfull", "en")
+                params["object_id"] = $ObjectId
+                params["info_message"] = 1
+                params["info_status"] = "success"
+                n["Params"] = params
+                CallContract("@1NotificationsSend", n)
+            }
+        }
+    }
+}

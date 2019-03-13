@@ -1,14 +1,17 @@
 contract VotingSubjectContract {
     data {
-        votingID int
+        VotingId int
+        ContractAcceptName string
+        ContractAcceptParams string "optional"
+        ContractRejectName string
+        ContractRejectParams string "optional"
 
-        contract_accept string
-        contract_accept_params string "optional"
-
-        contract_reject string
-        contract_reject_params string "optional"
+        OptContractAcceptName string "optional"
+        OptContractAcceptParams string "optional"
+        OptContractRejectName string "optional"
+        OptContractRejectParams string "optional"
     }
-    
+
     func safeJsonToMap(m string) map {
         var res map
         if Size(m) > 0 { res = JSONToMap(m) }
@@ -18,11 +21,14 @@ contract VotingSubjectContract {
     conditions {
         $STARTED = 3
         $FINISHED = 4
-        $voting = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id:$votingID, status:[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("id,date_started,voting->type,flags->full_data").Row()
+
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $VotingId, "status":[{"$neq":$STARTED},{"$neq":$FINISHED}]}).Columns("id,date_started,voting->type,flags->full_data,optional,creator->member_id").Row()
         if !$voting {
             warning LangRes("@1voting_started_can_not_edit", "en")
         }
-
+        if $voting["creator.member_id"] != $key_id {
+            warning LangRes("@1access_denied", "en")
+        }
         if $voting["flags.full_data"] == 1 && $voting["voting.type"] == 2 {
             warning LangRes("@1system_voting_can_not_edit", "en")
         }
@@ -30,22 +36,34 @@ contract VotingSubjectContract {
 
     action {
         var accept_params, reject_params map
-        accept_params = safeJsonToMap($contract_accept_params)
-        reject_params = safeJsonToMap($contract_reject_params)
+        accept_params = safeJsonToMap($ContractAcceptParams)
+        reject_params = safeJsonToMap($ContractRejectParams)
 
         var subject map
-        subject["contract_accept"] = $contract_accept
+        subject["contract_accept"] = $ContractAcceptName
         subject["contract_accept_params"] = accept_params
-        subject["contract_reject"] = $contract_reject
+        subject["contract_reject"] = $ContractRejectName
         subject["contract_reject_params"] = reject_params
 
-        $subject_id = DBFind("@1votings_subject").Where({ecosystem:$ecosystem_id, voting_id:$votingID}).One("id")
+        $subject_id = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId}).One("id")
         if $subject_id {
             DBUpdate("@1votings_subject", Int($subject_id), {subject:subject})
         } else {
-            DBInsert("@1votings_subject", {ecosystem:$ecosystem_id, voting_id:$votingID, subject:subject})
+            DBInsert("@1votings_subject", {ecosystem:$ecosystem_id, voting_id:$VotingId, subject:subject})
         }
 
-        @1VotingSubjectCheck("votingID", $votingID)
+        var o_accept_params o_reject_params map
+        o_accept_params = safeJsonToMap($OptContractAcceptParams)
+        o_reject_params = safeJsonToMap($OptContractRejectParams)
+
+        var optional map
+        optional = safeJsonToMap($voting["optional"])
+        optional["contract_accept"] = $OptContractAcceptName
+        optional["contract_accept_params"] = o_accept_params
+        optional["contract_reject"] = $OptContractRejectName
+        optional["contract_reject_params"] = o_reject_params
+        DBUpdate("@1votings", $VotingId, {optional:optional})
+
+        @1VotingSubjectCheck("VotingId", $VotingId)
     }
 }

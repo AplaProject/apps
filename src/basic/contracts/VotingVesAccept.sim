@@ -1,0 +1,32 @@
+contract VotingVesAccept {
+    data {
+        EcosystemId int
+        TemplateId string
+        VotingId string
+    }
+
+    conditions {
+        var prev string
+        prev = $stack[0]
+        if Len($stack) > 2{
+            prev = $stack[Len($stack) - 2]
+        }
+        if prev != "@1VotingDecisionCheck" {
+            warning LangRes("@1contract_start_votingdecisioncheck_only", "en")
+        }
+
+        var appId tId int
+        appId = Int(DBFind("@1applications").Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").One("id"))
+        tId = Int(AppParam(appId, "voting_template_ves", 1))
+        if !DBFind("@1voting_templates").Where({"ecosystem": $ecosystem_id, "id": tId}).One("id") {
+            warning LangRes("@1voting_template_not_found", "en")
+        }
+        if $TemplateId != tId {
+            warning LangRes("@1template_incorrect", "en")
+        }
+    }
+
+    action {
+        DBUpdate("@1ecosystems", Int($EcosystemId), {"is_valued": 1})
+    }
+}

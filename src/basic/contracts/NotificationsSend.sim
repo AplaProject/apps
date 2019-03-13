@@ -1,29 +1,29 @@
 contract NotificationsSend {
     data {
-        member_id int "optional"
-        rid int "optional"
-        closure_type int "optional"
-
-        sender int
-        icon_name string "optional"
-        text_header string
-        text_body string "optional"
-        page_name string
-        params_map string // json encoded expected
-        current_role_id string "optional"
-        eco_id string "optional"
-        popup string "optional"
+        MemberId int "optional"
+        Rid int "optional"
+        GroupId int "optional"
+        Closure int "optional"
+        Sender int
+        Icon string "optional"
+        Header string
+        Body string "optional"
+        Page string
+        Params string // json encoded expected
+        CurrentRid int "optional"
+        EcosystemId int "optional"
+        Popup string "optional"
     }
 
     func getMemberInfo(kid, ecoId int) map {
         var res member map
-        member = DBFind("@1members").Where({ecosystem:ecoId, id:kid}).Row()
+        member = DBFind("@1members").Where({"ecosystem": ecoId, "id": kid}).Row()
         if member {
             res["member_id"] = member["id"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
-        }else{
-            if DBFind("@1keys").Where({ecosystem:ecoId, id:kid}).Columns("id").Row() {
+        } else {
+            if DBFind("@1keys").Where({"ecosystem": ecoId, "id": kid}).Columns("id").Row() {
                 res["member_id"] = Str(kid)
                 res["member_name"] = IdToAddress(kid)
                 res["image_id"] = "0"
@@ -34,26 +34,26 @@ contract NotificationsSend {
 
     func sendNotify(recipient map) {
         var notification map
-        notification["header"] = $text_header
+        notification["header"] = $Header
         notification["type"] = $notify_type
-        notification["icon"] = $icon_name
-        notification["body"] = $text_body
-        if $popup == "true" || $popup == "1" {
+        notification["icon"] = $Icon
+        notification["body"] = $Body
+        if $Popup == "true" || $Popup == "1" {
             notification["popup"] = 1
-        }else{
+        } else {
             notification["popup"] = 0
         }
         var sender map
-        if $sender == 1 && $senderMember {
+        if $Sender == 1 && $senderMember {
             // send from member
-            sender["type"] = $sender
+            sender["type"] = $Sender
             sender["member_id"] = $senderMember["member_id"]
             sender["member_name"] = $senderMember["member_name"]
             sender["image_id"] = $senderMember["image_id"]
-        }else{
-            if $sender == 2 && $senderRole{
+        } else {
+            if $Sender == 2 && $senderRole {
                 // send from role
-                sender["type"] = $sender
+                sender["type"] = $Sender
                 sender["role_id"] = $senderRole["id"]
                 sender["role_name"] = $senderRole["role_name"]
                 sender["image_id"] = $senderRole["image_id"]
@@ -63,16 +63,16 @@ contract NotificationsSend {
         model["recipient"] = recipient
         model["sender"] = sender
         model["notification"] = notification
-        model["page_name"] = $page_name
-        model["page_params"] = $params_map
-        model["date_created"] = BlockTime()
-        model["ecosystem"] = $eco_id
+        model["page_name"] = $Page
+        model["page_params"] = $Params
+        model["date_created"] = $block_time
+        model["ecosystem"] = $EcosystemId
         DBInsert("@1notifications", model)
     }
 
     func sendToRole(roleId, ecoId int) {
         var role recipient map
-        role = DBFind("@1roles").Where({ecosystem:ecoId, id:roleId}).Row()
+        role = DBFind("@1roles").Where({"ecosystem": ecoId, "id": roleId}).Row()
         recipient["role_id"] = role["id"]
         recipient["role_name"] = role["role_name"]
         recipient["image_id"] = role["image_id"]
@@ -80,68 +80,86 @@ contract NotificationsSend {
     }
 
     conditions {
-        $member_id = Int($member_id)
-        $rid = Int($rid)
-        $current_role_id = Int($current_role_id)
-        $eco_id = Int($eco_id)
-        if $eco_id == 0{
-            $eco_id = $ecosystem_id
+        if $EcosystemId == 0 {
+            $EcosystemId = $ecosystem_id
         }
-        if Size($icon_name) < 1{
-            $icon_name = "icon-envelope"
+        if Size($Icon) < 1 {
+            $Icon = "icon-envelope"
         }
-        if $member_id != 0 {
-            if !DBFind("@1keys").Where({ecosystem:$eco_id, id:$member_id}).Row(){
+        if $MemberId != 0 {
+            if !DBFind("@1keys").Where({"ecosystem": $EcosystemId, "id": $MemberId}).Row() {
                 warning LangRes("@1key_not_found", "en")
             }
-            $notify_type = 1 // is "member"
-        }elif $rid > 0{
-            $notify_type = 2 // is "role"
-            if !DBFind("@1roles").Where({ecosystem:$eco_id, id:$rid}).One("id") {
+            $notify_type = 1
+        } elif $Rid > 0 {
+            $notify_type = 2
+            if !DBFind("@1roles").Where({"ecosystem": $EcosystemId, "id": $Rid}).One("id") {
                 warning $this_contract + ": " + LangRes("@1recipient_role_not_found", "en")
             }
-            if !DBFind("@1roles_participants").Where({ecosystem:$eco_id, "role->id":$rid, deleted:0}).One("id") {
+            if !DBFind("@1roles_participants").Where({"ecosystem": $EcosystemId, "role->id": $Rid, "deleted": 0}).One("id") {
                 warning $this_contract + ": " + LangRes("@1recipient_role_no_members", "en")
             }
-        } else{
+        } elif $GroupId > 0 {
+            $notify_type = 1
+            if !DBFind("@1groups").Where({"ecosystem": $EcosystemId, "id": $GroupId}).One("id") {
+                warning $this_contract + ": " + LangRes("@1recipient_group_not_found", "en")
+            }
+            if !DBFind("@1groups_participants").Where({"ecosystem": $EcosystemId, "groups_info->id": $GroupId, "deleted": 0}).One("id") {
+                warning $this_contract + ": " + LangRes("@1recipient_group_no_members", "en")
+            }
+        } else {
             warning $this_contract + ": " + LangRes("@1notification_type_not_defined", "en")
         }
         $senderMember = nil
         $senderRole = nil
-        if $sender == 1 {
+        if $Sender == 1 {
             $senderMember = getMemberInfo($key_id, $ecosystem_id)
-        }elif $sender == 2 {
-            $senderRole = DBFind("@1roles").Where({ecosystem:$ecosystem_id, id:$current_role_id}).Row()
+        } elif $Sender == 2 {
+            if !RoleAccess($CurrentRid) {
+                warning LangRes("@1access_denied", "en")
+            }
+            $senderRole = DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $CurrentRid}).Row()
             if !$senderRole {
                 warning $this_contract + ": " + LangRes("@1sender_role_not_found", "en")
             }
-        }else{
+        } else {
             warning $this_contract + ": " + LangRes("@1sender_invalid", "en")
         }
     }
 
     action {
-        if $member_id != 0 {
-            sendNotify(getMemberInfo($member_id, $eco_id))
-            UpdateNotifications($eco_id, Int($member_id))
-        }elif $rid > 0 {
-            if $closure_type == 1 {
+        if $MemberId != 0 {
+            sendNotify(getMemberInfo($MemberId, $EcosystemId))
+            UpdateNotifications($EcosystemId, Int($MemberId))
+        } elif $Rid > 0 {
+            if $Closure == 1 {
                 // Single closure: one begins the process - the others do not see
-                sendToRole($rid, $eco_id)
-                UpdateRolesNotifications($eco_id, Int($rid))
+                sendToRole($Rid, $EcosystemId)
+                UpdateRolesNotifications($EcosystemId, Int($Rid))
             } else {
                 // Multiple closure: to each his own notification
                 $notify_type = 1
                 var participants array
-                participants = DBFind("@1roles_participants").Where({ecosystem:$eco_id, "role->id":$rid, deleted:0}).Columns("member->member_id")
+                participants = DBFind("@1roles_participants").Where({"ecosystem": $EcosystemId, "role->id": $Rid, "deleted": 0}).Columns("member->member_id")
                 var i int
                 while i < Len(participants) {
                     var p map
                     p = participants[i]
-                    sendNotify(getMemberInfo(Int(p["member.member_id"]), $eco_id))
-                    UpdateNotifications($eco_id, Int(p["member.member_id"]))
+                    sendNotify(getMemberInfo(Int(p["member.member_id"]), $EcosystemId))
+                    UpdateNotifications($EcosystemId, Int(p["member.member_id"]))
                     i = i + 1
                 }
+            }
+        } elif $GroupId > 0 {
+            var participants array
+            participants = DBFind("@1groups_participants").Where({"ecosystem": $EcosystemId, "groups_info->id": $GroupId, "deleted": 0}).Columns("member->member_id")
+            var i int
+            while i < Len(participants) {
+                var p map
+                p = participants[i]
+                sendNotify(getMemberInfo(Int(p["member.member_id"]), $EcosystemId))
+                UpdateNotifications($EcosystemId, Int(p["member.member_id"]))
+                i = i + 1
             }
         }
     }

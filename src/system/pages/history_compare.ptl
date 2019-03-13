@@ -1,0 +1,98 @@
+SetVar(back_page, @1history)
+
+If(#type# == page){
+    DBFind(@1pages).Where({"id": #element_id#, "ecosystem": #ecosystem_id#}).Limit(1).Vars("res")
+    SetTitle($@1page_history$: #res_name# [$@1id$: #history_id#])
+    SetVar(contract_name, "@1EditPage")
+    GetHistory(Source: src_history, Name: pages, Id: #element_id#, RollbackId: #history_id#)
+}.ElseIf(#type# == block){
+    DBFind(@1blocks).Where({"id": #element_id#, "ecosystem": #ecosystem_id#}).Limit(1).Vars("res")
+    SetTitle($@1block_history$: #res_name# [$@1id$: #history_id#])
+    SetVar(contract_name, "@1EditBlock")
+    GetHistory(Source: src_history, Name: blocks, Id: #element_id#, RollbackId: #history_id#)
+}.ElseIf(#type# == contract){
+    DBFind(@1contracts).Where({"id": #element_id#, "ecosystem": #ecosystem_id#}).Limit(1).Vars("res")
+    SetTitle($@1contract_history$: #res_name# [$@1id$: #history_id#])
+    SetVar(contract_name, "@1EditContract")
+    GetHistory(Source: src_history, Name: contracts, Id: #element_id#, RollbackId: #history_id#)
+}.ElseIf(#type# == menu){
+    DBFind(@1menu).Where({"id": #element_id#, "ecosystem": #ecosystem_id#}).Limit(1).Vars("res")
+    SetTitle($@1menu_history$: #res_name# [$@1id$: #history_id#])
+    SetVar(contract_name, "@1EditMenu")
+    GetHistory(Source: src_history, Name: menu, Id: #element_id#, RollbackId: #history_id#)
+}
+
+Div(fullscreen){
+    Div(list-group-item ml-lg mr-lg){
+        Div(table){
+            Div(table__head){
+                Div(table__row){
+                    Div(table__cell){$@1current_value$}
+                    Div(table__cell){$@1history_value$}
+                }
+            }
+            ForList(src_history){
+                Div(table__row){
+                    Div(table__cell){
+                        VarAsIs(value_as_is, #res_value#)
+                        Code(#value_as_is#)
+                    }
+                    Div(table__cell table__cell_collapse){
+                        VarAsIs(value_as_is, #value#)
+                        Code(#value_as_is#)
+                    }
+                }
+            }
+        }
+        Div(text-center){
+            Button(Page: #back_page#, PageParams: "type=#type#,id=#element_id#", Class: btn bg-gray-lighter, Body: $@1back$)
+            Button(Contract: #contract_name#, Params: "Id=#element_id#,Value=#value_as_is#", Page: #back_page#, PageParams: "type=#type#,id=#element_id#", Class: btn btn-primary, Body: $@1restore$).Alert(Text: "$@1want_restore_history_value$", ConfirmButton: "$@1yes$", CancelButton: "$@1no$", Icon: icon-question)
+        }
+    }
+}.Style(
+    .table {
+        display: table;
+        margin-bottom: 10px;
+    }
+
+    .table > div:not(.table__body) {
+        display: table-row-group;
+    }
+
+    .table .table__head {
+        display: table-header-group;
+    }
+
+    .table .table__head .table__cell {
+        font-weight: 700;
+        color: #888;
+        background: #fff !important;
+        border-left: 0 !important;
+        border-right: 0 !important;
+        border-top: 0 !important;
+    }
+
+    .table .table__row {
+        display: table-row;
+        flex-direction: row;
+        flex-wrap: no-wrap;
+    }
+
+    .table .table__row:nth-child(odd) {
+        background: #f8f9fc;
+    }
+
+    .table .table__row .table__cell {
+        border-top: solid 1px #eee;
+        width: 50%;
+    }
+
+    .table .table__cell {
+        display: table-cell;
+        padding: 8px 10px;
+    }
+
+    .table .table__cell.table__cell_collapse {
+        width: 1px;
+    }
+)

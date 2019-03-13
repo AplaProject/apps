@@ -1,0 +1,120 @@
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Land registry"}).Vars("app")
+
+SetVar(this_page, "lr_settings").(admin_role,0).(bank_role,0).(depart2_role,0).(depart3_role,0)
+SetVar(admin_role, AppParam(App: #app_id#, Name: "lr_admin_role"))
+SetVar(bank_role, AppParam(App: #app_id#, Name: "lr_bank_role"))
+SetVar(depart2_role, AppParam(App: #app_id#, Name: "lr_depart2_role"))
+SetVar(depart3_role, AppParam(App: #app_id#, Name: "lr_depart3_role"))
+
+DBFind("@1roles", src_roles).Where({"ecosystem": #ecosystem_id#, "deleted": 0}).Columns("role_name,id").Limit(100)
+
+SetVar(row,"row mt-sm").(col_left,"col-sm-4 text-right mt-sm").(col_right,"col-sm-8 text-left")
+
+If(#ecosystem_id#>1){
+    DBFind("@1ecosystems").Where({"id": #ecosystem_id#}).Vars("custom")
+}.Else{
+    SetVar(custom_token_title, "APLA")
+}
+
+Div(content-wrapper){
+    Div(row){
+        Div(col-lg-6 col-lg-offset-3 col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1){
+            Form(panel panel-primary){
+                If(#custom_token_title# != ""){
+                    Div(panel-body){
+                        Div(text-center text-bold h4 m0){
+                            LangRes(lr_settings)
+                        }
+                        Div(text-center text-muted){
+                            LangRes(lr_settings_description)
+                        }
+                        Div(row mt-lg){
+                            Div(#col_left#){
+                                Label(){
+                                    LangRes(lr_admin_role_name)
+                                }
+                            }
+                            Div(#col_right#){
+                                Select(Name: RoleAdmin, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #admin_role#)
+                                Div(m0 h6 text-muted){
+                                    SetVar(r_name, $@1role_not_found$)
+                                    If(#admin_role# > 0){
+                                        DBFind("@1roles").Where({"ecosystem": #ecosystem_id#, "id": #admin_role#}).Columns("role_name").Vars(r)
+                                        SetVar(r_name, #r_role_name#)
+                                    }
+                                    LangRes(@1current_value): #r_name#
+                                }
+                            }
+                        }
+                        Div(#row#){
+                            Div(#col_left#){
+                                Label(){
+                                    LangRes(lr_bank_role_name)
+                                }
+                            }
+                            Div(#col_right#){
+                                Select(Name: RoleBank, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #bank_role#)
+                                Div(m0 h6 text-muted){
+                                    SetVar(r_name, $@1role_not_found$)
+                                    If(#bank_role# > 0){
+                                        DBFind("@1roles").Where({"ecosystem": #ecosystem_id#, "id": #bank_role#}).Columns("role_name").Vars(r)
+                                        SetVar(r_name, #r_role_name#)
+                                    }
+                                    LangRes(@1current_value): #r_name#
+                                }
+                            }
+                        }
+                        Div(#row#){
+                            Div(#col_left#){
+                                Label(){
+                                    LangRes(lr_depart2_role_name)
+                                }
+                            }
+                            Div(#col_right#){
+                                Select(Name: RoleDepart2, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #depart2_role#)
+                                Div(m0 h6 text-muted){
+                                    SetVar(r_name, $@1role_not_found$)
+                                    If(#depart2_role# > 0){
+                                        DBFind("@1roles").Where({"ecosystem": #ecosystem_id#, "id": #depart2_role#}).Columns("role_name").Vars(r)
+                                        SetVar(r_name, #r_role_name#)
+                                    }
+                                    LangRes(@1current_value): #r_name#
+                                }
+                            }
+                        }
+                        Div(#row#){
+                            Div(#col_left#){
+                                Label(){
+                                    LangRes(lr_depart3_role_name)
+                                }
+                            }
+                            Div(#col_right#){
+                                Select(Name: RoleDepart3, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #depart3_role#)
+                                Div(m0 h6 text-muted){
+                                    SetVar(r_name, $@1role_not_found$)
+                                    If(#depart3_role# > 0){
+                                        DBFind("@1roles").Where({"ecosystem": #ecosystem_id#, "id": #depart3_role#}).Columns("role_name").Vars(r)
+                                        SetVar(r_name, #r_role_name#)
+                                    }
+                                    LangRes(@1current_value): #r_name#
+                                }
+                            }
+                        }
+                    }
+                    Div(panel-footer text-right){
+                        Button(Body: $@1apply_settings$, Class: btn btn-primary, Page: #this_page#, Contract: LrSettings)
+                    }
+                }.Else{
+                    Div(panel-body){
+                        Div(text-center text-bold h4 m0){
+                            LangRes(lr_settings)
+                        }
+                        Div(text-center text-muted){
+                            LangRes(lr_tokens_needed)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

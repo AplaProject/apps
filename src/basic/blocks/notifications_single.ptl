@@ -2,8 +2,9 @@ SetVar(this_page, @1notifications_list).(this_table, @1notifications)
 Include(@1pager_header)
 
 SetTitle("$@1personal_notifics$")
-SetVar(role_admin, EcosysParam(Ecosystem:1, Name: role_admin))
-If(And(#role_id#==#role_admin#,#ecosystem_id#==1)){
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars("system_app")
+SetVar(role_admin, AppParam(App: #system_app_id#, Name: "role_admin"))
+If(And(#role_id# == #role_admin#, #ecosystem_id# == 1)){
     DBFind(@1ecosystems).Count(ecos_count)
     If(#ecos_count#>1){
         AddToolButton(Title: $@1broadcast$, Page: @1notifications_broadcast, Icon: icon-plus).Popup(Header: $@1notifications_broadcast$, Width: "50")
@@ -11,10 +12,10 @@ If(And(#role_id#==#role_admin#,#ecosystem_id#==1)){
 }
 AddToolButton(Title: $@1send$, Page: @1notifications_single_send, Icon: icon-plus).Popup(Header: $@1send$, Width: "50")
 
-If(GetVar(search)){
-    SetVar(where, {"ecosystem":#ecosystem_id#, "recipient->member_id":#key_id#, {$and: [{"notification->type":1}, {$or: [{"sender->member_name":{$like: #search#}},{"sender->role_name":{$like: #search#}}]}]}})
+If(#search#){
+    SetVar(where, {"ecosystem": #ecosystem_id#, "recipient->member_id": #key_id#, {"$and": [{"notification->type":1}, {"$or": [{"sender->member_name":{"$ilike": "#search#"}}, {"sender->role_name":{"$ilike": "#search#"}}]}]}})
 }.Else{
-    SetVar(where, {"ecosystem":#ecosystem_id#, "notification->type":1, "recipient->member_id":#key_id#}).(search,)
+    SetVar(where, {"ecosystem": #ecosystem_id#, "notification->type": 1, "recipient->member_id": #key_id#})
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
@@ -70,7 +71,9 @@ DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(
     }
 }.Custom(custom_date){
     Div(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI"))
-    Div(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_closed#, Format: "DD.MM.YYYY HH:MI"))
+    If(#date_closed# != 0){
+        Div(Class: #style_text# h6 m0, Body: DateTime(DateTime: #date_closed#, Format: "DD.MM.YYYY HH:MI"))
+    }
 }.Custom(custom_status){
     If(#closed# == 0){
         Span(Class: #style_text#, Body: LangRes(@1active))
@@ -80,7 +83,7 @@ DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(
 }.Custom(actions){
     Div(pull-right){
         If(#closed# == 0){
-            Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, Contract: @1NotificationsClose, Params: "notific_id=#id#", Page: @1notifications_list).Alert(Text: "$@1want_close_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+            Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, Contract: @1NotificationsClose, Params: "NotificId=#id#", Page: @1notifications_list).Alert(Text: "$@1want_close_notification$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
         }
     }
 }.Count(count)
@@ -92,7 +95,7 @@ Div(fullscreen){
                 Table(src, "$@1icon$=custom_icon,$@1page$=custom_page,$@1sender$=custom_sender,=custom_arrow,$@1recipient$=custom_recipient,$@1sent$ / $@1closed$=custom_date,$@1status$=custom_status,=actions")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1personal_notifics$ $@1not_founded$")
-            }                       
+            }
         }.Style(
             margin-top:-15px;
             tbody > tr:nth-of-type(odd) {

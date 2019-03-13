@@ -1,0 +1,32 @@
+DBFind(crediting_offers, offers).Where({"request_id": #Id#}).Order({"rate": 1, "date_created": 1}).Custom(custom_creditor){
+    SetVar(creditor_id, AddressToId(#creditor#))
+    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #creditor_id#}).Columns("member_info->information").Vars(c)
+    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#c_id#"){
+        Div(){
+            Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+            Span(){
+                P(Class: h5 m0 text-bold, Body: #creditor#)
+                P(Class: h6 m0, Body: #c_member_info_information#)
+            }
+        }.Style(display:flex; align-items:center;)
+    }
+}.Custom(custom_date){
+    Span(Class: h6 text-muted, Body: DateTime(DateTime: #date_created#, Format: "DD.MM.YYYY HH:MI"))
+}.Custom(custom_rate){
+    Span(Class: pull-right, Body: $crediting_rate$ - Strong(#rate# %))
+}.Count(cnt)
+
+Form(){
+    Div(list-group-item){
+        Div(row){
+            Div(col-lg-10 col-lg-offset-1){
+                Table(offers, "$crediting_creditor$=custom_creditor,$crediting_bid_date$=custom_date,=custom_rate")
+            }
+        }
+    }
+    Div(text-center mt-lg){
+        Button(Class: btn bg-gray-lighter ml-sm, Page: crediting_view, PageParams: "Id=#Id#"){
+            Span(Class: ml-sm, Body: LangRes(@1back))
+        }
+    }
+}

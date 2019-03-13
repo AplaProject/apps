@@ -1,12 +1,22 @@
+If(#vID# == ""){
+    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
+    If(#buffer_value_voting_id#>0){
+        SetVar(vID, #buffer_value_voting_id#)
+        SetVar(toPageInvite, 1)
+    }
+}
 If(#vID# > 0){
-    If(GetVar(back_page)){}.Else{
+    If(#back_page#){}.Else{
         SetVar(back_page,@1voting_view)
     }
     DBFind(@1votings).WhereId(#vID#).Columns("id,voting->name,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params").Vars(instance)
-    DBFind(@1votings_subject).Where({voting_id:#vID#, "subject->member_id":#key_id#}).Columns("id").Vars(already_candidate)
-    DBFind(@1roles,src_roles).Where({ecosystem:#ecosystem_id#, role_type:2, deleted:0}).Columns("id,role_name").Count(elective_roles_count)
+    DBFind(@1votings_subject).Where({"voting_id": #vID#, "subject->member_id": #key_id#}).Columns("id").Vars(already_candidate)
+    DBFind(@1roles,src_roles).Where({"ecosystem": #ecosystem_id#, "role_type": 2, "deleted": 0}).Columns("id,role_name").Count(elective_roles_count)
     If(#elective_roles_count#>0){
         Form(){
+            Input(Name: MemberId, Type: hidden, Value: 0)
+            Input(Name: VotingId, Type: hidden, Value: #vID#)
+
             If(#already_candidate_id#>0){
                 SetVar(hidden,hidden)
             }.Else{
@@ -34,7 +44,7 @@ If(#vID# > 0){
                     }
                 }
             }
-            DBFind(@1votings_subject,src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->member_id,subject->member_name").Count(members_count).Custom(_address){
+            DBFind(@1votings_subject,src_voting_subject).Where({"voting_id": #vID#}).Columns("id,subject->member_id,subject->member_name").Count(members_count).Custom(_address){
                 Address(#subject.member_id#)
             }.Custom(_member){
                 LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#subject.member_id#"){
@@ -57,7 +67,7 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 text-left){
-                        Select(Name: roleID, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #instance_optional_role_id#)
+                        Select(Name: RoleId, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #instance_optional_role_id#)
                     }
                 }
                 Div(row mt-sm){
@@ -68,7 +78,7 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 text-left){
-                        Input(Name: vacancies, Type: Number, Value: #instance_optional_role_vacancies#)
+                        Input(Name: Vacancies, Type: number, Value: #instance_optional_role_vacancies#)
                     }
                 }
             }
@@ -80,8 +90,8 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 text-left){
-                        Input(Name: contract_accept, Value: #instance_optional_contract_accept#, Placeholder: "$@1contract_accept_des$").Validate(minLength:3, maxLength:255)
-                        InputErr(Name: contract_accept, minLength: $@1validate_name$, maxLength: $@1validate_name$)
+                        Input(Name: OptContractAcceptName, Value: #instance_optional_contract_accept#, Placeholder: "$@1contract_accept_des$").Validate(minLength:3, maxLength:255)
+                        InputErr(Name: OptContractAcceptName, minLength: $@1validate_name$, maxLength: $@1validate_name$)
                     }
                 }
                 Div(row mt-sm){
@@ -91,7 +101,7 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 text-left){
-                        Input(Name: contract_accept_params, Value: #instance_optional_contract_accept_params#, Placeholder: "$@1contract_params_des$")
+                        Input(Name: OptContractAcceptParams, Value: #instance_optional_contract_accept_params#, Placeholder: "$@1contract_params_des$")
                     }
                 }
                 Div(row mt-sm){
@@ -101,8 +111,8 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 text-left){
-                        Input(Name: contract_reject, Value: #instance_optional_contract_reject#, Placeholder: "$@1contract_reject_des$").Validate(minLength:3, maxLength:255)
-                        InputErr(Name: contract_reject, minLength: $@1validate_name$, maxLength: $@1validate_name$)
+                        Input(Name: OptContractRejectName, Value: #instance_optional_contract_reject#, Placeholder: "$@1contract_reject_des$").Validate(minLength:3, maxLength:255)
+                        InputErr(Name: OptContractRejectName, minLength: $@1validate_name$, maxLength: $@1validate_name$)
                     }
                 }
                 Div(row mt-sm){
@@ -112,21 +122,23 @@ If(#vID# > 0){
                         }
                     }
                     Div(col-md-9 text-left){
-                        Input(Name: contract_reject_params, Value: #instance_optional_contract_reject_params#, Placeholder: "$@1contract_params_des$")
+                        Input(Name: OptContractRejectParams, Value: #instance_optional_contract_reject_params#, Placeholder: "$@1contract_params_des$")
                     }
                 }
             }
-            Input(Name: memberID, Type: hidden, Value: 0)
-            Input(Name: votingID, Type: hidden, Value: #vID#)
-            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: @1voting_view, PageParams: "vID=#vID#", Contract: @1VotingSubjectSettings)
+            If(#toPageInvite#==1){
+                Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: @1voting_invite, PageParams: "vID=#vID#", Contract: @1VotingSubjectSettings).Popup(60, $@1participants_add$)
+            }.Else{
+                Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: #back_page#, PageParams: "vID=#vID#", Contract: @1VotingSubjectSettings)
+            }
             Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: #back_page#, PageParams: "vID=#vID#")
         }
     }.Else{
         Div(row){
-            Div(col-md-12 text-center h3){
+            Div(col-md-12 text-center h4){
                 P(LangRes(@1elective_roles_not_found))
                 Button(Class: btn btn-link, Page: @1roles_create, PageParams: "vID=#vID#,back_page=#back_page#"){
-                    Span(Class: h3, Body: LangRes(@1create_role))
+                    Span(Class: h4, Body: LangRes(@1create_role))
                 }.Popup(50, $@1edit_role$)
             }
         }

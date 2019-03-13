@@ -1,10 +1,17 @@
+If(#vID# == ""){
+    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
+    If(#buffer_value_voting_id#>0){
+        SetVar(vID, #buffer_value_voting_id#)
+        SetVar(toPageInvite, 1)
+    }
+}
 If(#vID# > 0){
-    If(GetVar(back_page)){}.Else{
+    If(#back_page#){}.Else{
         SetVar(back_page,@1voting_view)
     }
 
     DBFind(@1votings, src_voting).WhereId(#vID#).Columns("id,voting->name,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params").Vars(instance)
-    DBFind(@1votings_subject, src_voting_subject).Where({voting_id:#vID#}).Columns("id,subject->text").Vars(prefix)
+    DBFind(@1votings_subject, src_voting_subject).Where({"voting_id": #vID#}).Columns("id,subject->text").Vars(prefix)
 
     If(#prefix_id#>0){
     }.Else{
@@ -12,6 +19,7 @@ If(#vID# > 0){
     }
 
     Form(){
+        Input(Name: VotingId, Type: hidden, Value: #vID#)
         Div(form-group){
             Div(row){
                 Div(col-md-12 mt-sm){
@@ -19,7 +27,7 @@ If(#vID# > 0){
                         Span(Body: LangRes(@1text_document))
                         Span(Class: text-danger, Body:*)
                     }
-                    Input(Name: text_document, Type: textarea, Value: #prefix_subject_text#).Style(resize: vertical;)
+                    Input(Name: TextDocument, Type: textarea, Value: #prefix_subject_text#).Style(resize: vertical;)
                 }
             }
         }
@@ -31,8 +39,8 @@ If(#vID# > 0){
                     }
                 }
                 Div(col-md-9 text-left){
-                    Input(Name: contract_accept, Value: #instance_optional_contract_accept#, Placeholder: "$@1contract_accept_des$").Validate(minLength:3, maxLength:255)
-                    InputErr(Name: contract_accept, minLength: $@1validate_name$, maxLength: $@1validate_name$)
+                    Input(Name: OptContractAcceptName, Value: #instance_optional_contract_accept#, Placeholder: "$@1contract_accept_des$").Validate(minLength:3, maxLength:255)
+                    InputErr(Name: OptContractAcceptName, minLength: $@1validate_name$, maxLength: $@1validate_name$)
                 }
             }
             Div(row mb-sm){
@@ -42,7 +50,7 @@ If(#vID# > 0){
                     }
                 }
                 Div(col-md-9 text-left){
-                    Input(Name: contract_accept_params, Value: #instance_optional_contract_accept_params#, Placeholder: "$@1contract_params_des$")
+                    Input(Name: OptContractAcceptParams, Value: #instance_optional_contract_accept_params#, Placeholder: "$@1contract_params_des$")
                 }
             }
             Div(row mb-sm){
@@ -52,8 +60,8 @@ If(#vID# > 0){
                     }
                 }
                 Div(col-md-9 text-left){
-                    Input(Name: contract_reject, Value: #instance_optional_contract_reject#, Placeholder: "$@1contract_reject_des$").Validate(minLength:3, maxLength:255)
-                    InputErr(Name: contract_reject, minLength: $@1validate_name$, maxLength: $@1validate_name$)
+                    Input(Name: OptContractRejectName, Value: #instance_optional_contract_reject#, Placeholder: "$@1contract_reject_des$").Validate(minLength:3, maxLength:255)
+                    InputErr(Name: OptContractRejectName, minLength: $@1validate_name$, maxLength: $@1validate_name$)
                 }
             }
             Div(row){
@@ -63,12 +71,15 @@ If(#vID# > 0){
                     }
                 }
                 Div(col-md-9 mc-sm text-left){
-                    Input(Name: contract_reject_params, Value: #instance_optional_contract_reject_params#, Placeholder: "$@1contract_params_des$")
+                    Input(Name: OptContractRejectParams, Value: #instance_optional_contract_reject_params#, Placeholder: "$@1contract_params_des$")
                 }
             }
         }
-        Input(Name: votingID, Type: hidden, Value: #vID#)
-        Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: #back_page#, PageParams: "vID=#vID#", Contract: @1VotingSubjectDocument)
+        If(#toPageInvite#==1){
+            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: @1voting_invite, PageParams: "vID=#vID#", Contract: @1VotingSubjectDocument).Popup(60, $@1participants_add$)
+        }.Else{
+            Button(Body: LangRes(@1save), Class: btn btn-primary pull-right, Page: #back_page#, PageParams: "vID=#vID#", Contract: @1VotingSubjectDocument)
+        }
         Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: #back_page#, PageParams: "vID=#vID#")
     }
 }.Else{

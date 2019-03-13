@@ -1,0 +1,50 @@
+contract VotingRunTokenRefund {
+    data {
+        VictimAccount string
+        SuspectAccount string
+        Amount money
+        Note string
+    }
+
+    conditions {
+        $victimId = AddressToId($VictimAccount)
+        $attackerId = AddressToId($SuspectAccount)
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $victimId}).Row() {
+            warning LangRes("@1victim_key_invalid", "en")
+        }
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $attackerId}).Row() {
+            warning LangRes("@1attacker_key_invalid", "en")
+        }
+
+        if $Amount <= 0 {
+            warning LangRes("@1amount_invalid", "en")
+        }
+        if Size($Note) == 0 {
+            warning LangRes("@1add_description", "en")
+        }
+
+        $app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Basic"}).One("id"))
+        $templateId = Int(DBFind("@1app_params").Where({"app_id": $app_id, "name": "voting_template_tokenrefund", "ecosystem": $ecosystem_id}).One("value"))
+        if $templateId == 0 {
+            warning LangRes("@1template_id_not_found", "en")
+        }
+    }
+
+    action {
+        TokensLockoutMember("KeyId,Value", $victimId, 1)
+        TokensLockoutMember("KeyId,Value", $attackerId, 1)
+        
+        var pars m map
+        m["victim_key_id"] = $victimId
+        m["attacker_key_id"] = $attackerId
+        m["amount"] = $Amount
+        m["note"] = $Note
+        m["validator_key_id"] = $key_id
+        m["blocked_at"] = $block_time
+        m["status"] = 1
+        m["result"] = 0
+        pars["RefundId"] = DBInsert("tokens_refund", m)
+
+        @1VotingTemplateRun("TemplateId,Duration,ContractAcceptParams,ContractRejectParams", $templateId, 14, JSONEncode(pars), JSONEncode(pars))
+    }
+}

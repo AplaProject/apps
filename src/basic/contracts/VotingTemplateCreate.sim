@@ -1,84 +1,116 @@
 contract VotingTemplateCreate {
     data {
-        Title string
+        VotingName string
         TypeParticipants int
-        TypeVoting int
         TypeDecision int
-        Volume int
         Quorum int
-        Subject string
-        Voters string "optional" // role of participant
-        Candidates string "optional" // role of candidate
-        InitContract string "optional" // Execute before the vote
+        Rating string "optional"
+        Volume int "optional"
+        CountTypeVoters int "optional"
+
+        Voters string "optional"
         Vacancies int "optional"
+        Candidates string "optional"
+
         ContractAccept string "optional"
         ParamsAccept string "optional"
         ContractReject string "optional"
         ParamsReject string "optional"
-        CountTypeVoters int
+
+        InitContract string "optional"
+        ParamsInit string "optional"
+        OptionalContractAccept string "optional"
+        OptionalParamsAccept string "optional"
+        OptionalContractReject string "optional"
+        OptionalParamsReject string "optional"
     }
 
+
     conditions {
-        if $TypeParticipants == 3 {
-            if Size($Voters) == 0 || $Voters == "NULL" || $Voters == 0 {
-                warning LangRes("@1voters_role_not_found", "en")
+        // check default settings
+        if ($TypeDecision == 1 || $TypeDecision == 2) && $CountTypeVoters == 1 {
+            info LangRes("@1voting_type_not_suitable", "en")
+        }
+        if $Quorum < 1 || $Quorum > 100 {
+            warning Sprintf(LangRes("@1quorum_range_must_be", "en"), $Quorum)
+        }
+        if $CountTypeVoters == 0 && $TypeDecision != 1 && $TypeDecision != 2 {
+            if $Volume < 1 || $Volume > 100 {
+                warning Sprintf(LangRes("@1volume_range_must_be", "en"), $Volume)
             }
         }
-        if Size($Title) <3 {
-            warning LangRes("@1enter_title", "en")
-        }
-        if $Volume <0 || $Volume > 100 {
-            warning LangRes("@1volume_range_wrong", "en")
-        }
-        if $Quorum <0 || $Quorum > 100 {
-            warning LangRes("@1quorum_range_wrong", "en")
+        if $CountTypeVoters == 1 {
+            if $Quorum < 1 {
+                info LangRes("@1voters_number_less_one", "en")
+            }
+            $Volume = 0
         }
 
+        // if type of participant is a role -> check this role
+        if $TypeParticipants == 3 && Int($Voters) == 0 {
+            warning LangRes("@1voters_role_not_found", "en")
+        }
+
+        // if voting for candidates -> check vacancies and candidates
         if $TypeDecision == 1 || $TypeDecision == 2 {
-            if $Vacancies < 1 {
+            if Int($Vacancies) < 1 {
                 warning LangRes("@1vacancies_number_wrong", "en")
             }
-            if $Candidates == "NULL" || $Candidates == 0 || Size($Candidates) == 0 {
+            if Int($Candidates) == 0 {
                 warning LangRes("@1candidate_role_wrong", "en")
             }
         }
 
-        if Size($InitContract) > 0{
-            if GetContractByName($InitContract) == 0 {
-                warning LangRes("@1init_contract_not_found", "en")
-            }
-        }
-        if Size($ContractAccept) > 0{
+        // if voting for contract -> check the availability of the contract
+        if $TypeDecision == 4 {
             if GetContractByName($ContractAccept) == 0 {
                 warning LangRes("@1accepted_contract_not_found", "en")
             }
+            if Size($ContractReject) > 0 {
+                if GetContractByName($ContractReject) == 0 {
+                    warning LangRes("@1rejected_contract_not_found", "en")
+                }
+            }
         }
-        if Size($ContractReject) > 0{
-            if GetContractByName($ContractReject) == 0{
-                warning LangRes("@1rejected_contract_not_found", "en")
+
+        // if initialization contract is set -> check the availability of the contract
+        if Size($InitContract) > 0 {
+            if GetContractByName($InitContract) == 0 {
+                warning LangRes("@1init_contract_not_found", "en")
             }
         }
     }
 
     action {
-        var m map
-        m["title"] = $Title
-        m["subject"] = $Subject
-        m["voters"] = $Voters
-        m["candidates"] = $Candidates
-        m["init_contract"] = $InitContract
-        m["volume"] = $Volume
-        m["quorum"] = $Quorum
-        m["type_voting"] = $TypeVoting
-        m["type_participants"] = $TypeParticipants
-        m["type_decision"] = $TypeDecision
-        m["vacancies"] = $Vacancies
-        m["contract_accept"] = $ContractAccept
-        m["accept_params"] = $ParamsAccept
-        m["contract_reject"] = $ContractReject
-        m["reject_params"] = $ParamsReject
-        m["ecosystem"] = $ecosystem_id
-        m["count_type_voters"] = $CountTypeVoters
-        $result = DBInsert("@1voting_templates", m)
+        var template map
+
+        template["voting->name"] = $VotingName
+        template["voting->type"] = 1
+        template["voting->volume"] = $Volume
+        template["voting->quorum"] = $Quorum
+        if $Rating == "true" {
+            template["voting->rating"] = 1
+        } else {
+            template["voting->rating"] = 0
+        }
+        template["voting->count_type_voters"] = $CountTypeVoters
+        template["voting->type_decision"] = $TypeDecision
+        template["voting->type_participants"] = $TypeParticipants
+
+        template["subject->candidates"] = $Candidates
+        template["subject->vacancies"] = $Vacancies
+        template["subject->voters"] = $Voters
+        template["subject->contract_accept"] = $ContractAccept
+        template["subject->contract_reject"] = $ContractReject
+
+        template["optional->contract_accept"] = $OptionalContractAccept
+        template["optional->contract_reject"] = $OptionalContractReject
+        template["optional->init_contract"] = $InitContract
+        template["optional->contract_accept_params"] = $OptionalParamsAccept
+        template["optional->contract_reject_params"] = $OptionalParamsReject
+        template["optional->init_contract_params"] = $ParamsInit
+
+        template["ecosystem"] = $ecosystem_id
+        DBInsert("@1voting_templates", template)
     }
 }

@@ -1,0 +1,107 @@
+contract GroupAccessManager {
+    data {
+        Action string
+        ManagerRid string "optional"
+        GroupId int "optional"
+        GroupName string "optional"
+        GroupType int "optional"
+        GroupInfo string "optional"
+    }
+
+    func updateAccess(ra array) {
+        var group_access string
+        group_access = JSONEncode(ra)
+        DBUpdate("@1groups", $GroupId, {"group_access": group_access})
+    }
+
+    func updateBufferAccess(ra array) {
+        var groups_access string
+        groups_access = JSONEncode(ra)
+        var filled map
+        filled["groups_access"] = groups_access
+        filled["group_name"] = $GroupName
+        filled["group_type"] = $GroupType
+        filled["group_information"] = $GroupInfo
+        if !$buffer_id {
+            DBInsert("@1buffer_data", {"ecosystem": $ecosystem_id, "member_id": $key_id, "key": "group_access", "value": filled})
+        } else {
+            DBUpdate("@1buffer_data", Int($buffer_id), {"value": filled})
+        }
+    }
+
+    conditions {
+        $ManagerRid = Int($ManagerRid)
+        if $GroupId > 0 {
+            @1GroupsAccessCheck("GroupId", $GroupId)
+            $role = DBFind("@1groups").Where({"ecosystem": $ecosystem_id, "id": $GroupId}).Columns("id,group_access").Row()
+            if !$role {
+                warning LangRes("@1group" "@1not_founded", "en")
+            }
+            if $ManagerRid > 0 {
+                if !DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $ManagerRid}).One("id") {
+                    warning LangRes("@1role_not_found", "en")
+                }
+            }
+            var ids array, i int
+            $ids = ids
+            ids = JSONDecode($role["group_access"])
+            while i < Len(ids){
+                if ids[i] > 0 {
+                    $ids = Append($ids, ids[i])
+                }
+                i = i + 1
+            }
+        } else {
+            $buffer_managers = 0
+            $buffer_id = 0
+            $ids = []
+            var buffer map
+            buffer = DBFind("@1buffer_data").Where({"ecosystem": $ecosystem_id, "member_id": $key_id, "key": "group_access"}).Columns("id,value,value->groups_access").Row()
+            if buffer {
+                $buffer_managers = buffer["value.groups_access"]
+                $buffer_id = buffer["id"]
+            }
+        }
+    }
+
+    action {
+        if $GroupId == 0 {
+            if $buffer_managers {
+                $ids = JSONDecode($buffer_managers)
+            }
+        }
+        if $ManagerRid > 0 {
+            var i int idsNew array
+            if $Action == "remove" {
+                while i < Len($ids) {
+                    if $ids[i] != $ManagerRid{
+                        idsNew = Append(idsNew, $ids[i])
+                    }
+                    i = i + 1
+                }
+                if $GroupId == 0 {
+                    updateBufferAccess(idsNew)
+                } else {
+                    updateAccess(idsNew)
+                }
+            }
+            if $Action == "add" {
+                var double bool
+                while i < Len($ids) {
+                    if $ids[i] == $ManagerRid{
+                        double = true
+                    }
+                    i = i + 1
+                }
+                if !double {
+                    $ids = Append($ids, $ManagerRid)
+                }
+                if $GroupId == 0 {
+                    updateBufferAccess($ids)
+                } else {
+                    updateAccess($ids)
+                }
+            }
+        }
+    }
+}

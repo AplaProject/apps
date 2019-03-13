@@ -1,0 +1,118 @@
+If(#notific_id#>0){
+    DBFind(@1notifications).Where({id:#notific_id#}).Columns("page_params->id").Vars(prefix)
+    SetVar(q_id,#prefix_page_params_id#)
+}
+DBFind(@1q_list).Where({"id": #q_id#}).Columns("id,question,description,answer,ecosystem,init,lastmodified,created_at,expired,status,params->hide,params->change").Vars(question)
+DBFind(@1q_answers).Where({"question_id": #question_id#}).Count(answers)
+DBFind(@1q_answers).Where({"question_id": #question_id#, member:#key_id#}).Vars(your_answer).Count(a)
+DBFind(@1members).Where({"ecosystem": #question_ecosystem#}).Count(total)
+
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Questionnaire"}).Vars(application)
+SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: q_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+If(#admin_access_id# > 0){
+    SetVar(permission,1)
+}
+
+Div(content-wrapper){
+    Div(row mt-sm){
+        Div(col-lg-10 col-lg-offset-1){
+            Form(panel panel-primary){
+                Div(list-group-item text-center){
+                    P(Class: h3 text-bold m0, Body: #question_description#)
+                }
+                Div(list-group-item){
+                    Div(row){
+                        Div(col-md-6 text-right){
+                            Label(For: Date Start){
+                                Span(Body: LangRes(@1q_date_start):)
+                            }
+                        }
+                        Div(col-md-6 text-left){
+                            DateTime(#question_created_at#,HH:MI DD.MM.YYYY)
+                        }
+                    }
+                    Div(row){
+                        Div(col-md-6 text-right){
+                            Label(For: Last Modified){
+                                Span(Body: LangRes(@1q_lastmodified):)
+                            }
+                        }
+                        Div(col-md-6 text-left){
+                            DateTime(#question_lastmodified#,HH:MI DD.MM.YYYY)
+                        }
+                    }
+                    Div(row){
+                        Div(col-md-6 text-right){
+                            Label(For: Date Ending){
+                                Span(Body: LangRes(@1q_date_expiration):)
+                            }
+                        }
+                        Div(col-md-6 text-left){
+                            DateTime(#question_expired#,HH:MI DD.MM.YYYY)
+                        }
+                    }
+                    Div(row){
+                        Div(col-md-6 text-right){
+                            Label(For: Status){
+                                Span(Body: LangRes(@1status):)
+                            }
+                        }
+                        Div(col-md-6 text-left){
+                            If(#question_status#==0){
+                                Span(Class: text-success, Body: LangRes(@1q_status_created))
+                            }
+                            If(#question_status#==1){
+                                Span(Class: text-success, Body: LangRes(@1q_status_started))
+                            }
+                            If(#question_status#==2){
+                                Span(Class: text-primary, Body: LangRes(@1q_status_ended))
+                            }
+                            If(#question_status#==3){
+                                Span(Class: text-warning, Body: LangRes(@1q_status_admin))
+                            }
+                        }
+                    }
+                }
+                If(#question_status#!=0){
+                    Div(list-group-item text-center t5){
+                        If(#a#>0){
+                             Div(row mb){
+                                Div(col-sm-6 mt-sm text-right){
+                                    Label(For: Notifications){
+                                        Span(Body: LangRes(@1q_answer)
+                                    }
+                                }
+                                Div(col-sm-6 mt-sm text-left){
+                                    Input(Name: Change, Type: checkbox, Value: true, Disabled: true, Class: m0, Placeholder: #your_answer_decision#)
+                                }
+                            }
+                        }
+                        If(And(#question_params_change#==true,#a#>0,#question_status#==1)){
+                            Div(row mb-sm){
+                                Div(col-md-12 text-center){
+                                    Span(Class: h6, Body: LangRes(@1q_hint_answer_revoting))
+                                }
+                            }
+                        }
+                        If(#question_status#==1){
+                            Div(row){
+                                Div(col-md-12 text-center){
+                                    ArrayToSource(src, #question_answer#)
+                                    ForList(Source: src, Index:ind){
+                                        If(#a#==0){
+                                            Button(Body: #value#, Page: @1q_question, Class: btn btn-primary ml-sm mr-sm, Contract: @1QAnswer, PageParams: "q_id=#question_id#", Params: "QuestionId=#question_id#,AnswerId=#ind#,Decision=#value#,Operation=CV")
+                                        }
+                                        If(And(#question_params_change#==true,#a#>0)){
+                                            Button(Body: #value#, Page: @1q_question, Class: btn btn-primary ml-sm mr-sm, Contract: @1QAnswer, PageParams: "q_id=#question_id#", Params: "Id=#your_answer_id#,QuestionId=#question_id#,AnswerId=#ind#,Decision=#value#,Operation=UV")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,81 @@
+contract CreditingSignAccept {
+    data {
+        Id int
+    }
+
+    func closeMyNotes() {
+        var notes array i int
+        notes = DBFind("@1notifications").Where({"closed": 0, "ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_name": "crediting_view", "page_params->crediting_id": $Id})
+        while i < Len(notes){
+            var note map
+            note = notes[i]
+            @1NotificationsClose("NotificId", Int(note["id"]))
+            i = i + 1
+        }
+    }
+
+    conditions {
+        var request map status int
+        request = DBFind("crediting_requests").Where({"id": $Id}).Row()
+        $borrower = request["borrower"]
+        $creditor = request["creditor"]
+        $rate = request["rate"]
+        $amount = request["amount"]
+
+        $sign_creditor = request["sign_creditor"]
+        $sign_borrower = request["sign_borrower"]
+        status = Int(request["status"])
+
+        //check status
+        if status != 2 {
+            warning LangRes("@1access_denied", "en")
+        }
+
+        //check borrower && creditor
+        if AddressToId($borrower) != $key_id && AddressToId($creditor) != $key_id {
+            warning LangRes("@1access_denied", "en")
+        }
+
+        $pub = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $key_id}).One("pub")
+        $pub = PubToHex($pub) 
+    }
+
+    action {
+        closeMyNotes()
+
+        var m map
+        if AddressToId($borrower) == $key_id {
+            m["sign_borrower"] = $block_time
+            m["pub_borrower"] = $pub
+            $sign_borrower = $block_time
+
+            var memberId int
+            var header body string params map
+            memberId = AddressToId($creditor)
+            header = "Signature for auction №" + Str($Id)
+            body = "Your signature is required!"
+            params["crediting_id"] = $Id
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-edit", header, body, "crediting_view", params)
+        }
+        if AddressToId($creditor) == $key_id {
+            m["sign_creditor"] = $block_time
+            m["pub_creditor"] = $pub
+            $sign_creditor = $block_time
+        }
+
+        if $sign_borrower > 0 && $sign_creditor > 0 {
+            $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Сrediting"}).One("id")
+            $commission_wallet = AppParam(Int($app), "crediting_commission_wallet", $ecosystem_id)
+
+            if $commission_wallet != "0" {
+                var commission money
+                commission = Money($amount) * Money($rate) / Money(100) / Money(10)
+                @1TokensSend("Recipient,Amount", Str($commission_wallet), Money(commission))
+            }
+
+            @1TokensSend("Recipient,Amount", Str($borrower), Money($amount))
+		    m["status"] = 4
+        }
+        DBUpdate("crediting_requests", Int($Id), m)
+    }
+}

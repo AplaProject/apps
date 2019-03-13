@@ -1,0 +1,838 @@
+SetVar(this_page, "@1voting_wizard")
+SetVar(back_page, "@1voting_list")
+DBFind("@1applications").Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
+DBFind("@1buffer_data").Where({"key": "voting_wizard_buffer", "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Columns("value->save_time,value->voting_name,value->voting_type,value->type_participants,value->type_decision,value->volume,value->quorum,value->rating,value->count_type_voters,value->description,value->interval,value->start_date,value->start_time,value->end_date,value->end_time,value->member_participants,value->role_participants,value->group_participants,value->execute_contract,value->contract_accept_name,value->contract_accept_params,value->contract_reject_name,value->contract_reject_params,value->text_document,value->candidates,value->apply,value->role_id,value->vacancies").Vars(buffer)
+
+If(#stage# == ""){
+    If(#buffer_value_save_time# == ""){
+        SetVar(stage, 1)
+    }.Else{
+        SetVar(stage, 0)
+    }
+}
+SetVar(debug, 0)
+SetVar(square, "fa fa-circle-o mr-sm")
+SetVar(square-filled, "fa fa-dot-circle-o mr-sm")
+
+Form(){
+    If(#stage# == 0){
+        Div(text-center){
+            Div(Body: LangRes(@1voting_wizard_draft_message))
+            Div(h6 m0 text-muted){$@1last_save$: DateTime(#buffer_value_save_time#, "HH:MI DD.MM.YYYY")}
+            Data(src_autosave, "id,name"){
+                yes,$@1voting_wizard_use_draft$
+                no,$@1start_over$
+            }
+            RadioGroup(Name: LoadAutosave, Source: src_autosave, NameColumn: name, ValueColumn: id)
+        }
+        Button(Body: LangRes(@1next), Class: btn btn-primary pull-right, Page: #this_page#, PageParams: "stage=1", Contract: @1VotingWizardBuffer).Popup(50, $@1voting_wizard$)
+        Button(Body: LangRes(@1cancel), Class: btn btn-default pull-right, Page: #back_page#)
+
+    }.ElseIf(#stage# == 1){
+        Div(row){
+            Div(col-md-3 mt-lg text-right){
+                Label(){
+                    LangRes(@1voting_subject)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                AppParam(Ecosystem: 1, App: #application_id#, Name: type_voting_decisions, Source: procent_type_decisions)
+                RadioGroup(Name: TypeDecision, Source: procent_type_decisions, NameColumn: name, ValueColumn: id, Value: #buffer_value_type_decision#)
+            }
+        }
+        Button(Class: btn btn-primary pull-right fa fa-chevron-right, Page: #this_page#, PageParams: "stage=2", Contract: @1VotingWizardBuffer).Popup(50, $@1voting_wizard$)
+        Button(Class: btn btn-default pull-right fa fa-pause, Page: #back_page#)
+        Div(progress-wrapper pull-right mr-sm text-muted){Em(Class: #square-filled#)Em(Class: #square#)Em(Class: #square#)Em(Class: #square#)Em(Class: #square#)Em(Class: #square#)Em(Class: #square#)}
+
+
+    }.ElseIf(#stage# == 2){
+        If(#val_contract_accept_name# != ""){
+            SetVar(buffer_value_contract_accept_name, #val_contract_accept_name#)
+        }
+        If(#val_contract_accept_params# != ""){
+            SetVar(buffer_value_contract_accept_params, #val_contract_accept_params#)
+        }
+        If(#val_contract_reject_name# != ""){
+            SetVar(buffer_value_contract_reject_name, #val_contract_reject_name#)
+        }
+        If(#val_contract_reject_params# != ""){
+            SetVar(buffer_value_contract_reject_params, #val_contract_reject_params#)
+        }
+
+
+        If(#buffer_value_type_decision# == 1){
+            If(#val_role_id# != ""){
+                SetVar(buffer_value_role_id, #val_role_id#)
+            }
+            If(#val_role_vacancies# != ""){
+                SetVar(buffer_value_vacancies, #val_role_vacancies#)
+            }
+            If(#val_execute_contract# != ""){
+                SetVar(buffer_value_execute_contract, #val_execute_contract#)
+            }
+            If(And(#apply# == "", #buffer_value_apply# == 1)){
+                SetVar(apply, 1)
+            }
+
+            DBFind(@1roles,src_roles).Where({"ecosystem": #ecosystem_id#, "role_type": 2, "deleted": 0}).Columns("id,role_name").Count(elective_roles_count)
+            If(#elective_roles_count# > 0){
+                Div(row mt-sm){
+                    Div(col-md-3 mt-sm text-right){
+                        Label(){
+                            Span(Body: LangRes(@1candidates))
+                            Span(Class: text-danger, Body: *)
+                        }
+                    }
+                    Div(col-md-9 text-left){
+                        Div(input-group){
+                            If(#apply# == 1){
+                                Input(Name: applied, Disabled: 1, Value: $@1applied_already$)
+                                Div(input-group-btn){
+                                    Button(Class: btn bg-gray-lighter buttons fa fa-undo, Page: #this_page#, PageParams: "stage=2,apply=0,val_role_id=Val(RoleId),val_role_vacancies=Val(Vacancies),val_execute_contract=Val(ExecuteContract),val_contract_accept_name=Val(ContractAcceptName),val_contract_accept_params=Val(ContractAcceptParams),val_contract_reject_name=Val(ContractRejectName),val_contract_reject_params=Val(ContractRejectParams)").Popup(50, $@1voting_wizard$)
+                                }
+                            }.Else{
+                                Input(Name: can_apply_voting, Disabled: 1, Value: $@1can_apply_voting$)
+                                Div(input-group-btn){
+                                    Button(Body: LangRes(@1apply), Class: btn bg-gray-lighter buttons, Page: #this_page#, PageParams: "stage=2,apply=1,val_role_id=Val(RoleId),val_role_vacancies=Val(Vacancies),val_execute_contract=Val(ExecuteContract),val_contract_accept_name=Val(ContractAcceptName),val_contract_accept_params=Val(ContractAcceptParams),val_contract_reject_name=Val(ContractRejectName),val_contract_reject_params=Val(ContractRejectParams)").Popup(50, $@1voting_wizard$)
+                                }
+                            }
+                        }
+                    }
+                }
+                If(#apply# == 1){
+                    DBFind("@1members").Where({"ecosystem": #ecosystem_id#, "id": #key_id#}).Vars(my)
+                    If(#my_member_name# == ""){
+                        SetVar(my_member_name, Address(#key_id#))
+                    }
+                    Data(src_voting_subject,"id,name"){
+                        #key_id#,#my_member_name#
+                    }.Custom(_address){
+                        Address(#id#)
+                    }.Custom(_member){
+                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#"){
+                            Span(Body: #name#)
+                        }
+                    }
+                }.Else{
+                    Data(src_voting_subject,"id,name"){}
+                }
+                If(#apply# == 1){
+                    Div(row){
+                        Div(col-sm-9 col-sm-offset-3){
+                            Table(src_voting_subject, "$@1candidates$=_member,=_address").Style(margin-bottom: 5px;)
+                        }
+                    }
+                }
+                Div(form-group){
+                    Div(row mt-lg){
+                        Div(col-md-3 mt-sm text-right){
+                            Label(){
+                                Span(Body: LangRes(@1role))
+                                Span(Class: text-danger, Body: *)
+                            }
+                        }
+                        Div(col-md-9 text-left){
+                            Select(Name: RoleId, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #buffer_value_role_id#)
+                        }
+                    }
+                    Div(row mt-sm){
+                        Div(col-md-3 mt-sm text-right){
+                            Label(){
+                                Span(Body: LangRes(@1vacancies))
+                                Span(Class: text-danger, Body: *)
+                            }
+                        }
+                        Div(col-md-9 text-left){
+                            Input(Name: Vacancies, Type: Number, Value: #buffer_value_vacancies#)
+                        }
+                    }
+                }
+            }.Else{
+                Div(row){
+                    Div(col-md-12 text-center h4){
+                        P(Class: m0, Body: LangRes(@1elective_roles_not_found))
+                        Button(Class: btn btn-link, Page: @1roles_create, PageParams: "back_page=#back_page#"){
+                            Span(Class: h4, Body: LangRes(@1create_role))
+                        }.Popup(50, $@1edit_role$)
+                    }
+                }
+            }
+
+
+        }.ElseIf(#buffer_value_type_decision# == 2){
+            If(#val_role_id# != ""){
+                SetVar(buffer_value_role_id, #val_role_id#)
+            }
+            If(#val_role_vacancies# != ""){
+                SetVar(buffer_value_vacancies, #val_role_vacancies#)
+            }
+            If(#val_execute_contract# != ""){
+                SetVar(buffer_value_execute_contract, #val_execute_contract#)
+            }
+            If(#new_candidate# == ""){
+                SetVar(new_candidate, 0)
+            }
+            If(#candidates# == ""){
+                If(#buffer_value_candidates# != ""){
+                    SetVar(candidates, #buffer_value_candidates#)
+                }.Else{
+                    SetVar(candidates, 0)
+                }
+            }
+            If(#new_candidate# != 0){
+                If(#candidates# == 0){
+                    SetVar(candidates, "#new_candidate#")
+                }.Else{
+                    SetVar(candidates, "#candidates#,#new_candidate#")
+                }
+            }
+
+            DBFind(@1keys, src_subject).Where({"ecosystem": #ecosystem_id#, "id": {"$in": [#candidates#]}}).Custom(_address){
+                Address(#id#)
+            }.Custom(_member){
+                DBFind(@1members).WhereId(#id#).Count(have_name).Vars(participant)
+                If(#have_name# > 0){
+                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: #participant_member_name#)
+                }.Else{
+                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: Address(#id#))
+                }
+            }
+
+            DBFind(@1keys,src_keys).Where({"ecosystem": #ecosystem_id#, {"$and": [{"id": {"$neq": #guest_key#}}, {"id": {"$nin": [#candidates#]}}]}}).Columns("id").Count(members_count).Custom(_name){
+                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Columns("id,member_name").Count(have_name).Vars(m)
+                Address(#id#)
+                If(#have_name# > 0){
+                    " (#m_member_name#)"
+                }
+            }
+
+            DBFind(@1roles,src_roles).Where({"ecosystem": #ecosystem_id#, "role_type": 2, "deleted": 0}).Columns("id,role_name").Count(elective_roles_count)
+            If(#elective_roles_count# > 0){
+                Div(form-group){
+                    Div(row){
+                        Div(col-md-3 mt-sm text-right){
+                            Label(){
+                                Span(Body: LangRes(@1candidates)).(Class: text-danger, Body: *)
+                            }
+                        }
+                        Div(col-md-9 mc-sm text-left){
+                            Div(input-group){
+                                If(#members_count# > 0){
+                                    Select(Name: MemberId, Source: src_keys, NameColumn: _name, ValueColumn: id)
+                                    Div(input-group-btn){
+                                        Button(Class: btn bg-gray-lighter fa fa-plus buttons, Page: #this_page#, PageParams: "stage=2,new_candidate=Val(MemberId),candidates=#candidates#,val_role_id=Val(RoleId),val_role_vacancies=Val(Vacancies),val_execute_contract=Val(ExecuteContract),val_contract_accept_name=Val(ContractAcceptName),val_contract_accept_params=Val(ContractAcceptParams),val_contract_reject_name=Val(ContractRejectName),val_contract_reject_params=Val(ContractRejectParams)").Popup(50, $@1voting_wizard$)
+                                        Button(Class: btn bg-gray-lighter fa fa-undo buttons, Page: #this_page#, PageParams: "stage=2,candidates=0,val_role_id=Val(RoleId),val_role_vacancies=Val(Vacancies),val_execute_contract=Val(ExecuteContract),val_contract_accept_name=Val(ContractAcceptName),val_contract_accept_params=Val(ContractAcceptParams),val_contract_reject_name=Val(ContractRejectName),val_contract_reject_params=Val(ContractRejectParams)").Popup(50, $@1voting_wizard$)
+                                    }
+                                }.Else{
+                                    Input(Class: mb, Disabled: 1, Value: "$@1voting_all_keys_added$")
+                                    Div(input-group-btn input-group-top){
+                                        Button(Class: btn bg-gray-lighter fa fa-undo buttons, Page: #this_page#, PageParams: "stage=2,candidates=0,val_role_id=Val(RoleId),val_role_vacancies=Val(Vacancies),val_execute_contract=Val(ExecuteContract),val_contract_accept_name=Val(ContractAcceptName),val_contract_accept_params=Val(ContractAcceptParams),val_contract_reject_name=Val(ContractRejectName),val_contract_reject_params=Val(ContractRejectParams)").Popup(50, $@1voting_wizard$)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    If(Or(#members_count# > 0, #candidates# != 0)){
+                        Div(row){
+                            Div(col-sm-9 col-sm-offset-3){
+                                Table(src_subject, "$@1candidates$=_member,=_address").Style(margin-bottom: 5px;)
+                            }
+                        }
+                    }
+                }
+                Div(form-group){
+                    Div(row){
+                        Div(col-md-3 mt-sm text-right){
+                            Label(){
+                                Span(Body: LangRes(@1role)).(Class: text-danger, Body: *)
+                            }
+                        }
+                        Div(col-md-9 mb-sm text-left){
+                            Select(Name: RoleId, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #buffer_value_role_id#)
+                        }
+                    }
+
+                    Div(row){
+                        Div(col-md-3 mt-sm text-right){
+                            Label(){
+                                Span(Body: LangRes(@1vacancies)).(Class: text-danger, Body: *)
+                            }
+                        }
+                        Div(col-md-9 mc-sm text-left){
+                            Input(Name: Vacancies, Class: form-control, Type: Number, Value: #buffer_value_vacancies#)
+                        }
+                    }
+                }
+            }.Else{
+                Div(row){
+                    Div(col-md-12 text-center h4){
+                        P(Class: m0, Body: LangRes(@1elective_roles_not_found))
+                        Button(Class: btn btn-link, Page: @1roles_create, PageParams: "back_page=#back_page#"){
+                            Span(Class: h4, Body: LangRes(@1create_role))
+                        }.Popup(50, $@1edit_role$)
+                    }
+                }
+            }
+
+
+        }.ElseIf(#buffer_value_type_decision# == 3){
+            Div(form-group){
+                Div(row){
+                    Div(col-md-3 mt-sm text-right){
+                        Label(){
+                            Span(Body: LangRes(@1text_document))
+                            Span(Class: text-danger, Body: *)
+                        }
+                    }
+                    Div(col-md-9 text-left){
+                        Input(Name: TextDocument, Type: textarea, Value: #buffer_value_text_document#).Style(resize: vertical;)
+                    }
+                }
+            }
+        }
+
+        If(Or(And(#buffer_value_type_decision# == 1, #elective_roles_count# > 0), And(#buffer_value_type_decision# == 2, #elective_roles_count# > 0), #buffer_value_type_decision# == 3)){
+            Div(form-group){
+                Div(row){
+                    Div(col-md-3 mt-sm text-right){
+                        Label(){
+                            Span(Body: LangRes(@1contract_execute))
+                        }
+                    }
+                    Div(col-md-9 mc-sm text-left){
+                        Data(src_execute, "id,name"){
+                            no,$@1no$
+                            yes,$@1yes$
+                        }
+                        Select(Name: ExecuteContract, Source: src_execute, NameColumn: name, ValueColumn: id, Value: #buffer_value_execute_contract#)
+                    }
+                }
+            }
+        }.ElseIf(#buffer_value_type_decision# == 4){
+            Input(Name: ExecuteContract, Type: "hidden", Value: "yes")
+        }
+
+        Div(){
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        Span(Body: LangRes(@1contract_accept))
+                        If(#buffer_value_type_decision# == 4){
+                            Span(Class: text-danger, Body: *)
+                        }
+                    }
+                }
+                Div(col-md-9 mb-sm text-left){
+                    Input(Name: ContractAcceptName, Value: #buffer_value_contract_accept_name#).Validate(minLength:3, maxLength:255)
+                    InputErr(Name: ContractAcceptName, minLength: $@1validate_name$, maxLength: $@1validate_name$)
+                    Div(Class: m0 h6 text-muted, Body: "$@1contract_accept_des$")
+                }
+            }
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        Span(Body: LangRes(@1params))
+                    }
+                }
+                Div(col-md-9 mb-sm text-left){
+                    Input(Name: ContractAcceptParams, Value: #buffer_value_contract_accept_params#)
+                    Div(Class: m0 h6 text-muted, Body: "$@1contract_params_des$")
+                }
+            }
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        Span(Body: LangRes(@1contract_reject))
+                        If(#buffer_value_type_decision# == 4){
+                            Span(Class: text-danger, Body: *)
+                        }
+                    }
+                }
+                Div(col-md-9 mb-sm text-left){
+                    Input(Name: ContractRejectName, Value: #buffer_value_contract_reject_name#).Validate(minLength:3, maxLength:255)
+                    InputErr(Name: ContractRejectName, minLength: $@1validate_name$, maxLength: $@1validate_name$)
+                    Div(Class: m0 h6 text-muted, Body: "$@1contract_reject_des$")
+                }
+            }
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        Span(Body: LangRes(@1params))
+                    }
+                }
+                Div(col-md-9 text-left){
+                    Input(Name: ContractRejectParams, Value: #buffer_value_contract_reject_params#)
+                    Div(Class: m0 h6 text-muted, Body: "$@1contract_params_des$")
+                }
+            }
+        }.Show(ExecuteContract=yes)
+
+        If(#buffer_value_type_decision# == 1){
+            Button(Class: btn btn-primary pull-right mt-sm fa fa-chevron-right, Page: #this_page#, PageParams: "stage=3", Contract: @1VotingWizardBuffer, Params: "Apply=#apply#,RoleId=Val(RoleId),Vacancies=Val(Vacancies),ExecuteContract=Val(ExecuteContract)").Popup(50, $@1voting_wizard$)
+        }.ElseIf(#buffer_value_type_decision# == 2){
+            Button(Class: btn btn-primary pull-right mt-sm fa fa-chevron-right, Page: #this_page#, PageParams: "stage=3", Contract: @1VotingWizardBuffer, Params: "Candidates=#candidates#,RoleId=Val(RoleId),Vacancies=Val(Vacancies),ExecuteContract=Val(ExecuteContract)").Popup(50, $@1voting_wizard$)
+        }.Else{
+            Button(Class: btn btn-primary pull-right mt-sm fa fa-chevron-right, Page: #this_page#, PageParams: "stage=3", Contract: @1VotingWizardBuffer, Params: "ExecuteContract=Val(ExecuteContract)").Popup(50, $@1voting_wizard$)
+        }
+        Button(Class: btn btn-default pull-right mt-sm fa fa-pause, Page: #back_page#)
+        Button(Class: btn btn-default pull-right mt-sm fa fa-chevron-left, Page: #this_page#, PageParams: "stage=1").Popup(50, $@1voting_wizard$)
+        Div(progress-wrapper pull-right mt-sm mr-sm text-muted){Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square#)Em(Class: #square#)Em(Class: #square#)Em(Class: #square#)Em(Class: #square#)}
+
+    }.ElseIf(#stage# == 3){
+        Div(row){
+            Div(col-md-3 mt-lg text-right){
+                Label(){
+                    LangRes(@1participants)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                AppParam(Ecosystem:1, App:#application_id#, Name: type_voting_participants, Source: type_voting_participants)
+                RadioGroup(Name: TypeParticipants, Source: type_voting_participants, NameColumn: name, ValueColumn: id, Value: #buffer_value_type_participants#)
+            }
+        }
+        Button(Class: btn btn-primary pull-right fa fa-chevron-right, Page: #this_page#, PageParams: "stage=4", Contract: @1VotingWizardBuffer).Popup(50, $@1voting_wizard$)
+        Button(Class: btn btn-default pull-right fa fa-pause, Page: #back_page#)
+        Button(Class: btn btn-default pull-right fa fa-chevron-left, Page: #this_page#, PageParams: "stage=2").Popup(50, $@1voting_wizard$)
+        Div(progress-wrapper pull-right mr-sm text-muted){Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square#)Em(Class: #square#)Em(Class: #square#)Em(Class: #square#)}
+
+
+    }.ElseIf(And(#stage# == 4, #buffer_value_type_participants# != 1)){
+        If(#new_participant# == ""){
+            SetVar(new_participant, 0)
+        }
+        If(#member_participants# == ""){
+            If(#buffer_value_member_participants# != ""){
+                SetVar(member_participants, #buffer_value_member_participants#)
+            }.Else{
+                SetVar(member_participants, 0)
+            }
+        }
+        If(#role_participants# == ""){
+            If(#buffer_value_role_participants# != ""){
+                SetVar(role_participants, #buffer_value_role_participants#)
+            }.Else{
+                SetVar(role_participants, 0)
+            }
+        }
+        If(#group_participants# == ""){
+            If(#buffer_value_group_participants# != ""){
+                SetVar(group_participants, #buffer_value_group_participants#)
+            }.Else{
+                SetVar(group_participants, 0)
+            }
+        }
+
+        If(#buffer_value_type_participants# == 2){
+            If(#new_participant# != 0){
+                If(#member_participants# == 0){
+                    SetVar(member_participants, #new_participant#)
+                }.Else{
+                    SetVar(member_participants, "#member_participants#,#new_participant#")
+                }
+            }
+            DBFind(@1keys, src_participants).Where({"ecosystem": #ecosystem_id#, "id": {"$in": [#member_participants#]}}).Count(participants_count).Custom(_id){
+                Address(#id#)
+            }.Custom(_name){
+                DBFind(@1members).WhereId(#id#).Count(have_name).Vars(participant)
+                If(#have_name# > 0){
+                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: #participant_member_name#)
+                }.Else{
+                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: Address(#id#))
+                }
+            }
+        }.ElseIf(#buffer_value_type_participants# == 6){
+            If(#new_participant# != 0){
+                If(#group_participants# == 0){
+                    SetVar(group_participants, #new_participant#)
+                }.Else{
+                    SetVar(group_participants, "#group_participants#,#new_participant#")
+                }
+            }
+            If(#group_participants# != 0){
+                DBFind(@1groups_participants, src_participants).Where({"ecosystem": #ecosystem_id#, "groups_info->id": {"$in": [#group_participants#]}}).Columns("member->member_id,groups_info->id").Count(participants_count).Custom(_id){
+                    Address(#member.member_id#)
+                }.Custom(_name){
+                    DBFind(@1members).WhereId(#member.member_id#).Count(have_name).Vars(participant)
+                    If(#have_name# > 0){
+                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: #participant_member_name#)
+                    }.Else{
+                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: Address(#id#))
+                    }
+                }
+            }
+        }.ElseIf(#buffer_value_type_participants# > 2){
+            If(#new_participant# != 0){
+                If(#role_participants# == 0){
+                    SetVar(role_participants, #new_participant#)
+                }.Else{
+                    SetVar(role_participants, "#role_participants#,#new_participant#")
+                }
+            }
+            If(And(Or(#buffer_value_type_participants# == 3, #buffer_value_type_participants# == 4), #role_participants# != 0)){
+                DBFind(@1roles_participants, src_participants).Where({"ecosystem": #ecosystem_id#, "role->id": {"$in": [#role_participants#]}}).Columns("member->member_id,role->id").Count(participants_count).Custom(_id){
+                    Address(#member.member_id#)
+                }.Custom(_name){
+                    DBFind(@1members).WhereId(#member.member_id#).Count(have_name).Vars(participant)
+                    If(#have_name# > 0){
+                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: #participant_member_name#)
+                    }.Else{
+                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: Address(#id#))
+                    }
+                }.Custom(_sent){
+                    $@1voting_role_added$
+                }.Custom(_member_roles){
+                    DBFind(@1roles).Columns("id,role_name,image_id").WhereId(#role.id#).Vars(rl)
+                    LinkPage(Class: text-primary h5 text-bold, Page: @1roles_view, PageParams: "v_role_id=#rl_id#"){
+                        If(#rl_image_id# > 0){
+                            Image(Src: Binary().ById(#rl_image_id#), Class: mr-sm).Style(width: 30px; border: 1px solid #5A5D63;)
+                            #rl_role_name#
+                        }.Else{
+                            Div(){
+                                Span(Class: fa icon-settings fa-2x mr-sm).(#rl_role_name#)
+                            }.Style(display:flex; align-items:center;)
+                        }
+                    }
+                }
+            }.ElseIf(And(#buffer_value_type_participants# == 5, #role_participants# != 0)){
+                DBFind(@1roles, src_participants).Columns("id,role_name,image_id").Where({"id": {"$in": [#role_participants#]}}).Count(participants_count).Custom(_sent){
+                    $@1voting_role_added$
+                }.Custom(_member_roles){
+                    LinkPage(Class: text-primary h5 text-bold, Page: @1roles_view, PageParams: "v_role_id=#id#"){
+                        If(#image_id# > 0){
+                            Image(Src: Binary().ById(#image_id#), Class: mr-sm).Style(width: 30px; border: 1px solid #5A5D63;)
+                            #role_name#
+                        }.Else{
+                            Div(){
+                                Span(Class: fa icon-settings fa-2x mr-sm).(#role_name#)
+                            }.Style(display:flex; align-items:center;)
+                        }
+                    }
+                }
+            }
+        }
+
+        If(#participants_count# > 0){
+            Div(list-group-item mb-lg){
+                If(#buffer_value_type_participants# == 5){
+                    Table(src_participants, "$@1role$=_member_roles,=_sent")
+                }.ElseIf(#buffer_value_type_participants# == 4){
+                    Table(src_participants, "$@1role$=_member_roles,=_sent,$@1member$=_name,=_id,")
+                }.Else{
+                    Table(src_participants, "$@1member$=_name,=_id")
+                }
+            }
+        }
+        If(#buffer_value_type_participants# != 1){
+            Div(row){
+                If(#buffer_value_type_participants# == 2){
+                    DBFind(@1keys,src_keys).Where({"ecosystem": #ecosystem_id#, {"$and": [{"id": {"$neq": #guest_key#}}, {"id": {"$nin": [#member_participants#]}}]}}).Columns("id").Count(keys_count).Custom(_name){
+                        SetVar(m_member_name,)
+                        DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Columns("id,member_name").Count(have_name).Vars(m)
+                        Address(#id#)
+                        If(#have_name# > 0){
+                            " (#m_member_name#)"
+                        }
+                    }
+                    SetVar(source, src_keys)
+                    SetVar(select_label, $@1member$)
+                    SetVar(hint, $@1select_member$)
+                }.ElseIf(#buffer_value_type_participants# == 6){
+                    DBFind(@1groups, src_groups).Where({"ecosystem": #ecosystem_id#, "deleted": 0, "id": {"$nin": [#group_participants#]}}).Count(groups_count).Columns("id,group_name").Custom(_name){
+                        Span(#group_name#)
+                    }
+                    SetVar(source, src_groups)
+                    SetVar(select_label, $@1group$)
+                    SetVar(hint, $@1select_group$)
+                }.ElseIf(#buffer_value_type_participants# > 2){
+                    DBFind(@1roles, src_roles).Where({"ecosystem": #ecosystem_id#, "deleted": 0, "id": {"$nin": [#role_participants#]}}).Count(roles_count).Columns("id,role_name").Custom(_name){
+                        Span(#role_name#)
+                    }
+                    SetVar(source, src_roles)
+                    SetVar(select_label, $@1role$)
+                    SetVar(hint, $@1select_role$)
+                }
+                Div(col-md-2 mt-sm text-right){
+                    Label(){
+                        Span(#select_label#)
+                        Span(*, text-danger)
+                    }
+                }
+                Div(col-md-10 text-left){
+                    If(#participants_count# == ""){
+                        SetVar(participants_count, 0)
+                    }
+                    If(#roles_count# == ""){
+                        SetVar(roles_count, 0)
+                    }
+                    If(#groups_count# == ""){
+                        SetVar(groups_count, 0)
+                    }
+                    If(Or(And(#buffer_value_type_participants# == 2, #keys_count# > 0), And(#buffer_value_type_participants# == 3, #participants_count# == 0), And(#buffer_value_type_participants# == 6, #participants_count# == 0), And(#buffer_value_type_participants# > 3, #roles_count# > 0))){
+                        Div(input-group){
+                            Select(Name: VarId, Source: #source#, NameColumn: _name, ValueColumn: id)
+                            Div(input-group-btn){
+                                Button(Class: btn bg-gray-lighter fa fa-plus buttons, Page: #this_page#, PageParams: "stage=4,new_participant=Val(VarId),member_participants=#member_participants#,role_participants=#role_participants#,group_participants=#group_participants#").Popup(50, $@1voting_wizard$)
+                                Button(Class: btn bg-gray-lighter fa fa-undo buttons, Page: #this_page#, PageParams: "stage=4,member_participants=0,role_participants=0,group_participants=0").Popup(50, $@1voting_wizard$)
+                            }
+                        }
+                        Div(Class: m0 h6 text-muted, Body: #hint#)
+                    }.ElseIf(#buffer_value_type_participants# == 3){
+                        Div(input-group){
+                            Input(Class: mb, Disabled: 1, Value: "$@1voting_one_role_allowed$")
+                            Div(input-group-btn input-group-top){
+                                Button(Class: btn bg-gray-lighter fa fa-undo buttons, Page: #this_page#, PageParams: "stage=4,member_participants=0,role_participants=0,group_participants=0").Popup(50, $@1voting_wizard$)
+                            }
+                        }
+                    }.ElseIf(#buffer_value_type_participants# == 6){
+                        Div(input-group){
+                            Input(Class: mb, Disabled: 1, Value: "$@1voting_one_group_allowed$")
+                            Div(input-group-btn input-group-top){
+                                Button(Class: btn bg-gray-lighter fa fa-undo buttons, Page: #this_page#, PageParams: "stage=4,member_participants=0,role_participants=0,group_participants=0").Popup(50, $@1voting_wizard$)
+                            }
+                        }
+                    }.ElseIf(#buffer_value_type_participants# > 3){
+                        Div(input-group){
+                            Input(Class: mb, Disabled: 1, Value: "$@1voting_all_roles_added$")
+                            Div(input-group-btn input-group-top){
+                                Button(Class: btn bg-gray-lighter fa fa-undo buttons, Page: #this_page#, PageParams: "stage=4,member_participants=0,role_participants=0,group_participants=0").Popup(50, $@1voting_wizard$)
+                            }
+                        }
+                    }.Else{
+                        Div(input-group){
+                            Input(Class: mb, Disabled: 1, Value: "$@1voting_all_keys_added$")
+                            Div(input-group-btn input-group-top){
+                                Button(Class: btn bg-gray-lighter fa fa-undo buttons, Page: #this_page#, PageParams: "stage=4,member_participants=0,role_participants=0,group_participants=0").Popup(50, $@1voting_wizard$)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Button(Class: btn btn-primary pull-right mt-sm fa fa-chevron-right, Page: #this_page#, PageParams: "stage=5", Contract: @1VotingWizardBuffer, Params: "MemberParticipants=#member_participants#,RoleParticipants=#role_participants#,GroupParticipants=#group_participants#").Popup(50, $@1voting_wizard$)
+        Button(Class: btn btn-default pull-right mt-sm fa fa-pause, Page: #back_page#)
+        Button(Class: btn btn-default pull-right mt-sm fa fa-chevron-left, Page: #this_page#, PageParams: "stage=3").Popup(50, $@1voting_wizard$)
+        Div(progress-wrapper pull-right mt-sm mr-sm text-muted){Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square#)Em(Class: #square#)Em(Class: #square#)}
+
+
+    }.ElseIf(Or(#stage# == 5, And(#stage# == 4, #buffer_value_type_participants# == 1))){
+        If(#count_type_voters# == ""){
+            SetVar(count_type_voters, 0)
+        }
+        If(#buffer_value_volume# == ""){
+            SetVar(buffer_value_volume, 51)
+        }
+        If(#buffer_value_rating# == ""){
+            SetVar(buffer_value_rating, "false")
+        }
+        If(And(#buffer_value_type_decision# != 1, #buffer_value_type_decision# != 2)){
+            Div(row){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        LangRes(@1vote_count_type)
+                        Span(*,text-danger)
+                    }
+                }
+                Div(col-md-9 text-left){
+                    Data(type_voters,"id,name"){
+                        0,$@1percent_votes$
+                        1,$@1number_votes$
+                    }
+                    Select(Name: CountTypeVoters, Source: type_voters, NameColumn: name, ValueColumn: id, Value: #buffer_value_count_type_voters#)
+                }
+            }
+        }.Else{
+            Input(Name: CountTypeVoters, Type: hidden, Value: 0)
+        }
+        Div(row mt-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    LangRes(@1voting_quorum)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Div(m0 h6 text-muted){
+                    If(#buffer_value_quorum# != ""){
+                        Input(Name: Quorum, Type: number, Value: #buffer_value_quorum#)
+                    }.Else{
+                        Input(Name: Quorum, Type: number, Value: 30)
+                    }
+                    $@1voting_quorum_desc$
+                }.Show(CountTypeVoters=0)
+                Div(m0 h6 text-muted){
+                    If(#buffer_value_quorum# != ""){
+                        Input(Name: Quorum, Type: number, Value: #buffer_value_quorum#)
+                    }.Else{
+                        Input(Name: Quorum, Type: number, Value: 3)
+                    }
+                    $@1voting_quorum_number_desc$
+                }.Show(CountTypeVoters=1)
+            }
+        }
+        If(#buffer_value_type_participants# != 5){
+            Div(row mt-sm){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        LangRes(@1voting_rating)
+                    }
+                }
+                Div(col-md-9 mt-sm text-left){
+                    Input(Name: rating_switch, Placeholder: $@1voting_rating_desc$, Type: checkbox, Value: #buffer_value_rating#, Class: m0 text-muted)
+                }
+            }
+        }.Else{
+            Input(Name: rating_switch, Type: hidden, Value: "false")
+        }
+        If(And(#buffer_value_type_decision# != 1, #buffer_value_type_decision# != 2)){
+            Div(row mt-sm){
+                Div(col-md-3 mt-sm text-right){
+                    Label(){
+                        LangRes(@1voting_volume)
+                        Span(*,text-danger)
+                    }
+                }
+                Div(col-md-9 text-left){
+                    Input(Name: Volume, Type: number, Value: #buffer_value_volume#)
+                    Div(m0 h6 text-muted){
+                        $@1voting_volume_desc$
+                    }
+                }
+            }.Show(CountTypeVoters=0)
+        }
+        If(#buffer_value_type_participants# == 1){
+            SetVar(previous_stage_button, 3)
+        }.Else{
+            SetVar(previous_stage_button, 4)
+        }
+        Div(){
+            Button(Class: btn btn-primary pull-right mt-sm fa fa-chevron-right, Page: #this_page#, PageParams: "stage=6", Contract: @1VotingWizardBuffer, Params: "Rating=true").Popup(50, $@1voting_wizard$)
+        }.Show(rating_switch=true)
+        Div(){
+            Button(Class: btn btn-primary pull-right mt-sm fa fa-chevron-right, Page: #this_page#, PageParams: "stage=6", Contract: @1VotingWizardBuffer, Params: "Rating=false").Popup(50, $@1voting_wizard$)
+        }.Hide(rating_switch=true)
+        Button(Class: btn btn-default pull-right mt-sm fa fa-pause, Page: #back_page#)
+        Button(Class: btn btn-default pull-right mt-sm fa fa-chevron-left, Page: #this_page#, PageParams: "stage=#previous_stage_button#").Popup(50, $@1voting_wizard$)
+        Div(progress-wrapper pull-right mt-sm mr-sm text-muted){Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square#)Em(Class: #square#)}
+
+
+    }.ElseIf(#stage# == 6){
+        If(#buffer_value_start_time# == ""){
+            SetVar(buffer_value_start_time, "00:00")
+        }
+        If(#buffer_value_end_time# == ""){
+            SetVar(buffer_value_end_time, "00:00")
+        }
+        Div(row){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    LangRes(@1date_start)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Div(row){
+                    Div(col-md-6){
+                        Input(Name: StartDate, Type: date, Value: #buffer_value_start_date#)
+                    }
+                    Div(col-md-6){
+                        Input(Name: StartTime, Type: time, Value: #buffer_value_start_time#)
+                    }
+                }
+            }
+        }
+        Div(row mt-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    LangRes(@1date_end)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Div(row){
+                    Div(col-md-6){
+                        Input(Name: EndDate, Type: date, Value: #buffer_value_end_date#)
+                    }
+                    Div(col-md-6){
+                        Input(Name: EndTime, Type: time, Value: #buffer_value_end_time#)
+                    }
+                }
+            }
+        }
+        Button(Class: btn btn-primary pull-right mt fa fa-chevron-right, Page: #this_page#, PageParams: "stage=7", Contract: @1VotingWizardBuffer).Popup(50, $@1voting_wizard$)
+        Button(Class: btn btn-default pull-right mt fa fa-pause, Page: #back_page#)
+        Button(Class: btn btn-default pull-right mt fa fa-chevron-left, Page: #this_page#, PageParams: "stage=5").Popup(50, $@1voting_wizard$)
+        Div(progress-wrapper pull-right mt mr-sm text-muted){Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square#)}
+
+
+    }.ElseIf(#stage# == 7){
+        Div(row){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    LangRes(@1voting_title)
+                    Span(*,text-danger)
+                }
+            }
+            Div(col-md-9 text-left){
+                Input(Name: Name, Value: "New voting")
+            }
+        }
+        Div(row mt-sm){
+            Div(col-md-3 mt-sm text-right){
+                Label(){
+                    LangRes(@1description)
+                }
+            }
+            Div(col-md-9 text-left){
+                Input(Name: Description, Type: textarea).Style(resize:vertical)
+            }
+        }
+        Input(Name: Type, Type: hidden, Value: 1)
+        Button(Class: btn btn-primary pull-right mt fa fa-play, Page: #back_page#, Contract: @1VotingWizardCreate, Params: "TypeDecision=#buffer_value_type_decision#,CountTypeVoters=#buffer_value_count_type_voters#,TypeParticipants=#buffer_value_type_participants#,MemberParticipants=#buffer_value_member_participants#,RoleParticipants=#buffer_value_role_participants#,GroupParticipants=#buffer_value_group_participants#,Volume=#buffer_value_volume#,Quorum=#buffer_value_quorum#,Rating=#buffer_value_rating#,StartDate=#buffer_value_start_date#,StartTime=#buffer_value_start_time#,EndDate=#buffer_value_end_date#,EndTime=#buffer_value_end_time#,Name=Val(Name),Description=Val(Description),Apply=#buffer_value_apply#,Candidates=#buffer_value_candidates#,RoleId=#buffer_value_role_id#,Vacancies=#buffer_value_vacancies#,ExecuteContract=#buffer_value_execute_contract#,ContractAcceptName=#buffer_value_contract_accept_name#,ContractAcceptParams=#buffer_value_contract_accept_params#,ContractRejectName=#buffer_value_contract_reject_name#,ContractRejectParams=#buffer_value_contract_reject_params#,TextDocument=#buffer_value_text_document#")
+        Button(Class: btn btn-default pull-right mt fa fa-pause, Page: #back_page#)
+        Button(Class: btn btn-default pull-right mt fa fa-chevron-left, Page: #this_page#, PageParams: "stage=6").Popup(50, $@1voting_wizard$)
+        Div(progress-wrapper pull-right mt mr-sm text-muted){Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)Em(Class: #square-filled#)}
+    }
+}.Style(
+    .progress-wrapper{line-height: 33px;}
+    .input-group-top{vertical-align: top;}
+    .buttons{
+        border: 1px solid #dde6e9;
+        padding: 6px 16px;
+    }
+)
+If(#debug# == 1){
+    Div(Class: h6 text-muted){
+        Div(Body: stage = #stage#)
+        Div(Body: type_decision = #buffer_value_type_decision#)
+        Div(Body: type_participants = #buffer_value_type_participants#)
+        Div(Body: count_type_voters = #buffer_value_count_type_voters#)
+        Div(Body: volume = #buffer_value_volume#)
+        Div(Body: quorum = #buffer_value_quorum#)
+        Div(Body: rating = #buffer_value_rating#)
+        Div(Body: start_date = #buffer_value_start_date#)
+        Div(Body: start_time = #buffer_value_start_time#)
+        Div(Body: end_date = #buffer_value_end_date#)
+        Div(Body: end_time = #buffer_value_end_time#)
+        Div(Body: voting_name = #buffer_value_voting_name#)
+        Div(Body: description = #buffer_value_description#)
+
+        Div(Body: member_participants = #buffer_value_member_participants#)
+        Div(Body: role_participants = #buffer_value_role_participants#)
+        Div(Body: group_participants = #buffer_value_group_participants#)
+
+        Div(Body: execute_contract = #buffer_value_execute_contract#)
+        Div(Body: contract_accept_name = #buffer_value_contract_accept_name#)
+        Div(Body: contract_accept_params = #buffer_value_contract_accept_params#)
+        Div(Body: contract_reject_name = #buffer_value_contract_reject_name#)
+        Div(Body: contract_reject_params = #buffer_value_contract_reject_params#)
+
+        Div(Body: text_document = #buffer_value_text_document#)
+
+        Div(Body: candidates = #buffer_value_candidates#)
+        Div(Body: apply = #buffer_value_apply#)
+        Div(Body: role_id = #buffer_value_role_id#)
+        Div(Body: vacancies = #buffer_value_vacancies#)
+    }
+}

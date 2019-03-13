@@ -1,8 +1,8 @@
 contract VotingSubjectCheck {
     data {
-        votingID int
+        VotingId int
     }
-    
+
     func safeJsonToMap(m string) map {
         var res map
         if Size(m) > 0 { res = JSONToMap(m) }
@@ -10,17 +10,17 @@ contract VotingSubjectCheck {
     }
 
     conditions {
-        $voting_map = DBFind("@1votings").Where({ecosystem:$ecosystem_id, id:$votingID}).Columns("id,optional,voting->type,voting->type_decision,flags").Row()
+        $voting_map = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $VotingId}).Columns("id,optional,voting->type,voting->type_decision,flags").Row()
         if !$voting_map {
             warning LangRes("@1voting_not_found", "en")
         }
 
         $type_decision = $voting_map["voting.type_decision"]
-        if $type_decision < 1 || $type_decision > 5 {
+        if $type_decision < 1 || $type_decision > 4 {
             warning LangRes("@1decision_type_invalid", "en")
         }
 
-        $subject_map = DBFind("@1votings_subject").Where({ecosystem:$ecosystem_id, voting_id:$votingID}).Row()
+        $subject_map = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId}).Row()
         if !$subject_map {
             warning LangRes("@1voting_subject_not_found", "en")
         }
@@ -29,7 +29,7 @@ contract VotingSubjectCheck {
     action {
         var flags, subject map
         flags = safeJsonToMap($voting_map["flags"])
-        if $type_decision > 2 && $type_decision <= 5 {
+        if $type_decision > 2 && $type_decision <= 4 {
             subject = safeJsonToMap($subject_map["subject"])
         }
 
@@ -39,7 +39,7 @@ contract VotingSubjectCheck {
             var optional map
             optional = safeJsonToMap($voting_map["optional"])
 
-            if optional["number_candidates"] > 0 && optional["role_vacancies"] > 0 && optional["role_id"] > 0 {
+            if Int(optional["number_candidates"]) > 0 && Int(optional["role_vacancies"]) > 0 && Int(optional["role_id"]) > 0 {
                 fullData = 1
             }
         }
@@ -51,26 +51,14 @@ contract VotingSubjectCheck {
         }
 
         if $type_decision == 4 {
-            if $voting_map["voting.type"] == 1{ // personal
-                if subject["table"] != "" && subject["table_id"] != "" && subject["column"] != "" && subject["column_value"] != "" {
-                    fullData = 1
-                }
-            }
-            if $voting_map["voting.type"] == 2 { // system
-                if subject["column"] != "" && subject["column_value"] != "" {
-                    fullData = 1
-                }
-            }
-        }
-
-        if $type_decision == 5 {
-            if subject["contract_accept"] != "" && subject["contract_reject"] != "" {
+            if subject["contract_accept"] != "" {
                 fullData = 1
             }
         }
 
         if fullData == 1 {
-            DBUpdate("@1votings", $votingID, {"flags->full_data":fullData})
+            DBUpdate("@1votings", $VotingId, {"flags->full_data":fullData})
+            @1VotingStatusUpdate()
         }
     }
 }

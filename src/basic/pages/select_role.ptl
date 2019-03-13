@@ -1,0 +1,63 @@
+SetVar(this_page, @1select_role).(this_table, @1roles).(current_header, $@1roles$).(pager_limit, 10)
+Include(@1pager_header)
+
+If(#page_par#){
+    SetVar(EcosystemId, #page_par#)
+}.Else{
+    SetVar(page_par, #EcosystemId#)
+}
+
+If(#search#){
+    SetVar(where, {"ecosystem": #EcosystemId#, "deleted": 0, "role_name": #search#})
+}.Else{
+    SetVar(where, {"ecosystem": #EcosystemId#, "deleted": 0})
+}
+
+Div(){
+    Form(input-group){
+        Div(input-group-addon){
+            LangRes(@1name)
+        }
+        Input(Name: search, Value: #search#, Placeholder: $@1text_to_search$)
+        Div(input-group-btn){
+            If(#search#!=""){
+                Button(Class: btn bg-gray-lighter fa fa-close mtl buttons, Page: #this_page#, PageParams: "back_page=#back_page#,back_header=#back_header#,parent_back_page=#parent_back_page#,EcosystemId=#EcosystemId#,Id=#Id#").Popup(Header: #current_header#, Width: "50")
+            }
+            Button(Class: btn bg-gray-lighter mtl buttons, Page: #this_page#, PageParams: "back_page=#back_page#,back_header=#back_header#,parent_back_page=#parent_back_page#,EcosystemId=#EcosystemId#,search=Val(search),Id=#Id#", Body: Em(Class: fa fa-search) $@1search$).Popup(Header: #current_header#, Width: "50")
+        }
+    }
+}.Style(
+    .buttons {
+        border: 1px solid #dde6e9;
+    }
+)
+
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_id){
+    Span(Class: h6 text-muted, Body: #id#)
+}.Custom(_name){
+    If(#back_header#!=""){
+        Button(Class: btn-xs btn-link, Page: #back_page#, PageParams: "RoleId=#id#,EcosystemId=#EcosystemId#,Id=#Id#,parent_back_page=#parent_back_page#"){
+            Span(Class: h5 text-bold, Body: #role_name#)
+        }.Popup(Header: #back_header#, Width: 50)
+    }.Else{
+        Button(Class: btn-xs btn-link, Page: #back_page#, PageParams: "RoleId=#id#,EcosystemId=#EcosystemId#,Id=#Id#,parent_back_page=#parent_back_page#"){
+            Span(Class: h5 text-bold, Body: #role_name#)
+        }
+    }
+}.Count(count)
+
+Div(fullscreen){
+    If(#count# > 0){
+        Table(src,"=_name")
+    }.Else{
+        Div(Class: text-center h4 text-muted, Body: "$@1roles$ $@1not_founded$")
+    }
+}
+Div(){
+    Include(@1pager_for_popup)
+    If(#back_header#!=""){
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: #back_page#, PageParams: "EcosystemId=#EcosystemId#,Id=#Id#,parent_back_page=#parent_back_page#").Popup(Header: #back_header#, Width: "50")
+    }.Else{
+        Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: #back_page#, PageParams: "EcosystemId=#EcosystemId#,Id=#Id#,parent_back_page=#parent_back_page#")
+    }
+}
