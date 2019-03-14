@@ -1,0 +1,24 @@
+contract CreditingInstall {
+    data {}
+
+    conditions {}
+
+    action {
+        $role_admin = Int(DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "role_name": "Admin"}).One("id"))
+
+        $role_borrower = Int(DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "role_name": "Borrower"}).One("id"))
+        if $role_borrower == 0 {
+            $role_borrower = RolesCreate("Name,Type", "Borrower", 1)
+        }
+
+        $role_creditor = Int(DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "role_name": "Creditor"}).One("id"))
+        if $role_creditor == 0 {
+            $role_creditor = RolesCreate("Name,Type", "Creditor", 1)
+        }
+
+        $commission_wallet = EcosysParam("founder_account")
+        $commission_wallet = IdToAddress(Int($commission_wallet))
+
+        CreditingSettings("RoleAdmin,RoleBorrower,RoleCreditor,CommissionWallet", $role_admin, $role_borrower, $role_creditor, $commission_wallet)
+    }
+}
