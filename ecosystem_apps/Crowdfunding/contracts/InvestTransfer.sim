@@ -1,0 +1,38 @@
+contract InvestTransfer {
+    data {
+        RowId int
+        Action string
+        Summ money "optional"
+    }
+    conditions {
+
+    }
+    action {
+        var s map
+        if $Action == "Invest" {
+            s["+deposit"] = $Summ
+            DBUpdate("@1keys",$key_id,s)
+        }
+        if $Action == "Finished" {
+            $check_startup = DBFind("@1startups").WhereId($RowId).Columns("id,creator,creator->member_id,status").Row()
+            var participants array i int req d s map
+            participants = DBFind("@1investment_participants").Where({"startup_id":$RowId})
+            if Int($check_startup["status"]) == 2 {
+                while i < Len(participants) { 
+                    req = participants[i]
+                    @1TokensTransfer("Amount,SenderId,RecipientId",Money(req["amount"]),Int(req["member_id"]),Int($check_startup["creator.member_id"]))
+                    d["-deposit"] = Money(req["amount"])
+                    DBUpdate("@1keys",Int(req["member_id"]),d) 
+                    i = i + 1
+                }
+            } else {
+                while i < Len(participants) { 
+                    req = participants[i]
+                    d["-deposit"] = Money(req["amount"])
+                    DBUpdate("@1keys",Int(req["member_id"]),d) 
+                    i = i + 1
+                }
+            }
+        }
+    }
+}

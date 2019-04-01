@@ -1,0 +1,44 @@
+contract StartupsStatusUpdate {
+    data {
+
+    }
+    func changeStatus(from, to map) {
+        var requests array i int req map
+        requests = DBFind("@1startups").Where(from)
+        if to["status"] == 1 {
+            while i < Len(requests) {
+                req = requests[i]
+                DBUpdate("@1startups", Int(req["id"]), to)
+                i = i + 1
+            }
+        }
+        if to["status"] == 2 {
+            while i < Len(requests) {
+                var check_st map
+                req = requests[i]
+                check_st = DBFind("@1startups").WhereId(Int(req["id"])).Row()
+                if Money(check_st["collected_amount"]) >= Money(check_st["required_amount"]) {
+                    DBUpdate("@1startups", Int(req["id"]), to)
+                    @1InvestTransfer("Action,RowId","Finished",Int(req["id"]))
+                } else {
+                    to["status"] = 3
+                    DBUpdate("@1startups", Int(req["id"]), to)
+                    @1InvestTransfer("Action,RowId","Finished",Int(req["id"]))
+                }
+                i = i + 1
+            }
+        }
+    }
+    conditions {
+        $WAITING = 0
+        $START = 1
+        $FINISHED = 2
+    }
+    action {
+          //setting status $START
+        changeStatus({"status": $WAITING, "deleted": 0, "date_started": {"$lte": $block_time}}, {"status": $START})
+
+        //setting status $FINISHED
+        changeStatus({"status": $START, "deleted": 0, "date_ended": {"$lte": $block_time}}, {"status": $FINISHED})
+    }
+}

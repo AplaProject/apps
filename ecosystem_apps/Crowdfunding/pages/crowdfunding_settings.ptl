@@ -1,0 +1,83 @@
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Crowdfunding"}).Vars("app")
+DBFind("@1roles", src_roles).Where({"ecosystem": #ecosystem_id#, "deleted": 0}).Columns("role_name,id").Limit(100)
+SetVar(row,"row mt-sm").(col_left,"col-sm-4 text-right mt-sm").(col_right,"col-sm-8 text-left")
+
+SetVar(this_page, "crowdfunding_settings").(role_admin,0).(role_startup,0).(role_investor,0)
+SetVar(role_admin, AppParam(App: #app_id#, Name: "crowdfunding_admin_role"))
+SetVar(role_startup, AppParam(App: #app_id#, Name: "crowdfunding_startup_role"))
+SetVar(role_investor, AppParam(App: #app_id#, Name: "crowdfunding_investor_role"))
+
+Div(content-wrapper){
+    Div(row){
+        Div(col-lg-6 col-lg-offset-3 col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1){
+            Form(panel panel-primary){
+                Div(panel-body){
+                    Div(text-center text-bold h4 m0){
+                        LangRes(@1crowdfunding_settings)
+                    }
+                    Div(text-center text-muted){
+                        
+                        LangRes(@1crowdfunding_settings_description)
+                    }
+                    Div(row mt-lg){
+                        Div(#col_left#){
+                            Label(){
+                                "Admin"
+                            }
+                        }
+                        Div(#col_right#){
+                            Select(Name: RoleAdmin, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #role_admin#)
+                            Div(m0 h6 text-muted){
+                                SetVar(r_name, $@1role_not_found$)
+                                If(#role_admin# > 0){
+                                    DBFind("@1roles").Where({"ecosystem": #ecosystem_id#, "id": #role_admin#}).Columns("role_name").Vars(r)
+                                    SetVar(r_name, #r_role_name#)
+                                }
+                                LangRes(@1current_value): #r_name#
+                            }
+                        }
+                    }
+                    Div(#row#){
+                        Div(#col_left#){
+                            Label(){
+                                "Startup"
+                            }
+                        }
+                        Div(#col_right#){
+                            Select(Name: RoleStartup, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #role_startup#)
+                            Div(m0 h6 text-muted){
+                                SetVar(r_name, $@1role_not_found$)
+                                If(#role_startup# > 0){
+                                    DBFind("@1roles").Where({"ecosystem": #ecosystem_id#, "id": #role_startup#}).Columns("role_name").Vars(r)
+                                    SetVar(r_name, #r_role_name#)
+                                }
+                                LangRes(@1current_value): #r_name#
+                            }
+                        }
+                    }
+                    Div(#row#){
+                        Div(#col_left#){
+                            Label(){
+                                "Investor"
+                            }
+                        }
+                        Div(#col_right#){
+                            Select(Name: RoleInvestor, Source: src_roles, NameColumn: role_name, ValueColumn: id, Value: #role_investor#)
+                            Div(m0 h6 text-muted){
+                                SetVar(r_name, $@1role_not_found$)
+                                If(#role_investor# > 0){
+                                    DBFind("@1roles").Where({"ecosystem": #ecosystem_id#, "id": #role_investor#}).Columns("role_name").Vars(r)
+                                    SetVar(r_name, #r_role_name#)
+                                }
+                                LangRes(@1current_value): #r_name#
+                            }
+                        }
+                    }
+                }
+                Div(panel-footer text-right){
+                    Button(Body: $@1apply_settings$, Class: btn btn-primary, Page: #this_page#, Contract: @1CrowdfundingSettings)
+                }
+            }
+        }
+    }
+}
