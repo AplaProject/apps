@@ -10,8 +10,7 @@ contract InvestTransfer {
     action {
         var s map
         if $Action == "Invest" {
-            s["+deposit"] = $Summ
-            DBUpdate("@1keys",$key_id,s)
+            @1TokensIncDeposit("Amount",$Summ)
         }
         if $Action == "Finished" {
             $check_startup = DBFind("@1startups").WhereId($RowId).Columns("id,creator,creator->member_id,status").Row()
@@ -21,15 +20,13 @@ contract InvestTransfer {
                 while i < Len(participants) { 
                     req = participants[i]
                     @1TokensTransfer("Amount,SenderId,RecipientId",Money(req["amount"]),Int(req["member_id"]),Int($check_startup["creator.member_id"]))
-                    d["-deposit"] = Money(req["amount"])
-                    DBUpdate("@1keys",Int(req["member_id"]),d) 
+                    @1TokensDecDeposit("MemberId,Amount",Int(req["member_id"]),Money(req["amount"]))
                     i = i + 1
                 }
             } else {
                 while i < Len(participants) { 
                     req = participants[i]
-                    d["-deposit"] = Money(req["amount"])
-                    DBUpdate("@1keys",Int(req["member_id"]),d) 
+                    @1TokensDecDeposit("MemberId,Amount",Int(req["member_id"]),Money(req["amount"]))
                     i = i + 1
                 }
             }

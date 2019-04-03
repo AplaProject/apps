@@ -65,26 +65,30 @@ If(#global_access# == 1){
     }
 
     DBFind(#this_table#,Source: src_start).Columns("id,informations,informations->name,informations->description,informations->link,date_started,date_ended,required_amount,min_investment,share_capital,ecosystem,deleted,creator,creator->member_address,creator->member_name,creator->member_id,status,date_created").Where(#where#).Offset(#pager_offset#).Limit(#pager_limit#).Custom(_name){
-        Span(Body: #informations.name#)
-    }.Custom(_creator){
-        If(#creator.member_name# == ""){
-            LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
-                Span(Body: #creator.member_address#)
+        Div(button-group text-nowrap){
+            Button(Class: btn bg-gray-lighter ml-sm buttons, Page: @1startup_view,PageParams: "stid=#id#,back_page=#this_page#"){
+                Em(Class: text-primary fa fa-1x fa-info)
+                Span(Class: text-primary ml-sm, Body: #informations.name#)
             }
-        }.Else{
-            Div(Class: row){
-                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
-                    Span(Body: #creator.member_name#)
+        }.Style(
+            .buttons{border: 1px solid #dde6e9;}
+        )
+    }.Custom(_creator){ 
+        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
+            Div(){
+                Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                Span(){
+                    If(#creator.member_name# == ""){
+                        Span(Body: #creator.member_address#)
+                    }.Else{
+                        Span(Body: #creator.member_name#)
+                    }
                 }
-            }
-            Div(Class: row){
-                Span(Class: text-muted h5,Body: #creator.member_address#)
-            }
-        }
-    }.Custom(_date_start){
-        DateTime(DateTime: #date_started#, Format: HH:MI DD.MM.YYYY)
-    }.Custom(_date_end){
-        DateTime(DateTime: #date_ended#, Format: HH:MI DD.MM.YYYY)
+            }.Style(display:flex; align-items:center;)  
+        }  
+    }.Custom(_date){
+        P(Class: h6 m0, Body: DateTime(DateTime: #date_started#, Format: HH:MI DD.MM.YYYY))
+        P(Class: h6 m0, Body: DateTime(DateTime: #date_ended#, Format: HH:MI DD.MM.YYYY))
     }.Custom(req_amount){
         Span(Body: Money(#required_amount#))
     }.Custom(min_amount){
@@ -100,17 +104,7 @@ If(#global_access# == 1){
                         Em(Class: text-danger fa fa-1x fa-trash)
                     }.Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
                 }
-                Button(Class: btn bg-gray-lighter mh-sm, Page: @1startup_view,PageParams: "stid=#id#,back_page=#this_page#"){
-                    Em(Class: text-default fa fa-1x icon-eye)
-                }
-            }.ElseIf(#investor_access_id# > 0){
-                Button(Class: btn bg-gray-lighter, Page: @1startup_view,PageParams: "stid=#id#,back_page=#this_page#"){
-                    Em(Class: text-default fa fa-1x icon-eye)
-                }
             }.ElseIf(#admin_access_id# > 0){
-                Button(Class: btn bg-gray-lighter mh-sm, Page: @1startup_view,PageParams: "stid=#id#,back_page=#this_page#"){
-                    Em(Class: text-default fa fa-1x icon-eye)
-                }
                 If(And(#status# < 2,#status# != -1)){
                     Button(Class: btn bg-gray-lighter, Contract: @1CreateStartup, Params: "StId=#id#,Action=delete", Page: @1startup_list){
                         Em(Class: text-danger fa fa-1x fa-trash)
@@ -138,7 +132,7 @@ If(#global_access# == 1){
         Div(table-responsive ml-lg mr-lg){
             Div(list-group-item){
                 If(#check_comp# > 0){
-                    Table(Source: src_start,Columns: "$@1name$=_name,$@1creator$=_creator,$@1date_start$=_date_start,$@1date_end$=_date_end,$@1date_created$=_date_created,$@1required_amount$=req_amount,$@1min_investment$=min_amount,$@1share_capital$=share_capital,$@1status$=_status,=_edit")
+                    Table(Source: src_start,Columns: "$@1name$=_name,$@1creator$=_creator,$@1date_start$ / $@1date_end$=_date,$@1date_created$=_date_created,$@1required_amount$=req_amount,$@1min_investment$=min_amount,$@1share_capital$=share_capital,$@1status$=_status,=_edit")
                 }.Else{
                     Div(Class: text-center h4 text-muted, Body: $@1startups_not_found$)
                 }
