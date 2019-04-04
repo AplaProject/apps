@@ -42,11 +42,11 @@ If(#global_access# == 1){
         Include(@1search)
     }
 
-    If(GetVar(search)){
+    If(#search#){
         If(#startup_access_id# > 0){
-            SetVar(where, {"deleted":0,#type_filter#,"creator->member_id":#key_id#,"informations->name": {"$ilike": "#search#"}})
+            SetVar(where, {"deleted":0, #type_filter#, "informations->name": {"$ilike": "#search#"}})
         }.ElseIf(#investor_access_id# > 0){
-            SetVar(where, {"deleted":0,#type_filter#,"informations->name": {"$ilike": "#search#"}})
+            SetVar(where, {"deleted":0, #type_filter#, "informations->name": {"$ilike": "#search#"}})
         }.ElseIf(#admin_access_id# > 0){
             SetVar(where, {#type_filter#,"informations->name": {"$ilike": "#search#"}})
         }.Else{
@@ -54,9 +54,9 @@ If(#global_access# == 1){
         }
     }.Else{
         If(#startup_access_id# > 0){
-            SetVar(where, {"deleted":0,#type_filter#,"creator->member_id":#key_id#})
+            SetVar(where, {#type_filter#, "deleted":0})
         }.ElseIf(#investor_access_id# > 0){
-            SetVar(where, {"deleted":0,#type_filter#})
+            SetVar(where, {#type_filter#, "deleted":0})
         }.ElseIf(#admin_access_id# > 0){
             SetVar(where, {#type_filter#})
         }.Else{
@@ -66,13 +66,10 @@ If(#global_access# == 1){
 
     DBFind(#this_table#,Source: src_start).Columns("id,informations,informations->name,informations->description,informations->link,date_started,date_ended,required_amount,min_investment,share_capital,ecosystem,deleted,creator,creator->member_address,creator->member_name,creator->member_id,status,date_created").Where(#where#).Offset(#pager_offset#).Limit(#pager_limit#).Custom(_name){
         Div(button-group text-nowrap){
-            Button(Class: btn bg-gray-lighter ml-sm buttons, Page: @1startup_view,PageParams: "stid=#id#,back_page=#this_page#"){
-                Em(Class: text-primary fa fa-1x fa-info)
+            LinkPage(Class: text-primary h5 text-bold, Page: @1startup_view,PageParams: "stid=#id#,back_page=#this_page#"){
                 Span(Class: text-primary ml-sm, Body: #informations.name#)
             }
-        }.Style(
-            .buttons{border: 1px solid #dde6e9;}
-        )
+        }
     }.Custom(_creator){ 
         LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
             Div(){
@@ -97,21 +94,23 @@ If(#global_access# == 1){
         Div(pull-right){
             If(And(#startup_access_id# > 0,#creator.member_id# == #key_id#)){
                 If(#status# == 0){
-                    Button(Class: btn bg-gray-lighter mh-sm, PageParams: "stid=#id#,back_page=#this_page#", Page: @1create_startup){
+                    Button(Class: btn bg-gray-lighter mh-sm buttons, PageParams: "stid=#id#,back_page=#this_page#", Page: @1create_startup){
                         Em(Class: text-default fa fa-1x fa-edit)
                     }.Popup(50, $@1edit$)
-                    Button(Class: btn bg-gray-lighter mh-sm, Contract: @1CreateStartup, Params: "StId=#id#,Action=delete", Page: @1startup_list){
+                    Button(Class: btn bg-gray-lighter mh-sm buttons, Contract: @1CreateStartup, Params: "StId=#id#,Action=delete", Page: @1startup_list){
                         Em(Class: text-danger fa fa-1x fa-trash)
                     }.Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
                 }
             }.ElseIf(#admin_access_id# > 0){
                 If(And(#status# < 2,#status# != -1)){
-                    Button(Class: btn bg-gray-lighter, Contract: @1CreateStartup, Params: "StId=#id#,Action=delete", Page: @1startup_list){
+                    Button(Class: btn bg-gray-lighter buttons, Contract: @1CreateStartup, Params: "StId=#id#,Action=delete", Page: @1startup_list){
                         Em(Class: text-danger fa fa-1x fa-trash)
                     }.Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
                 }
             }
-        }
+        }.Style(
+            .buttons{border: 1px solid #dde6e9;}
+        )
     }.Custom(_status){
         If(#status# == 0){
             Span(Class:text-warning,Body: $@1waiting$)
@@ -132,7 +131,7 @@ If(#global_access# == 1){
         Div(table-responsive ml-lg mr-lg){
             Div(list-group-item){
                 If(#check_comp# > 0){
-                    Table(Source: src_start,Columns: "$@1name$=_name,$@1creator$=_creator,$@1date_start$ / $@1date_end$=_date,$@1date_created$=_date_created,$@1required_amount$=req_amount,$@1min_investment$=min_amount,$@1share_capital$=share_capital,$@1status$=_status,=_edit")
+                    Table(Source: src_start,Columns: "$@1name$=_name,$@1date_start$ / $@1date_end$=_date,$@1required_amount$=req_amount,$@1min_investment$=min_amount,$@1share_capital$=share_capital,$@1creator$=_creator,$@1date_created$=_date_created,$@1status$=_status,=_edit")
                 }.Else{
                     Div(Class: text-center h4 text-muted, Body: $@1startups_not_found$)
                 }
