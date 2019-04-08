@@ -13,6 +13,7 @@ contract CreateStartup {
         Action string "optional"
         StId int "optional"
     }
+
     func trimZeroTime(s string) string {
         if Contains(s, "T00:00:00Z") {
             s = Replace(s, "T00:00:00Z", "")
@@ -51,7 +52,7 @@ contract CreateStartup {
                 if Size($EndTime) < 5 {
                     errs = Append(errs, "ending time")
                 }
-                warning Sprintf(LangRes("@1voting_creation_error_x_unspecified", "en"), Join(errs, ", "))
+                warning Sprintf(LangRes("@1startup_creation_error_x_unspecified", "en"), Join(errs, ", "))
             } else {
                 $date_started = $block_time
                 $Interval = Int($Interval)
@@ -68,25 +69,16 @@ contract CreateStartup {
             warning LangRes("@1ending_date_invalid", "en")
         }
     }
+
     conditions {
-        if $Action == "delete" {
-            $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Crowdfunding"}).One("id")
-            $check_access = AppParam(Int($app), "crowdfunding_startup_role", $ecosystem_id)
-            $check_access_admin = AppParam(Int($app), "crowdfunding_admin_role", $ecosystem_id)
-            var rids array
-            rids = JSONDecode("["+$check_access+","+$check_access_admin+"]")
-            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
-                warning LangRes("@1access_denied", "en")
-            }
-        } else {
-            $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Crowdfunding"}).One("id")
-            $check_access = AppParam(Int($app), "crowdfunding_startup_role", $ecosystem_id)
-            var rids array
-            rids = JSONDecode("["+$check_access+"]")
-            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
-                warning LangRes("@1access_denied", "en")
-            }
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Crowdfunding"}).One("id")
+        $check_access = AppParam(Int($app), "crowdfunding_startup_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+$check_access+"]")
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+            warning LangRes("@1access_denied", "en")
         }
+
         if !$StartupName {
             warning LangRes("@1empty_name", "en")
         }
@@ -111,54 +103,36 @@ contract CreateStartup {
             fixDatetimes()
         }
     }
-    action {
-        if $Action == "delete" {
-            var m map
-            m["deleted"] = 1
-            m["status"] = -1
-            if $startup["status"] == 1 && Money($startup["collected_amount"]) > 0 {
-                var participants array i int
-                participants = DBFind("@1investment_participants").Where({"startup_id": $StId, "ecosystem_id": $ecosystem_id}).Columns("id")
-                while i < Len(participants) {
-                    var p map
-                    p = participants[i]
-                    @1InvestTransfer("RowId", Int(p["id"]))
-                    i = i + 1
-                }
-                DBUpdate("@1startups",$StId,m)
-            } else {
-                DBUpdate("@1startups",$StId,m)
-            }
+
+    action { 
+        var information creator m map
+        information["name"] = $StartupName
+        information["description"] = $Description
+        information["link"] = $SiteLink
+
+        $member_name = DBFind("@1members").WhereId($key_id).One("member_name")
+        creator["member_id"] = $key_id
+        if $member_name {
+            creator["member_name"] = $member_name
         } else {
-            var information creator m map
-            information["name"] = $StartupName
-            information["description"] = $Description
-            information["link"] = $SiteLink
-
-            $member_name = DBFind("@1members").WhereId($key_id).One("member_name")
-            creator["member_id"] = $key_id
-            if $member_name {
-                creator["member_name"] = $member_name
-            } else {
-                creator["member_name"] = IdToAddress($key_id)
-            }
-            creator["member_address"] = IdToAddress($key_id)
-
-            m["informations"] = information
-            m["creator"] = creator
-            m["date_started"] = $date_started
-            m["date_ended"] = $date_ended
-            m["required_amount"] = $RequiredAmount
-            m["min_investment"] = $MinAmount
-            m["share_capital"] = $ShareCapital
-            m["ecosystem"] = $ecosystem_id
-            if $Action == "edit" {
-                DBUpdate("@1startups",$StId,m)
-            } else {
-                m["date_created"] = $block_time
-                DBInsert("@1startups",m)
-            }
+            creator["member_name"] = IdToAddress($key_id)
         }
-  
+        creator["member_address"] = IdToAddress($key_id)
+
+        m["informations"] = information
+        m["creator"] = creator
+        m["date_started"] = $date_started
+        m["date_ended"] = $date_ended
+        m["required_amount"] = $RequiredAmount
+        m["min_investment"] = $MinAmount
+        m["share_capital"] = $ShareCapital
+        m["ecosystem"] = $ecosystem_id
+        
+        if $Action == "edit" {
+            DBUpdate("@1startups",$StId,m)
+        } else {
+            m["date_created"] = $block_time
+            DBInsert("@1startups",m)
+        }
     }
 }
