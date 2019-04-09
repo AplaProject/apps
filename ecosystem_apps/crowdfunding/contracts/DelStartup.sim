@@ -15,24 +15,16 @@ contract DelStartup {
             }
         }  
     }
-    
+
     action {
         $startup = DBFind("@1startups").WhereId($StId).Row()
+        if $startup["status"] == 1 && Money($startup["collected_amount"]) > 0 {
+            @1InvestTransfer("RowId,Action", $StId, "Finished")
+        }
+
         var m map
         m["deleted"] = 1
         m["status"] = -1
-        if $startup["status"] == 1 && Money($startup["collected_amount"]) > 0 {
-            var participants array i int
-            participants = DBFind("@1investment_participants").Where({"startup_id": $StId, "ecosystem_id": $ecosystem_id}).Columns("id")
-            while i < Len(participants) {
-                var p map
-                p = participants[i]
-                @1InvestTransfer("RowId", Int(p["id"]))
-                i = i + 1
-            }
-            DBUpdate("@1startups",$StId,m)
-        } else {
-            DBUpdate("@1startups",$StId,m)
-        }
+        DBUpdate("@1startups", $StId, m)
     }
 }
