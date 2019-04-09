@@ -1,0 +1,42 @@
+contract InvestStartup {
+    data {
+        StartupId int
+        Invest money
+    }
+
+    conditions {
+        $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Crowdfunding"}).One("id")
+        $check_access = AppParam(Int($app), "crowdfunding_investor_role", $ecosystem_id)
+        var rids array
+        rids = JSONDecode("["+$check_access+"]")
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+            warning LangRes("@1access_denied", "en")
+        }
+
+        $info_startup= DBFind("@1startups").WhereId($StartupId).Row()
+        if Money($info_startup["min_investment"]) > Money($Invest) {
+            warning LangRes("@1less_investment", "en")
+        }
+    }
+
+    action { 
+        var m t map
+        m["member_id"] = $key_id
+        m["ecosystem_id"] = $ecosystem_id
+        m["startup_id"] = $StartupId
+        m["amount"] = $Invest
+        m["investment_date"] = $block_time
+        
+        @1InvestTransfer("Action,RowId,Summ","Invest",$StartupId,$Invest)
+        
+        t["+collected_amount"] = $Invest
+        var percent invested summ int
+        summ = Money($info_startup["required_amount"]) / Money(1000000000000000000)
+        invested = (Money($info_startup["collected_amount"]) + Money($Invest)) / Money(1000000000000000000)
+        percent = (Money(invested)*Money(100))/Money(summ)
+        t["collected_percent"] = percent
+
+        DBInsert("@1investment_participants",m)
+        DBUpdate("@1startups",$StartupId,t)
+    }
+}

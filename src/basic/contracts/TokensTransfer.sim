@@ -20,7 +20,7 @@ contract TokensTransfer {
 
     func getPermission() {
         var array_permissions array result i int prevContract string
-        array_permissions = ["@1TokensSend", "@1PoaTokensSend", "@1TokensRefundAccept", "@1ExCancel", "@1ExCancelOrder","@1ExCancelOrders", "@1ExMatching", "@1ExMatchingOTC", "@1ExOrder"]
+        array_permissions = ["@1TokensSend", "@1PoaTokensSend", "@1TokensRefundAccept", "@1ExCancel", "@1ExCancelOrder","@1ExCancelOrders", "@1ExMatching", "@1ExMatchingOTC", "@1ExOrder", "@1InvestTransfer"]
 
         prevContract = $stack[0]
         if Len($stack) > 2 {
@@ -41,7 +41,7 @@ contract TokensTransfer {
     }
 
     func checkSender() {
-        var sender_map map
+        var sender_map map check_dep money
         sender_map = DBFind("@1keys").Where({"id": $SenderId, "ecosystem": $e_id}).Row()
 
         if !sender_map {
@@ -54,6 +54,10 @@ contract TokensTransfer {
             warning LangRes("@1sender_deleted", "en")
         }
         if Money(sender_map["amount"]) < $Amount {
+            warning LangRes("@1amount_less_than_needed", "en")
+        }
+        check_dep = Money(sender_map["amount"]) - Money(sender_map["deposit"])
+        if Money(check_dep) < $Amount {
             warning LangRes("@1amount_less_than_needed", "en")
         }
     }
