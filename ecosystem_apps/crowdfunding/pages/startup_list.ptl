@@ -1,0 +1,165 @@
+SetVar(this_page, @1startup_list).(this_table, @1startups)
+Include(@1pager_header)
+
+SetTitle(Startups list)
+
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Crowdfunding"}).Vars(application)
+SetVar(admin_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crowdfunding_admin_role))
+SetVar(startup_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crowdfunding_startup_role))
+SetVar(investor_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crowdfunding_investor_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#startup_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(startup_access)
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#investor_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(investor_access)
+
+If(#page_par#==0){
+    SetVar(type_filter, {"status": 0})
+}.ElseIf(#page_par#==1){
+    SetVar(type_filter, {"status": 1})
+}.ElseIf(#page_par#==2){
+    SetVar(type_filter, {"status": {"$gte": 2}})
+}.ElseIf(#page_par#==-1){
+    SetVar(type_filter, {"status": -1})
+}
+
+If(#startup_access_id# > 0){
+    AddToolButton(Title: $@1create$, Page: create_startup, Icon: icon-plus, PageParams: "back_page = #this_page#").Popup(50, "New startup")
+}
+If(Or(#startup_access_id# > 0,#admin_access_id# > 0, #investor_access_id# > 0)){
+    SetVar(global_access,1)
+}
+If(#global_access# == 1){
+    Div(mr-lg text-right){
+        If(#admin_access_id# > 0){
+            Button(Body: Em(Class: fa fa-refresh) $@1update_statuses$, Class: btn bg-gray mr-lg, Page: #this_page#, Contract: @1StartupsStatusUpdate)
+        }
+        Button(Page: startup_filter, Class: btn bg-gray-lighter mr-sm, PageParams: "page_par=#page_par#,search=#search#,back_page=#this_page#", Body: Em(Class: fa fa-filter) $@1filter$).Popup(Header: $@1filter$, Width: "30")
+        If(#type_filter#){
+            Button(Page: #this_page#, PageParams: "page_par=NULL,search=#search#", Class: btn bg-gray-lighter mr-sm, Body: Em(Class: fa fa-close))
+        }
+    }
+    Div(list-group-item ml-lg mr-lg pt-lg){
+        SetVar(search_name, LangRes(@1name)).(search, #search#)
+        Include(@1search)
+    }
+
+    If(#search#){
+        If(#startup_access_id# > 0){
+            SetVar(where, {"deleted":0, #type_filter#, "informations->name": {"$ilike": "#search#"}})
+        }.ElseIf(#investor_access_id# > 0){
+            SetVar(where, {"deleted":0, #type_filter#, "informations->name": {"$ilike": "#search#"}})
+        }.ElseIf(#admin_access_id# > 0){
+            SetVar(where, {#type_filter#,"informations->name": {"$ilike": "#search#"}})
+        }.Else{
+            SetVar(where, {"status":10})
+        }
+    }.Else{
+        If(#startup_access_id# > 0){
+            SetVar(where, {#type_filter#, "deleted":0})
+        }.ElseIf(#investor_access_id# > 0){
+            SetVar(where, {#type_filter#, "deleted":0})
+        }.ElseIf(#admin_access_id# > 0){
+            SetVar(where, {#type_filter#})
+        }.Else{
+            SetVar(where, {"status":10})
+        }
+    }
+
+    DBFind(#this_table#,Source: src_start).Columns("id,collected_amount,informations,informations->name,informations->description,informations->link,date_started,date_ended,required_amount,min_investment,share_capital,ecosystem,deleted,creator,creator->member_address,creator->member_name,creator->member_id,status,date_created,collected_percent").Where(#where#).Offset(#pager_offset#).Limit(#pager_limit#).Custom(_name){
+        Div(button-group text-nowrap){
+            LinkPage(Class: text-primary h5 text-bold, Page: @1startup_view, PageParams: "stid=#id#,back_page=#this_page#"){
+                Span(Class: text-primary ml-sm, Body: #informations.name#)
+            }
+        }
+    }.Custom(_creator){ 
+        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
+            Div(){
+                Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                Span(){
+                    If(#creator.member_name# == ""){
+                        Span(Body: #creator.member_address#)
+                    }.Else{
+                        Span(Body: #creator.member_name#)
+                    }
+                }
+            }.Style(display:flex; align-items:center;)  
+        }  
+    }.Custom(_collected){
+        If(#status# > 0){
+            If(#collected_percent# > 0){
+                Span(Class: h5 text-bold, Body: #collected_percent# %)
+            }.Else{
+                Span(Class: h5 text-bold, Body: 0 %) 
+            }
+        }.Else{
+            Span(Class: h5 text-bold, Body: 0 %)
+        }
+    }.Custom(_date){
+        P(Class: h6 m0, Body: DateTime(DateTime: #date_started#, Format: HH:MI DD.MM.YYYY))
+        P(Class: h6 m0, Body: DateTime(DateTime: #date_ended#, Format: HH:MI DD.MM.YYYY))
+    }.Custom(req_amount){
+        Span(Class: text-bold, Body: Money(#required_amount#) APLA)
+    }.Custom(min_amount){
+        Span(Body: Money(#min_investment#))
+    }.Custom(_edit){
+        Div(pull-right){
+            If(And(#startup_access_id# > 0,#creator.member_id# == #key_id#)){
+                If(#status# == 0){
+                    Button(Class: btn bg-gray-lighter mh-sm buttons, PageParams: "stid=#id#,back_page=#this_page#", Page: @1create_startup){
+                        Em(Class: text-default fa fa-1x fa-edit)
+                    }.Popup(50, $@1edit$)
+                    Button(Class: btn bg-gray-lighter mh-sm buttons, Contract: @1DelStartup, Params: "StId=#id#", Page: @1startup_list){
+                        Em(Class: text-danger fa fa-1x fa-trash)
+                    }.Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                }
+            }.ElseIf(#admin_access_id# > 0){
+                If(And(#status# < 2,#status# != -1)){
+                    Button(Class: btn bg-gray-lighter buttons, Contract: @1DelStartup, Params: "StId=#id#", Page: @1startup_list){
+                        Em(Class: text-danger fa fa-1x fa-trash)
+                    }.Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
+                }
+            }
+        }.Style(
+            .buttons{border: 1px solid #dde6e9;}
+        )
+    }.Custom(_status){
+        If(#status# == 0){
+            Span(Class: text-warning, Body: $@1waiting$)
+        }.ElseIf(#status# == 1){
+            Span(Class: text-primary, Body: $@1started$)
+        }.ElseIf(#status# == 2){
+            Span(Class: text-success, Body: $@1finished$)
+        }.ElseIf(#status# == 3){
+            Span(Class: text-danger, Body: $@1finished$)
+        }.ElseIf(#status# == -1){
+            Span(Class: text-danger, Body: $@1deleted$)
+        }
+    }.Custom(_date_created){
+        P(Class: h6 m0, Body: DateTime(DateTime: #date_created#, Format: HH:MI DD.MM.YYYY))
+    }.Order({"status": "-1","date_started": "-1"}).Count(check_comp)
+
+    Div(fullscreen){
+        Div(table-responsive ml-lg mr-lg){
+            Div(list-group-item){
+                If(#check_comp# > 0){
+                    Table(Source: src_start, Columns: "$@1name$=_name,$@1required_amount$=req_amount,$@1creator$=_creator,$@1date_start$ / $@1date_end$=_date,$@1date_created$=_date_created,$@1collected_funds$=_collected,$@1status$=_status,=_edit")
+                }.Else{
+                    Div(Class: text-center h4 text-muted, Body: $@1startups_not_found$)
+                }
+            }.Style(
+                margin-top:-15px;
+                tbody > tr:nth-of-type(odd) {
+                    background-color: #f8f9fc;
+                }
+            )
+        }
+    }
+    Div(mt-sm ml-lg mr-sm mb-sm){
+        Include(@1pager)
+    }
+}.Else{
+    Div(row ml-lg mr-lg){
+        Div(md-12 alert h4 text-bold text-center){
+            Span(Body: LangRes(startup_attention))
+        }
+    }
+}

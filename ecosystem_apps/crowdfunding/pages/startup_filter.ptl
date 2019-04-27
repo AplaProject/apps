@@ -1,0 +1,31 @@
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Crowdfunding"}).Vars(application)
+SetVar(admin_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crowdfunding_admin_role))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+
+If(#admin_access_id# > 0){
+    Data(type_status, "value,name"){
+        -1,$@1deleted$
+        0,$@1waiting$
+        1,$@1started$
+        2,$@1finished$
+    }
+}.Else{
+    Data(type_status, "value,name"){
+        0,$@1waiting$
+        1,$@1started$
+        2,$@1finished$
+    }
+}
+Form(text-center){
+    Label(Class: m0){
+        Span(Body: LangRes(startup_filter_desc))
+    }
+    Div(row text-left){
+        Div(col-md-5){}
+        Div(col-md-7){
+            RadioGroup(Name: Filter, Source: type_status, NameColumn: name, ValueColumn: value)
+        }
+    }
+    Button(Body: LangRes(@1filter), Class: btn btn-primary pull-right, Page: #back_page#, PageParams: "page_par=Val(Filter),search=#search#")
+    Button(Body: LangRes(@1clear), Class: btn btn-default pull-right, Page: #back_page#, PageParams: "page_par=NULL,search=#search#")
+}
