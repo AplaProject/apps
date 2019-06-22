@@ -2,22 +2,19 @@ contract NewUser {
     data {
         NewPubkey string
     }
-
     conditions {
-        $newId = PubToID($NewPubkey)
-        if $newId == 0 {
-            warning LangRes("@1wrong_pub", "en")
+        $id = PubToID($NewPubkey)
+        if $id == 0 {
+            error LangRes("@1wrong_pub", "en")
         }
-        if DBFind("@1keys").Columns("id").Where({"id": $newId, "ecosystem": $ecosystem_id}).One("id") != nil {
-            warning LangRes("@1template_user_exists", "en")
+        if DBFind("keys").Columns("id").WhereId($id).One("id") != nil {
+            error LangRes("@1template_user_exists", "en")
         }
-
-        $amount = Money(1000) * Money(1000000000000000000)
     }
-
     action {
-        NewMoney($newId, Str($amount), "New user deposit")
-        SetPubKey($newId, StringToBytes($NewPubkey))
-        $result = $newId 
+        $pub = HexToPub($NewPubkey)
+        $account = IdToAddress($id)
+        $amount = Money(1000) * Money(1000000000000000000)
+        DBInsert("keys", {"id": $id, "account": $account, "pub": $pub, "amount": $amount, "ecosystem": 1})
     }
 }
