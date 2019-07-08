@@ -1,48 +1,61 @@
-SetVar(this_page, @1apps_list_inactive).(this_table, @1applications)
-Include(@1pager_header)
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_developer_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_admin_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(admin_access)
 
-SetTitle("$@1apps_inactive$")
-Span(Class: h5 m0 mb ml-lg){
-    LinkPage(Class: ml-sm, Body: $@1applications$, Page: @1apps_list)
-    Span(Class: text-muted, Body: /).Style(margin-right: 10px; margin-left: 10px;)
-    Span(Class: text-muted, Body: "$@1apps_inactive$")
-}.Style(
-    display: inline-block;
-)
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    SetVar(this_page, @1apps_list_inactive).(this_table, @1applications)
+    Include(@1pager_header)
 
-If(#search#){
-    SetVar(where, {"ecosystem": #ecosystem_id#, "deleted": 1, {"$or":[{"name": {"$ilike": "#search#"}}]}})
+    SetTitle("$@1apps_inactive$")
+    Span(Class: h5 m0 mb ml-lg){
+        LinkPage(Class: ml-sm, Body: $@1applications$, Page: @1apps_list)
+        Span(Class: text-muted, Body: /).Style(margin-right: 10px; margin-left: 10px;)
+        Span(Class: text-muted, Body: "$@1apps_inactive$")
+    }.Style(
+        display: inline-block;
+    )
+
+    If(#search#){
+        SetVar(where, {"ecosystem": #ecosystem_id#, "deleted": 1, {"$or":[{"name": {"$ilike": "#search#"}}]}})
+    }.Else{
+        SetVar(where, {"ecosystem": #ecosystem_id#, "deleted": 1})
+    }
+
+    Div(list-group-item ml-lg mr-lg pt-lg){
+        SetVar(search_name, LangRes(@1name))
+        Include(@1search)
+    }
+
+    DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_actions){
+        Span(Class: pull-right){
+            Button(Class: btn btn-link, Page: @1apps_list_inactive, Contract: @1DelApplication, Params: "ApplicationId=#id#", Body: "$@1restore$")
+        }
+    }.Count(count)
+
+    Div(fullscreen){
+        Div(table-responsive ml-lg mr-lg){
+            Div(list-group-item){
+                If(#count# > 0){
+                    Table(src, "$@1name$=name,$@1conditions$=conditions,=_actions")
+                }.Else{
+                    Div(Class: text-center h4 text-muted, Body: "$@1inactive_warning$")
+                }
+            }.Style(
+                margin-top:-15px;
+                tbody > tr:nth-of-type(odd) {
+                    background-color: #f8f9fc;
+                }
+            )
+        }
+    }
+    Div(mt-sm ml-lg mr-sm mb-sm){
+        Include(@1pager)
+    }
 }.Else{
-    SetVar(where, {"ecosystem": #ecosystem_id#, "deleted": 1})
-}
-
-Div(list-group-item ml-lg mr-lg pt-lg){
-    SetVar(search_name, LangRes(@1name))
-    Include(@1search)
-}
-
-DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_actions){
-    Span(Class: pull-right){
-        Button(Class: btn btn-link, Page: @1apps_list_inactive, Contract: @1DelApplication, Params: "ApplicationId=#id#", Body: "$@1restore$")
+    SetTitle($@1apps_inactive$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
-}.Count(count)
-
-Div(fullscreen){
-    Div(table-responsive ml-lg mr-lg){
-        Div(list-group-item){
-            If(#count# > 0){
-                Table(src, "$@1name$=name,$@1conditions$=conditions,=_actions")
-            }.Else{
-                Div(Class: text-center h4 text-muted, Body: "$@1inactive_warning$")
-            }
-        }.Style(
-            margin-top:-15px;
-            tbody > tr:nth-of-type(odd) {
-                background-color: #f8f9fc;
-            }
-        )
-    }
-}
-Div(mt-sm ml-lg mr-sm mb-sm){
-    Include(@1pager)
 }

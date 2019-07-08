@@ -1,37 +1,50 @@
-DBFind(@1sections).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Vars(section)
-DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars("system_app")
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_developer_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_admin_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(admin_access)
 
-Div(content-wrapper){
-    SetTitle($@1section_access_rights$)
-    Div(Class: breadcrumb){
-        LinkPage($@1sections$, @1section_list)
-        Span(/).Style(margin-right: 10px; margin-left: 10px;)
-        Span(Class: text-muted, Body: #section_title#)
-    }
-    Form(){
-        Div(form-group){
-            Label($@1roles_access$)
-            DBFind(@1roles,src_roles).Where({"ecosystem": #ecosystem_id#, "deleted": 0}).Columns("id,role_name").Order(id)
-            Div(input-group mb-sm){
-                Select(Name: access_rid, Source:src_roles, NameColumn:role_name, ValueColumn: id)
-                Div(input-group-btn){
-                    Button(Class: btn btn-primary fa fa-plus, Page: section_access, PageParams:"id=#section_id#", Contract: @1SectionRoles, Params:"Id=#section_id#,Rid=Val(access_rid),Operation=add")
-                }
-            }
-            DBFind(@1sections).Where({"ecosystem": #ecosystem_id#, "id": #section_id#}).Columns("roles_access").Vars(json)
-                If(#json_roles_access#=="[]"){
-                    Span(Body: $@1available_sections$, Class: m0 text-muted)
-                }.Else{
-                  DBFind(@1roles,src_roles_access).Where({"ecosystem": #ecosystem_id#, "id": {"$in": #json_roles_access#}}).Columns("id,role_name")
-                    ForList(src_roles_access){
-                        SetVar(role_admin, AppParam(App: #system_app_id#, Name: "role_admin"))
-                        If(#role_id# == #role_admin#){
-                            Button(Class: btn btn-info mr-sm mb-sm, Page: @1section_access, PageParams:"id=#section_id#", Contract: @1SectionRoles, Params:"Id=#section_id#,Rid=#id#,Operation=remove", Body: Span(Class: fa fa-remove) #role_name#)
-                        }.Else{
-                            Button(Class: btn btn-default mr-sm mb-sm, Page: @1section_access, PageParams:"id=#section_id#", Contract: @1SectionRoles, Params:"Id=#section_id#,Rid=#id#,Operation=remove", Body: Span(Class: fa fa-remove) #role_name#)
-                        }
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    DBFind(@1sections).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Vars(section)
+    DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars("system_app")
+
+    Div(content-wrapper){
+        SetTitle($@1section_access_rights$)
+        Div(Class: breadcrumb){
+            LinkPage($@1sections$, @1section_list)
+            Span(/).Style(margin-right: 10px; margin-left: 10px;)
+            Span(Class: text-muted, Body: #section_title#)
+        }
+        Form(){
+            Div(form-group){
+                Label($@1roles_access$)
+                DBFind(@1roles,src_roles).Where({"ecosystem": #ecosystem_id#, "deleted": 0}).Columns("id,role_name").Order(id)
+                Div(input-group mb-sm){
+                    Select(Name: access_rid, Source:src_roles, NameColumn:role_name, ValueColumn: id)
+                    Div(input-group-btn){
+                        Button(Class: btn btn-primary fa fa-plus, Page: section_access, PageParams:"id=#section_id#", Contract: @1SectionRoles, Params:"Id=#section_id#,Rid=Val(access_rid),Operation=add")
                     }
                 }
+                DBFind(@1sections).Where({"ecosystem": #ecosystem_id#, "id": #section_id#}).Columns("roles_access").Vars(json)
+                    If(#json_roles_access#=="[]"){
+                        Span(Body: $@1available_sections$, Class: m0 text-muted)
+                    }.Else{
+                    DBFind(@1roles,src_roles_access).Where({"ecosystem": #ecosystem_id#, "id": {"$in": #json_roles_access#}}).Columns("id,role_name")
+                        ForList(src_roles_access){
+                            SetVar(role_admin, AppParam(App: #system_app_id#, Name: "role_admin"))
+                            If(#role_id# == #role_admin#){
+                                Button(Class: btn btn-info mr-sm mb-sm, Page: @1section_access, PageParams:"id=#section_id#", Contract: @1SectionRoles, Params:"Id=#section_id#,Rid=#id#,Operation=remove", Body: Span(Class: fa fa-remove) #role_name#)
+                            }.Else{
+                                Button(Class: btn btn-default mr-sm mb-sm, Page: @1section_access, PageParams:"id=#section_id#", Contract: @1SectionRoles, Params:"Id=#section_id#,Rid=#id#,Operation=remove", Body: Span(Class: fa fa-remove) #role_name#)
+                            }
+                        }
+                    }
+            }
         }
+    }
+}.Else{
+    SetTitle($@1section_access_rights$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
 }

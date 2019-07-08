@@ -1,101 +1,114 @@
-Div(content-wrapper){
-    SetTitle($@1table_create$)
-    Div(breadcrumb){
-        Div(){
-            LinkPage($@1tables$, @1app_tables)
-            Span(/).Style(margin-right: 10px; margin-left: 10px;)
-            Span($@1table_create$, text-muted)
-        }
-    }
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_developer_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_admin_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(admin_access)
 
-    Data(src_type,"type,name"){
-        text,"Text"
-        number,"Number"
-        varchar,"Varchar"
-        datetime,"Date/Time"
-        money,"Money"
-        double,"Double"
-        character,"Character"
-        json,"JSON"
-    }
-    Form(){
-        Div(panel panel-default){
-            Div(panel-body){
-                Div(row){
-                    Div(col-sm-12){
-                        Label($@1name$)
-                        Input(Name:Name)
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    Div(content-wrapper){
+        SetTitle($@1table_create$)
+        Div(breadcrumb){
+            Div(){
+                LinkPage($@1tables$, @1app_tables)
+                Span(/).Style(margin-right: 10px; margin-left: 10px;)
+                Span($@1table_create$, text-muted)
+            }
+        }
+
+        Data(src_type,"type,name"){
+            text,"Text"
+            number,"Number"
+            varchar,"Varchar"
+            datetime,"Date/Time"
+            money,"Money"
+            double,"Double"
+            character,"Character"
+            json,"JSON"
+        }
+        Form(){
+            Div(panel panel-default){
+                Div(panel-body){
+                    Div(row){
+                        Div(col-sm-12){
+                            Label($@1name$)
+                            Input(Name:Name)
+                        }
                     }
-                }
-                Div(row mt-lg){
-                    Div(col-xs-4 col-md-4){
-                        Label(Class: text-muted, Body: $@1columns$)
-                        Input(Name:disinp, Disabled: true, Value: id)
-                    }
-                    Div(col-xs-6 col-md-7){
-                        Label(Class: text-muted, Body: $@1type$)
-                        Input(Name: disinp, Disabled: true, Value: Number)
-                    }
-                    Div(col-xs-2 col-md-1){
-                        Label(Class: text-muted, Body: $@1actions$)
-                    }
-                }
-                If(#cs#==""){
-                    SetVar(cs, Calculate( Exp: 0, Type: int))
-                }
-                If(#del# == 1){
-                    SetVar(cs, Calculate( Exp: #cs# - 1, Type: int))
-                }.Else{
-                    SetVar(cs, Calculate( Exp: #cs# + 1, Type: int))
-                }
-                Range(params_range, 0, #cs#)
-                ForList(Source: params_range){
-                    Div(row mt-sm){
+                    Div(row mt-lg){
                         Div(col-xs-4 col-md-4){
-                            Input(Name:ColumnsArr)
+                            Label(Class: text-muted, Body: $@1columns$)
+                            Input(Name:disinp, Disabled: true, Value: id)
                         }
                         Div(col-xs-6 col-md-7){
-                            Select(Name: TypesArr, Source: src_type, NameColumn: name, ValueColumn: type)
+                            Label(Class: text-muted, Body: $@1type$)
+                            Input(Name: disinp, Disabled: true, Value: Number)
                         }
                         Div(col-xs-2 col-md-1){
-                            If(And(#cs#==#params_range_index#, #cs# > 1)){
-                                Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, PageParams: "cs=#cs#,del=1,application_id=#application_id#", Page: @1table_create)
+                            Label(Class: text-muted, Body: $@1actions$)
+                        }
+                    }
+                    If(#cs#==""){
+                        SetVar(cs, Calculate( Exp: 0, Type: int))
+                    }
+                    If(#del# == 1){
+                        SetVar(cs, Calculate( Exp: #cs# - 1, Type: int))
+                    }.Else{
+                        SetVar(cs, Calculate( Exp: #cs# + 1, Type: int))
+                    }
+                    Range(params_range, 0, #cs#)
+                    ForList(Source: params_range){
+                        Div(row mt-sm){
+                            Div(col-xs-4 col-md-4){
+                                Input(Name:ColumnsArr)
+                            }
+                            Div(col-xs-6 col-md-7){
+                                Select(Name: TypesArr, Source: src_type, NameColumn: name, ValueColumn: type)
+                            }
+                            Div(col-xs-2 col-md-1){
+                                If(And(#cs#==#params_range_index#, #cs# > 1)){
+                                    Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, PageParams: "cs=#cs#,del=1,application_id=#application_id#", Page: @1table_create)
+                                }
                             }
                         }
                     }
                 }
+                Div(panel-footer text-right){
+                    Button(Body: $@1column_add$, Class: btn btn-primary, Page: @1table_create, PageParams: "cs=#cs#,application_id=#application_id#")
+                }
             }
-            Div(panel-footer text-right){
-                Button(Body: $@1column_add$, Class: btn btn-primary, Page: @1table_create, PageParams: "cs=#cs#,application_id=#application_id#")
-            }
-        }
-        Div(row){
-            Div(col-xs-6 col-sm-6 col-md-6){
-                Div(panel panel-default){
-                    Div(panel-heading, Body: $@1write_permissions$)
-                    Div(panel-body){
-                        Div(form-group){
-                            Label($@1insert$)
-                            Input(Name: InsertPerm, Value: ContractConditions("MainCondition"))
+            Div(row){
+                Div(col-xs-6 col-sm-6 col-md-6){
+                    Div(panel panel-default){
+                        Div(panel-heading, Body: $@1write_permissions$)
+                        Div(panel-body){
+                            Div(form-group){
+                                Label($@1insert$)
+                                Input(Name: InsertPerm, Value: ContractConditions("MainCondition"))
+                            }
+                            Div(form-group){
+                                Label($@1updating$)
+                                Input(Name: UpdatePerm, Value: ContractConditions("MainCondition"))
+                            }
+                            Div(form-group){
+                                Label($@1new_column$)
+                                Input(Name: NewColumnPerm, Value: ContractConditions("MainCondition"))
+                            }
+                            Div(form-group){
+                                Label($@1reading$)
+                                Input(Name: ReadPerm, Value: "true")
+                            }
                         }
-                        Div(form-group){
-                            Label($@1updating$)
-                            Input(Name: UpdatePerm, Value: ContractConditions("MainCondition"))
+                        Div(panel-footer  text-right){
+                            Button(Body: $@1save$, Class: btn btn-primary, Contract: @1NewTableJoint, Page: @1app_tables, Params: "ApplicationId=#application_id#")
                         }
-                        Div(form-group){
-                            Label($@1new_column$)
-                            Input(Name: NewColumnPerm, Value: ContractConditions("MainCondition"))
-                        }
-                        Div(form-group){
-                            Label($@1reading$)
-                            Input(Name: ReadPerm, Value: "true")
-                        }
-                    }
-                    Div(panel-footer  text-right){
-                        Button(Body: $@1save$, Class: btn btn-primary, Contract: @1NewTableJoint, Page: @1app_tables, Params: "ApplicationId=#application_id#")
                     }
                 }
             }
         }
+    }
+}.Else{
+    SetTitle($@1table_create$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
 }

@@ -1,20 +1,41 @@
 contract NewUser {
     data {
         NewPubkey string
+        Account string "optional"
     }
+
     conditions {
-        $id = PubToID($NewPubkey)
-        if $id == 0 {
-            error LangRes("@1wrong_pub", "en")
+        $newId = PubToID($NewPubkey)
+        
+        if $newId == 0 {
+            warning LangRes("@1wrong_pub", "en")
         }
-        if DBFind("keys").Columns("id").WhereId($id).One("id") != nil {
-            error LangRes("@1template_user_exists", "en")
+        if DBFind("@1keys").Columns("id").Where({"id": $newId, "ecosystem": $ecosystem_id}).One("id") != nil {
+            warning Sprintf(LangRes("@1template_user_exists", "en"), $newId)
+        }
+
+        $pub = HexToPub($NewPubkey)
+        $amount = Money(1000) * Money(1000000000000000000)
+
+        if Size($Account) > 0 {
+            $k_id = DBFind("@1keys").Columns("id").Where({"account": $Account, "ecosystem": $ecosystem_id, "deleted": 0}).One("id") 
+            if $k_id == nil {
+                warning "Account not found"
+            }
         }
     }
+
     action {
-        $pub = HexToPub($NewPubkey)
-        $account = IdToAddress($id)
-        $amount = Money(1000) * Money(1000000000000000000)
-        DBInsert("keys", {"id": $id, "account": $account, "pub": $pub, "amount": $amount, "ecosystem": 1})
+        if Size($Account) > 0 {
+            $account = $Account
+            DBInsert("keys", {"id": $newId, "account": $account, "pub": $pub, "amount": $amount, "ecosystem": 1})
+            $result = $account
+
+            DBUpdate("@1keys", Int($k_id), {"deleted": 1})
+        } else {
+            $account = IdToAddress($newId)
+            DBInsert("keys", {"id": $newId, "account": $account, "pub": $pub, "amount": $amount, "ecosystem": 1})
+            $result = $account
+        }
     }
 }

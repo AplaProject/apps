@@ -1,48 +1,61 @@
-DBFind(@1buffer_data, src_buffer).Columns("value->app_id").Where({"key": export, "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
-If(#buffer_value_app_id# > 0){
-    DBFind(@1applications, src_app).Where({"id": #buffer_value_app_id#, "ecosystem": #ecosystem_id#}).Vars("application")
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_developer_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_admin_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(admin_access)
 
-    Div(mr-lg ml-lg){
-        SetTitle($@1blocks$: #application_name#)
-        AddToolButton(Title: $@1create$, Page: editor, Icon: icon-plus, PageParams: "create=block,appId=#buffer_value_app_id#")
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    DBFind(@1buffer_data, src_buffer).Columns("value->app_id").Where({"key": export, "account": #account_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
+    If(#buffer_value_app_id# > 0){
+        DBFind(@1applications, src_app).Where({"id": #buffer_value_app_id#, "ecosystem": #ecosystem_id#}).Vars("application")
 
-        SetVar(this_table, @1blocks).(this_page, @1app_blocks).(pager_limit, 50)
-        SetVar(where, {"app_id": #buffer_value_app_id#, "ecosystem": #ecosystem_id#})
-        Include(@1pager_header)
-        Include(@1admin_link)
+        Div(mr-lg ml-lg){
+            SetTitle($@1blocks$: #application_name#)
+            AddToolButton(Title: $@1create$, Page: editor, Icon: icon-plus, PageParams: "create=block,appId=#buffer_value_app_id#")
 
-        DBFind(#this_table#, src).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where(#where#)
+            SetVar(this_table, @1blocks).(this_page, @1app_blocks).(pager_limit, 50)
+            SetVar(where, {"app_id": #buffer_value_app_id#, "ecosystem": #ecosystem_id#})
+            Include(@1pager_header)
+            Include(@1admin_link)
 
-        Form(panel panel-primary){
-            Div(panel-body){
-                Div(row){
-                    ForList(src){
-                        Div(col-md-#width# col-sm-12){
-                            Div(list-group-item){
-                                Div(row){
-                                    Div(col-md-4){
-                                        LinkPage(Body: "#name#", Class: text-primary, Page: editor, PageParams: "open=block,name=#name#")
-                                    }
-                                    Div(col-md-8){
-                                        Div(pull-right){
-                                            LinkPage(Body: Em(Class: fa fa-history), Class: text-primary h4 mh-sm, Page: @1history, PageParams: "id=#id#,type=block")
-                                            LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4 mh-sm, Page: @1properties_edit, PageParams: "edit_property_id=#id#,type=block")
+            DBFind(#this_table#, src).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where(#where#)
+
+            Form(panel panel-primary){
+                Div(panel-body){
+                    Div(row){
+                        ForList(src){
+                            Div(col-md-#width# col-sm-12){
+                                Div(list-group-item){
+                                    Div(row){
+                                        Div(col-md-4){
+                                            LinkPage(Body: "#name#", Class: text-primary, Page: editor, PageParams: "open=block,name=#name#")
+                                        }
+                                        Div(col-md-8){
+                                            Div(pull-right){
+                                                LinkPage(Body: Em(Class: fa fa-history), Class: text-primary h4 mh-sm, Page: @1history, PageParams: "id=#id#,type=block")
+                                                LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4 mh-sm, Page: @1properties_edit, PageParams: "edit_property_id=#id#,type=block")
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                Div(mt){
-                    Include(@1pager)
+                    Div(mt){
+                        Include(@1pager)
+                    }
                 }
             }
+        }
+    }.Else{
+        SetTitle($@1blocks$)
+        Div(breadcrumb){
+            Span(Class: text-muted, Body: $@1apps_select_error$)
         }
     }
 }.Else{
     SetTitle($@1blocks$)
     Div(breadcrumb){
-        Span(Class: text-muted, Body: $@1apps_select_error$)
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
 }

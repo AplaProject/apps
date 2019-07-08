@@ -1,45 +1,58 @@
-DBFind(@1sections).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Vars(section)
-Div(content-wrapper){
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_developer_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_admin_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(admin_access)
+
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    DBFind(@1sections).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Vars(section)
+    Div(content-wrapper){
+        SetTitle($@1section_edit$)
+        Div(breadcrumb){
+            LinkPage($@1sections$, @1section_list)
+            Span(/, mh)
+            Span(Class: text-muted, Body: #section_title#)
+        }
+
+        Form(){
+            Div(form-group){
+                Label($@1title$)
+                Input(Name: Title, Value: #section_title#)
+            }
+            Div(form-group){
+                Data(src_status, "name,value"){
+                    $@1hidden_section$,0
+                    $@1regular_section$,1
+                    $@1main_section$,2
+                }
+                Label($@1status$)
+                If(#section_status#==2){
+                    Input(Name: placeholder, Value: "$@1main_section$", Disabled: "true")
+                    Span(Body: $@1main_section_warning$, Class: m0 text-muted)
+                }.Else{
+                    Select(Name: Status, Value: #section_status#, Source: src_status, NameColumn: "name", ValueColumn: "value")
+                }
+            }
+            Div(form-group){
+                Label($@1link$)
+                Input(Name: Urlname, Value: #section_urlname#)
+            }
+            Div(form-group){
+                Label($@1section_main_page$)
+                Input(Name: Page, Value: #section_page#)
+            }
+            Div(form-group){
+                If(#section_status#==2){
+                    Button(Class: btn btn-primary, Body: $@1save$, Contract: @1EditSection, Page: @1section_list, Params: "Id=#section_id#,Status=#section_status#")
+                }.Else{
+                    Button(Class: btn btn-primary, Body: $@1save$, Contract: @1EditSection, Page: @1section_list, Params: "Id=#section_id#")
+                }
+            }
+        }
+    }
+}.Else{
     SetTitle($@1section_edit$)
     Div(breadcrumb){
-        LinkPage($@1sections$, @1section_list)
-        Span(/, mh)
-        Span(Class: text-muted, Body: #section_title#)
-    }
-
-    Form(){
-        Div(form-group){
-            Label($@1title$)
-            Input(Name: Title, Value: #section_title#)
-        }
-        Div(form-group){
-            Data(src_status, "name,value"){
-                $@1hidden_section$,0
-                $@1regular_section$,1
-                $@1main_section$,2
-            }
-            Label($@1status$)
-            If(#section_status#==2){
-                Input(Name: placeholder, Value: "$@1main_section$", Disabled: "true")
-                Span(Body: $@1main_section_warning$, Class: m0 text-muted)
-            }.Else{
-                Select(Name: Status, Value: #section_status#, Source: src_status, NameColumn: "name", ValueColumn: "value")
-            }
-        }
-        Div(form-group){
-            Label($@1link$)
-            Input(Name: Urlname, Value: #section_urlname#)
-        }
-        Div(form-group){
-            Label($@1section_main_page$)
-            Input(Name: Page, Value: #section_page#)
-        }
-        Div(form-group){
-            If(#section_status#==2){
-                Button(Class: btn btn-primary, Body: $@1save$, Contract: @1EditSection, Page: @1section_list, Params: "Id=#section_id#,Status=#section_status#")
-            }.Else{
-                Button(Class: btn btn-primary, Body: $@1save$, Contract: @1EditSection, Page: @1section_list, Params: "Id=#section_id#")
-            }
-        }
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
 }

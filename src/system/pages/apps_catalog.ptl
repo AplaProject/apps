@@ -1,53 +1,66 @@
-SetVar(this_page, @1apps_catalog).(this_table, @1applications)
-Include(@1pager_header)
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_developer_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_admin_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(admin_access)
 
-SetTitle($@1apps_catalog$)
-Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: $@1apps_catalog_desc$))
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    SetVar(this_page, @1apps_catalog).(this_table, @1applications)
+    Include(@1pager_header)
 
-If(#search#){
-    SetVar(where, {"ecosystem": 1, "deleted": 0, "name": {"$ilike": "#search#"}})
-}.Else{
-    SetVar(where, {"ecosystem": 1, "deleted": 0})
-}
+    SetTitle($@1apps_catalog$)
+    Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: $@1apps_catalog_desc$))
 
-Div(list-group-item ml-lg mr-lg pt-lg){
-    SetVar(search_name, LangRes(@1name))
-    Include(@1search)
-}
+    If(#search#){
+        SetVar(where, {"ecosystem": 1, "deleted": 0, "name": {"$ilike": "#search#"}})
+    }.Else{
+        SetVar(where, {"ecosystem": 1, "deleted": 0})
+    }
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(inst_app){
-    If(#ecosystem_id# != 1){
-        SetVar(config_id,0)
-        DBFind(@1applications).Where({"name": #name#, "ecosystem": #ecosystem_id#}).Count(inst_app)
-        DBFind(@1app_params).Where({"app_id": #id#, "ecosystem": 1, "name": "config"}).Vars(config)
-        If(#config_id# > 0){
-            If(#inst_app# == 0){
-                Button(Class: btn-xs pull-right btn-link, Contract: @1AppInstall, Params: "ApplicationId=#id#", Page: #this_page#){
-                    Span(Class: h5, Body: $@1install$)
+    Div(list-group-item ml-lg mr-lg pt-lg){
+        SetVar(search_name, LangRes(@1name))
+        Include(@1search)
+    }
+
+    DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(inst_app){
+        If(#ecosystem_id# != 1){
+            SetVar(config_id,0)
+            DBFind(@1applications).Where({"name": #name#, "ecosystem": #ecosystem_id#}).Count(inst_app)
+            DBFind(@1app_params).Where({"app_id": #id#, "ecosystem": 1, "name": "config"}).Vars(config)
+            If(#config_id# > 0){
+                If(#inst_app# == 0){
+                    Button(Class: btn-xs pull-right btn-link, Contract: @1AppInstall, Params: "ApplicationId=#id#", Page: #this_page#){
+                        Span(Class: h5, Body: $@1install$)
+                    }
+                }.Else{
+                    Span(Body: $@1installed$, Class: text-muted pull-right)
                 }
-            }.Else{
-                Span(Body: $@1installed$, Class: text-muted pull-right)
             }
         }
-    }
-}.Count(count)
+    }.Count(count)
 
-Div(fullscreen){
-    Div(table-responsive ml-lg mr-lg){
-        Div(list-group-item){
-            If(#count# > 0){
-                Table(src, "ID=id,$@1name$=name,=inst_app")
-            }.Else{
-                Div(Class: text-center h4 text-muted, Body: "$@1applications$ $@1not_founded$")
-            }
-        }.Style(
-            margin-top:-15px;
-            tbody > tr:nth-of-type(odd) {
-                background-color: #f8f9fc;
-            }
-        )
+    Div(fullscreen){
+        Div(table-responsive ml-lg mr-lg){
+            Div(list-group-item){
+                If(#count# > 0){
+                    Table(src, "ID=id,$@1name$=name,=inst_app")
+                }.Else{
+                    Div(Class: text-center h4 text-muted, Body: "$@1applications$ $@1not_founded$")
+                }
+            }.Style(
+                margin-top:-15px;
+                tbody > tr:nth-of-type(odd) {
+                    background-color: #f8f9fc;
+                }
+            )
+        }
     }
-}
-Div(mt-sm ml-lg mr-sm mb-sm){
-    Include(@1pager)
+    Div(mt-sm ml-lg mr-sm mb-sm){
+        Include(@1pager)
+    }
+}.Else{
+    SetTitle($@1apps_catalog$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
+    }
 }

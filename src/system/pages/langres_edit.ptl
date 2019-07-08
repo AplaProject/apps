@@ -1,92 +1,105 @@
-SetVar(this_page,"@1langres_edit")
-If(#back_page#==""){
-    SetVar(back_page,"@1app_langres")
-}
-Div(content-wrapper){
-    SetTitle($@1lang_res$)
-    Div(Class: breadcrumb){
-        LinkPage($@1lang_res$, @1app_langres)
-        Span(/).Style(margin-right: 10px; margin-left: 10px;)
-        Span(Class: text-muted, Body: $@1editing$)
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_developer_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#role_admin_id#]}, "role->id": #role_id#], "member->account": #account_id#, "deleted": 0}).Vars(admin_access)
+
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    SetVar(this_page,"@1langres_edit")
+    If(#back_page#==""){
+        SetVar(back_page,"@1app_langres")
     }
+    Div(content-wrapper){
+        SetTitle($@1lang_res$)
+        Div(Class: breadcrumb){
+            LinkPage($@1lang_res$, @1app_langres)
+            Span(/).Style(margin-right: 10px; margin-left: 10px;)
+            Span(Class: text-muted, Body: $@1editing$)
+        }
 
-    Form(panel panel-default){
-        Div(panel-body){
-            DBFind(@1languages, src_leng).Vars(pre).Where({"id": #lang_id#, "ecosystem": #ecosystem_id#})
-            Div(row){
-                Div(col-md-12){
-                    Label($@1name$)
-                    Input(Name: LangName, Disabled: "true", Value: #pre_name#)
+        Form(panel panel-default){
+            Div(panel-body){
+                DBFind(@1languages, src_leng).Vars(pre).Where({"id": #lang_id#, "ecosystem": #ecosystem_id#})
+                Div(row){
+                    Div(col-md-12){
+                        Label($@1name$)
+                        Input(Name: LangName, Disabled: "true", Value: #pre_name#)
+                    }
                 }
-            }
-            Div(row){
-                Div(col-md-1 mt-lg){
-                    Label(Class: text-muted, Body: $@1localization$)
+                Div(row){
+                    Div(col-md-1 mt-lg){
+                        Label(Class: text-muted, Body: $@1localization$)
+                    }
+                    Div(col-md-9 mt-lg){
+                        Label(Class: text-muted, Body: $@1value$)
+                    }
+                    Div(col-md-2 mt-lg){
+                        Label(Class: text-muted, Body: $@1action$)
+                    }
                 }
-                Div(col-md-9 mt-lg){
-                    Label(Class: text-muted, Body: $@1value$)
-                }
-                Div(col-md-2 mt-lg){
-                    Label(Class: text-muted, Body: $@1action$)
-                }
-            }
 
-            JsonToSource(pv, #pre_res#)
-            ForList(Source: pv, Index:s_ind){
-                SetVar(max_sec, #s_ind#)
-            }
-            If(#cs#==""){
-                SetVar(cs, #max_sec#)
-            }
-            If(Or(#del_flag#==1,#del_data#>0)){
-                SetVar(cs, Calculate(Exp:#cs#-1, Type: int))
-            }
+                JsonToSource(pv, #pre_res#)
+                ForList(Source: pv, Index:s_ind){
+                    SetVar(max_sec, #s_ind#)
+                }
+                If(#cs#==""){
+                    SetVar(cs, #max_sec#)
+                }
+                If(Or(#del_flag#==1,#del_data#>0)){
+                    SetVar(cs, Calculate(Exp:#cs#-1, Type: int))
+                }
 
-            SetVar(next_sec, Calculate(Exp:#cs#+1, Type: int))
-            SetVar(data_sec, Calculate(Exp:#cs#-#max_sec#, Type: int))
+                SetVar(next_sec, Calculate(Exp:#cs#+1, Type: int))
+                SetVar(data_sec, Calculate(Exp:#cs#-#max_sec#, Type: int))
 
-            ForList(Source: pv, Index:s_ind){
-                If(#s_ind#>#cs#){
-                }.Else{
-                    Div(row){
-                        Div(col-md-1 mt-sm){
-                            Input(Name: LocaleArr, Value: `#key#`)
-                        }.Style(input {padding: 6px;text-align:center;})
-                        Div(col-md-9 mt-sm){
-                            Input(Name: ValueArr, Value: `#value#`)
-                        }
-                        Div(col-md-2 mt-sm){
-                            If(And(#s_ind#>1,#s_ind#==#cs#)){
-                                Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, PageParams: "lang_id=#lang_id#,cs=#cs#,del_data=#s_ind#", Page: #this_page#)
+                ForList(Source: pv, Index:s_ind){
+                    If(#s_ind#>#cs#){
+                    }.Else{
+                        Div(row){
+                            Div(col-md-1 mt-sm){
+                                Input(Name: LocaleArr, Value: `#key#`)
+                            }.Style(input {padding: 6px;text-align:center;})
+                            Div(col-md-9 mt-sm){
+                                Input(Name: ValueArr, Value: `#value#`)
+                            }
+                            Div(col-md-2 mt-sm){
+                                If(And(#s_ind#>1,#s_ind#==#cs#)){
+                                    Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, PageParams: "lang_id=#lang_id#,cs=#cs#,del_data=#s_ind#", Page: #this_page#)
+                                }
                             }
                         }
                     }
                 }
-            }
-            Range(params_range, #max_sec#, #cs#)
-            ForList(Source: params_range, Index:s_ind){
-                Div(row){
-                    Div(col-md-1 mt-sm){
-                        Input(Name:LocaleArr)
-                    }.Style(input {padding: 6px;text-align:center;})
-                    Div(col-md-9 mt-sm){
-                        Input(Name:ValueArr)
-                    }
-                    Div(col-md-2 mt-sm){
-                        If(#s_ind#==#data_sec#){
-                            Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, PageParams: "lang_id=#lang_id#,cs=#cs#,del_flag=1", Page: #this_page#)
+                Range(params_range, #max_sec#, #cs#)
+                ForList(Source: params_range, Index:s_ind){
+                    Div(row){
+                        Div(col-md-1 mt-sm){
+                            Input(Name:LocaleArr)
+                        }.Style(input {padding: 6px;text-align:center;})
+                        Div(col-md-9 mt-sm){
+                            Input(Name:ValueArr)
+                        }
+                        Div(col-md-2 mt-sm){
+                            If(#s_ind#==#data_sec#){
+                                Button(Body: Em(Class: fa fa-trash), Class: btn btn-default, PageParams: "lang_id=#lang_id#,cs=#cs#,del_flag=1", Page: #this_page#)
+                            }
                         }
                     }
                 }
-            }
-            Div(row){
-                Div(col-md-12 mt-lg){
-                    LinkPage(Body: $@1locale_add$, Page: @1langres_edit, PageParams: "lang_id=#lang_id#,cs=#next_sec#")
+                Div(row){
+                    Div(col-md-12 mt-lg){
+                        LinkPage(Body: $@1locale_add$, Page: @1langres_edit, PageParams: "lang_id=#lang_id#,cs=#next_sec#")
+                    }
                 }
             }
+            Div(panel-footer text-right){
+                Button(Body: $@1save$, Class: btn btn-primary, Contract: @1EditLangJoint, Params: "Id=#lang_id#", Page: #back_page#)
+            }
         }
-        Div(panel-footer text-right){
-            Button(Body: $@1save$, Class: btn btn-primary, Contract: @1EditLangJoint, Params: "Id=#lang_id#", Page: #back_page#)
-        }
+    }
+}.Else{
+    SetTitle($@1lang_res$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
 }
