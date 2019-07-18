@@ -3,16 +3,16 @@ Include(@1pager_header)
 
 SetTitle("$@1ecosystem_members$")
 Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1ecosystem_members_list_desc$"))
-DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars("system_app")
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars(system_app)
 SetVar(role_admin, AppParam(App: #system_app_id#, Name: "role_admin"))
 If(And(#role_id# == #role_admin#, #ecosystem_id# != 1)){
     AddToolButton(Title: $@1members_add$, Page:@1ecosystem_add_members, Icon: icon-plus).Popup(50, $@1ecosystem_add_members$)
 }
 
 If(#search#){
-    SetVar(where, {"ecosystem": #ecosystem_id#, "id": {"$neq":#guest_key#}, "deleted": 0, "id": AddressToId(#search#)})
+    SetVar(where, {"ecosystem": #ecosystem_id#, "account": {"$neq": #guest_key#}, "deleted": 0, "account": #search#})
 }.Else{
-    SetVar(where, {"ecosystem": #ecosystem_id#, "id": {"$neq":#guest_key#}, "deleted": 0})
+    SetVar(where, {"ecosystem": #ecosystem_id#, "account": {"$neq": #guest_key#}, "deleted": 0})
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
@@ -20,33 +20,32 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind("@1ecosystems").Where({"id": #ecosystem_id#}).Vars("custom")
+DBFind("@1ecosystems").Where({"id": #ecosystem_id#}).Vars(custom)
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(custom_id){
+DBFind(#this_table#, src).Where(#where#).Order({"account": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(custom_id){
     SetVar(Name: style_text, Value: "text-normal")
     SetVar(Name: style_link, Value: "text-primary")
-    Span(Class: h6 text-muted, Body: #id#)
-    SetVar(m_id, 0)
-    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Vars(m)
-    If(Or(#m_id#>0,#m_id#<0)){
+    Span(Class: h6 text-muted, Body: #account#)
+    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "account": #account#}).Vars(m)
+    If(#m_account#){
         SetVar(image_id, #m_image_id#)
         SetVar(member_name, #m_member_name#)
     }.Else{
         SetVar(image_id, 0)
-        SetVar(member_name, Address(#id#))
+        SetVar(member_name, #account#)
     }
-}.Custom(custom_member_id){
+}.Custom(custom_account){
     If(Or(#ecosystem_id# == 1, #custom_token_title# != "")){
-        Button(Class: btn-xs btn-link, Page: @1tokens_send, PageParams: "v_key_id=#id#"){
-            Span(Class: h5, Body: Address(#id#))
+        Button(Class: btn-xs btn-link, Page: @1tokens_send, PageParams: "v_account=#account#"){
+            Span(Class: h5, Body: #account#)
         }.Popup(Header: $@1tokens_send$, Width: "50")
     }.Else{
-        Span(Class: h5, Body: Address(#id#))
+        Span(Class: h5, Body: #account#)
     }
 }.Custom(custom_username){
-    LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#"){
+    LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_account=#account#"){
         If(#image_id#>0){
-            Image(Src: Binary().ById(#image_id#), Class: img-circle).Style(height: 30px;width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
+            Image(Src: Binary().ById(#image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
             Span(#member_name#)
         }.Else{
             Div(){
@@ -61,7 +60,7 @@ Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){
-                Table(src, "$@1name$=custom_username,$@1wallet$=custom_member_id")
+                Table(src, "$@1name$=custom_username,$@1wallet$=custom_account")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1members$ $@1not_founded$")
             }

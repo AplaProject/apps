@@ -1,4 +1,4 @@
-DBFind(@1notifications,threads).Where({"ecosystem": #ecosystem_id#, "page_params->type": "message", {"$or": [{"sender->member_id": #key_id#}, {"recipient->member_id": #key_id#}]}}).Order({"id":"-1"}).Limit(250).Count(threads_count).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_id,recipient->member_name,notification->body,notification->header,page_params->thread,date_created,closed")
+DBFind(@1notifications,threads).Where({"ecosystem": #ecosystem_id#, "page_params->type": "message", {"$or": [{"sender->account": #account_id#}, {"recipient->account": #account_id#}]}}).Order({"id":"-1"}).Limit(250).Count(threads_count).Columns("id,sender->account,sender->member_name,sender->image_id,recipient->account,recipient->member_name,notification->body,notification->header,page_params->thread,date_created,closed")
 
 Div(content-wrapper){
     Div(row){
@@ -22,36 +22,36 @@ Div(content-wrapper){
                         DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "page_params->thread": #id#}).Count(thread_depth)
                     }
                     If(Or(#id# == #last_id#, #thread_depth# == 0)){
-                        If(And(#closed# == 0, Or(#sender.member_id# != #key_id#, #recipient.member_id# == #key_id#))){
+                        If(And(#closed# == 0, Or(#sender.account# != #account_id#, #recipient.account# == #account_id#))){
                             SetVar(status, "unread")
                         }.Else{
                             SetVar(status, "read")
                         }
                         Div(list-group-item col-sm-12 thread-block #status#){
                             Div(avatar-block text-center){
-                                DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Columns("sender->member_id,recipient->member_id,sender->member_name,recipient->member_name,sender->image_id,recipient->image_id").Vars(init_message)
-                                If(#init_message_sender_member_id# != #key_id#){
-                                    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #init_message_sender_member_id#}).Vars(talker)
-                                    If(#talker_id#){
+                                DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Columns("sender->account,recipient->account,sender->member_name,recipient->member_name,sender->image_id,recipient->image_id").Vars(init_message)
+                                If(#init_message_sender_account# != #account_id#){
+                                    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "account": #init_message_sender_account#}).Vars(talker)
+                                    If(#talker_account#){
                                         SetVar(talker_name, #talker_member_name#)
                                         SetVar(talker_picture, #talker_image_id#)
                                     }.Else{
-                                        SetVar(talker_id, #init_message_sender_member_id#)
+                                        SetVar(talker_account, #init_message_sender_account#)
                                         SetVar(talker_name, #init_message_sender_member_name#)
                                         SetVar(talker_picture, #init_message_sender_image_id#)
                                     }
                                 }.Else{
-                                    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #init_message_recipient_member_id#}).Vars(talker)
-                                    If(#talker_id#){
+                                    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "account": #init_message_recipient_account#}).Vars(talker)
+                                    If(#talker_account#){
                                         SetVar(talker_name, #talker_member_name#)
                                         SetVar(talker_picture, #talker_image_id#)
                                     }.Else{
-                                        SetVar(talker_id, #init_message_recipient_member_id#)
+                                        SetVar(talker_account, #init_message_recipient_account#)
                                         SetVar(talker_name, #init_message_recipient_member_name#)
                                         SetVar(talker_picture, #init_message_recipient_image_id#)
                                     }
                                 }
-                                LinkPage(Page: @1profile_view, PageParams: "v_key_id=#talker_id#"){
+                                LinkPage(Page: @1profile_view, PageParams: "v_account=#talker_account#"){
                                     If(#talker_picture# > 0){
                                         Image(Src: Binary().ById(#talker_picture#), Class: img-circle avatar)
                                     }.Else{
@@ -67,7 +67,7 @@ Div(content-wrapper){
                                     }.Else{
                                         Div(Class: preview h4 m0, Body: #notification.header#)
                                     }
-                                    If(#sender.member_id# == #key_id#){
+                                    If(#sender.account# == #account_id#){
                                         Div(Class: preview text-muted, Body: $@1you$: #notification.body#)
                                     }.Else{
                                         Div(Class: preview text-muted, Body: #notification.body#)

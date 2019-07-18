@@ -44,11 +44,11 @@ contract VotingValidatorAccept {
             warning LangRes("@1voting_subject_not_found", "en")
         }
         validator_map = JSONDecode(validator_map)
-        $validator_id = Int(validator_map["ValidatorId"])
+        $validator_id = validator_map["ValidatorId"]
         $flag = validator_map["flag"]
 
-        $oldRoleRowId = Int(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": oldRoleId, "member->member_id": $validator_id}).One("id"))
-        $roleRowId = Int(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": roleId, "member->member_id": $validator_id}).One("id"))
+        $oldRoleRowId = Int(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": oldRoleId, "member->account": $validator_id}).One("id"))
+        $roleRowId = Int(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": roleId, "member->account": $validator_id}).One("id"))
 
         $roleId = Int(DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": roleId, "deleted": 0}).One("id"))
         if $roleId == 0 {
@@ -61,7 +61,7 @@ contract VotingValidatorAccept {
             if $oldRoleRowId > 0 {
                 @1RolesUnassign("RowId", $oldRoleRowId)
             }
-            @1RolesAssign("Rid,MemberId", $roleId, Int($validator_id))
+            @1RolesAssign("Rid,MemberId", $roleId, $validator_id)
         }
         if $flag == "remove" {
             if $roleRowId > 0 {    

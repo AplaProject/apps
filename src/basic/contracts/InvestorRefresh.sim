@@ -60,22 +60,22 @@ contract InvestorRefresh {
     action {
         // get investors ids
         var keysInvestors assignedInvestors investorsIds assignedIds array
-        keysInvestors = DBFind("@1keys").Where({"ecosystem": $ecosystem_id}).Columns("id").Order([{amount:"-1"},{id:"-1"}]).Limit($limitInvestors)
-        assignedInvestors = DBFind("@1roles_participants").Where({"role->id": $roleId, "deleted": 0}).Columns("member->member_id")
+        keysInvestors = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "deleted": 0}).Columns("account").Order([{"amount": "-1"},{"id": "-1"}]).Limit($limitInvestors)
+        assignedInvestors = DBFind("@1roles_participants").Where({"role->id": $roleId, "deleted": 0}).Columns("member->account")
 
         // get ids
         var i int
         while i < Len(keysInvestors) {
             var inv map
             inv = keysInvestors[i]
-            investorsIds[i] = inv["id"]
+            investorsIds[i] = inv["account"]
             i = i + 1
         }
         i = 0
         while i < Len(assignedInvestors) {
             var inv map
             inv = assignedInvestors[i]
-            assignedIds[i] = inv["member.member_id"]
+            assignedIds[i] = inv["member.account"]
             i = i + 1
         }
 
@@ -85,7 +85,7 @@ contract InvestorRefresh {
         while i < Len(assignedIds) {
             if notInArray(assignedIds[i], investorsIds){
                 mid = assignedIds[i]
-                assigned = DBFind("@1roles_participants").Where({"member->member_id": mid, "role->id": $roleId}).Row()
+                assigned = DBFind("@1roles_participants").Where({"member->account": mid, "role->id": $roleId}).Row()
                 if assigned {
                     @1RolesUnassign("RowId", Int(assigned["id"]))
                 }
@@ -96,10 +96,10 @@ contract InvestorRefresh {
         i = 0
         while i < Len(investorsIds) {
             if notInArray(investorsIds[i], assignedIds){
-                var id int
-                id = Int(investorsIds[i])
-                if DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": id}).Row(){
-                    @1RolesAssign("Rid,MemberId", $roleId, id)
+                var account string
+                account = investorsIds[i]
+                if DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": account, "deleted": 0}).Row(){
+                    @1RolesAssign("Rid,MemberId", $roleId, account)
                 }
             }
             i = i + 1

@@ -2,7 +2,7 @@ SetVar(this_page, @1notifications_list).(this_table, @1notifications)
 Include(@1pager_header)
 
 SetTitle("$@1personal_notifics$")
-DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars("system_app")
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars(system_app)
 SetVar(role_admin, AppParam(App: #system_app_id#, Name: "role_admin"))
 If(And(#role_id# == #role_admin#, #ecosystem_id# == 1)){
     DBFind(@1ecosystems).Count(ecos_count)
@@ -13,9 +13,9 @@ If(And(#role_id# == #role_admin#, #ecosystem_id# == 1)){
 AddToolButton(Title: $@1send$, Page: @1notifications_single_send, Icon: icon-plus).Popup(Header: $@1send$, Width: "50")
 
 If(#search#){
-    SetVar(where, {"ecosystem": #ecosystem_id#, "recipient->member_id": #key_id#, {"$and": [{"notification->type":1}, {"$or": [{"sender->member_name":{"$ilike": "#search#"}}, {"sender->role_name":{"$ilike": "#search#"}}]}]}})
+    SetVar(where, {"ecosystem": #ecosystem_id#, "recipient->account": #account_id#, {"$and": [{"notification->type":1}, {"$or": [{"sender->member_name":{"$ilike": "#search#"}}, {"sender->role_name":{"$ilike": "#search#"}}]}]}})
 }.Else{
-    SetVar(where, {"ecosystem": #ecosystem_id#, "notification->type": 1, "recipient->member_id": #key_id#})
+    SetVar(where, {"ecosystem": #ecosystem_id#, "notification->type": 1, "recipient->account": #account_id#})
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
@@ -23,7 +23,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,recipient->member_id,recipient->member_name,recipient->image_id,sender->type,sender->member_id,sender->member_name,sender->role_id,sender->role_name,notification->icon,notification->popup,page_name,page_params,date_created,date_closed,closed").Custom(custom_id){
+DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,recipient->account,recipient->member_name,recipient->image_id,sender->type,sender->account,sender->member_name,sender->role_id,sender->role_name,notification->icon,notification->popup,page_name,page_params,date_created,date_closed,closed").Custom(custom_id){
     If(#closed# == 0){
         SetVar(Name: style_text, Value: "text-normal")
         SetVar(Name: style_link, Value: "text-primary")
@@ -33,7 +33,7 @@ DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(
     }
     Span(Class: #style_text#, Body: #id#)
 }.Custom(custom_recipient){
-    LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#recipient.member_id#"){
+    LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_account=#recipient.account#"){
         If(#recipient.image_id#>0){
             Image(Src: Binary().ById(#recipient.image_id#), Class: img-circle).Style(width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
             Span(#recipient.member_name#)
@@ -48,7 +48,7 @@ DBFind(#this_table#, src).Where(#where#).Order([{closed:"1"}, {id:"-1"}]).Limit(
     Em(Class: fa fa-long-arrow-right fa-1x #style_text#)
 }.Custom(custom_sender){
     If(#sender.type#==1){
-        LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#sender.member_id#"){
+        LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_account=#sender.account#"){
             Span(Body: #sender.member_name#)
         }
     }

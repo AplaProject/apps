@@ -6,7 +6,7 @@ contract MembershipDecide {
 
     conditions {
         $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
-        $request = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $NotificId}).Columns("id,closed,sender->member_id,page_params->ecosystem_id,page_params->ecosystem_sender").Row()
+        $request = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $NotificId}).Columns("id,closed,sender->account,page_params->ecosystem_id,page_params->ecosystem_sender").Row()
         var ecoId int
         ecoId = Int($request["page_params.ecosystem_id"])
 
@@ -26,11 +26,12 @@ contract MembershipDecide {
         params["ecosystem_id"] = $request["page_params.ecosystem_id"]
         if $Accept == 1 {
             params["status"] = 1
-            var pub string mid eco_id int
-            mid = Int($request["sender.member_id"])
+            var pub account string eco_id account_key int
+            account = $request["sender.account"]
+            account_key = AddressToId(account)
             eco_id = Int($request["page_params.ecosystem_id"])
-            pub = DBFind("@1keys").Where({"ecosystem": 1, "id": mid}).One("pub")
-            DBInsert("@1keys", {id:mid, pub:pub, ecosystem:$ecosystem_id})
+            pub = DBFind("@1keys").Where({"ecosystem": 1, "account": account, "deleted": 0}).One("pub")
+            DBInsert("@1keys", {"ecosystem": $ecosystem_id, "id": account_key, "account": account, "pub": pub, "deleted": 0})
         } else {
             params["status"] = 0
         }
@@ -43,7 +44,7 @@ contract MembershipDecide {
         body = Sprintf(LangRes("@1ecosystem_request_approved", "en"), ecoName, ecoId)
         page = "@1membership_user_view"
 
-        @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params,EcosystemId", Int($request["sender.member_id"]), 1, icon, header, body, page, params, Int($request["page_params.ecosystem_sender"]))
+        @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params,EcosystemId", $request["sender.account"], 1, icon, header, body, page, params, Int($request["page_params.ecosystem_sender"]))
         @1NotificationsProcess("NotificId", $NotificId)
         @1NotificationsClose("NotificId", $NotificId)
     }

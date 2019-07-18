@@ -3,19 +3,18 @@ contract NotificationsProcess {
         NotificId int
     }
 
-    func getMemberInfo(kid int) map {
+    func getMemberInfo(account string) map {
         var res member map
-        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
+        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "account": account}).Row()
         if member {
-            res["member_id"] = member["id"]
+            res["account"] = member["account"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         } else {
-            member = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
-            if member {
-                res["member_id"] = member["id"]
-                res["member_name"] = IdToAddress(Int(member["id"]))
-                res["image_id"] = 0
+            if DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": account, "deleted": 0}).Row() {
+                res["account"] = account
+                res["member_name"] = account
+                res["image_id"] = "0"
             }
         }
         return res
@@ -34,7 +33,7 @@ contract NotificationsProcess {
             var rid string
             rid = Int($notify["recipient.role_id"])
             if rid > 0{
-                if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": rid, "member->member_id": $key_id, "deleted": 0}).One("id") {
+                if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": rid, "member->account": $account_id, "deleted": 0}).One("id") {
                     warning LangRes("@1notification_not_part_of_role", "en")
                 }
             }
@@ -47,7 +46,7 @@ contract NotificationsProcess {
 
     action {
         var model map
-        model["processing_info"] = getMemberInfo($key_id)
+        model["processing_info"] = getMemberInfo($account_id)
         model["date_start_processing"] = $block_time
         DBUpdate("@1notifications", $NotificId, model)
     }

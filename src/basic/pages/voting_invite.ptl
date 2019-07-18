@@ -11,10 +11,10 @@ If(#vID# > 0){
             SetVar(back_page,@1voting_view)
         }
         DBFind(@1votings).WhereId(#vID#).Columns("id,voting->name,voting->type_participants").Vars(instance)
-        DBFind(@1votings_participants, src_participants).Where({"voting_id": #vID#}).Columns("id,member->member_id,member->member_name,member->role_id,member->member->member_id,member->member->member_name").Count(participants_count).Custom(_id){
-            Address(#member.member_id#)
+        DBFind(@1votings_participants, src_participants).Where({"voting_id": #vID#}).Columns("id,member->account,member->member_name,member->role_id").Count(participants_count).Custom(_id){
+            #member.account#
         }.Custom(_name){
-            LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#member.member_id#", Body: #member.member_name#)
+            LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#member.account#", Body: #member.member_name#)
         }.Custom(_sent){
             $@1voting_role_added$
         }.Custom(_member_roles){
@@ -53,17 +53,15 @@ If(#vID# > 0){
 					}
 				}
 				Div(col-md-9 text-left){
-					If(#MemberId# == ""){
-						SetVar(MemberId, 0)
-					}.Else{
-						Input(Name: VarId, Type: hidden, Value: #MemberId#)
-					}
 					Div(input-group){
-						If(Or(#MemberId#>0,#MemberId#<0)){
-							SetVar(AddressMemberId, Address(#MemberId#))
+						If(#MemberId#){
 							SetVar(Id, #MemberId#)
-						}
-						Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #AddressMemberId#)
+                            Input(Name: VarId, Type: hidden, Value: #MemberId#)
+                            Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #MemberId#)
+                        }.Else{
+                            Input(Name: VarId, Type: hidden, Value: 0)
+                            Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx")
+                        }
 						Div(input-group-btn){
 							Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=@1voting_invite,back_header=$@1participants_add$,EcosystemId=#ecosystem_id#,Id=#vID#").Popup(Header: $@1member$, Width: "50")
 						}
@@ -115,7 +113,7 @@ If(#vID# > 0){
 						Input(Name: VarId, Type: hidden, Value: #GroupId#)
 					}
 					Div(input-group){
-						If(#GroupId#>0){
+						If(#GroupId# > 0){
 							SetVar(Id, #GroupId#)
 							DBFind(@1groups).WhereId(#GroupId#).Columns("group_name").Vars(g)
 						}
@@ -129,7 +127,7 @@ If(#vID# > 0){
 		}
         Div(text-right){
             Button(Body: $@1back$, Class: btn btn-default, Page: #back_page#, PageParams: "vID=#vID#")
-            If(Or(#AddressMemberId#!="",#RoleId#!="",#GroupId#!="")){
+            If(Or(#MemberId# != "", #RoleId# != "", #GroupId# != "")){
                 Button(Body: $@1send$, Class: btn btn-primary, Page: @1voting_invite, PageParams: "vID=#vID#,back_page=#back_page#", Contract: @1VotingInvite).Popup(50, $@1participants_add$)
             }
         }

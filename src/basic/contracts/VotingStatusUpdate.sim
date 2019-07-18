@@ -18,12 +18,12 @@ contract VotingStatusUpdate {
                 i = i + 1
             }
         } else {
-            voters = DBFind("@1votings_participants").Columns("member->member_id").Limit(10000).Where({"ecosystem": $ecosystem_id, "voting_id": id, "decision": 0})
+            voters = DBFind("@1votings_participants").Columns("member->account").Limit(10000).Where({"ecosystem": $ecosystem_id, "voting_id": id, "decision": 0})
             lenVoters = Len(voters)
             while i < lenVoters {
                 var voter memberId params map
                 voter = voters[i]
-                memberId = Int(voter["member.member_id"])
+                memberId = voter["member.account"]
                 params["voting_id"] = id
                 @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-check", LangRes("@1voting", "en"), title, $page_name, params)
                 i = i + 1
@@ -35,16 +35,16 @@ contract VotingStatusUpdate {
         if voting["voting.rating"] == 1 && voting["voting.type_participants"] != 5 {
             var id i lenVoters int voters array
             id = Int(voting["id"])
-            voters = DBFind("@1votings_participants").Columns("id,member->member_id").Limit(10000).Where({"ecosystem": $ecosystem_id, "voting_id": id})
+            voters = DBFind("@1votings_participants").Columns("id,member->account").Limit(10000).Where({"ecosystem": $ecosystem_id, "voting_id": id})
             lenVoters = Len(voters)
 
             while i < lenVoters {
                 var voter map memberId int
                 voter = voters[i]
-                memberId = Int(voter["member.member_id"])
+                memberId = voter["member.account"]
 
                 var where rating map
-                where[$rating_wallet] = IdToAddress(memberId)
+                where[$rating_wallet] = memberId
                 where["ecosystem"] = $ecosystem_id
                 if GetColumnType($rating_table, $rating_amount) != "" {
                     rating = DBFind($rating_table).Columns($request_columns).Where(where).Row()

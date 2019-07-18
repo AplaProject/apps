@@ -2,7 +2,7 @@ contract ValidatorRequest {
     data {
         TcpAddress string
         ApiAddress string
-        KeyId int
+        KeyId string
         PubKey string
         Description string "optional"
         Comment string "optional"
@@ -12,7 +12,7 @@ contract ValidatorRequest {
         if $ecosystem_id != 1 {
             warning LangRes("@1contract_first_ecosystem_only", "en")
         }
-        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $KeyId}).Row() {
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $KeyId, "deleted": 0}).Row() {
             warning LangRes("@1address_invalid", "en")
         }
     }
@@ -24,10 +24,10 @@ contract ValidatorRequest {
         if !DBFind("@1roles").Where({"ecosystem": 1, "id": roleId, "deleted": 0}).One("id") {
             warning Sprintf(LangRes("@1role_app_param_not_found", "en"), "role_candidate_for_validators")
         }
-        @1RolesAssign("Rid,MemberId", roleId, $key_id)
+        @1RolesAssign("Rid,MemberId", roleId, $account_id)
 
         var m map
-        m["candidate_key_id"] = $KeyId
+        m["candidate_account"] = $KeyId
         m["tcp_address"] = $TcpAddress
         m["api_address"] = $ApiAddress
         m["pub_key"] = $PubKey

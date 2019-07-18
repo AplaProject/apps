@@ -16,13 +16,13 @@ contract MembershipRequest {
             warning Sprintf(LangRes("@1template_eco_not_exist", "en"), $EcosystemId)
         }
 
-        if DBFind("@1keys").Where({"id": $key_id, "ecosystem": $EcosystemId}) {
+        if DBFind("@1keys").Where({"ecosystem": $EcosystemId, "account": $account_id, "deleted": 0}) {
             warning LangRes("@1member_added_before", "en")
         }
 
         $free_membership = Int(DBFind("@1parameters").Where({"ecosystem": $EcosystemId, "name": "free_membership"}).One("value"))
         if $free_membership == 0 {
-            if DBFind("@1notifications").Where({"ecosystem": $EcosystemId, "page_params->ecosystem_id": $EcosystemId, "sender->member_id": $key_id, "closed": 0, "page_name": "@1membership_admin_view"}).Row(){
+            if DBFind("@1notifications").Where({"ecosystem": $EcosystemId, "page_params->ecosystem_id": $EcosystemId, "sender->account": $account_id, "closed": 0, "page_name": "@1membership_admin_view"}).Row(){
                 warning LangRes("@1request_sent_already", "en")
             }
 
@@ -44,9 +44,10 @@ contract MembershipRequest {
             @1NotificationsSend("Rid,Sender,Icon,Header,Body,Page,Params,Closure,EcosystemId", $admin_id, 1, "icon icon-user-follow", LangRes("@1membership_request_new", "en"), LangRes("@1details_view", "en"), "@1membership_admin_view", notific_params,1,$EcosystemId)
         }
         if $free_membership == 1 {
-            var pub string
-            pub = DBFind("@1keys").Where({"ecosystem": 1, "id": $key_id}).One("pub")
-            DBInsert("@1keys", {id:$key_id, pub:pub, ecosystem:$EcosystemId})
+            var pub string account_key int
+            account_key = IdToAddress($account_id)
+            pub = DBFind("@1keys").Where({"ecosystem": 1, "account": $account_id, "deleted": 0}).One("pub")
+            DBInsert("@1keys", {"ecosystem": $EcosystemId, "id": account_key, "account": $account_id, "pub": pub, "deleted": 0})
 
             var params map
             params["ecosystem_id"] = $EcosystemId
@@ -59,7 +60,7 @@ contract MembershipRequest {
             body = Sprintf(LangRes("@1ecosystem_request_approved", "en"), ecoName, $EcosystemId)
             page = "@1membership_user_view"
 
-            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params,EcosystemId", $key_id, 1, icon, header, body, page, params, $ecosystem_id)
+            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params,EcosystemId", $account_id, 1, icon, header, body, page, params, $ecosystem_id)
         }
     }
 }

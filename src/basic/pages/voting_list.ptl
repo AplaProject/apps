@@ -6,7 +6,7 @@ Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1voting
 AddToolButton(Title: $@1voting_wizard$, Page: @1voting_wizard, Icon: icon-magic-wand).Popup(50, $@1voting_wizard$)
 AddToolButton(Title: $@1templates_list$, Page: @1voting_templates_list, Icon: icon-pin)
 AddToolButton(Title: $@1create$, Page: @1voting_create, Icon: icon-plus).Popup(60, $@1new_voting$)
-DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars("system_app")
+DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars(system_app)
 SetVar(role_admin, AppParam(App: #system_app_id#, Name: "role_admin"))
 If(#role_id# == #role_admin#){
     Div(btn-group ml-lg){
@@ -28,7 +28,7 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 SetVar(INVALID,1).(WAITING,2).(STARTED,3).(FINISHED,4)
 DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->success,flags->decision,flags->full_data,progress->percent_success,progress->number_participants,creator->member_id,creator->member_name,date_started,date_ended,deleted,status,voting->count_type_voters,voting->volume,progress->number_voters").Count(count_votings).Custom(_id){
+DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,voting->name,voting->type,voting->type_decision,voting->type_participants,flags->success,flags->decision,flags->full_data,progress->percent_success,progress->number_participants,creator->account,creator->member_name,date_started,date_ended,deleted,status,voting->count_type_voters,voting->volume,progress->number_voters").Count(count_votings).Custom(_id){
     Span(Class: h5, Body: #id#)
 }.Custom(_name){
     LinkPage(Page: @1voting_view, PageParams: "vID=#id#"){
@@ -74,7 +74,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
         }
     }
 }.Custom(_creator){
-    LinkPage(Class: text-primary h6, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#", Body: #creator.member_name#)
+    LinkPage(Class: text-primary h6, Page: @1profile_view, PageParams: "v_account=#creator.account#", Body: #creator.member_name#)
 }.Custom(_date){
     P(Class: text-center h6 m0, Body: DateTime(DateTime: #date_started#, Format: "DD.MM.YYYY HH:MI"))
     P(Class: text-center h6 m0, Body: DateTime(DateTime: #date_ended#, Format: "DD.MM.YYYY HH:MI"))
@@ -94,7 +94,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
 }.Custom(_decision){
     Div(text-center){
         If(#flags.decision# == 0){
-            If(And(#status#==#FINISHED#,#creator.member_id#==#key_id#)){
+            If(And(#status# = =#FINISHED#, #creator.account# == #account_id#)){
                 Button(Body: LangRes(@1decision), Class: btn btn-primary, Contract: @1VotingDecisionCheck, Params: "VotingId=#id#", Page: #this_page#)
             }.Else{
                 Div(text-muted){LangRes(@1no)}
@@ -122,7 +122,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
     }
 }.Custom(_actions){
     Div(text-right){
-        If(And(#creator.member_id#==#key_id#,#status#==#INVALID#)){
+        If(And(#creator.account# == #account_id#, #status# == #INVALID#)){
             Button(Class: fa fa-trash btn btn-default, Contract: @1VotingDelete, Params: "VotingId=#id#", Page: #this_page#).Alert(Text: "$@1want_delete_voting$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)
         }
     }
