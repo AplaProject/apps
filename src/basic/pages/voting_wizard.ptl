@@ -1,7 +1,7 @@
 SetVar(this_page, "@1voting_wizard")
 SetVar(back_page, "@1voting_list")
 DBFind("@1applications").Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
-DBFind("@1buffer_data").Where({"key": "voting_wizard_buffer", "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Columns("value->save_time,value->voting_name,value->voting_type,value->type_participants,value->type_decision,value->volume,value->quorum,value->rating,value->count_type_voters,value->description,value->interval,value->start_date,value->start_time,value->end_date,value->end_time,value->member_participants,value->role_participants,value->group_participants,value->execute_contract,value->contract_accept_name,value->contract_accept_params,value->contract_reject_name,value->contract_reject_params,value->text_document,value->candidates,value->apply,value->role_id,value->vacancies").Vars(buffer)
+DBFind("@1buffer_data").Where({"key": "voting_wizard_buffer", "account": #account_id#, "ecosystem": #ecosystem_id#}).Columns("value->save_time,value->voting_name,value->voting_type,value->type_participants,value->type_decision,value->volume,value->quorum,value->rating,value->count_type_voters,value->description,value->interval,value->start_date,value->start_time,value->end_date,value->end_time,value->member_participants,value->role_participants,value->group_participants,value->execute_contract,value->contract_accept_name,value->contract_accept_params,value->contract_reject_name,value->contract_reject_params,value->text_document,value->candidates,value->apply,value->role_id,value->vacancies").Vars(buffer)
 
 If(#stage# == ""){
     If(#buffer_value_save_time# == ""){
@@ -101,16 +101,16 @@ Form(){
                     }
                 }
                 If(#apply# == 1){
-                    DBFind("@1members").Where({"ecosystem": #ecosystem_id#, "id": #key_id#}).Vars(my)
+                    DBFind("@1members").Where({"ecosystem": #ecosystem_id#, "account": #account_id#}).Vars(my)
                     If(#my_member_name# == ""){
-                        SetVar(my_member_name, Address(#key_id#))
+                        SetVar(my_member_name, #account_id#)
                     }
                     Data(src_voting_subject,"id,name"){
-                        #key_id#,#my_member_name#
+                        #account_id#,#my_member_name#
                     }.Custom(_address){
-                        Address(#id#)
+                        #account#
                     }.Custom(_member){
-                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#"){
+                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#account#"){
                             Span(Body: #name#)
                         }
                     }
@@ -188,26 +188,26 @@ Form(){
                 }
             }
 
-            DBFind(@1keys, src_subject).Where({"ecosystem": #ecosystem_id#, "id": {"$in": [#candidates#]}}).Custom(_address){
-                Address(#id#)
+            DBFind(@1keys, src_subject).Where({"ecosystem": #ecosystem_id#, "account": {"$in": [#candidates#]}, "deleted": 0}).Custom(_address){
+                #account#
             }.Custom(_member){
-                DBFind(@1members).WhereId(#id#).Count(have_name).Vars(participant)
+                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "account": #account#}).Count(have_name).Vars(participant)
                 If(#have_name# > 0){
-                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: #participant_member_name#)
+                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#account#", Body: #participant_member_name#)
                 }.Else{
-                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: Address(#id#))
+                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#account#", Body: #account#)
                 }
             }
 
-            DBFind(@1keys,src_keys).Where({"ecosystem": #ecosystem_id#, {"$and": [{"id": {"$neq": #guest_key#}}, {"id": {"$nin": [#candidates#]}}]}}).Columns("id").Count(members_count).Custom(_name){
-                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Columns("id,member_name").Count(have_name).Vars(m)
-                Address(#id#)
+            DBFind(@1keys, src_accounts).Where({"ecosystem": #ecosystem_id#, {"$and": [{"account": {"$neq": #guest_key#}}, {"account": {"$nin": [#candidates#]}}]}, "deleted": 0}).Columns("account").Count(members_count).Custom(_name){
+                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "account": #account#}).Columns("account,member_name").Count(have_name).Vars(m)
+                #account#
                 If(#have_name# > 0){
                     " (#m_member_name#)"
                 }
             }
 
-            DBFind(@1roles,src_roles).Where({"ecosystem": #ecosystem_id#, "role_type": 2, "deleted": 0}).Columns("id,role_name").Count(elective_roles_count)
+            DBFind(@1roles, src_roles).Where({"ecosystem": #ecosystem_id#, "role_type": 2, "deleted": 0}).Columns("id,role_name").Count(elective_roles_count)
             If(#elective_roles_count# > 0){
                 Div(form-group){
                     Div(row){
@@ -219,9 +219,9 @@ Form(){
                         Div(col-md-9 mc-sm text-left){
                             Div(input-group){
                                 If(#members_count# > 0){
-                                    Select(Name: MemberId, Source: src_keys, NameColumn: _name, ValueColumn: id)
+                                    Select(Name: MemberAccount, Source: src_accounts, NameColumn: _name, ValueColumn: account)
                                     Div(input-group-btn){
-                                        Button(Class: btn bg-gray-lighter fa fa-plus buttons, Page: #this_page#, PageParams: "stage=2,new_candidate=Val(MemberId),candidates=#candidates#,val_role_id=Val(RoleId),val_role_vacancies=Val(Vacancies),val_execute_contract=Val(ExecuteContract),val_contract_accept_name=Val(ContractAcceptName),val_contract_accept_params=Val(ContractAcceptParams),val_contract_reject_name=Val(ContractRejectName),val_contract_reject_params=Val(ContractRejectParams)").Popup(50, $@1voting_wizard$)
+                                        Button(Class: btn bg-gray-lighter fa fa-plus buttons, Page: #this_page#, PageParams: "stage=2,new_candidate=Val(MemberAccount),candidates=#candidates#,val_role_id=Val(RoleId),val_role_vacancies=Val(Vacancies),val_execute_contract=Val(ExecuteContract),val_contract_accept_name=Val(ContractAcceptName),val_contract_accept_params=Val(ContractAcceptParams),val_contract_reject_name=Val(ContractRejectName),val_contract_reject_params=Val(ContractRejectParams)").Popup(50, $@1voting_wizard$)
                                         Button(Class: btn bg-gray-lighter fa fa-undo buttons, Page: #this_page#, PageParams: "stage=2,candidates=0,val_role_id=Val(RoleId),val_role_vacancies=Val(Vacancies),val_execute_contract=Val(ExecuteContract),val_contract_accept_name=Val(ContractAcceptName),val_contract_accept_params=Val(ContractAcceptParams),val_contract_reject_name=Val(ContractRejectName),val_contract_reject_params=Val(ContractRejectParams)").Popup(50, $@1voting_wizard$)
                                     }
                                 }.Else{
@@ -432,14 +432,14 @@ Form(){
                     SetVar(member_participants, "#member_participants#,#new_participant#")
                 }
             }
-            DBFind(@1keys, src_participants).Where({"ecosystem": #ecosystem_id#, "id": {"$in": [#member_participants#]}}).Count(participants_count).Custom(_id){
-                Address(#id#)
+            DBFind(@1keys, src_participants).Where({"ecosystem": #ecosystem_id#, "account": {"$in": [#member_participants#]}, "deleted": 0}).Count(participants_count).Custom(_id){
+                #account#
             }.Custom(_name){
-                DBFind(@1members).WhereId(#id#).Count(have_name).Vars(participant)
+                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "account": #account#}).Count(have_name).Vars(participant)
                 If(#have_name# > 0){
-                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: #participant_member_name#)
+                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#account#", Body: #participant_member_name#)
                 }.Else{
-                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: Address(#id#))
+                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#account#", Body: #account#)
                 }
             }
         }.ElseIf(#buffer_value_type_participants# == 6){
@@ -451,14 +451,14 @@ Form(){
                 }
             }
             If(#group_participants# != 0){
-                DBFind(@1groups_participants, src_participants).Where({"ecosystem": #ecosystem_id#, "groups_info->id": {"$in": [#group_participants#]}}).Columns("member->member_id,groups_info->id").Count(participants_count).Custom(_id){
-                    Address(#member.member_id#)
+                DBFind(@1groups_participants, src_participants).Where({"ecosystem": #ecosystem_id#, "groups_info->id": {"$in": [#group_participants#]}}).Columns("member->account,groups_info->id").Count(participants_count).Custom(_id){
+                    #member.account#
                 }.Custom(_name){
-                    DBFind(@1members).WhereId(#member.member_id#).Count(have_name).Vars(participant)
+                    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "account": #member.account#}).Count(have_name).Vars(participant)
                     If(#have_name# > 0){
-                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: #participant_member_name#)
+                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#account#", Body: #participant_member_name#)
                     }.Else{
-                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: Address(#id#))
+                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#account#", Body: #account#)
                     }
                 }
             }
@@ -471,14 +471,14 @@ Form(){
                 }
             }
             If(And(Or(#buffer_value_type_participants# == 3, #buffer_value_type_participants# == 4), #role_participants# != 0)){
-                DBFind(@1roles_participants, src_participants).Where({"ecosystem": #ecosystem_id#, "role->id": {"$in": [#role_participants#]}}).Columns("member->member_id,role->id").Count(participants_count).Custom(_id){
-                    Address(#member.member_id#)
+                DBFind(@1roles_participants, src_participants).Where({"ecosystem": #ecosystem_id#, "role->id": {"$in": [#role_participants#]}}).Columns("member->account,role->id").Count(participants_count).Custom(_id){
+                    #member.account#
                 }.Custom(_name){
-                    DBFind(@1members).WhereId(#member.member_id#).Count(have_name).Vars(participant)
+                    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "account": #member.account#}).Count(have_name).Vars(participant)
                     If(#have_name# > 0){
-                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: #participant_member_name#)
+                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#account#", Body: #participant_member_name#)
                     }.Else{
-                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#id#", Body: Address(#id#))
+                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#account#", Body: #account#)
                     }
                 }.Custom(_sent){
                     $@1voting_role_added$
@@ -527,29 +527,32 @@ Form(){
         If(#buffer_value_type_participants# != 1){
             Div(row){
                 If(#buffer_value_type_participants# == 2){
-                    DBFind(@1keys,src_keys).Where({"ecosystem": #ecosystem_id#, {"$and": [{"id": {"$neq": #guest_key#}}, {"id": {"$nin": [#member_participants#]}}]}}).Columns("id").Count(keys_count).Custom(_name){
+                    DBFind(@1keys, src_keys).Where({"ecosystem": #ecosystem_id#, {"$and": [{"account": {"$neq": #guest_key#}}, {"account": {"$nin": [#member_participants#]}}]}, "deleted": 0}).Columns("account").Count(keys_count).Custom(_name){
                         SetVar(m_member_name,)
-                        DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #id#}).Columns("id,member_name").Count(have_name).Vars(m)
-                        Address(#id#)
+                        DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "account": #account#}).Columns("account,member_name").Count(have_name).Vars(m)
+                        #account#
                         If(#have_name# > 0){
                             " (#m_member_name#)"
                         }
                     }
-                    SetVar(source, src_keys)
+                    SetVar(source, "src_keys")
+                    SetVar(value, "account")
                     SetVar(select_label, $@1member$)
                     SetVar(hint, $@1select_member$)
                 }.ElseIf(#buffer_value_type_participants# == 6){
                     DBFind(@1groups, src_groups).Where({"ecosystem": #ecosystem_id#, "deleted": 0, "id": {"$nin": [#group_participants#]}}).Count(groups_count).Columns("id,group_name").Custom(_name){
                         Span(#group_name#)
                     }
-                    SetVar(source, src_groups)
+                    SetVar(source, "src_groups")
+                    SetVar(value, "id")
                     SetVar(select_label, $@1group$)
                     SetVar(hint, $@1select_group$)
                 }.ElseIf(#buffer_value_type_participants# > 2){
                     DBFind(@1roles, src_roles).Where({"ecosystem": #ecosystem_id#, "deleted": 0, "id": {"$nin": [#role_participants#]}}).Count(roles_count).Columns("id,role_name").Custom(_name){
                         Span(#role_name#)
                     }
-                    SetVar(source, src_roles)
+                    SetVar(source, "src_roles")
+                    SetVar(value, "id")
                     SetVar(select_label, $@1role$)
                     SetVar(hint, $@1select_role$)
                 }
@@ -571,7 +574,7 @@ Form(){
                     }
                     If(Or(And(#buffer_value_type_participants# == 2, #keys_count# > 0), And(#buffer_value_type_participants# == 3, #participants_count# == 0), And(#buffer_value_type_participants# == 6, #participants_count# == 0), And(#buffer_value_type_participants# > 3, #roles_count# > 0))){
                         Div(input-group){
-                            Select(Name: VarId, Source: #source#, NameColumn: _name, ValueColumn: id)
+                            Select(Name: VarId, Source: #source#, NameColumn: _name, ValueColumn: #value#)
                             Div(input-group-btn){
                                 Button(Class: btn bg-gray-lighter fa fa-plus buttons, Page: #this_page#, PageParams: "stage=4,new_participant=Val(VarId),member_participants=#member_participants#,role_participants=#role_participants#,group_participants=#group_participants#").Popup(50, $@1voting_wizard$)
                                 Button(Class: btn bg-gray-lighter fa fa-undo buttons, Page: #this_page#, PageParams: "stage=4,member_participants=0,role_participants=0,group_participants=0").Popup(50, $@1voting_wizard$)
