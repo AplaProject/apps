@@ -65,9 +65,9 @@ contract VotingRunNewValidator {
         }
     }
 
-    func checkKeyId(account string) {
+    func checkKeyId(key int) {
         var existed map
-        existed = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": account, "deleted": 0}).Row()
+        existed = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": key}).Row()
         if !existed {
             warning LangRes("@1key_not_found", "en")
         }
@@ -91,7 +91,7 @@ contract VotingRunNewValidator {
         firstNode = JSONDecode(first)
         checkTcpAddress(firstNode["tcp_address"])
         checkApiAddress(firstNode["api_address"])
-        checkKeyId(firstNode["account"])
+        checkKeyId(Int(firstNode["key_id"]))
         checkPub(firstNode["public_key"])
         nodes = Append(nodes, firstNode)
         return nodes
@@ -111,10 +111,10 @@ contract VotingRunNewValidator {
 
         $TcpAddress = $validator["tcp_address"]
         $ApiAddress = $validator["api_address"]
-        $KeyId = $validator["candidate_account"]
+        $KeyId = AddressToId($validator["candidate_account"])
         $PubKey = $validator["pub_key"]
 
-        checkKeyId($KeyId)
+        checkKeyId(Int($KeyId))
         checkPub($PubKey)
         checkApiAddress($ApiAddress)
         checkTcpAddress($TcpAddress)
@@ -124,7 +124,7 @@ contract VotingRunNewValidator {
         var nodes array new_node map
         new_node["tcp_address"] = $TcpAddress
         new_node["api_address"] = $ApiAddress
-        new_node["account"] = $KeyId
+        new_node["key_id"] = Str($KeyId)
         new_node["public_key"] = $PubKey
         nodes = JSONDecode(getNodesJSON())
         if Len(nodes) == 0 {
@@ -137,7 +137,7 @@ contract VotingRunNewValidator {
         var pars map
         pars["Name"] = "full_nodes"
         pars["Value"] = JSONEncode(nodes)
-        pars["ValidatorId"] = $KeyId
+        pars["ValidatorId"] = Str($KeyId)
         pars["flag"] = "add"
 
         @1VotingTemplateRun("TemplateId,Duration,ContractAcceptParams", $templateId, 14, JSONEncode(pars))
