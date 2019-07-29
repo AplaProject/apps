@@ -4,6 +4,8 @@ contract ExportNewApp {
     }
 
     conditions {
+        DeveloperCondition()
+
         $app_map = DBFind("@1applications").Columns("id,name").Where({"id": $ApplicationId, "ecosystem": $ecosystem_id}).Row()
         if !$app_map{
             warning LangRes("@1app_not_found", "en")
@@ -54,11 +56,6 @@ contract ExportNewApp {
             value["count_menu"] = "0"
         }
 
-        $buffer_id = DBFind("@1buffer_data").Where({"account": $account_id, "key": "export", "ecosystem": $ecosystem_id}).One("id")
-        if !$buffer_id {
-            DBInsert("@1buffer_data", {"account": $account_id, "key": "export", "value": value})
-        } else {
-            DBUpdate("@1buffer_data", Int($buffer_id), {"value": value})
-        }
+        @1BufferManager("Action,Key,Val", "set", "export", JSONEncode(value))
     }
 }

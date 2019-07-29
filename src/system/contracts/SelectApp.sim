@@ -4,6 +4,8 @@ contract SelectApp {
     }
 
     conditions {
+        DeveloperCondition()
+
         $app = DBFind("@1applications").Columns("id,name").Where({"id": $ApplicationId, "ecosystem": $ecosystem_id}).Row()
         if !$app {
             LangRes("@1app_not_found", "en")
@@ -11,15 +13,10 @@ contract SelectApp {
     }
 
     action {
-        var value map bufferId int
+        var value map
         value["app_id"] = Str($ApplicationId)
         value["app_name"] = $app["name"]
 
-        bufferId = Int(DBFind("@1buffer_data").Where({"account": $account_id, "key": "export", "ecosystem": $ecosystem_id}).One("id"))
-        if bufferId > 0 {
-            DBUpdate("@1buffer_data", bufferId, {"value": value})
-        } else {
-            DBInsert("@1buffer_data", {"account": $account_id, "key": "export", "value": value, ecosystem: $ecosystem_id})
-        }
+        @1BufferManager("Action,Key,Val", "set", "export", JSONEncode(value))
     }
 }

@@ -1,6 +1,6 @@
 contract NewUser {
     data {
-        NewPubkey string
+        NewPubkey string "optional"
         Account string "optional"
     }
 
@@ -11,7 +11,11 @@ contract NewUser {
             warning LangRes("@1wrong_pub", "en")
         }
         if DBFind("@1keys").Columns("id").Where({"id": $newId, "ecosystem": $ecosystem_id}).One("id") != nil {
-            warning Sprintf(LangRes("@1template_user_exists", "en"), $newId)
+            warning Sprintf(LangRes("@1template_user_exists", "en"), IdToAddress($newId))
+        }
+
+        if Size($NewPubkey) == 0 {
+            warning "You did not enter the public key"
         }
 
         $pub = HexToPub($NewPubkey)

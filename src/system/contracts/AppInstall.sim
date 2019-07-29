@@ -4,6 +4,8 @@ contract AppInstall {
     }
 
     conditions {
+        DeveloperCondition()
+
         $check_app = DBFind("@1applications").Columns("id,ecosystem,name,conditions").Where({"id": $ApplicationId, "ecosystem": 1}).Row()
         if !$check_app["id"] {
             warning LangRes("@1item_not_found", "en")
@@ -32,13 +34,7 @@ contract AppInstall {
         var app_ins map
         app_ins["app_name"] = $app_name
 
-        $import_id = DBFind("@1buffer_data").Where({"account": $account_id, "key": "import_info", "ecosystem": $ecosystem_id}).One("id")
-        if $import_id {
-            $import_id = Int($import_id)
-            DBUpdate("@1buffer_data", $import_id, {"value": app_ins})
-        } else {
-            DBInsert("@1buffer_data", {"account": $account_id, "key": "import_info", "value": app_ins, "ecosystem": $ecosystem_id})
-        }
+        @1BufferManager("Action,Key,Val", "set", "import_info", JSONEncode(app_ins))
 
         //import
         var i int
