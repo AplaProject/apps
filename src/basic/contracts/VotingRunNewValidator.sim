@@ -1,6 +1,6 @@
 contract VotingRunNewValidator {
     data {
-        ValidatorId int
+        ConsortiumMemberId int
     }
 
     func warn(name, detail string) {
@@ -99,20 +99,20 @@ contract VotingRunNewValidator {
 
     conditions {
         $app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Basic"}).One("id"))
-        $templateId = Int(DBFind("@1app_params").Where({"app_id": $app_id, "name": "voting_template_validators", "ecosystem": $ecosystem_id}).One("value"))
+        $templateId = Int(DBFind("@1app_params").Where({"app_id": $app_id, "name": "voting_template_consortium_member", "ecosystem": $ecosystem_id}).One("value"))
         if $templateId == 0 {
             warning LangRes("@1template_id_not_found", "en")
         }
 
-        $validator = DBFind("@1validator_candidates").Where({"id": $ValidatorId, "deleted": 0}).Row()
-        if !$validator {
+        $ConsortiumMember = DBFind("@1validator_candidates").Where({"id": $ConsortiumMemberId, "deleted": 0}).Row()
+        if !$ConsortiumMember {
             warning LangRes("@1candidate_not_found", "en")
         }
 
-        $TcpAddress = $validator["tcp_address"]
-        $ApiAddress = $validator["api_address"]
-        $KeyId = AddressToId($validator["candidate_account"])
-        $PubKey = $validator["pub_key"]
+        $TcpAddress = $ConsortiumMember["tcp_address"]
+        $ApiAddress = $ConsortiumMember["api_address"]
+        $KeyId = AddressToId($ConsortiumMember["candidate_account"])
+        $PubKey = $ConsortiumMember["pub_key"]
 
         checkKeyId(Int($KeyId))
         checkPub($PubKey)
@@ -137,7 +137,7 @@ contract VotingRunNewValidator {
         var pars map
         pars["Name"] = "full_nodes"
         pars["Value"] = JSONEncode(nodes)
-        pars["ValidatorId"] = Str($KeyId)
+        pars["ConsortiumMemberId"] = Str($KeyId)
         pars["flag"] = "add"
 
         @1VotingTemplateRun("TemplateId,Duration,ContractAcceptParams", $templateId, 14, JSONEncode(pars))
