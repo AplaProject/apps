@@ -6,11 +6,11 @@ If(#v_role_id#>0){
     SetVar(this_page, @1roles_view).(this_table, @1roles_participants)
     Include(@1pager_header)
 
-    DBFind(@1roles).Where({"ecosystem": #ecosystem_id#, "id": #v_role_id#}).Columns("role_name,role_type,deleted,roles_access,creator->account").Vars(prefix)
+    DBFind(@1roles).Where({"ecosystem": "#ecosystem_id#", "id": "#v_role_id#"}).Columns("role_name,role_type,deleted,roles_access,creator->account").Vars(prefix)
     If(#prefix_creator_account#==#account_id#){
         SetVar(manager_id,1)
     }.ElseIf(And(#prefix_roles_access#!="NULL",#prefix_roles_access#!="",#prefix_roles_access#!="[]",#role_id#>0,#prefix_deleted#==0,#prefix_role_type#!=2)){
-        DBFind(@1roles).Where({"ecosystem": #ecosystem_id#, "id": [{"$in": #prefix_roles_access#}, {"$eq": #role_id#}]}).Columns("id").Vars(manager)
+        DBFind(@1roles).Where({"ecosystem": "#ecosystem_id#", "id": [{"$in": #prefix_roles_access#}, {"$eq": "#role_id#"}]}).Columns("id").Vars(manager)
     }
 
     If(#manager_id#>0){
@@ -27,9 +27,10 @@ If(#v_role_id#>0){
     )
 
     If(#search#){
-        SetVar(w_search, {"member->member_name": {"$ilike": "#search#"}})
+        SetVar(where, {"ecosystem": "#ecosystem_id#", "role->id": "#v_role_id#", "member->member_name": {"$ilike": "#search#"}})
+    }.Else{
+        SetVar(where, {"ecosystem": "#ecosystem_id#", "role->id": "#v_role_id#"})
     }
-    SetVar(where, {"ecosystem":#ecosystem_id#, "role->id":#v_role_id#, {#w_search#}})
 
     Div(list-group-item ml-lg mr-lg pt-lg){
         SetVar(search_name, LangRes(@1member)).(page_par, #v_role_id#)

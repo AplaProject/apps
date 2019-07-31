@@ -11,9 +11,10 @@ Span(Class: h5 m0 mb ml-lg){
 )
 
 If(#search#){
-    SetVar(w_search, {"voting->name": {"$ilike": "#search#"}})
+    SetVar(where, {"ecosystem": "#ecosystem_id#", "voting->type": {"$in": [1, 2]}, "voting->name": {"$ilike": "#search#"}})
+}.Else{
+    SetVar(where, {"ecosystem": "#ecosystem_id#", "voting->type": {"$in": [1, 2]}})
 }
-SetVar(where, {"ecosystem": #ecosystem_id#, "voting->type": {"$in": [1,2]}, {#w_search#}})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, LangRes(@1template))
@@ -22,6 +23,8 @@ Div(list-group-item ml-lg mr-lg pt-lg){
 
 DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
 
+SetVar(all_templates_count, 0)
+DBFind(#this_table#).Where({"ecosystem": "#ecosystem_id#"}).Count(all_templates_count)
 DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("voting->name,voting->type_participants,voting->type_decision,voting->type").Custom(_participants){
     P(Class: m0 h6, Body: AppParam(Ecosystem:1, App:#application_id#, Name:type_voting_participants, Index: #voting.type_participants#))
 }.Custom(_decision){
@@ -41,7 +44,7 @@ Div(fullscreen){
         Div(list-group-item){
             If(#count# > 0){
                 Table(src, "$@1template$=_name,$@1participants$=_participants,$@1decision$=_decision,$@1voting_type$=_type")
-            }.ElseIf(#ecosystem_id#==1){
+            }.ElseIf(And(#ecosystem_id# == 1, #all_templates_count# == 0)){
                 Form(Class: text-center h6){
                     Data(autofill, "value,description"){
                         yes,$@1use_default_voting_templates$

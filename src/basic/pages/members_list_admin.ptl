@@ -3,32 +3,33 @@ Include(@1pager_header)
 
 SetTitle("$@1member_management$")
 Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1member_management_desc$"))
-DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "System"}).Vars(system_app)
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "System"}).Vars(system_app)
 SetVar(role_admin, AppParam(App: #system_app_id#, Name: "role_admin"))
 If(And(#role_id# == #role_admin#, #ecosystem_id# != 1)){
     AddToolButton(Title: $@1members_add$, Page: @1ecosystem_add_members, Icon: icon-plus).Popup(50, $@1ecosystem_add_members$)
 }
 
 If(#search#){
-    SetVar(w_search, {"account": #search#})
+    SetVar(where, {"ecosystem": "#ecosystem_id#", "account": {"$neq": "#guest_account#"}, "account": {"$ilike": "#search#"}})
+}.Else{
+    SetVar(where, {"ecosystem": "#ecosystem_id#", "account": {"$neq": "#guest_account#"}})
 }
-SetVar(where, {"ecosystem": #ecosystem_id#, "account": {"$neq": #guest_key#}, {#w_search#}})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, LangRes(@1wallet))
     Include(@1search)
 }
 
-DBFind("@1ecosystems").Where({"id": #ecosystem_id#}).Vars(custom)
+DBFind("@1ecosystems").Where({"id": "#ecosystem_id#"}).Vars(custom)
 
-DBFind(#this_table#, src).Where(#where#).Order({"deleted": "1", "account": "1"}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(custom_id){
+DBFind(#this_table#, src).Where(#where#).Order({"deleted": 1, "account": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(custom_id){
     If(#deleted# == 0){
         SetVar(style_text, "text-normal").(style_link, "text-primary")
     }.Else{
         SetVar(style_text,"text-muted").(style_link,"text-muted")
     }
     Span(Class: h6 text-muted, Body: #account#)
-    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "account": #account#}).Vars(m)
+    DBFind(@1members).Where({"ecosystem": "#ecosystem_id#", "account": "#account#"}).Vars(m)
     If(#m_account#){
         SetVar(image_id, #m_image_id#)
         SetVar(member_name, #m_member_name#)
