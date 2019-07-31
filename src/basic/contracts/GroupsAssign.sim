@@ -1,7 +1,7 @@
 contract GroupsAssign {
     data {
         GroupId int
-        MemberId string
+        MemberAccount string
     }
 
     func getMemberInfo(account string) map {
@@ -26,8 +26,8 @@ contract GroupsAssign {
         if !$group {
             warning LangRes("@1group_not_found", "en")
         }
-        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $MemberId, "deleted": 0}).Row() {
-            warning LangRes("@1key_not_found", "en")
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $MemberAccount, "deleted": 0}).Row() {
+            warning LangRes("@1account_not_found", "en")
         }
         if Int($group["deleted"]) == 1 {
             warning LangRes("@1group_deleted_request_impossible", "en")
@@ -38,7 +38,7 @@ contract GroupsAssign {
     }
 
     action {
-        if DBFind("@1groups_participants").Where({"ecosystem": $ecosystem_id, "groups_info->id": $GroupId, "member->account": $MemberId, "deleted": 0}).One("id") {
+        if DBFind("@1groups_participants").Where({"ecosystem": $ecosystem_id, "groups_info->id": $GroupId, "member->account": $MemberAccount, "deleted": 0}).One("id") {
             // do not re-assign and do not warning because this contract may be called for other
             return
         }
@@ -48,7 +48,7 @@ contract GroupsAssign {
         group["type"] = $group["group_type"]
         group["name"] = $group["group_name"]
         group["image_id"] = $group["image_id"]
-        member = getMemberInfo($MemberId)
+        member = getMemberInfo($MemberAccount)
         appointer = getMemberInfo($account_id)
 
         var m map

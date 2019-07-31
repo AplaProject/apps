@@ -18,8 +18,8 @@ contract TokensRefundAccept {
             warning LangRes("@1tokens_refund_not_found", "en")
         }
 
-        $RecipientId = $tokenrefund["victim_account"]
-        $SenderId = $tokenrefund["attacker_account"]
+        $RecipientAccount = $tokenrefund["victim_account"]
+        $SenderAccount = $tokenrefund["attacker_account"]
         $amount = Money($tokenrefund["amount"])
         $votingID = Int($tokenrefund["voting_id"])
 
@@ -28,11 +28,11 @@ contract TokensRefundAccept {
         }
         
         var sender map
-        sender = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $SenderId, "deleted": 0}).Row()
+        sender = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $SenderAccount, "deleted": 0}).Row()
         if !sender {
             warning LangRes("@1sender_invalid", "en")
         }
-        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $RecipientId, "deleted": 0}).Row() {
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $RecipientAccount, "deleted": 0}).Row() {
             warning LangRes("@1recipient_invalid", "en")
         }
         if sender["amount"] < $amount {
@@ -42,10 +42,10 @@ contract TokensRefundAccept {
 
     action {
         if $tokenrefund["result"] == 0 {
-            TokensLockoutMember("KeyId,Value", $RecipientId, 0)
-            TokensLockoutMember("KeyId,Value", $SenderId, 0)
+            TokensLockoutMember("MemberAccount,Value", $RecipientAccount, 0)
+            TokensLockoutMember("MemberAccount,Value", $SenderAccount, 0)
 
-            @1TokensTransfer("Amount,SenderId,RecipientId,Comment", $amount, $SenderId, $RecipientId, "Refund tokens")
+            @1TokensTransfer("Amount,SenderAccount,RecipientAccount,Comment", $amount, $SenderAccount, $RecipientAccount, "Refund tokens")
 
             var m map
             m["status"] = 2

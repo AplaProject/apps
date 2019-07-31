@@ -1,4 +1,4 @@
-contract VotingValidatorAccept {
+contract VotingConsortiumMemberAccept {
     data {
         TemplateId string
         VotingId string
@@ -44,15 +44,15 @@ contract VotingValidatorAccept {
             warning LangRes("@1voting_subject_not_found", "en")
         }
         consortium_member_map = JSONDecode(consortium_member_map)
-        $consortium_member_id = IdToAddress(Int(consortium_member_map["ConsortiumMemberId"]))
+        $consortium_member = IdToAddress(Int(consortium_member_map["ConsortiumMemberId"]))
         $flag = consortium_member_map["flag"]
 
-        $oldRoleRowId = Int(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": oldRoleId, "member->account": $consortium_member_id}).One("id"))
-        $roleRowId = Int(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": roleId, "member->account": $consortium_member_id}).One("id"))
+        $oldRoleRowId = Int(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": oldRoleId, "member->account": $consortium_member}).One("id"))
+        $roleRowId = Int(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": roleId, "member->account": $consortium_member}).One("id"))
 
         $roleId = Int(DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": roleId, "deleted": 0}).One("id"))
         if $roleId == 0 {
-            warning LangRes("@1validator_role_not_found", "en")
+            warning LangRes("@1consortium_member_role_not_found", "en")
         }
     }
 
@@ -61,7 +61,7 @@ contract VotingValidatorAccept {
             if $oldRoleRowId > 0 {
                 @1RolesUnassign("RowId", $oldRoleRowId)
             }
-            @1RolesAssign("Rid,MemberId", $roleId, $consortium_member_id)
+            @1RolesAssign("Rid,MemberAccount", $roleId, $consortium_member)
         }
         if $flag == "remove" {
             if $roleRowId > 0 {    

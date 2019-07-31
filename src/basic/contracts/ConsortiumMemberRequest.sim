@@ -1,8 +1,8 @@
-contract ValidatorRequest {
+contract ConsortiumMemberRequest {
     data {
         TcpAddress string
         ApiAddress string
-        KeyId string
+        CandidateAccount string
         PubKey string
         Description string "optional"
         Comment string "optional"
@@ -12,7 +12,7 @@ contract ValidatorRequest {
         if $ecosystem_id != 1 {
             warning LangRes("@1contract_first_ecosystem_only", "en")
         }
-        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $KeyId, "deleted": 0}).Row() {
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $CandidateAccount, "deleted": 0}).Row() {
             warning LangRes("@1address_invalid", "en")
         }
     }
@@ -24,10 +24,10 @@ contract ValidatorRequest {
         if !DBFind("@1roles").Where({"ecosystem": 1, "id": roleId, "deleted": 0}).One("id") {
             warning Sprintf(LangRes("@1role_app_param_not_found", "en"), "role_consortium_member_candidate")
         }
-        @1RolesAssign("Rid,MemberId", roleId, $account_id)
+        @1RolesAssign("Rid,MemberAccount", roleId, $account_id)
 
         var m map
-        m["candidate_account"] = $KeyId
+        m["candidate_account"] = $CandidateAccount
         m["tcp_address"] = $TcpAddress
         m["api_address"] = $ApiAddress
         m["pub_key"] = $PubKey
@@ -35,6 +35,6 @@ contract ValidatorRequest {
         m["comment"] = $Comment
         m["date_created"] = $block_time
         m["deleted"] = 0
-        DBInsert("@1validator_candidates", m)
+        DBInsert("@1consortium_member_requests", m)
     }
 }
