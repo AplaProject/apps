@@ -1,4 +1,4 @@
-contract TsConsensusAction {
+contract TsConsortiumMemberAction {
     data {
         Action string
         WalletId int
@@ -12,12 +12,12 @@ contract TsConsensusAction {
         if basicAppId == 0{
             warning LangRes("@1app_not_found", "en")
         }
-        $roleConsensus = Int(AppParam(Int($system_app_id), "role_consensus", $ecosystem_id))
-        if $roleConsensus == 0 {
-            warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), "role_consensus")
+        $roleConsortiumMember = Int(AppParam(Int($system_app_id), "role_consortium_member", $ecosystem_id))
+        if $roleConsortiumMember == 0 {
+            warning Sprintf(LangRes("@1role_not_set_application_parameter", "en"), "role_consortium_member")
         }
-        if !RoleAccess($roleConsensus) {
-            warning "this action allowed only for role id #" + $roleConsensus
+        if !RoleAccess($roleConsortiumMember) {
+            warning "this action allowed only for role id #" + $roleConsortiumMember
         }
         $wallet = DBFind("ts_wallets").Where({"id": $WalletId, "rejected_at": 0}).Row()
         if !$wallet {
@@ -26,23 +26,23 @@ contract TsConsensusAction {
         if Int($wallet["signed_at"]) == 0 {
             warning "Buyer wallet not signed"
         }
-        if $wallet["key_id_signer"] > 0 {
-            if $wallet["key_id_signer"] != $key_id{
-                warning "This wallet was signed by asbl early"
+        if $wallet["signer_account"] != 0 {
+            if $wallet["signer_account"] != $account_id {
+                warning "This wallet was signed earlier"
             }
         }
     }
 
     action {
         if $Action == "accept" {
-            DBUpdate("ts_wallets", Int($wallet["id"]), {"key_id_signer": $key_id})
+            DBUpdate("ts_wallets", Int($wallet["id"]), {"signer_account": $account_id})
             // buyer notification
             var params map
             params["wallet_id"] = $wallet["id"]
-            @1NotificationsSend("MemberId,Sender,Header,Page,Params,Closure", Int($wallet["key_id_buyer"]), 1, "Your wallet approved", "ts_buyer_congratulation", params, 1)
+            @1NotificationsSend("MemberAccount,Sender,Header,Page,Params,Closure", $wallet["buyer_account"], 1, "Your wallet approved", "ts_buyer_congratulation", params, 1)
 
         } elif $Action == "reject" {
-            DBUpdate("ts_wallets", Int($wallet["id"]), {rejected_at:$time})
+            DBUpdate("ts_wallets", Int($wallet["id"]), {"rejected_at": $time})
         }
         @1NotificationsClose("NotificId", $NotificId)
     }

@@ -3,22 +3,22 @@ Include(@1pager_header)
 
 SetTitle(Startups list)
 
-DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Crowdfunding"}).Vars(application)
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "Crowdfunding"}).Vars(application)
 SetVar(admin_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crowdfunding_admin_role))
 SetVar(startup_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crowdfunding_startup_role))
 SetVar(investor_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crowdfunding_investor_role))
-DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
-DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#startup_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(startup_access)
-DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#investor_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(investor_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#admin_role#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(admin_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#startup_role#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(startup_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#investor_role#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(investor_access)
 
-If(#page_par#==0){
-    SetVar(type_filter, {"status": 0})
-}.ElseIf(#page_par#==1){
-    SetVar(type_filter, {"status": 1})
-}.ElseIf(#page_par#==2){
-    SetVar(type_filter, {"status": {"$gte": 2}})
-}.ElseIf(#page_par#==-1){
-    SetVar(type_filter, {"status": -1})
+If(#page_par# == 0){
+    SetVar(type_filter, `"status": 0`)
+}.ElseIf(#page_par# == 1){
+    SetVar(type_filter, `"status": 1`)
+}.ElseIf(#page_par# == 2){
+    SetVar(type_filter, `"status": {"$gte": 2}`)
+}.ElseIf(#page_par# == -1){
+    SetVar(type_filter, `"status": "-1"`)
 }
 
 If(#startup_access_id# > 0){
@@ -44,41 +44,41 @@ If(#global_access# == 1){
 
     If(#search#){
         If(#startup_access_id# > 0){
-            SetVar(where, {"deleted":0, #type_filter#, "informations->name": {"$ilike": "#search#"}})
+            SetVar(where, {"deleted": 0, "#type_filter#", "informations->name": {"$ilike": "#search#"}})
         }.ElseIf(#investor_access_id# > 0){
-            SetVar(where, {"deleted":0, #type_filter#, "informations->name": {"$ilike": "#search#"}})
+            SetVar(where, {"deleted": 0, "#type_filter#", "informations->name": {"$ilike": "#search#"}})
         }.ElseIf(#admin_access_id# > 0){
-            SetVar(where, {#type_filter#,"informations->name": {"$ilike": "#search#"}})
+            SetVar(where, {"#type_filter#", "informations->name": {"$ilike": "#search#"}})
         }.Else{
-            SetVar(where, {"status":10})
+            SetVar(where, {"status": 10})
         }
     }.Else{
         If(#startup_access_id# > 0){
-            SetVar(where, {#type_filter#, "deleted":0})
+            SetVar(where, {"#type_filter#", "deleted": 0})
         }.ElseIf(#investor_access_id# > 0){
-            SetVar(where, {#type_filter#, "deleted":0})
+            SetVar(where, {"#type_filter#", "deleted": 0})
         }.ElseIf(#admin_access_id# > 0){
-            SetVar(where, {#type_filter#})
+            SetVar(where, {"#type_filter#"})
         }.Else{
-            SetVar(where, {"status":10})
+            SetVar(where, {"status": 10})
         }
     }
 
-    DBFind(#this_table#,Source: src_start).Columns("id,collected_amount,informations,informations->name,informations->description,informations->link,date_started,date_ended,required_amount,min_investment,share_capital,ecosystem,deleted,creator,creator->member_address,creator->member_name,creator->member_id,status,date_created,collected_percent").Where(#where#).Offset(#pager_offset#).Limit(#pager_limit#).Custom(_name){
+    DBFind(#this_table#, src_start).Where(#where#).Columns("id,collected_amount,informations,informations->name,informations->description,informations->link,date_started,date_ended,required_amount,min_investment,share_capital,ecosystem,deleted,creator,creator->member_name,creator->account,status,date_created,collected_percent").Offset(#pager_offset#).Limit(#pager_limit#).Custom(_name){
         Div(button-group text-nowrap){
             LinkPage(Class: text-primary h5 text-bold, Page: @1startup_view, PageParams: "stid=#id#,back_page=#this_page#"){
                 Span(Class: text-primary ml-sm, Body: #informations.name#)
             }
         }
     }.Custom(_creator){ 
-        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
+        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#creator.account#"){
             Div(){
                 Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
                 Span(){
-                    If(#creator.member_name# == ""){
-                        Span(Body: #creator.member_address#)
-                    }.Else{
+                    If(#creator.member_name#){
                         Span(Body: #creator.member_name#)
+                    }.Else{
+                        Span(Body: #creator.account#)
                     }
                 }
             }.Style(display:flex; align-items:center;)  
@@ -102,7 +102,7 @@ If(#global_access# == 1){
         Span(Body: Money(#min_investment#))
     }.Custom(_edit){
         Div(pull-right){
-            If(And(#startup_access_id# > 0,#creator.member_id# == #key_id#)){
+            If(And(#startup_access_id# > 0, #creator.account# == #account_id#)){
                 If(#status# == 0){
                     Button(Class: btn bg-gray-lighter mh-sm buttons, PageParams: "stid=#id#,back_page=#this_page#", Page: @1create_startup){
                         Em(Class: text-default fa fa-1x fa-edit)
@@ -135,7 +135,7 @@ If(#global_access# == 1){
         }
     }.Custom(_date_created){
         P(Class: h6 m0, Body: DateTime(DateTime: #date_created#, Format: HH:MI DD.MM.YYYY))
-    }.Order({"status": "-1","date_started": "-1"}).Count(check_comp)
+    }.Order({"status": "-1", "date_started": "-1"}).Count(check_comp)
 
     Div(fullscreen){
         Div(table-responsive ml-lg mr-lg){

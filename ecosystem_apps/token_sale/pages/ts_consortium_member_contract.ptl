@@ -1,29 +1,29 @@
 SetVar(isStartProcessing, 0)
 If(#notific_id# > 0){
-    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("page_params->wallet_id,date_start_processing,notification->type,processing_info->member_id,closed").Vars(note)
+    DBFind("@1notifications").Where({"ecosystem": "#ecosystem_id#", "id": "#notific_id#"}).Columns("page_params->wallet_id,date_start_processing,notification->type,processing_info->account,closed").Vars(note)
     If(#note_date_start_processing# > 0){
         SetVar(isStartProcessing, 1)
     }
 }
 
-SetVar(this_page, ts_consensus_contract)
+SetVar(this_page, ts_consortium_member_contract)
 Div(content-wrapper){
     Form(){
-        DBFind(@1ts_wallets).Where({"id": #note_page_params_wallet_id#, "rejected_at": 0}).Vars(wallet)
+        DBFind("@1ts_wallets").Where({"id": "#note_page_params_wallet_id#", "rejected_at": 0}).Vars(wallet)
         If(#wallet_id# > 0){
             Div(list-group-item){
                 Div(text-center text-bold h4 m0){
-                    LangRes(@1key_id_investor)
+                    LangRes(@1investor)
                 }
             }
             Div(list-group-item){
                 Div(row){
                     Div(col-sm-3 text-right text-bold){
-                        $@1key_id_investor$
+                        $@1investor$
                     }
                     Div(col-sm-9 text-left){
-                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#wallet_key_id_buyer#"){
-                            Address(#wallet_key_id_buyer#)
+                        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#wallet_buyer_account#"){
+                            #wallet_buyer_account#
                         }
                     }
                 }
@@ -62,9 +62,9 @@ Div(content-wrapper){
             }
             If(#note_closed# == 0){
                 Div(list-group-item){
-                    If(And(#note_processing_info_member_id# == #key_id#, #isStartProcessing# == 1)){
-                        Button(Body: $@1reject$, Class: btn btn-default, Page: #this_page#, PageParams: "notific_id=#notific_id#", Contract: TsConsensusAction, Params: "Action=reject,WalletId=#note_page_params_wallet_id#,NotificId=#notific_id#")
-                        Button(Body: $@1accept$, Class: btn btn-primary pull-right, Page: #this_page#, PageParams: "notific_id=#notific_id#", Contract: TsConsensusAction, Params: "Action=accept,WalletId=#note_page_params_wallet_id#,NotificId=#notific_id#")
+                    If(And(#note_processing_info_account# == #account_id#, #isStartProcessing# == 1)){
+                        Button(Body: $@1reject$, Class: btn btn-default, Page: #this_page#, PageParams: "notific_id=#notific_id#", Contract: TsConsortiumMemberAction, Params: "Action=reject,WalletId=#note_page_params_wallet_id#,NotificId=#notific_id#")
+                        Button(Body: $@1accept$, Class: btn btn-primary pull-right, Page: #this_page#, PageParams: "notific_id=#notific_id#", Contract: TsConsortiumMemberAction, Params: "Action=accept,WalletId=#note_page_params_wallet_id#,NotificId=#notific_id#")
                     }.ElseIf(#isStartProcessing# == 1){
                         Div(text-muted text-center){
                             $@1notice_processing_started_another_member$

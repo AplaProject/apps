@@ -4,45 +4,45 @@ Include(@1pager_header)
 SetTitle("$crediting$")
 Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$crediting_desc$"))
 
-DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Crediting"}).Vars(application)
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "Crediting"}).Vars(application)
 SetVar(admin_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crediting_admin_role))
 SetVar(creditor_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crediting_creditor_role))
 SetVar(borrower_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crediting_borrower_role))
-DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
-DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#creditor_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(creditor_access)
-DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#borrower_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(borrower_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#admin_role#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(admin_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#creditor_role#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(creditor_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#borrower_role#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(borrower_access)
 
 If(#borrower_access_id# > 0){
     AddToolButton(Title: $@1add$, Page: crediting_add, Icon: icon-plus).Popup(60, $crediting_add$)
 }
 
-If(#page_par#==0){
-    SetVar(type_filter, {"status": 0})
-}.ElseIf(#page_par#==1){
-    SetVar(type_filter, {"status": 1})
-}.ElseIf(#page_par#==2){
-    SetVar(type_filter, {"status": 2})
-}.ElseIf(#page_par#==3){
-    SetVar(type_filter, {"status": 3})
-}.ElseIf(#page_par#==4){
-    SetVar(type_filter, {"status": 4})
+If(#page_par# == 0){
+    SetVar(type_filter, `, {"status": 0}`)
+}.ElseIf(#page_par# == 1){
+    SetVar(type_filter, `, {"status": 1}`)
+}.ElseIf(#page_par# == 2){
+    SetVar(type_filter, `, {"status": 2}`)
+}.ElseIf(#page_par# == 3){
+    SetVar(type_filter, `, {"status": 3}`)
+}.ElseIf(#page_par# == 4){
+    SetVar(type_filter, `, {"status": 4}`)
 }
 
 If(#creditor_access_id# > 0){
     SetVar(global_access, 1)
-    SetVar(role_where, {"deleted": 0})
+    SetVar(role_where, `, {"deleted": 0}`)
 }.ElseIf(#borrower_access_id# > 0){
     SetVar(global_access, 1)
-    SetVar(role_where, {"borrower": Address(#key_id#)})
+    SetVar(role_where, `, {"borrower": "#account_id#"}`)
 }.ElseIf(#admin_access_id# > 0){
     SetVar(global_access, 1)
 }
 
 If(#global_access# == 1){
     If(#search#){
-        SetVar(where, {"$and": [#role_where#, #type_filter#, {"borrower": {"$ilike": "#search#"}}]})
+        SetVar(where, {"$and": [{"borrower": {"$ilike": "#search#"}} #role_where# #type_filter#]})
     }.Else{
-        SetVar(where, {"$and": [#role_where#, #type_filter#]})
+        SetVar(where, {"$and": [#role_where# #type_filter#]})
     }
 
     Div(mr-lg text-right){
@@ -68,11 +68,10 @@ If(#global_access# == 1){
             SetVar(Name: style_text, Value: "text-muted")
             SetVar(Name: style_link, Value: "text-muted")
         }
-        SetVar(borrower_id, AddressToId(#borrower#))
         Span(Class: #style_text#, Body: #id#)
     }.Custom(custom_borrower){
-        DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #borrower_id#}).Columns("member_info->information").Vars(member)
-        LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#member_id#"){
+        DBFind("@1members").Where({"ecosystem": "#ecosystem_id#", "account": "#borrower#"}).Columns("member_info->information").Vars(member)
+        LinkPage(Class: #style_link# h5 text-bold, Page: @1profile_view, PageParams: "v_account=#member_account#"){
             Div(){
                 Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
                 Span(){
@@ -93,17 +92,17 @@ If(#global_access# == 1){
     }.Custom(custom_status){
         If(#status#==-2){
             Span(Class: text-muted, Body: LangRes(crediting_blocked))
-        }.ElseIf(#status#==-1){
+        }.ElseIf(#status# == -1){
             Span(Class: text-muted, Body: LangRes(crediting_removed))
-        }.ElseIf(#status#==0){
+        }.ElseIf(#status# == 0){
             Span(Class: text-warning, Body: LangRes(crediting_waiting))
-        }.ElseIf(#status#==1){
+        }.ElseIf(#status# == 1){
             Span(Class: text-success, Body: LangRes(crediting_auction))
-        }.ElseIf(#status#==2){
+        }.ElseIf(#status# == 2){
             Span(Class: text-primary, Body: LangRes(crediting_signing))
-        }.ElseIf(#status#==3){
+        }.ElseIf(#status# == 3){
             Span(Class: text-danger, Body: LangRes(crediting_rejected))
-        }.ElseIf(#status#==4){
+        }.ElseIf(#status# == 4){
             Span(Class: text-normal, Body: LangRes(crediting_finished))
         }
     }.Custom(custom_view){
@@ -117,7 +116,7 @@ If(#global_access# == 1){
         )
     }.Custom(actions){
         Div(text-right button-group text-nowrap){
-            If(And(#deleted#==0,#status#==0,#borrower_id#==#key_id#)){
+            If(And(#deleted# == 0, #status# == 0, #borrower# == #account_id#)){
                 Button(Class: btn bg-gray-lighter buttons, Contract: CreditingDel, Params: "Id=#id#", Page: #this_page#){
                     Em(Class: text-danger fa fa-1x fa-trash)
                 }.Alert(Text: "$@1sure_want_delete$", ConfirmButton: $@1yes$, CancelButton: $@1no$, Icon: question)

@@ -23,14 +23,14 @@ contract QAnswer {
         if $question["au_roles"] != "[0]" {
             var au_roles array
             au_roles = JSONDecode($question["au_roles"])
-            if !DBFind("@1roles_participants").Where({"member->member_id": $key_id, "deleted": 0, "ecosystem": $ecosystem_id, "role->id": {"$in": au_roles}}) {
+            if !DBFind("@1roles_participants").Where({"member->account": $account_id, "deleted": 0, "ecosystem": $ecosystem_id, "role->id": {"$in": au_roles}}) {
                 warning LangRes("@1q_error_cannot", "en")
             }
         }
         if $question["au_groups"] != "[0]" {
             var au_groups array
             au_groups = JSONDecode($question["au_groups"])
-            if !DBFind("@1groups_participants").Where({"member->member_id": $key_id, "deleted": 0, "ecosystem": $ecosystem_id," groups_info->id": {"$in": au_groups}}) {
+            if !DBFind("@1groups_participants").Where({"member->account": $account_id, "deleted": 0, "ecosystem": $ecosystem_id," groups_info->id": {"$in": au_groups}}) {
                 warning LangRes("@1q_error_cannot", "en")
             }
         }
@@ -38,7 +38,7 @@ contract QAnswer {
 
     action {
         var notes array i int note map
-        notes = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_name": "@1q_question", "page_params->id": $QuestionId, "closed": 0}).Columns("id")
+        notes = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->account": $account_id, "page_name": "@1q_question", "page_params->id": $QuestionId, "closed": 0}).Columns("id")
         while i < Len(notes) {
             note = notes[i]
             @1NotificationsClose("NotificId", Int(note["id"]))
@@ -52,7 +52,7 @@ contract QAnswer {
             m["lastmodified"] = $block_time
             DBUpdate("@1q_list", $QuestionId, m)
         } else {
-            m["member"] = $key_id
+            m["member"] = $account_id
             m["decision"] = $Decision
             m["answer_id"] = $AnswerId
             m["ecosystem"] = $ecosystem_id

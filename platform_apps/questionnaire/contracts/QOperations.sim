@@ -42,12 +42,12 @@ contract QOperations {
         admin_ids = AppParam(Int($app), "q_admin_role", $ecosystem_id)
         var rids array
         rids = JSONDecode("["+admin_ids+"]")
-        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->account": $account_id, "deleted": 0}).Row() {
             warning LangRes("@1access_denied", "en")
         }
 
         if $Operation == "GA" {
-            $groups = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).Columns("au_groups").One("au_groups"))
+            $groups = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).One("au_groups"))
             var i int
             i = 0
             while i < Len($groups) {
@@ -58,7 +58,7 @@ contract QOperations {
             }
         }
         if $Operation == "RA" {
-            $roles = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).Columns("au_roles").One("au_roles"))
+            $roles = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).One("au_roles"))
             var i int
             i = 0
             while i < Len($roles) {
@@ -92,7 +92,7 @@ contract QOperations {
         //notifications when start and changing status
         if $Operation == "C" {
             var decision array
-            decision = JSONDecode(DBFind("@1buffer_data").Where({"key": "q_answers", "member_id": $key_id, "ecosystem": $ecosystem_id}).One("value"))
+            decision = JSONDecode(DBFind("@1buffer_data").Where({"key": "q_answers", "account": $account_id, "ecosystem": $ecosystem_id}).One("value"))
             var params map
             params["notifications"] = $Notifications
             params["hide"] = $Hide
@@ -102,7 +102,7 @@ contract QOperations {
             q["answer"] = JSONEncode(decision)
             q["ecosystem"] = $ecosystem_id
             q["deleted"] = 0
-            q["init"] = $key_id
+            q["init"] = $account_id
             q["status"] = 0
             q["au_roles"] = "[0]"
             q["au_groups"] = "[0]"
@@ -116,31 +116,31 @@ contract QOperations {
             q["description"] = $Description
             q["question"] = $Question
             q["ecosystem"] = $ecosystem_id
-            q["init"] = $key_id
+            q["init"] = $account_id
             q["lastmodified"] = $block_time
             DBUpdate("@1q_list", $Id, q)
         }
         if $Operation == "AA" {
             if $Id == 0 {
-                if !DBFind("@1buffer_data").Where({"key": "q_answers", "member_id": $key_id, "ecosystem": $ecosystem_id}).One("value") {
+                if !DBFind("@1buffer_data").Where({"key": "q_answers", "account": $account_id, "ecosystem": $ecosystem_id}).One("value") {
                     var decision array
                     decision = Append(decision, Str($Answer))
                     q["value"] = JSONEncode(decision)
-                    q["member_id"] = $key_id
+                    q["account"] = $account_id
                     q["key"] = "q_answers"
                     q["ecosystem"] = $ecosystem_id
                     DBInsert("@1buffer_data", q)
                 } else {
                     var decision array
-                    $id_upd = Int(DBFind("@1buffer_data").Where({"key": "q_answers", "member_id": $key_id, "ecosystem": $ecosystem_id}).One("id"))
-                    decision = JSONDecode(DBFind("@1buffer_data").Where({"key": "q_answers", "member_id": $key_id, "ecosystem": $ecosystem_id}).One("value"))
+                    $id_upd = Int(DBFind("@1buffer_data").Where({"key": "q_answers", "account": $account_id, "ecosystem": $ecosystem_id}).One("id"))
+                    decision = JSONDecode(DBFind("@1buffer_data").Where({"key": "q_answers", "account": $account_id, "ecosystem": $ecosystem_id}).One("value"))
                     decision = Append(decision, Str($Answer))
                     q["value"] = JSONEncode(decision)
                     DBUpdate("@1buffer_data", $id_upd, q)
                 }
             } else {
                 var decision array
-                decision = JSONDecode(DBFind("@1q_list").Columns("answer").Where({"id": $Id, "ecosystem": $ecosystem_id}).One("answer"))
+                decision = JSONDecode(DBFind("@1q_list").Where({"id": $Id, "ecosystem": $ecosystem_id}).One("answer"))
                 decision = Append(decision, Str($Answer))
                 q["answer"] = JSONEncode(decision)
                 DBUpdate("@1q_list", $Id, q)
@@ -149,8 +149,8 @@ contract QOperations {
         if $Operation == "AD" {
             if $Id == 0 {
                 var decision decision_new array
-                decision = JSONDecode(DBFind("@1buffer_data").Where({"key": "q_answers", "member_id": $key_id}).One("value"))
-                $id_upd = Int(DBFind("@1buffer_data").Where({"key": "q_answers", "member_id": $key_id}).One("id"))
+                decision = JSONDecode(DBFind("@1buffer_data").Where({"key": "q_answers", "account": $account_id}).One("value"))
+                $id_upd = Int(DBFind("@1buffer_data").Where({"key": "q_answers", "account": $account_id}).One("id"))
                 var i int
                 while i < Len(decision) {
                     if decision[i] != Str($Answer) {
@@ -162,7 +162,7 @@ contract QOperations {
                 DBUpdate("@1buffer_data", $id_upd, q)
             } else {
                 var decision decision_new array
-                decision = JSONDecode(DBFind("@1q_list").Columns("answer").Where({"id": $Id, "ecosystem": $ecosystem_id}).One("answer"))
+                decision = JSONDecode(DBFind("@1q_list").Where({"id": $Id, "ecosystem": $ecosystem_id}).One("answer"))
                 var i int
                 while i < Len(decision) {
                     if decision[i] != Str($Answer) {
@@ -175,7 +175,7 @@ contract QOperations {
             }
         }
         if $Operation == "RA" {
-            audience = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).Columns("au_roles").One("au_roles"))
+            audience = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).One("au_roles"))
             if audience[0]==0 {
                 audience[0] = $AuRoles
             } else {
@@ -185,7 +185,7 @@ contract QOperations {
             DBUpdate("@1q_list", $Id, q)
         }
         if $Operation == "GA" {
-            audience = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).Columns("au_groups").One("au_groups"))
+            audience = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).One("au_groups"))
             if audience[0]==0 {
                 audience[0] = $AuGroups
             } else {
@@ -195,7 +195,7 @@ contract QOperations {
             DBUpdate("@1q_list", $Id, q)
         }
         if $Operation == "RD" {
-            audience = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).Columns("au_roles").One("au_roles"))
+            audience = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).One("au_roles"))
             var i int
             if audience[0]==$AuRoles && Len(audience)<2 {
                 audience[0] = 0
@@ -212,7 +212,7 @@ contract QOperations {
             DBUpdate("@1q_list", $Id, q)
         }
         if $Operation == "GD" {
-            audience = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).Columns("au_groups").One("au_groups"))
+            audience = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).One("au_groups"))
             var i int
             if audience[0]==$AuGroups && Len(audience)<2 {
                 audience[0] = 0
@@ -229,7 +229,7 @@ contract QOperations {
             DBUpdate("@1q_list", $Id, q)
         }
         if $Operation == "T" {
-            q["init"] = $key_id
+            q["init"] = $account_id
             q["status"] = 1
             q["lastmodified"] = $block_time
             DBUpdate("@1q_list", $Id, q)
@@ -240,18 +240,18 @@ contract QOperations {
             grp_array = JSONDecode(DBFind("@1q_list").Where({"id": $Id}).One("au_groups"))
             if rid_array[0] == 0 && grp_array[0] == 0 && params["params.notifications"] == "true" {
                 var participants array
-                participants = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "deleted": 0}).Columns("id")
+                participants = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "deleted": 0}).Columns("account")
                 var i int
                 while i < Len(participants) {
                     var participant map
                     participant = participants[i]
-                    @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params,Rid,Closure", Int(participant["id"]), 1, "fa fa-question-circle", LangRes("@1q_new_question", "en"), params["question"], "@1q_question", params, 0, 0)
+                    @1NotificationsSend("MemberAccount,Sender,Icon,Header,Body,Page,Params,Rid,Closure", participant["account"], 1, "fa fa-question-circle", LangRes("@1q_new_question", "en"), params["question"], "@1q_question", params, 0, 0)
                     i = i + 1
                 }
             }
         }
         if $Operation == "Z" {
-            q["init"] = $key_id
+            q["init"] = $account_id
             q["status"] = 3
             q["lastmodified"] = $block_time
             DBUpdate("@1q_list", $Id, q)
@@ -275,7 +275,7 @@ contract QOperations {
             }
         }
         if $Operation == "D" {
-            q["init"] = $key_id
+            q["init"] = $account_id
             q["status"] = 3
             q["deleted"] = 1
             q["lastmodified"] = $block_time

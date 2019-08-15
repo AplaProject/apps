@@ -5,12 +5,12 @@ contract DelStartup {
 
     conditions {
         $app = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Crowdfunding"}).One("id")
-        $check_creator = DBFind("@1startups").WhereId($StId).Columns("id,creator,creator->member_id").Row()
+        $check_creator = DBFind("@1startups").WhereId($StId).Columns("id,creator,creator->account").Row()
         $check_access_admin = AppParam(Int($app), "crowdfunding_admin_role", $ecosystem_id)
         var rids array
         rids = JSONDecode("["+$check_access_admin+"]")
-        if Int($check_creator["creator.member_id"]) != $key_id {
-            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+        if $check_creator["creator.account"] != $account_id {
+            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->account": $account_id, "deleted": 0}).Row() {
                 warning LangRes("@1access_denied", "en")
             }
         }  

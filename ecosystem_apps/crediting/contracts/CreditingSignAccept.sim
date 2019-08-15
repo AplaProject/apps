@@ -5,7 +5,7 @@ contract CreditingSignAccept {
 
     func closeMyNotes() {
         var notes array i int
-        notes = DBFind("@1notifications").Where({"closed": 0, "ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_name": "crediting_view", "page_params->crediting_id": $Id})
+        notes = DBFind("@1notifications").Where({"closed": 0, "ecosystem": $ecosystem_id, "recipient->account": $account_id, "page_name": "crediting_view", "page_params->crediting_id": $Id})
         while i < Len(notes){
             var note map
             note = notes[i]
@@ -32,11 +32,11 @@ contract CreditingSignAccept {
         }
 
         //check borrower && creditor
-        if AddressToId($borrower) != $key_id && AddressToId($creditor) != $key_id {
+        if $borrower != $account_id && $creditor != $account_id {
             warning LangRes("@1access_denied", "en")
         }
 
-        $pub = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $key_id}).One("pub")
+        $pub = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $account_id, "deleted": 0}).One("pub")
         $pub = PubToHex($pub) 
     }
 
@@ -44,19 +44,17 @@ contract CreditingSignAccept {
         closeMyNotes()
 
         var m map
-        if AddressToId($borrower) == $key_id && $sign_borrower == 0 {
+        if $borrower == $account_id && $sign_borrower == 0 {
             m["sign_borrower"] = $block_time
             m["pub_borrower"] = $pub
             $sign_borrower = $block_time
 
-            var memberId int
             var header body string params map
-            memberId = AddressToId($creditor)
             header = "Signature for auction №" + Str($Id)
             body = "Your signature is required!"
             params["crediting_id"] = $Id
-            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-edit", header, body, "crediting_view", params)
-        } elif AddressToId($creditor) == $key_id && $sign_creditor == 0 {
+            @1NotificationsSend("MemberAccount,Sender,Icon,Header,Body,Page,Params", $creditor, 1, "fa-edit", header, body, "crediting_view", params)
+        } elif $creditor == $account_id && $sign_creditor == 0 {
             m["sign_creditor"] = $block_time
             m["pub_creditor"] = $pub
             $sign_creditor = $block_time

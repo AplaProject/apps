@@ -58,7 +58,9 @@ contract DelegateRefresh {
         i = 0
         while i < Len(currentDelegates) {
             delegate = currentDelegates[i]
-            if notInArray(delegate["member.account"], delegateIds){
+            var memberKey string
+            memberKey = Str(AddressToId(delegate["member.account"]))
+            if notInArray(memberKey, delegateIds){
                 id = Int(delegate["id"])
                 @1RolesUnassign("RowId", id)
             }
@@ -70,11 +72,13 @@ contract DelegateRefresh {
         i = 0
         while i < Len(delegateIds) {
             delegateId = Int(delegateIds[i])
-            key = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": delegateId, "deleted": 0}).Row()
+            var delegateAccount string
+            delegateAccount = IdToAddress(delegateId)
+            key = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": delegateAccount, "deleted": 0}).Row()
             if key {
                 // check role dup
-                if !DBFind("@1roles_participants").Where({"member->account": delegateId, "role->id": rid, "deleted": 0}).Row(){
-                    @1RolesAssign("Rid,MemberAccount", rid, key["account"])
+                if !DBFind("@1roles_participants").Where({"member->account": delegateAccount, "role->id": rid, "deleted": 0}).Row(){
+                    @1RolesAssign("Rid,MemberAccount", rid, delegateAccount)
                 }
             }
             i = i + 1
