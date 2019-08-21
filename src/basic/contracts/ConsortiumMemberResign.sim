@@ -1,0 +1,26 @@
+contract ConsortiumMemberResign {
+
+    func getRoleId(name string) int {
+        var rid int
+        rid = Int(AppParam(Int($system_app_id), name, $ecosystem_id))
+        if rid == 0 {
+            warning Sprintf(LangRes("@role_not_set_application_parameter", "en"), name)
+        }
+        return rid
+    }
+
+    conditions {
+        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
+        var roleConsortiumMember int
+        roleConsortiumMember = getRoleId("role_consortium_member")
+        if !RoleAccess(roleConsortiumMember) {
+            warning LangRes("@1consortium_members_only", "en")
+        }
+        $assigned = DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "member->account": $account_id, "role->id": roleConsortiumMember, "deleted": 0}).One("id")
+    }
+
+    action {
+        @1RolesUnassign("RowId", Int($assigned))
+        @1NodeRemoveByKey()
+    }
+}

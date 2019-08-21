@@ -1,92 +1,105 @@
-Div(content-wrapper){
-    SetTitle($@1edit_column$)
-    Div(breadcrumb){
-        Div(){
-            LinkPage($@1tables$, @1app_tables)
-            Span(/,mh)
-            LinkPage($@1edit_table$, @1table_edit, PageParams:"tabl_id=#tabl_id#")
-            Span(/,mh)
-            Span($@1edit_column$, text-muted)
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_developer_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_admin_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(admin_access)
+
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    Div(content-wrapper){
+        SetTitle($@1edit_column$)
+        Div(breadcrumb){
+            Div(){
+                LinkPage($@1tables$, @1app_tables)
+                Span(/,mh)
+                LinkPage($@1edit_table$, @1table_edit, PageParams:"tabl_id=#tabl_id#")
+                Span(/,mh)
+                Span($@1edit_column$, text-muted)
+            }
         }
-    }
 
-    DBFind(@1tables).Columns("id,name,columns,conditions").Where({"id": #tabl_id#, "ecosystem": #ecosystem_id#}).Vars(table)
-    JsonToSource(src_columns, #table_columns#)
-    Form(panel panel-default){
-        Div(panel-body){
-            ForList(src_columns){
-                If(#key# == #name_column#){
-                    Div(form-group){
-                        Label($@1column$)
-                        Input(Name: ColumnName, Disabled: "true", Value: #name_column#)
-                    }
-                    Div(form-group){
-                        Label($@1type$)
-                        SetVar(col_type, GetColumnType(#table_name#, #key#))
-                        If(#col_type# == character){
-                            SetVar(input_type, "Character")
+        DBFind("@1tables").Columns("id,name,columns,conditions").Where({"id": "#tabl_id#", "ecosystem": "#ecosystem_id#"}).Vars(table)
+        JsonToSource(src_columns, #table_columns#)
+        Form(panel panel-default){
+            Div(panel-body){
+                ForList(src_columns){
+                    If(#key# == #name_column#){
+                        Div(form-group){
+                            Label($@1column$)
+                            Input(Name: ColumnName, Disabled: "true", Value: #name_column#)
                         }
-                        If(#col_type# == text){
-                            SetVar(input_type, "Text")
+                        Div(form-group){
+                            Label($@1type$)
+                            SetVar(col_type, GetColumnType(#table_name#, #key#))
+                            If(#col_type# == character){
+                                SetVar(input_type, "Character")
+                            }
+                            If(#col_type# == text){
+                                SetVar(input_type, "Text")
+                            }
+                            If(#col_type# == number){
+                                SetVar(input_type, "Number")
+                            }
+                            If(#col_type# == money){
+                                SetVar(input_type, "Money")
+                            }
+                            If(#col_type# == varchar){
+                                SetVar(input_type, "Varchar")
+                            }
+                            If(#col_type# == datetime){
+                                SetVar(input_type, "Date/Time")
+                            }
+                            If(#col_type# == double){
+                                SetVar(input_type, "Double")
+                            }
+                            If(#col_type# == json){
+                                SetVar(input_type, "JSON")
+                            }
+                            If(#col_type# == bytea){
+                                SetVar(input_type, "Binary Data")
+                            }
+                            If(#col_type# == uuid){
+                                SetVar(input_type, "UUID")
+                            }
+                            Input(Name: Coltype, Disabled: "true", Value: #input_type#)
                         }
-                        If(#col_type# == number){
-                            SetVar(input_type, "Number")
-                        }
-                        If(#col_type# == money){
-                            SetVar(input_type, "Money")
-                        }
-                        If(#col_type# == varchar){
-                            SetVar(input_type, "Varchar")
-                        }
-                        If(#col_type# == datetime){
-                            SetVar(input_type, "Date/Time")
-                        }
-                        If(#col_type# == double){
-                            SetVar(input_type, "Double")
-                        }
-                        If(#col_type# == json){
-                            SetVar(input_type, "JSON")
-                        }
-                        If(#col_type# == bytea){
-                            SetVar(input_type, "Binary Data")
-                        }
-                        If(#col_type# == uuid){
-                            SetVar(input_type, "UUID")
-                        }
-                        Input(Name: Coltype, Disabled: "true", Value: #input_type#)
-                    }
 
-                    SetVar(isObject,0)
-                    JsonToSource(condition,#value#)
-                    ForList(condition){
-                        SetVar(isObject,1)
-                        If(#key#==read){
+                        SetVar(isObject,0)
+                        JsonToSource(condition,#value#)
+                        ForList(condition){
+                            SetVar(isObject,1)
+                            If(#key#==read){
+                                Div(form-group){
+                                    Label($@1reading$)
+                                    Input(Name: ReadColumn, Value: #value#)
+                                }
+                            }.ElseIf(#key#==update){
+                                Div(form-group){
+                                    Label($@1updating$)
+                                    Input(Name: UpdateColumn, Value: #value#)
+                                }
+                            }
+                        }
+                        If(#isObject#==0){
                             Div(form-group){
                                 Label($@1reading$)
-                                Input(Name: ReadColumn, Value: #value#)
+                                Input(Name: ReadColumn, Value: true)
                             }
-                        }.ElseIf(#key#==update){
                             Div(form-group){
                                 Label($@1updating$)
                                 Input(Name: UpdateColumn, Value: #value#)
                             }
                         }
                     }
-                    If(#isObject#==0){
-                        Div(form-group){
-                            Label($@1reading$)
-                            Input(Name: ReadColumn, Value: true)
-                        }
-                        Div(form-group){
-                            Label($@1updating$)
-                            Input(Name: UpdateColumn, Value: #value#)
-                        }
-                    }
                 }
             }
+            Div(panel-footer clearfix text-right){
+                Button(Body: $@1save$, Contract: @1EditColumn, Class: btn btn-primary, Page: @1table_edit, PageParams: "tabl_id=#tabl_id#", Params: "TableName=#table_name#,Name=Val(ColumnName),Type=Val(Coltype),UpdatePerm=Val(UpdateColumn),ReadPerm=Val(ReadColumn)")
+            }
         }
-        Div(panel-footer clearfix text-right){
-            Button(Body: $@1save$, Contract: @1EditColumn, Class: btn btn-primary, Page: @1table_edit, PageParams: "tabl_id=#tabl_id#", Params: "TableName=#table_name#,Name=Val(ColumnName),Type=Val(Coltype),UpdatePerm=Val(UpdateColumn),ReadPerm=Val(ReadColumn)")
-        }
+    }
+}.Else{
+    SetTitle($@1edit_column$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
 }

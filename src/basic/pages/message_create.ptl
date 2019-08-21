@@ -3,8 +3,11 @@ SetVar(this_page, @1message_create)
 If(#EcosystemId# == ""){
     SetVar(EcosystemId, #ecosystem_id#)
 }
-If(#MemberId# == ""){
-    SetVar(MemberId, 0)
+If(#MemberAccount#){
+    SetVar(MemberAccountInputValue, #MemberAccount#)
+}.Else{
+    SetVar(MemberAccount, 0)
+    SetVar(MemberAccountInputValue,)
 }
 
 If(#RoleId#){
@@ -13,12 +16,6 @@ If(#RoleId#){
     SetVar(broadcast_type_value, "group")
 }.Else{
     SetVar(broadcast_type_value, "member")
-}
-
-If(Or(#MemberId# > 0, #MemberId# < 0)){
-    SetVar(AddressMemberId, Address(#MemberId#))
-}.Else{
-    SetVar(AddressMemberId,)
 }
 
 Form(){
@@ -44,9 +41,9 @@ Form(){
             }
         }
         Div(col-md-9 text-left){
-            Input(Name: MemberId, Type: hidden, Value: #MemberId#)
+            Input(Name: MemberAccount, Type: hidden, Value: #MemberAccount#)
             Div(input-group){
-                Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #AddressMemberId#)
+                Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #MemberAccountInputValue#)
                 Div(input-group-btn){
                     Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams: "back_page=#this_page#,back_header=$@1message_create$,EcosystemId=#EcosystemId#").Popup(Header: $@1member$, Width: "50")
                 }
@@ -62,14 +59,14 @@ Form(){
         Div(col-md-9 text-left){
             If(RoleId == ""){
                 SetVar(RoleId, 0)
-                SetVar(RoleName, "")
+                SetVar(RoleName,)
             }.Else{
                 Input(Name: Rid, Type: hidden, Value: #RoleId#)
             }
             Div(input-group){
                 If(#RoleId# > 0){
                     SetVar(Id, #RoleId#)
-                    DBFind(@1roles).WhereId(#RoleId#).Columns("role_name").Vars(r)
+                    DBFind("@1roles").WhereId(#RoleId#).Columns("role_name").Vars(r)
                 }
                 Input(Name: m_name, Disabled: 1, Value: #r_role_name#)
                 Div(input-group-btn){
@@ -87,14 +84,14 @@ Form(){
         Div(col-md-9 text-left){
             If(GroupId == ""){
                 SetVar(GroupId, 0)
-                SetVar(GroupName, "")
+                SetVar(GroupName,)
             }.Else{
                 Input(Name: GroupId, Type: hidden, Value: #GroupId#)
             }
             Div(input-group){
                 If(#GroupId# > 0){
                     SetVar(Id, #GroupId#)
-                    DBFind(@1groups).WhereId(#GroupId#).Columns("group_name").Vars(g)
+                    DBFind("@1groups").WhereId(#GroupId#).Columns("group_name").Vars(g)
                 }
                 Input(Name: m_name, Disabled: 1, Value: #g_group_name#)
                 Div(input-group-btn){
@@ -134,10 +131,10 @@ Form(){
                 Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1messages_list, Contract: @1NotificationsSend, Params: "Rid=0,GroupId=0,CurrentRid=#role_id#")
             }.Show("broadcast_type=member")
             Div(){
-                Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1messages_list, Contract: @1NotificationsSend, Params: "MemberId=0,GroupId=0,CurrentRid=#role_id#,Closure=2")
+                Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1messages_list, Contract: @1NotificationsSend, Params: "MemberAccount=0,GroupId=0,CurrentRid=#role_id#,Closure=2")
             }.Show("broadcast_type=role")
             Div(){
-                Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1messages_list, Contract: @1NotificationsSend, Params: "MemberId=0,Rid=0,CurrentRid=#role_id#")
+                Button(Body: LangRes(@1send), Class: btn btn-primary pull-right, Page: @1messages_list, Contract: @1NotificationsSend, Params: "MemberAccount=0,Rid=0,CurrentRid=#role_id#")
             }.Show("broadcast_type=group")
             Button(Body: LangRes(@1back), Class: btn btn-default pull-right, Page: @1messages_list)
         }

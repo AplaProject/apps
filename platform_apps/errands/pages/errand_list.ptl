@@ -9,13 +9,13 @@ If(And(#type#!=0,#type#!=1)){
 }
 
 SetTitle($@1errands$)
-DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Errands"}).Vars(application)
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "Errands"}).Vars(application)
 SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: errands_admin_role))
-DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "role->id": {"$in": [#admin_roles#]}, "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "role->id": {"$in": [#admin_roles#]}, "member->account": "#account_id#", "deleted": 0}).Vars(admin_access)
 SetVar(errands_access, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: errands_access))
-DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#errands_access#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(create_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#errands_access#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(create_access)
 If(#create_access_id# > 0){
-    AddToolButton(Title: $@1new_errand$, Page: @1errand_create, PageParams:"type=#type#", Icon: icon-plus).Popup(50, "$@1new_errand$")
+    AddToolButton(Title: $@1new_errand$, Page: @1errand_create, PageParams: "type=#type#", Icon: icon-plus).Popup(50, "$@1new_errand$")
 }
 
 Div(btn-group){
@@ -45,33 +45,33 @@ Div(btn-group){
             Button(Class: btn bg-gray-lighter, Page: @1errand_list, PageParams: "Status=-1,type=#type#"){Span(Body: Em(Class: fa fa-times), Class: text-danger)}
         }
     }
-    If(Or(#search#!="",#Status#==-1,#Status#==0,#Status#==1)){
+    If(Or(#search# != "", #Status# == -1, #Status# == 0, #Status# == 1)){
         Span(Button(Class: btn btn-link pull-right, Page: @1errand_list,PageParams: "type=#type#", Body: $@1clear_filters$)).Style(padding-left:10px)
     }
 }
 
-If(#type#==1){
-    SetVar(where_recipient, {"recipient->role_id": {"$neq": 0}})
+If(#type# == 1){
+    SetVar(where_recipient, `, {"recipient->role_id": {"$neq": 0}}`)
 }.Else{
-    SetVar(where_recipient, {"recipient->member_id": {"$neq": 0}})
+    SetVar(where_recipient, `, {"recipient->account": {"$neq": 0}}`)
 }
 
-If(Or(#Status#==-1,#Status#==0,#Status#==1)){
-    SetVar(where_status, {"page_params->status": #Status#})
+If(Or(#Status# == -1, #Status# == 0, #Status# == 1)){
+    SetVar(where_status, `, {"page_params->status": #Status#}`)
 }
 
 If(#search#){
-    SetVar(where_search, {"page_params->name": {"$ilike": "#search#"}})
+    SetVar(where_search, `, {"page_params->name": {"$ilike": "#search#"}}`)
 }
 
-SetVar(where, {"$and": [{"ecosystem": #ecosystem_id#}, {"page_params->type": "task"}, #where_recipient#, #where_status#, #where_search#]})
+SetVar(where, {"$and": [{"ecosystem": "#ecosystem_id#"}, {"page_params->type": "task"} #where_recipient# #where_status# #where_search#]})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, LangRes(@1name)).(page_par, #type#)
     Include(@1search)
 }
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,ecosystem,page_params->status,page_params->name,recipient->role_name,recipient->role_id,recipient->member_name,recipient->member_id,recipient->image_id,sender->image_id,sender->role_name,sender->role_id,date_created,page_params->date_end").Custom(_status){
+DBFind(#this_table#, src).Where(#where#).Order({"id": "-1"}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,ecosystem,page_params->status,page_params->name,recipient->role_name,recipient->role_id,recipient->member_name,recipient->account,recipient->image_id,sender->image_id,sender->role_name,sender->role_id,date_created,page_params->date_end").Custom(_status){
     If(#page_params.status# == 0){
         Span(Body:Em(Class:fa fa-hourglass-half) $@1in_progress$,Class: text-primary h5)
     }.ElseIf(#page_params.status# == -1){
@@ -86,8 +86,8 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).
                 Span(Class: icon-people fa-2x mr-sm).(#recipient.role_name#)
             }.Style(display:flex; align-items:center;)
         }
-    }.ElseIf(#recipient.member_id# != 0){
-        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#recipient.member_id#"){
+    }.ElseIf(#recipient.account#){
+        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#recipient.account#"){
             If(#recipient.image_id#>0){
                 Image(Src: Binary().ById(#recipient.image_id#), Class: img-circle).Style(height: 30px;width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
                 Span(#recipient.member_name#)

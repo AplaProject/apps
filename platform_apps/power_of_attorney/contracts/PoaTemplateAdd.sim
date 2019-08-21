@@ -4,18 +4,18 @@ contract PoaTemplateAdd {
         ParamArr array
     }
 
-    func getMemberInfo(kid int) map {
+    func getMemberInfo(account string) map {
         var res member map
-        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
+        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "account": account}).Row()
         if member {
-            res["member_id"] = member["id"]
+            res["account"] = member["account"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         } else {
-            member = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
+            member = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": account, "deleted": 0}).Row()
             if member {
-                res["member_id"] = member["id"]
-                res["member_name"] = IdToAddress(Int(member["id"]))
+                res["account"] = member["account"]
+                res["member_name"] = member["account"]
                 res["image_id"] = 0
             }
         }
@@ -28,7 +28,7 @@ contract PoaTemplateAdd {
         admin_ids = AppParam(Int($app), "poa_admin_role", $ecosystem_id)
         var rids array
         rids = JSONDecode("["+admin_ids+"]")
-        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->account": $account_id, "deleted": 0}).Row() {
             warning LangRes("@1poa_not_rights_to_create", "en")
         }
     }
@@ -41,7 +41,7 @@ contract PoaTemplateAdd {
         }
 
         var m map
-        m["creator"] = getMemberInfo($key_id)
+        m["creator"] = getMemberInfo($account_id)
         m["contract"] = $ContractName
         m["date_created"] = $block_time
         m["params"] = params

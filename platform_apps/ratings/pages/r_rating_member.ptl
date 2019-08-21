@@ -1,15 +1,15 @@
 SetVar(this_page, @1r_rating_member).(back_page, @1r_ratings)
-DBFind(@1e_types, types).Where({"ecosystem": #ecosystem_id#}).Columns("id,name")
+DBFind("@1e_types", types).Where({"ecosystem": "#ecosystem_id#"}).Columns("id,name")
 
-DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Ratings"}).Vars(application)
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "Ratings"}).Vars(application)
 SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: ratings_admin_role))
-DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#admin_roles#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(admin_access)
 If(#admin_access_id# > 0){
     SetVar(isManager,1)
 }
 
 Form(){
-    If(#isManager#==1){
+    If(#isManager# == 1){
         Div(row){
             Div(col-sm-4 mt-sm text-bold text-right){
                 Label(For:Member){
@@ -18,9 +18,8 @@ Form(){
             }
             Div(col-sm-8 text-left){
                 Div(input-group){
-                    If(#MemberId#!=""){
-                        SetVar(Member, Address(#MemberId#))
-                        Input(Name: Member, Disabled: 1, Value: #Member#)
+                    If(#MemberAccount#){
+                        Input(Name: Member, Disabled: 1, Value: #MemberAccount#)
                     }.Else{
                         Input(Name: Member, Disabled: 1, Value: "xxxx-xxxx-xxxx-xxxx-xxxx")
                     }
@@ -30,10 +29,10 @@ Form(){
                 }
             }
         }
-        If(#MemberId#!=""){
+        If(#MemberAccount#){
             Div(row mt-sm){
                 Div(col-sm-4 mt-sm text-right){
-                    Label(For:Amount){
+                    Label(For: Amount){
                         $@1r_amount$
                     }
                 }
@@ -41,7 +40,7 @@ Form(){
                     Input(Name: Amount, Type: number)
                 }
             }
-            DBFind(@1e_events, events).Where({"ecosystem": #ecosystem_id#}).Limit(10).Order("created_at").Columns("name,id")
+            DBFind("@1e_events", events).Where({"ecosystem": "#ecosystem_id#"}).Limit(10).Order("created_at").Columns("name,id")
             Div(row mt-sm){
                 Div(col-sm-4 mt-sm text-right){
                     Label(For:LastEvent){

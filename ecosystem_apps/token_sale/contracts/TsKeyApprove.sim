@@ -7,7 +7,7 @@ contract TsKeyApprove {
 
     func getFreeWallet() int {
         var count_wallets int wallet_map map wallet_arr array
-        wallet_arr = DBFind("ts_wallets").Where({"key_id_buyer": 0, "deleted": 0}).Order({"id": 1})
+        wallet_arr = DBFind("ts_wallets").Where({"buyer_account": 0, "deleted": 0}).Order({"id": 1})
 
         count_wallets = Len(wallet_arr)
         if count_wallets == 0 {
@@ -45,15 +45,16 @@ contract TsKeyApprove {
         }
 
         $userKey = PubToID($PublicKey)
+        $userAccount = IdToAddress($userKey)
         if $userKey == 0 {
             warning LangRes("@1public_key_invalid", "en")
         }
 
-        if DBFind("ts_wallets").Where({"key_id_buyer": $userKey}).One("id") {
+        if DBFind("ts_wallets").Where({"buyer_account": $userAccount}).One("id") {
             warning LangRes("@1investor_added_already", "en")
         }
 
-        if DBFind("@1keys").Where({"id": $userKey, "ecosystem": 1}).One("id") {
+        if DBFind("@1keys").Where({"account": $userAccount, "deleted": 0, "ecosystem": 1}).One("id") {
             warning LangRes("@1key_added_already", "en")
         }
 
@@ -73,22 +74,22 @@ contract TsKeyApprove {
     action {
         var pub_bytes bytes
         pub_bytes = HexToPub($PublicKey)
-        DBInsert("@1keys", {"id": $userKey, "pub": pub_bytes, "ecosystem": 1})
+        DBInsert("@1keys", {"id": $userKey, "account": $userAccount, "deleted": 0, "pub": pub_bytes, "ecosystem": 1})
         var start_balance money
         start_balance = Money(1000000000000000)
-        @1TokensSend("Recipient,Amount", IdToAddress($userKey), start_balance)
+        @1TokensSend("Recipient,Amount", $userAccount, start_balance)
 
         if $KeyType == "investor" {
             $wallet_id = getFreeWallet()
             $pub_short_buyer = Substr($PublicKey, 0, 12) + "..." + Substr($PublicKey, Size($PublicKey) - 12, 12)
-            DBUpdate("ts_wallets", $wallet_id, {"key_id_buyer": $userKey, "created_at": $block_time, "pub_buyer": $PublicKey, "pub_short_buyer": $pub_short_buyer})
+            DBUpdate("ts_wallets", $wallet_id, {"buyer_account": $userAccount, "created_at": $block_time, "pub_buyer": $PublicKey, "pub_short_buyer": $pub_short_buyer})
 
             // new user notification
             var params map title page body string
             title = LangRes("@1ts_hello_user_description", "en")
             body = LangRes("@1ts_read_contract", "en")
             page = "@1ts_buyer_contract"
-            @1NotificationsSend("MemberId,Sender,Header,Body,Page,Params,Closure,CurrentRid", $userKey, 2, title, body, page, params, 1, $CurrentRoleId)
+            @1NotificationsSend("MemberAccount,Sender,Header,Body,Page,Params,Closure,CurrentRid", $userAccount, 2, title, body, page, params, 1, $CurrentRoleId)
         }
     }
 }

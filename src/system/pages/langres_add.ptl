@@ -1,65 +1,78 @@
-If(#name#){}.Else{
-    SetVar(name,)
-}
-Div(content-wrapper){
-    SetTitle($@1lang_res$)
-    Div(Class: breadcrumb){
-        LinkPage($@1lang_res$, @1app_langres)
-        Span(/).Style(margin-right: 10px; margin-left: 10px;)
-        Span(Class: text-muted, Body: $@1new_langres$)
-    }
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_developer_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_admin_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(admin_access)
 
-    Form(panel panel-default){
-        Div(panel-body){
-            Div(row){
-                Div(col-md-12){
-                    Label($@1name$)
-                    Input(Name:Name, Value:#name#)
-                }
-            }
-            Div(row text-muted){
-                Div(col-md-1 mt-lg){
-                    Label(){$@1localization$}
-                }
-                Div(col-md-10 mt-lg){
-                    Label(){$@1value$}
-                }
-                Div(col-md-1 mt-lg){
-                    Label(){$@1action$}
-                }
-            }
-            If(#cs#==""){
-                SetVar(cs,0)
-            }
-            If(#del# == 1){
-                SetVar(cs,Calculate(#cs# - 1))
-            }.Else{
-                SetVar(cs,Calculate(#cs# + 1))
-            }
-            Range(params_range, 0, #cs#)
-            ForList(Source: params_range){
-                Div(row mt-sm){
-                    Div(col-md-1){
-                        Input(Name:LocaleArr)
-                    }.Style(input {padding: 6px;text-align:center;})
-                    Div(col-md-10){
-                        Input(Name:ValueArr)
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    If(#name#){}.Else{
+        SetVar(name,)
+    }
+    Div(content-wrapper){
+        SetTitle($@1lang_res$)
+        Div(Class: breadcrumb){
+            LinkPage($@1lang_res$, @1app_langres)
+            Span(/).Style(margin-right: 10px; margin-left: 10px;)
+            Span(Class: text-muted, Body: $@1new_langres$)
+        }
+
+        Form(panel panel-default){
+            Div(panel-body){
+                Div(row){
+                    Div(col-md-12){
+                        Label($@1name$)
+                        Input(Name:Name, Value:#name#)
                     }
-                    Div(col-md-1){
-                        If(And(#cs#==#params_range_index#,#cs#>1)){
-                            Button(Class:fa fa-trash btn btn-default, PageParams: "cs=#cs#,del=1", Page: @1langres_add)
+                }
+                Div(row text-muted){
+                    Div(col-md-1 mt-lg){
+                        Label(){$@1localization$}
+                    }
+                    Div(col-md-10 mt-lg){
+                        Label(){$@1value$}
+                    }
+                    Div(col-md-1 mt-lg){
+                        Label(){$@1action$}
+                    }
+                }
+                If(#cs#==""){
+                    SetVar(cs,0)
+                }
+                If(#del# == 1){
+                    SetVar(cs,Calculate(#cs# - 1))
+                }.Else{
+                    SetVar(cs,Calculate(#cs# + 1))
+                }
+                Range(params_range, 0, #cs#)
+                ForList(Source: params_range){
+                    Div(row mt-sm){
+                        Div(col-md-1){
+                            Input(Name:LocaleArr)
+                        }.Style(input {padding: 6px;text-align:center;})
+                        Div(col-md-10){
+                            Input(Name:ValueArr)
+                        }
+                        Div(col-md-1){
+                            If(And(#cs#==#params_range_index#,#cs#>1)){
+                                Button(Class:fa fa-trash btn btn-default, PageParams: "cs=#cs#,del=1", Page: @1langres_add)
+                            }
                         }
                     }
                 }
-            }
-            Div(row){
-                Div(col-md-12 mt-lg){
-                    LinkPage(Body:$@1locale_add$, Page: @1langres_add, PageParams:"cs=#cs#")
+                Div(row){
+                    Div(col-md-12 mt-lg){
+                        LinkPage(Body:$@1locale_add$, Page: @1langres_add, PageParams:"cs=#cs#")
+                    }
                 }
             }
+            Div(panel-footer text-right){
+                Button(Body: $@1save$, Class: btn btn-primary, Contract: @1NewLangJoint, Page: @1app_langres)
+            }
         }
-        Div(panel-footer text-right){
-            Button(Body: $@1save$, Class: btn btn-primary, Contract: @1NewLangJoint, Page: @1app_langres)
-        }
+    }
+}.Else{
+    SetTitle($@1lang_res$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
 }

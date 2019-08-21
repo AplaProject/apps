@@ -1,5 +1,5 @@
 If(#vID# == ""){
-    DBFind(@1buffer_data).Columns("value->voting_id").Where({"key": "voting", "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
+    DBFind("@1buffer_data").Columns("value->voting_id").Where({"key": "voting", "account": "#account_id#", "ecosystem": "#ecosystem_id#"}).Vars(buffer)
     If(#buffer_value_voting_id#>0){
         SetVar(vID, #buffer_value_voting_id#)
     }
@@ -11,18 +11,18 @@ If(#vID# > 0){
     If(#back_page#){}.Else{
         SetVar(back_page,@1voting_view)
     }
-    DBFind(@1votings, src_voting).WhereId(#vID#).Columns("id,voting->name,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params").Vars(instance)
-    DBFind(@1votings_subject, src_subject).Where({"voting_id": #vID#}).Columns("id,subject->member_id,subject->member_name").Custom(_address){
-        SetVar(candidates,"#candidates#,#subject.member_id#")
-        Address(#subject.member_id#)
+    DBFind("@1votings", src_voting).WhereId(#vID#).Columns("id,voting->name,optional->role_id,optional->role_vacancies,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params").Vars(instance)
+    DBFind("@1votings_subject", src_subject).Where({"voting_id": "#vID#"}).Columns("id,subject->account,subject->member_name").Custom(_address){
+        SetVar(candidates,"#candidates#,#subject.account#")
+        #subject.account#
     }.Custom(_member){
-        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#subject.member_id#"){
+        LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#subject.account#"){
             Span(Body: #subject.member_name#)
         }
     }
 
-    DBFind(@1roles,src_roles).Where({"ecosystem": #ecosystem_id#, "role_type": 2, "deleted": 0}).Columns("id,role_name").Count(elective_roles_count)
-    If(#elective_roles_count#>0){
+    DBFind("@1roles", src_roles).Where({"ecosystem": "#ecosystem_id#", "role_type": 2, "deleted": 0}).Columns("id,role_name").Count(elective_roles_count)
+    If(#elective_roles_count# > 0){
         Form(){
             Input(Name: VotingId, Type: hidden, Value: #vID#)
             Div(form-group){
@@ -34,16 +34,19 @@ If(#vID# > 0){
                     }
                     Div(col-md-9 mc-sm text-left){
                         Div(input-group){
-                            If(#MemberId#!=""){
-                                SetVar(AddressMemberId, Address(#MemberId#))
+                            If(#MemberAccount#){
+                                Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #MemberAccount#)
+                            }.Else{
+                                Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx")
                             }
-                            Input(Name: m_name, Disabled: 1, Placeholder: "xxxx-xxxx-xxxx-xxxx-xxxx", Value: #AddressMemberId#)
                             Div(input-group-btn){
-                                Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams:"back_page=@1voting_decision_election,back_header=$@1voting_subject$,EcosystemId=#ecosystem_id#,Id=#vID#").Popup(Header: $@1member$, Width: "50")
-                                If(#MemberId#!=""){
-                                    Button(Class: btn bg-gray-lighter fa fa-plus buttons, Page: @1voting_decision_election, PageParams: "vID=#vID#,back_page=#back_page#", Contract: @1VotingSubjectCandidates, Params:"MemberId=#MemberId#").Popup(50, $@1subject_voting$)
+                                Button(Class: btn bg-gray-lighter fa fa-caret-down buttons, Page: @1select_wallet, PageParams: "back_page=@1voting_decision_election,back_header=$@1voting_subject$,EcosystemId=#ecosystem_id#,Id=#vID#").Popup(Header: $@1member$, Width: "50")
+                                If(#MemberAccount#){
+                                    Button(Class: btn bg-gray-lighter fa fa-plus buttons, Page: @1voting_decision_election, PageParams: "vID=#vID#,back_page=#back_page#", Contract: @1VotingSubjectCandidates, Params: "MemberAccount=#MemberAccount#").Popup(50, $@1subject_voting$)
                                 }
-                            }
+                            }.Style(
+                                .buttons{border: 1px solid #dde6e9;}
+                            )
                         }
                     }
                 }

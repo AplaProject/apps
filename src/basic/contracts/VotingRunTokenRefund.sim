@@ -7,13 +7,11 @@ contract VotingRunTokenRefund {
     }
 
     conditions {
-        $victimId = AddressToId($VictimAccount)
-        $attackerId = AddressToId($SuspectAccount)
-        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $victimId}).Row() {
-            warning LangRes("@1victim_key_invalid", "en")
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $VictimAccount, "deleted": 0}).Row() {
+            warning LangRes("@1victim_wallet_invalid", "en")
         }
-        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $attackerId}).Row() {
-            warning LangRes("@1attacker_key_invalid", "en")
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $SuspectAccount, "deleted": 0}).Row() {
+            warning LangRes("@1attacker_wallet_invalid", "en")
         }
 
         if $Amount <= 0 {
@@ -31,15 +29,15 @@ contract VotingRunTokenRefund {
     }
 
     action {
-        TokensLockoutMember("KeyId,Value", $victimId, 1)
-        TokensLockoutMember("KeyId,Value", $attackerId, 1)
+        TokensLockoutMember("MemberAccount,Value", $VictimAccount, 1)
+        TokensLockoutMember("MemberAccount,Value", $SuspectAccount, 1)
         
         var pars m map
-        m["victim_key_id"] = $victimId
-        m["attacker_key_id"] = $attackerId
+        m["victim_account"] = $VictimAccount
+        m["attacker_account"] = $SuspectAccount
         m["amount"] = $Amount
         m["note"] = $Note
-        m["validator_key_id"] = $key_id
+        m["consortium_member_account"] = $account_id
         m["blocked_at"] = $block_time
         m["status"] = 1
         m["result"] = 0

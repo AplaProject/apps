@@ -1,50 +1,63 @@
-If(#back_page#){}.Else{
-    SetVar(back_page, @1app_params)
-}
-Div(content-wrapper){
-    If(#create# == create){
-        SetVar(param_name, "$@1new_parameter$")
-    }.Else{
-        DBFind(@1app_params, src_params).Where({"id": #id#, "ecosystem": #ecosystem_id#}).Vars("param")
-    }
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_developer_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_admin_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(admin_access)
 
-    SetTitle($@1app_param$)
-    Div(Class: breadcrumb){
-        LinkPage($@1app_params$, @1app_params)
-        Span(/).Style(margin-right: 10px; margin-left: 10px;)
-        Span(Class: text-muted, Body: #param_name#)
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    If(#back_page#){}.Else{
+        SetVar(back_page, @1app_params)
     }
+    Div(content-wrapper){
+        If(#create# == create){
+            SetVar(param_name, "$@1new_parameter$")
+        }.Else{
+            DBFind("@1app_params", src_params).Where({"id": "#id#", "ecosystem": "#ecosystem_id#"}).Vars(param)
+        }
 
-    Form(){
-        Div(form-group){
-            Label("$@1name$")
-            If(#create# == create){
-                Input(Name: name)
-            }.Else{
-                Input(Name: name, Value: #param_name#, Disabled: "true")
+        SetTitle($@1app_param$)
+        Div(Class: breadcrumb){
+            LinkPage($@1app_params$, @1app_params)
+            Span(/).Style(margin-right: 10px; margin-left: 10px;)
+            Span(Class: text-muted, Body: #param_name#)
+        }
+
+        Form(){
+            Div(form-group){
+                Label("$@1name$")
+                If(#create# == create){
+                    Input(Name: name)
+                }.Else{
+                    Input(Name: name, Value: #param_name#, Disabled: "true")
+                }
+            }
+            Div(form-group){
+                If(#create# == create){
+                    Input(Type: textarea, Name: value).Style(height: 500px !important;)
+                }.Else{
+                    Input(Type: textarea, Name: value, Value: "#param_value#").Style(height: 500px !important;)
+                }
+            }
+            Div(form-group){
+                Label($@1change_conditions$)
+                If(#create# == create){
+                    Input(Name: conditions)
+                }.Else{
+                    Input(Name: conditions, Value: #param_conditions#)
+                }
+            }
+            Div(form-group text-right){
+                If(#create# == create){
+                    Button(Class: btn btn-primary, Body: $@1save$, Contract: @1NewAppParam, Params: "Name=Val(name),Value=Val(value),Conditions=Val(conditions),ApplicationId=#application_id#", Page: #back_page#)
+                }.Else{
+                    Button(Class: btn btn-primary, Body: $@1save$, Contract: @1EditAppParam, Params: "Id=#id#,Value=Val(value),Conditions=Val(conditions)", Page: #back_page#)
+                }
             }
         }
-        Div(form-group){
-            If(#create# == create){
-                Input(Type: textarea, Name: value).Style(height: 500px !important;)
-            }.Else{
-                Input(Type: textarea, Name: value, Value: "#param_value#").Style(height: 500px !important;)
-            }
-        }
-        Div(form-group){
-            Label($@1change_conditions$)
-            If(#create# == create){
-                Input(Name: conditions)
-            }.Else{
-                Input(Name: conditions, Value: #param_conditions#)
-            }
-        }
-        Div(form-group text-right){
-            If(#create# == create){
-                Button(Class: btn btn-primary, Body: $@1save$, Contract: @1NewAppParam, Params: "Name=Val(name),Value=Val(value),Conditions=Val(conditions),ApplicationId=#application_id#", Page: #back_page#)
-            }.Else{
-                Button(Class: btn btn-primary, Body: $@1save$, Contract: @1EditAppParam, Params: "Id=#id#,Value=Val(value),Conditions=Val(conditions)", Page: #back_page#)
-            }
-        }
+    }
+}.Else{
+    SetTitle($@1new_parameter$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
 }

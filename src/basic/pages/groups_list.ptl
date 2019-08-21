@@ -6,17 +6,18 @@ Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: $@1group_d
 AddToolButton(Page: @1groups_create, Icon: icon-plus, Title: $@1create$).Popup(50, $@1new_group$)
 
 If(#search#){
-    SetVar(w_search, {"group_name": {"$ilike": "#search#"}})
+    SetVar(where, {"ecosystem": "#ecosystem_id#", "group_name": {"$ilike": "#search#"}})
+}.Else{
+    SetVar(where, {"ecosystem": "#ecosystem_id#"})
 }
-SetVar(where, {"ecosystem": #ecosystem_id#, {#w_search#}})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, $@1groups$)
     Include(@1search)
 }
-DBFind(@1applications).Columns("id,name").Where({"ecosystem": 1, "name": "Basic"}).Vars(application)
+DBFind("@1applications").Columns("id,name").Where({"ecosystem": 1, "name": "Basic"}).Vars(application)
 
-DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": "1", "id": "1"}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,group_name,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,group_access,group_info,group_type").Custom(_id){
+DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": 1, "id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,group_name,image_id,creator->account,creator->member_name,date_created,date_deleted,deleted,group_access,group_info,group_type").Custom(_id){
     If(#deleted# == 0){
         SetVar(style_text, "text-normal").(style_link, "text-primary")
     }.Else{
@@ -25,7 +26,7 @@ DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": "1", "id": "1"
     Span(Class: #style_text#, Body: #id#)
 }.Custom(_creator){
     If(And(#creator.member_name# != NULL, #creator.member_name# != "")){
-        LinkPage(Class: #style_link# text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
+        LinkPage(Class: #style_link# text-bold, Page: @1profile_view, PageParams: "v_account=#creator.account#"){
             #creator.member_name#
         }
     }
@@ -66,13 +67,13 @@ DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": "1", "id": "1"
         }
     }
 }.Custom(_access){
-    If(#creator.member_id# == #key_id#){
+    If(#creator.account# == #account_id#){
         SetVar(access,done)
     }.Else{
         SetVar(access,)
     }
     If(And(#group_access#!="NULL",#group_access# != "",#group_access#!=[])){
-        DBFind(@1roles,src_access_list).Where({"id": {"$in": #group_access#}}).Columns("id,role_name").Count(access_count).Order(role_name)
+        DBFind("@1roles", src_access_list).Where({"id": {"$in": #group_access#}}).Columns("id,role_name").Count(access_count).Order("role_name")
         Div(#style_text# breaker){
             ForList(src_access_list){
                 If(#role_id# == #id#){
@@ -111,9 +112,9 @@ DBFind(#this_table#, src_groups).Where(#where#).Order({"deleted": "1", "id": "1"
     }
 }.Custom(join_group){
     If(#deleted# == 0){
-        DBFind("@1groups_participants").Columns("id,groups_info,groups_info->id,deleted,member,member->member_id").Where({"groups_info->id": #id#, "deleted": 0, "member->member_id": #key_id#}).Vars(j_l).Count(check_membership)
+        DBFind("@1groups_participants").Columns("id,groups_info,groups_info->id,deleted,member,member->account").Where({"groups_info->id": "#id#", "deleted": 0, "member->account": "#account_id#"}).Vars(j_l).Count(check_membership)
         If(And(#group_type# == 1, #check_membership# == 0)){
-            Button(Body: $@1join_the_group$, Class: btn btn-link pull-right, Contract: @1GroupsAssign, Page: @1groups_view, PageParams: "v_group_id=#id#", Params: "GroupId=#id#,MemberId=#key_id#")
+            Button(Body: $@1join_the_group$, Class: btn btn-link pull-right, Contract: @1GroupsAssign, Page: @1groups_view, PageParams: "v_group_id=#id#", Params: "GroupId=#id#,MemberAccount=#account_id#")
         }.ElseIf(And(#group_type# == 1,#check_membership# == 1)){
             Button(Body: $@1leave_the_group$, Class: btn btn-link pull-right, Contract: @1GroupsUnassign, Page: @1groups_list, Params:"RowId=#j_l_id#")
         }.ElseIf(And(#group_type# == 2,#check_membership# == 0)){

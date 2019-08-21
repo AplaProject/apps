@@ -23,7 +23,7 @@ contract NotificationsClose {
     }
 
     conditions {
-        $notify = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $NotificId}).Columns("id,date_start_processing,processing_info->member_id,closed,notification->type,recipient->member_id,recipient->role_id").Row()
+        $notify = DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "id": $NotificId}).Columns("id,date_start_processing,processing_info->account,closed,notification->type,recipient->account,recipient->role_id").Row()
         if !$notify {
             warning LangRes("@1notification_not_found", "en")
         }
@@ -39,7 +39,7 @@ contract NotificationsClose {
 
         // checking personal notification
         if $notify["notification.type"] == 1 && flag_permission == 0 {
-            if $notify["recipient.member_id"] != $key_id {
+            if $notify["recipient.account"] != $account_id {
                 warning LangRes("@1notification_another_member", "en")
             }
         }
@@ -50,7 +50,7 @@ contract NotificationsClose {
                 warning LangRes("@1notification_processing_not_started", "en")
             }
 
-            if $notify["processing_info.member_id"] != $key_id {
+            if $notify["processing_info.account"] != $account_id {
                 warning LangRes("@1notice_processing_started_another_member", "en")
             }
         }
@@ -69,7 +69,7 @@ contract NotificationsClose {
         DBUpdate("@1notifications", $NotificId, m)
 
         if $notify["notification.type"] == 1 {
-            UpdateNotifications($ecosystem_id, Int($notify["recipient.member_id"]))
+            UpdateNotifications($ecosystem_id, $notify["recipient.account"])
         } else {
             UpdateRolesNotifications($ecosystem_id, Int($notify["recipient.role_id"]))
         }

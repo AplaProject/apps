@@ -8,18 +8,18 @@ contract PoaAdd {
         ValueArr array
     }
 
-    func getMemberInfo(kid int) map {
+    func getMemberInfo(account string) map {
         var res member map
-        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
+        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "account": account}).Row()
         if member {
-            res["member_id"] = member["id"]
+            res["account"] = member["account"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         } else {
-            member = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
+            member = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": account, "deleted": 0}).Row()
             if member {
-                res["member_id"] = member["id"]
-                res["member_name"] = IdToAddress(Int(member["id"]))
+                res["account"] = member["account"]
+                res["member_name"] = member["account"]
                 res["image_id"] = 0
             }
         }
@@ -49,8 +49,9 @@ contract PoaAdd {
         }
 
         //check the recipient key
-        $recipient_id = AddressToId($Recipient)
-        if $recipient_id == 0 {
+        var recipient_key int
+        recipient_key = AddressToId($Recipient)
+        if recipient_key == 0 {
             warning Sprintf(LangRes("@1recipient_x_invalid", "en"), $Recipient)
         }
 
@@ -75,8 +76,8 @@ contract PoaAdd {
         m["deleted"] = 0
         m["ecosystem"] = $ecosystem_id
         m["params"] = params
-        m["poa_recipient"] = getMemberInfo($recipient_id )
-        m["poa_sender"] = getMemberInfo($key_id)
+        m["poa_recipient"] = getMemberInfo($Recipient)
+        m["poa_sender"] = getMemberInfo($account_id)
         m["template_id"] = $TemplateId
         $result = DBInsert("@1poa", m)
     }

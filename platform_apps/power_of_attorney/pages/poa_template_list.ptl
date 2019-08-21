@@ -9,17 +9,17 @@ Span(Class: h5 m0 mb ml-lg){
 }.Style(
     display: inline-block;
 )
-DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Power of attorney"}).Vars(application)
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "Power of attorney"}).Vars(application)
 SetVar(admin_roles, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: poa_admin_role))
-DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#admin_roles#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(admin_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#admin_roles#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(admin_access)
 If(#admin_access_id# > 0){
     AddToolButton(Page: @1poa_template_add, Title: $@1template_add$, Icon: icon-plus).Popup(Header: $@1template_add$, Width: "50")
 }
 
 If(#search#){
-    SetVar(where, {"ecosystem": #ecosystem_id#, "contract": {"$ilike": "#search#"}, "deleted": 0})
+    SetVar(where, {"ecosystem": "#ecosystem_id#", "contract": {"$ilike": "#search#"}, "deleted": 0})
 }.Else{
-    SetVar(where, {"ecosystem": #ecosystem_id#, "deleted": 0})
+    SetVar(where, {"ecosystem": "#ecosystem_id#", "deleted": 0})
 }
 
 Div(list-group-item ml-lg mr-lg pt-lg){
@@ -27,13 +27,13 @@ Div(list-group-item ml-lg mr-lg pt-lg){
     Include(@1search)
 }
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,contract,params,creator->member_id,creator->member_name,date_created,deleted").Count(templates_count).Custom(_contract){
+DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,contract,params,creator->account,creator->member_name,date_created,deleted").Count(templates_count).Custom(_contract){
     Button(Class: btn-xs btn-link, PageParams: "template_id=#id#", Page: @1poa_add){
         Span(Class: h5 text-bold, Body: #contract#)
     }.Popup(50, $@1poa_add$)
 }.Custom(_creator){
     If(And(#creator.member_name#!=NULL,#creator.member_name#!="")){
-        LinkPage(Class: text-primary, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
+        LinkPage(Class: text-primary, Page: @1profile_view, PageParams: "v_account=#creator.account#"){
             #creator.member_name#
         }
     }
@@ -52,7 +52,7 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
         }
     }
 }.Custom(_action){
-    If(#creator.member_id#==#key_id#){
+    If(#creator.account# == #account_id#){
         Div(text-right button-group text-nowrap){
             If(#deleted# == 0){
                 Button(Class: btn bg-gray-lighter, Contract: @1PoaTemplateDelete, Params: "TemplateId=#id#", Page: #this_page#){

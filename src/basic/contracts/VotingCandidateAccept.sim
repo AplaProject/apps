@@ -1,7 +1,7 @@
 contract VotingCandidateAccept {
     data {
         VotingId int
-        CandidateId int
+        CandidateAccount string
         RoleId int
     }
 
@@ -12,7 +12,7 @@ contract VotingCandidateAccept {
             @1NotificationsClose("NotificId", role_id_search)
         } else {
             var id int
-            id = Int(DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->member_id": $key_id, "page_name": "@1voting_view", "page_params->voting_id": $VotingId, "closed": 0}).One("id"))
+            id = Int(DBFind("@1notifications").Where({"ecosystem": $ecosystem_id, "recipient->account": $account_id, "page_name": "@1voting_view", "page_params->voting_id": $VotingId, "closed": 0}).One("id"))
             if id > 0 {
                 @1NotificationsClose("NotificId", id)
             }
@@ -35,16 +35,16 @@ contract VotingCandidateAccept {
         if $voting["status"] != $STARTED {
             warning LangRes("@1voting_not_started", "en")
         }
-        $subject = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId, "subject->member_id": $CandidateId}).Columns("id,number_accept,results").Row()
+        $subject = DBFind("@1votings_subject").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId, "subject->account": $CandidateAccount}).Columns("id,number_accept,results").Row()
         if !$subject {
             warning LangRes("@1voting_subject_not_found", "en")
         }
 
         if Int($voting["voting.type_participants"]) != 5 {
-            $participant = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId, "member->member_id": $key_id, "decision": 0}).Columns("id,rating").Row()
+            $participant = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId, "member->account": $account_id, "decision": 0}).Columns("id,rating").Row()
         }
         if Int($voting["voting.type_participants"]) == 5 {
-            $participant = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId, "member->member_id": 0, "member->role_id": $RoleId, "decision": 0}).Columns("id,rating").Row()
+            $participant = DBFind("@1votings_participants").Where({"ecosystem": $ecosystem_id, "voting_id": $VotingId, "member->account": 0, "member->role_id": $RoleId, "decision": 0}).Columns("id,rating").Row()
         }
         if !$participant {
             warning LangRes("@1voting_not_participant", "en")
@@ -53,16 +53,16 @@ contract VotingCandidateAccept {
 
     action {
         if Int($voting["voting.type_participants"]) == 5 {
-            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "member->member_id": $key_id, "role->id": $RoleId, "deleted": 0}).One("id") {
+            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "member->account": $account_id, "role->id": $RoleId, "deleted": 0}).One("id") {
                 warning LangRes("@1voting_not_participant", "en")
             } else {
                 var member map
-                member["member_id"] = $key_id
-                member["member_name"] = IdToAddress($key_id)
+                member["account"] = $account_id
+                member["member_name"] = $account_id
                 member["role_id"] = $RoleId
                 var member_json string
                 member_json = JSONEncode(member)
-                DBUpdate("@1votings_participants", Int($participant["id"]), {"member":member_json})
+                DBUpdate("@1votings_participants", Int($participant["id"]), {"member": member_json})
             }
         }
 
@@ -73,7 +73,7 @@ contract VotingCandidateAccept {
         if $voting["flags.decision"] != 1 {
             var m map
             m["decision_date"] = $block_time
-            m["decision"] = $CandidateId
+            m["decision"] = AddressToId($CandidateAccount)
             DBUpdate("@1votings_participants", Int($participant["id"]), m)
 
             var p map

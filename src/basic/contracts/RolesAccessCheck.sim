@@ -5,18 +5,18 @@ contract RolesAccessCheck {
 
     conditions {
         var role map
-        role = DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $Rid}).Columns("id,role_name,deleted,roles_access,role_type,creator->member_id").Row()
+        role = DBFind("@1roles").Where({"ecosystem": $ecosystem_id, "id": $Rid}).Columns("id,role_name,deleted,roles_access,role_type,creator->account").Row()
         if !role {
             warning Sprintf("%v: " + LangRes("@1role_not_found", "en"), $this_contract)
         }
 
-        if role["creator.member_id"] == $key_id {
+        if role["creator.account"] == $account_id {
             return
         }
 
         var rids array
         rids = JSONDecode(role["roles_access"])
-        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->account": $account_id, "deleted": 0}).Row() {
             warning Sprintf(LangRes("@1role_change_no_permission", "en"), role["role_name"])
         }
     }

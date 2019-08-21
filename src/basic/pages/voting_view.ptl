@@ -1,6 +1,6 @@
-DBFind(@1applications).Columns("name,id").Where({"ecosystem": 1, "name": "Basic"}).Vars(application)
+DBFind("@1applications").Columns("name,id").Where({"ecosystem": 1, "name": "Basic"}).Vars(application)
 If(#notific_id#>0){
-    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("page_params->voting_id").Vars(notific)
+    DBFind("@1notifications").Where({"ecosystem": "#ecosystem_id#", "id": "#notific_id#"}).Columns("page_params->voting_id").Vars(notific)
     SetVar(vID,#notific_page_params_voting_id#)
 }
 
@@ -10,16 +10,16 @@ SetVar(this_page,"@1voting_view")
 
 Div(content-wrapper){
     If(#vID# > 0){
-        DBFind(@1votings).WhereId(#vID#).Columns("id,voting->rating,voting->name,voting->volume,voting->quorum,voting->type_participants,voting->type,voting->count_type_voters,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended,status,creator->member_id").Vars(instance)
+        DBFind("@1votings").WhereId(#vID#).Columns("id,voting->rating,voting->name,voting->volume,voting->quorum,voting->type_participants,voting->type,voting->count_type_voters,voting->type_decision,voting->description,optional->role_id,optional->role_vacancies,optional->number_candidates,optional->contract_accept,optional->contract_reject,optional->contract_accept_params,optional->contract_reject_params,progress->number_participants,progress->number_voters,progress->percent_success,progress->percent_voters,flags->success,flags->full_data,flags->decision,flags->notifics,date_started,date_ended,status,creator->account").Vars(instance)
         SetVar(type_decision,#instance_voting_type_decision#)
         SetVar(type_participants,#instance_voting_type_participants#)
 
         SetVar(isVotingAllowed,0)
         SetVar(isStartProcessing,0)
         If(Or(#type_participants#==1,#type_participants#==2,#type_participants#==3,#type_participants#==4,#type_participants#==6)){
-            DBFind(@1votings_participants).Where({"voting_id": #vID#, "member->member_id": #key_id#, "decision": 0, "ecosystem": #ecosystem_id#}).Columns("id").Vars(flag_participant)
+            DBFind("@1votings_participants").Where({"voting_id": "#vID#", "member->account": "#account_id#", "decision": 0, "ecosystem": "#ecosystem_id#"}).Columns("id").Vars(flag_participant)
             If(And(#instance_status#==#STARTED#,#flag_participant_id#>0)){
-                DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "recipient->member_id": #key_id#, "page_name": #this_page#, "page_params->voting_id": #vID#, "closed": 0}).Columns("id,notification->type,date_start_processing").Vars(notificcc)
+                DBFind("@1notifications").Where({"ecosystem": "#ecosystem_id#", "recipient->account": "#account_id#", "page_name": "#this_page#", "page_params->voting_id": "#vID#", "closed": 0}).Columns("id,notification->type,date_start_processing").Vars(notificcc)
                 If(#notificcc_id#>0){
                     SetVar(isVotingAllowed,1)
                     SetVar(notific_id,#notificcc_id#)
@@ -27,7 +27,7 @@ Div(content-wrapper){
                         SetVar(isStartProcessing,1)
                     }
                 }.Else{
-                    DBFind(@1votings_participants).Where({"ecosystem": #ecosystem_id#, "member->member_id": #key_id#, "voting_id": #vID#}).Columns("id,decision_date").Vars(md)
+                    DBFind("@1votings_participants").Where({"ecosystem": "#ecosystem_id#", "member->account": "#account_id#", "voting_id": "#vID#"}).Columns("id,decision_date").Vars(md)
                     If(And(#md_id#>0, #md_decision_date#==0)){
                         SetVar(isVotingAllowed,1)
                     }
@@ -35,9 +35,9 @@ Div(content-wrapper){
             }
         }
         If(#type_participants#==5){
-            DBFind(@1votings_participants).Where({"voting_id": #vID#, "member->role_id": #role_id#, "decision": 0, "ecosystem": #ecosystem_id#}).Columns("id").Vars(flag_participant)
+            DBFind("@1votings_participants").Where({"voting_id": "#vID#", "member->role_id": "#role_id#", "decision": 0, "ecosystem": "#ecosystem_id#"}).Columns("id").Vars(flag_participant)
             If(And(#instance_status#==#STARTED#,#flag_participant_id#>0)){
-                DBFind(@1notifications).Where({{"$or":[{"date_start_processing": 0}, {"processing_info->member_id": #key_id#}]}, "ecosystem": #ecosystem_id#, "recipient->role_id": #role_id#, "page_name": #this_page#, "page_params->voting_id": #vID#, "closed": 0}).Columns("id,notification->type,date_start_processing").Vars(notificcc)
+                DBFind("@1notifications").Where({"$or": [{"date_start_processing": 0}, {"processing_info->account": "#account_id#"}], "ecosystem": "#ecosystem_id#", "recipient->role_id": "#role_id#", "page_name": "#this_page#", "page_params->voting_id": "#vID#", "closed": 0}).Columns("id,notification->type,date_start_processing").Vars(notificcc)
                 If(#notificcc_id#>0){
                     SetVar(isVotingAllowed,1)
                     SetVar(notific_id,#notificcc_id#)
@@ -80,7 +80,7 @@ Div(content-wrapper){
                                 }
                                 Div(col-md-6 text-left){
                                     If(#instance_optional_role_id# > 0){
-                                        DBFind(@1roles).Where({"ecosystem": #ecosystem_id#, "id": #instance_optional_role_id#}).Columns("id,role_name").Vars(prefix)
+                                        DBFind("@1roles").Where({"ecosystem": "#ecosystem_id#", "id": "#instance_optional_role_id#"}).Columns("id,role_name").Vars(prefix)
                                         #prefix_role_name# (LangRes(@1id): #prefix_id#)
                                     }.Else{
                                         Span(Class:text-danger, Body: LangRes(@1not_filled))
@@ -111,10 +111,10 @@ Div(content-wrapper){
                                     }
                                 }
                             }
-                            DBFind(@1votings_subject, src_voting_subject).Where({"voting_id": #vID#}).Order("id").Columns("id,subject->member_id,subject->member_name").Custom(_address){
-                                Address(#subject.member_id#)
+                            DBFind("@1votings_subject", src_voting_subject).Where({"voting_id": "#vID#"}).Order("id").Columns("id,subject->account,subject->member_name").Custom(_address){
+                                #subject.account#
                             }.Custom(_member){
-                                LinkPage(Class: text-primary t6 text-bold, Page: @1profile_view, PageParams: "v_key_id=#subject.member_id#"){
+                                LinkPage(Class: text-primary t6 text-bold, Page: @1profile_view, PageParams: "v_account=#subject.account#"){
                                     #subject.member_name#
                                 }
                             }.Custom(_voting){
@@ -122,7 +122,7 @@ Div(content-wrapper){
                                     Button(Body: LangRes(@1process), Class: btn btn-info text-capitalize, Contract: @1NotificationsProcess, Params: "NotificId=#notific_id#", Page: #this_page#, PageParams: "notific_id=#notific_id#")
                                 }.Else{
                                     If(#isVotingAllowed#==1){
-                                        Button(Body: LangRes(@1vote), Class: btn btn-success, Page: #this_page#, PageParams: "vID=#vID#", Contract: @1VotingCandidateAccept, Params: "CandidateId=#subject.member_id#,RoleId=#role_id#")
+                                        Button(Body: LangRes(@1vote), Class: btn btn-success, Page: #this_page#, PageParams: "vID=#vID#", Contract: @1VotingCandidateAccept, Params: "CandidateAccount=#subject.account#,RoleId=#role_id#")
                                     }
                                 }
                             }
@@ -135,23 +135,23 @@ Div(content-wrapper){
                                 Div(col-md-12){
                                     If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==1)){
                                         If(#type_decision#==1){
-                                            If(#instance_creator_member_id#==#key_id#){
+                                            If(#instance_creator_account#==#account_id#){
                                                 Button(Class: btn btn-link, Page: @1voting_decision_candidates, PageParams: "vID=#vID#"){
                                                     Strong(LangRes(@1subject_voting_edit))
                                                 }.Popup(60, $@1subject_voting$)
                                             }.Else{
-                                                DBFind(@1votings_subject).Where({"voting_id": #vID#, "subject->member_id": #key_id#}).Columns("id").Vars(already_candidate)
+                                                DBFind("@1votings_subject").Where({"voting_id": "#vID#", "subject->account": "#account_id#"}).Columns("id").Vars(already_candidate)
                                                 If(#already_candidate_id#>0){
                                                     SetVar(hidden,hidden)
                                                 }.Else{
                                                     SetVar(hidden,)
                                                 }
                                                 Div(#hidden#){
-                                                    Button(Body: $@1can_apply_voting$, Class: btn btn-link, Page: #this_page#, PageParams: "vID=#vID#", Contract: @1VotingSubjectCandidates, Params: "VotingId=#vID#,MemberId=#key_id#")
+                                                    Button(Body: $@1can_apply_voting$, Class: btn btn-link, Page: #this_page#, PageParams: "vID=#vID#", Contract: @1VotingSubjectCandidates, Params: "VotingId=#vID#,MemberAccount=#account_id#")
                                                 }
                                             }
                                         }
-                                        If(#instance_creator_member_id#==#key_id#){
+                                        If(#instance_creator_account#==#account_id#){
                                             If(#type_decision#==2){
                                                 Button(Class: btn btn-link, Page: @1voting_decision_election, PageParams: "vID=#vID#"){
                                                     Strong(LangRes(@1subject_voting_edit))
@@ -163,7 +163,7 @@ Div(content-wrapper){
                             }
                         }
                         If(#type_decision#==3){
-                            DBFind(@1votings_subject, src_voting_subject).Where({"voting_id": #vID#}).Columns("id,subject->text,subject->hash,results->percent_accepted").Vars(subject)
+                            DBFind("@1votings_subject", src_voting_subject).Where({"voting_id": "#vID#"}).Columns("id,subject->text,subject->hash,results->percent_accepted").Vars(subject)
                             Div(row t6 mt-lg){
                                 Div(col-sm-8 col-sm-offset-2 col-lg-8 col-lg-offset-2){
                                     Div(list-group-item){
@@ -185,7 +185,7 @@ Div(content-wrapper){
                             Div(row mt-sm t6){
                                 Div(col-md-12){
                                     If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==1)){
-                                        If(#instance_creator_member_id#==#key_id#){
+                                        If(#instance_creator_account#==#account_id#){
                                             Button(Class: btn btn-link, Page: @1voting_decision_document, PageParams: "vID=#vID#"){
                                                 Strong(LangRes(@1subject_voting_edit))
                                             }.Popup(60, $@1subject_voting$)
@@ -207,7 +207,7 @@ Div(content-wrapper){
                             }
                         }
                         If(#type_decision#==4){
-                            DBFind(@1votings_subject, src_voting_subject).Where({"voting_id": #vID#}).Columns("id,subject->contract_accept,subject->contract_accept_params,subject->contract_reject,subject->contract_reject_params,results->percent_accepted").Vars(subject)
+                            DBFind("@1votings_subject", src_voting_subject).Where({"voting_id": "#vID#"}).Columns("id,subject->contract_accept,subject->contract_accept_params,subject->contract_reject,subject->contract_reject_params,results->percent_accepted").Vars(subject)
                             Div(row t6){
                                 Div(col-md-6 text-right){
                                     LangRes(@1contract_accept)
@@ -263,7 +263,7 @@ Div(content-wrapper){
                             Div(row mt-sm t6){
                                 Div(col-md-12){
                                     If(And(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#),#instance_voting_type#==1)){
-                                        If(#instance_creator_member_id#==#key_id#){
+                                        If(#instance_creator_account#==#account_id#){
                                             Button(Class: btn btn-link, Page: @1voting_decision_contract, PageParams: "vID=#vID#"){
                                                 Strong(LangRes(@1subject_voting_edit))
                                             }.Popup(60, $@1subject_voting$)
@@ -429,7 +429,7 @@ Div(content-wrapper){
                                 }
                                 If(#instance_voting_type#==1){
                                     If(Or(#instance_status#==#INVALID#,#instance_status#==#WAITING#)){
-                                        If(#instance_creator_member_id#==#key_id#){
+                                        If(#instance_creator_account#==#account_id#){
                                             Button(Class: btn-xs btn-link text-bold ml, Page: @1voting_invite, PageParams: "vID=#vID#"){
                                                 LangRes(@1participants_add)
                                             }.Popup(60, $@1participants_add$)

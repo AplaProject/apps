@@ -1,0 +1,22 @@
+contract ConsortiumMemberDelete {
+    data {
+        Id int
+    }
+
+    conditions {
+        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
+        var roleId int candidateAccount string
+        roleId = Int(AppParam(Int($system_app_id), "role_consortium_member_candidate", $ecosystem_id))
+        candidateAccount = DBFind("@1consortium_member_requests").Where({"ecosystem": $ecosystem_id, "id": $Id}).One("candidate_account")
+
+        $role = DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "deleted": 0, "role->id": roleId, "member->account": candidateAccount}).Row()
+        if !$role {
+            warning LangRes("@1candidate_role_not_found", "en")
+        }
+    }
+
+    action {
+        DBUpdate("@1consortium_member_requests", $Id, {"deleted": 1})
+        @1RolesUnassign("RowId", Int($role["id"]))
+    }
+}

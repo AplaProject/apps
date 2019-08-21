@@ -1,49 +1,62 @@
-DBFind(@1buffer_data, src_buffer).Columns("value->app_id").Where({"key": export, "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
-If(#buffer_value_app_id# > 0){
-    DBFind(@1applications, src_app).Where({"id": #buffer_value_app_id#, "ecosystem": #ecosystem_id#}).Vars("application")
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_developer_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_admin_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(admin_access)
 
-    Div(mr-lg ml-lg){
-        SetTitle($@1binaries$: #application_name#)
-        AddToolButton(Title:$@1binary_upload$, Page: @1app_upload_binary, Icon: icon-plus, PageParams: "application_id=#application_id#")
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    DBFind("@1buffer_data", src_buffer).Columns("value->app_id").Where({"key": "export", "account": "#account_id#", "ecosystem": "#ecosystem_id#"}).Vars(buffer)
+    If(#buffer_value_app_id# > 0){
+        DBFind("@1applications", src_app).Where({"id": "#buffer_value_app_id#", "ecosystem": "#ecosystem_id#"}).Vars(application)
 
-        SetVar(this_table, @1binaries).(this_page, @1app_binary).(pager_limit, 50)
-        SetVar(where, {"app_id": #buffer_value_app_id#, "ecosystem": #ecosystem_id#})
-        SetVar(hideLink, 0)
-        Include(@1pager_header)
-        Include(@1admin_link)
+        Div(mr-lg ml-lg){
+            SetTitle($@1binaries$: #application_name#)
+            AddToolButton(Title:$@1binary_upload$, Page: @1app_upload_binary, Icon: icon-plus, PageParams: "application_id=#application_id#")
 
-        DBFind(#this_table#, src).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where(#where#).Custom(_name){
-            LinkPage(Page: @1app_upload_binary, PageParams: "id=#id#,application_id=#buffer_value_app_id#", Body: #name#)
-        }.Custom(_img){
-            Div(pull-right){
-                Image(Src: Binary().ById(#id#), Class: preview).Style(height: 40px; widht 40px;)
-            }
-        }.Count(cnt)
+            SetVar(this_table, @1binaries).(this_page, @1app_binary).(pager_limit, 50)
+            SetVar(where, {"app_id": "#buffer_value_app_id#", "ecosystem": "#ecosystem_id#"})
+            SetVar(hideLink, 0)
+            Include(@1pager_header)
+            Include(@1admin_link)
 
-        Form(panel panel-primary){
-            Div(panel-body){
-                Div(row){
-                    Div(col-md-#width# col-sm-12){
-                        If(#cnt#>0){
-                            Div(list-group-item){
-                                Div(row){
-                                    Div(col-md-12){
-                                        Table(src,"=_name,=data,=_img")
+            DBFind(#this_table#, src).Limit(#pager_limit#).Order(#sort_name#).Offset(#pager_offset#).Where(#where#).Custom(_name){
+                LinkPage(Page: @1app_upload_binary, PageParams: "id=#id#,application_id=#buffer_value_app_id#", Body: #name#)
+            }.Custom(_img){
+                Div(pull-right){
+                    Image(Src: Binary().ById(#id#), Class: preview).Style(height: 40px; widht 40px;)
+                }
+            }.Count(cnt)
+
+            Form(panel panel-primary){
+                Div(panel-body){
+                    Div(row){
+                        Div(col-md-#width# col-sm-12){
+                            If(#cnt#>0){
+                                Div(list-group-item){
+                                    Div(row){
+                                        Div(col-md-12){
+                                            Table(src,"=_name,=data,=_img")
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                Div(mt){
-                    Include(@1pager)
+                    Div(mt){
+                        Include(@1pager)
+                    }
                 }
             }
+        }
+    }.Else{
+        SetTitle($@1binaries$)
+        Div(breadcrumb){
+            Span(Class: text-muted, Body: $@1apps_select_error$)
         }
     }
 }.Else{
     SetTitle($@1binaries$)
     Div(breadcrumb){
-        Span(Class: text-muted, Body: $@1apps_select_error$)
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
 }

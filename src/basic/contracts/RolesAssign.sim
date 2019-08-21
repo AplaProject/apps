@@ -1,29 +1,28 @@
 contract RolesAssign {
     data {
         Rid int
-        MemberId int
+        MemberAccount string
     }
 
-    func getMemberInfo(kid int) map {
+    func getMemberInfo(account string) map {
         var res member map
-        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
+        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "account": account}).Row()
         if member {
-            res["member_id"] = member["id"]
+            res["account"] = member["account"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         } else {
-            member = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
-            if member {
-                res["member_id"] = member["id"]
-                res["member_name"] = IdToAddress(Int(member["id"]))
-                res["image_id"] = 0
+            if DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": account, "deleted": 0}).Row() {
+                res["account"] = account
+                res["member_name"] = account
+                res["image_id"] = "0"
             }
         }
         return res
     }
 
     conditions {
-        $role = DBFind("@1roles").Where({"id": $Rid}).Columns("id,deleted,role_type,role_name,image_id,creator->member_id").Row()
+        $role = DBFind("@1roles").Where({"id": $Rid}).Columns("id,deleted,role_type,role_name,image_id,creator->account").Row()
         if Int($role["role_type"]) == 2 {
             warning LangRes("@1elective_role_voting_only", "en")
         }
@@ -31,8 +30,8 @@ contract RolesAssign {
             warning LangRes("@1role_not_found", "en")
         }
 
-        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $MemberId}).Row() {
-            warning LangRes("@1key_not_found", "en")
+        if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $MemberAccount, "deleted": 0}).Row() {
+            warning LangRes("@1account_not_found", "en")
         }
 
         if $role["deleted"] == 1 {
@@ -44,9 +43,9 @@ contract RolesAssign {
         if Len($stack) > 2{
             prev_contract = $stack[Len($stack) - 2]
         }
-        specRules["@1VotingValidatorAccept"] = 1
+        specRules["@1VotingConsortiumMemberAccept"] = 1
         specRules["@1DelegateRefresh"] = 1
-        specRules["@1ValidatorRequest"] = 1
+        specRules["@1ConsortiumMemberRequest"] = 1
         specRules["@1InvestorRefresh"] = 1
 
         if specRules[prev_contract] != 1 {
@@ -55,7 +54,7 @@ contract RolesAssign {
     }
 
     action {
-        if DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": $Rid, "member->member_id": $MemberId, "deleted": 0}).One("id") {
+        if DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": $Rid, "member->account": $MemberAccount, "deleted": 0}).One("id") {
             // do not re-assign and do not warning because this contract may be called for other
             return
         }
@@ -65,8 +64,8 @@ contract RolesAssign {
         role["name"] = $role["role_name"]
         role["image_id"] = $role["image_id"]
 
-        member = getMemberInfo($MemberId)
-        appointer = getMemberInfo($key_id)
+        member = getMemberInfo($MemberAccount)
+        appointer = getMemberInfo($account_id)
         var m map
         m["role"] = role
         m["member"] = member

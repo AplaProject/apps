@@ -1,42 +1,42 @@
-If(#notific_id#>0){
-    DBFind("@1notifications").Where({"id": #notific_id#, "ecosystem": #ecosystem_id#}).Columns("notification->body,recipient->member_id,page_params->object_id,page_params->info_message,page_params->info_status,closed").Vars(notific)
+If(#notific_id# > 0){
+    DBFind("@1notifications").Where({"id": "#notific_id#", "ecosystem": "#ecosystem_id#"}).Columns("notification->body,recipient->account,page_params->object_id,page_params->info_message,page_params->info_status,closed").Vars(notific)
     SetVar(object_id, #notific_page_params_object_id#)
     SetVar(back_page,@1notifications_list)
 }
 
-If(#object_id#>0){
+If(#object_id# > 0){
     Include(lr_check_rights)
-    DBFind("@1applications").Where({"ecosystem": #ecosystem_id#, "name": "Land registry"}).Columns("name,id").Vars(app)
+    DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "Land registry"}).Columns("name,id").Vars(app)
     AppParam(App: #app_id#, Name: lr_issues, Source: src_issues)
     SetVar(col_left,"col-md-4 text-right").(col_right,"col-md-8 text-left")
-    DBFind("land_registry", src).WhereId(#object_id#).Columns("id,owner_id,buyer_id,step,specifications->map_coords,specifications->address,specifications->area,specifications->land_type,specifications->land_use,specifications->buildings_class,specifications->land_authority,registration_date,date_created,modification_date,status->legal_status,status->encumbrance_certificate,status->tax_receipt_and_bills,price,market_price,government_price").Vars(view)
+    DBFind("land_registry", src).WhereId(#object_id#).Columns("id,owner_account,buyer_account,step,specifications->map_coords,specifications->address,specifications->area,specifications->land_type,specifications->land_use,specifications->buildings_class,specifications->land_authority,registration_date,date_created,modification_date,status->legal_status,status->encumbrance_certificate,status->tax_receipt_and_bills,price,market_price,government_price").Vars(view)
     SetVar(custom_token_title, "APLA")
-    If(#ecosystem_id#>1){
-        DBFind("@1ecosystems").Where({"id": #ecosystem_id#}).Vars("custom")
+    If(#ecosystem_id# > 1){
+        DBFind("@1ecosystems").Where({"id": "#ecosystem_id#"}).Vars(custom)
     }
 
-    If(#view_owner_id#==#key_id#){
-        SetVar(owner,1)
-        DBFind("@1notifications").Where({"page_params->object_id": #view_id#, "page_params->depart2_requests": 2, "ecosystem": #ecosystem_id#}).Columns("id").Vars(depart2)
-        DBFind("@1notifications").Where({"page_params->object_id": #view_id#, "page_params->depart3_requests": 2, "ecosystem": #ecosystem_id#}).Columns("id").Vars(depart3)
-        If(#depart2_id#>0){
-            SetVar(depart2_requests,2)
+    If(#view_owner_account# == #account_id#){
+        SetVar(owner, 1)
+        DBFind("@1notifications").Where({"page_params->object_id": "#view_id#", "page_params->depart2_requests": 2, "ecosystem": "#ecosystem_id#"}).Columns("id").Vars(depart2)
+        DBFind("@1notifications").Where({"page_params->object_id": "#view_id#", "page_params->depart3_requests": 2, "ecosystem": "#ecosystem_id#"}).Columns("id").Vars(depart3)
+        If(#depart2_id# > 0){
+            SetVar(depart2_requests, 2)
         }.Else{
-            SetVar(depart2_requests,1)
+            SetVar(depart2_requests, 1)
         }
-        If(#depart3_id#>0){
-            SetVar(depart3_requests,2)
+        If(#depart3_id# > 0){
+            SetVar(depart3_requests, 2)
         }.Else{
-            SetVar(depart3_requests,1)
+            SetVar(depart3_requests, 1)
         }
     }
-    If(#view_buyer_id#==#key_id#){
-        SetVar(buyer,1)
+    If(#view_buyer_account# == #account_id#){
+        SetVar(buyer, 1)
     }
-    If(And(#view_status_legal_status#==1,#view_status_encumbrance_certificate#==1,#view_status_tax_receipt_and_bills#==1,#view_government_price#>0,#view_market_price#>0)){
-        SetVar(depart_checks,1)
-        If(And(#depart_checks#==1,#view_step#==-1,#view_price#>0)){
-            SetVar(available_for_sale,1)
+    If(And(#view_status_legal_status# == 1, #view_status_encumbrance_certificate# == 1, #view_status_tax_receipt_and_bills# == 1, #view_government_price# > 0, #view_market_price# > 0)){
+        SetVar(depart_checks, 1)
+        If(And(#depart_checks# == 1, #view_step# == -1, #view_price# > 0)){
+            SetVar(available_for_sale, 1)
         }
     }
 
@@ -51,17 +51,17 @@ If(#object_id#>0){
                 }
             }
             Div(#col_right#){
-                SetVar(m_id, 0)
-                DBFind("@1members").Where({"id": #view_owner_id#, "ecosystem": #ecosystem_id#}).Vars(m)
-                If(Or(#m_id#>0,#m_id#<0)){
+                SetVar(m_account,)
+                DBFind("@1members").Where({"account": "#view_owner_account#", "ecosystem": "#ecosystem_id#"}).Vars(m)
+                If(#m_account#){
                     SetVar(image_id, #m_image_id#)
                     SetVar(member_name, #m_member_name#)
                 }.Else{
                     SetVar(image_id, 0)
-                    SetVar(member_name, Address(#view_owner_id#))
+                    SetVar(member_name, #view_owner_account#)
                 }
-                LinkPage(Page: @1profile_view, PageParams: "v_key_id=#view_owner_id#"){
-                    If(#image_id#>0){
+                LinkPage(Page: @1profile_view, PageParams: "v_account=#view_owner_account#"){
+                    If(#image_id# > 0){
                         Image(Src: Binary().ById(#image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)
                         Span(Class: ml-sm text-bold, Body: #member_name#)
                     }.Else{
@@ -195,7 +195,7 @@ If(#object_id#>0){
                 }
             }
         }
-        If(And(#depart3#==1,#depart_checks#!=1,#notific_recipient_member_id#=="")){
+        If(And(#depart3# == 1, #depart_checks# != 1, #notific_recipient_account# == "")){
             Div(list-group-item){
                 Div(row mt-sm){
                     Div(#col_left# mt-sm){
@@ -301,7 +301,7 @@ If(#object_id#>0){
                 }
             }
         }
-        If(And(#depart2#==1,#depart_checks#!=1,#notific_recipient_member_id#=="")){
+        If(And(#depart2#==1,#depart_checks#!=1,#notific_recipient_account#=="")){
             Div(list-group-item){
                 Div(row mt-sm){
                     Div(#col_left#){
@@ -378,23 +378,23 @@ If(#object_id#>0){
         }
         Div(list-group-item){
             Div(row){
-                If(And(#notific_closed#==1,And(Or(#depart2#==1,#depart3#==1),#depart_checks#!=1,#view_step#==-1,#notific_recipient_member_id#=="")!=1)){
+                If(And(#notific_closed#==1,And(Or(#depart2#==1,#depart3#==1),#depart_checks#!=1,#view_step#==-1,#notific_recipient_account#=="")!=1)){
                     Div(col-md-8 col-md-offset-2 text-center){
                         Div(Class: h4, Body: Em(Class: fa fa-fw fa-check-circle text-muted) $lr_decision_made$)
                     }
                 }.Else{
                     Div(col-md-2 text-center){
                         If(#view_step#>=0){
-                            SetVar(o_id, 0)
-                            DBFind("@1members").Where({"id": #view_owner_id#, "ecosystem": #ecosystem_id#}).Vars(o)
-                            If(Or(#o_id#>0,#o_id#<0)){
+                            SetVar(o_account,)
+                            DBFind("@1members").Where({"account": "#view_owner_account#", "ecosystem": "#ecosystem_id#"}).Vars(o)
+                            If(#o_account#){
                                 SetVar(owner_image_id, #o_image_id#)
                                 SetVar(owner_member_name, #o_member_name#)
                             }.Else{
                                 SetVar(owner_image_id, 0)
-                                SetVar(owner_member_name, Address(#view_owner_id#))
+                                SetVar(owner_member_name, #view_owner_account#)
                             }
-                            LinkPage(Page: @1profile_view, PageParams: "v_key_id=#view_owner_id#"){
+                            LinkPage(Page: @1profile_view, PageParams: "v_account=#view_owner_account#"){
                                 If(#owner_image_id#>0){
                                     Image(Src: Binary().ById(#owner_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)
                                 }.Else{
@@ -406,7 +406,7 @@ If(#object_id#>0){
                         }
                     }
                     Div(col-md-8 text-center){
-                        If(And(#notific_page_params_info_message#==1,And(Or(#depart2#==1,#depart3#==1),#depart_checks#!=1,#view_step#==-1,#notific_recipient_member_id#=="")!=1)){
+                        If(And(#notific_page_params_info_message#==1,And(Or(#depart2#==1,#depart3#==1),#depart_checks#!=1,#view_step#==-1,#notific_recipient_account#=="")!=1)){
                             If(#notific_page_params_info_status#=="success"){
                                 Div(Class: h4, Body: Em(Class: fa fa-fw fa-check-circle text-success) #notific_notification_body#)
                             }.Else{
@@ -438,8 +438,8 @@ If(#object_id#>0){
                             }
                             If(#buyer#==1){
                                 SetVar(bank_role_id, AppParam(App: #app_id#, Name: lr_bank_role))
-                                DBFind("@1roles_participants").Where({"role->id": #bank_role_id#, "deleted": 0, "ecosystem": #ecosystem_id#}).Columns("id,member->member_id").Vars(bank)
-                                SetVar(bank_account,Address(#bank_member_member_id#))
+                                DBFind("@1roles_participants").Where({"role->id": "#bank_role_id#", "deleted": 0, "ecosystem": "#ecosystem_id#"}).Columns("id,member->account").Vars(bank)
+                                SetVar(bank_account, #bank_member_account#)
                                 If(#bank_id#>0){
                                     Button(Body: LangRes(lr_deposit_money), Class: btn btn-success mb, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,Step=#view_step#,Decision=deposit", Page: #back_page#, PageParams: "sales_list=#sales_list#").CompositeContract(@1TokensSend, [{"Amount": #view_price#, "Recipient": "#bank_account#"}])
                                 }
@@ -448,22 +448,22 @@ If(#object_id#>0){
                             Div(Class: h4, Body: Em(Class: fa fa-fw fa-hourglass-3 text-primary) $lr_awaiting_bank_transfer$)
                             If(#bank#==1){
                                 Button(Body: LangRes(@1cancel), Class: btn btn-danger mb, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,RoleId=#role_id#,Step=#view_step#,Decision=cancel", Page: #back_page#, PageParams: "sales_list=#sales_list#").Alert($lr_want_cancel_deal$, $@1confirm_button$, $@1cancel$)
-                                Button(Body: LangRes(lr_finalize_deal), Class: btn btn-success mb, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,RoleId=#role_id#,Step=#view_step#,Decision=finalize", Page: #back_page#, PageParams: "sales_list=#sales_list#").CompositeContract(@1TokensSend, [{"Amount": #view_price#, "Recipient": "#view_owner_id#"}])
+                                Button(Body: LangRes(lr_finalize_deal), Class: btn btn-success mb, Contract: LrPurchaseSteps, Params: "ObjectId=#view_id#,RoleId=#role_id#,Step=#view_step#,Decision=finalize", Page: #back_page#, PageParams: "sales_list=#sales_list#").CompositeContract(@1TokensSend, [{"Amount": #view_price#, "Recipient": "#view_owner_account#"}])
                             }
                         }
                     }
                     Div(col-md-2 text-center){
                         If(#view_step#>=0){
-                            SetVar(b_id, 0)
-                            DBFind("@1members").Where({"id": #view_buyer_id#, "ecosystem": #ecosystem_id#}).Vars(b)
-                            If(Or(#b_id#>0,#b_id#<0)){
+                            SetVar(b_account,)
+                            DBFind("@1members").Where({"account": "#view_buyer_account#", "ecosystem": "#ecosystem_id#"}).Vars(b)
+                            If(#b_account#){
                                 SetVar(buyer_image_id, #b_image_id#)
                                 SetVar(buyer_member_name, #b_member_name#)
                             }.Else{
                                 SetVar(buyer_, 0)
-                                SetVar(buyer_member_name, Address(#view_buyer_id#))
+                                SetVar(buyer_member_name, #view_buyer_account#)
                             }
-                            LinkPage(Page: @1profile_view, PageParams: "v_key_id=#view_buyer_id#"){
+                            LinkPage(Page: @1profile_view, PageParams: "v_account=#view_buyer_account#"){
                                 If(#buyer_image_id#>0){
                                     Image(Src: Binary().ById(#buyer_image_id#), Class: img-circle).Style(height: 30px; width: 30px; border: 1px solid #5A5D63;)
                                 }.Else{
@@ -471,7 +471,7 @@ If(#object_id#>0){
                                 }
                                 Div(Class: short-name text-bold, Body: #buyer_member_name#)
                             }
-                            Div(Class: text-muted m0, Body: ($lr_owner$))
+                            Div(Class: text-muted m0, Body: ($lr_buyer$))
                         }
                     }
                 }

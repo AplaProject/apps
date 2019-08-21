@@ -1,13 +1,11 @@
 SetVar(this_page, @1r_accruals).(this_table, @1r_accruals)
 Include(@1pager_header)
 
-If(#Id#!=""){
-    SetVar(member, Address(#Id#))
+If(#Account#){
+    SetVar(member, #Account#)
 }.Else{
-    SetVar(member, Address(#key_id#))
+    SetVar(member, #account_id#)
 }
-
-SetVar(where, {"member": #member#, "ecosystem": #ecosystem_id#})
 
 SetTitle($@1r_accruals$ (#member#))
 Span(Class: h5 m0 mb ml-lg){
@@ -18,15 +16,14 @@ Span(Class: h5 m0 mb ml-lg){
     display: inline-block;
 )
 
-DBFind(#this_table#, src).Where(#where#).Order({"id": -1}).Limit(#pager_limit#).Offset(#pager_offset#).Count(count).Custom(_type){
+DBFind(#this_table#, src).Where({"member": "#member#", "ecosystem": "#ecosystem_id#"}).Order({"id": "-1"}).Limit(#pager_limit#).Offset(#pager_offset#).Count(count).Custom(_type){
     SetVar(t_name,)
-    DBFind(@1e_types).Where({"ecosystem": #ecosystem_id#, "id": #event_type#}).Columns("name").Vars(t)
-    Span(#t_name#,ml-sm text-muted)
+    DBFind("@1e_types").Where({"ecosystem": "#ecosystem_id#", "id": "#event_type#"}).Columns("name").Vars(t)
+    Span(#t_name#, ml-sm text-muted)
 }.Custom(_created){
     DateTime(#created_at#, Format: YYYY-MM-DD HH:MI:SS)
 }.Custom(_manager){
-    SetVar(manager_key_id, AddressToId(#manager#))
-    LinkPage(Class: h5 text-primary, Page: @1profile_view, PageParams: "v_key_id=#manager_key_id#"){
+    LinkPage(Class: h5 text-primary, Page: @1profile_view, PageParams: "v_account=#manager#"){
         Div(){
             Span(Class: fa icon-user fa-2x mr).(#manager#)
         }.Style(display:flex; align-items:center;)

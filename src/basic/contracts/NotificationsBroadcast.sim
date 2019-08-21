@@ -6,17 +6,17 @@ contract NotificationsBroadcast {
         Popup string "optional"
     }
 
-    func getMemberInfo(kid int) map {
+    func getMemberInfo(account string) map {
         var res member map
-        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "id": kid}).Row()
+        member = DBFind("@1members").Where({"ecosystem": $ecosystem_id, "account": account}).Row()
         if member {
-            res["member_id"] = member["id"]
+            res["account"] = member["account"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         } else {
-            if DBFind("@1keys").Columns("id").Where({"ecosystem": $ecosystem_id, "id": kid}).Row() {
-                res["member_id"] = Str(kid)
-                res["member_name"] = IdToAddress(kid)
+            if DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": account, "deleted": 0}).Row() {
+                res["account"] = account
+                res["member_name"] = account
                 res["image_id"] = "0"
             }
         }
@@ -39,7 +39,7 @@ contract NotificationsBroadcast {
 
     action {
         var i lenIds int eco map ids array sender recipient params note map
-        sender = getMemberInfo($key_id)
+        sender = getMemberInfo($account_id)
         sender["type"] = 1
         note["header"] = $Header
         note["type"] = 1
@@ -59,12 +59,12 @@ contract NotificationsBroadcast {
                 $system_app_id = DBFind("@1applications").Where({"ecosystem": ecoId, "name": "System"}).One("id")
                 var adminRoleId int
                 adminRoleId = Int(AppParam(Int($system_app_id), "role_admin", $ecosystem_id))
-                ids = DBFind("@1roles_participants").Where({"ecosystem": ecoId, "role->id": adminRoleId, "role->type": 3}).Columns("member->member_id")
+                ids = DBFind("@1roles_participants").Where({"ecosystem": ecoId, "role->id": adminRoleId, "role->type": 3}).Columns("member->account")
                 lenIds = Len(ids)
                 var i_ids int
                 while i_ids < lenIds {
                     recipient = ids[i_ids]
-                    recipient = getMemberInfo(Int(recipient["member.member_id"]))
+                    recipient = getMemberInfo(recipient["member.account"])
                     var m map
                     m["recipient"] = recipient
                     m["sender"] = sender

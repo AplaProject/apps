@@ -1,6 +1,6 @@
 contract NotificationsSend {
     data {
-        MemberId int "optional"
+        MemberAccount string "optional"
         Rid int "optional"
         GroupId int "optional"
         Closure int "optional"
@@ -15,17 +15,17 @@ contract NotificationsSend {
         Popup string "optional"
     }
 
-    func getMemberInfo(kid, ecoId int) map {
+    func getMemberInfo(account string, ecoId int) map {
         var res member map
-        member = DBFind("@1members").Where({"ecosystem": ecoId, "id": kid}).Row()
+        member = DBFind("@1members").Where({"ecosystem": ecoId, "account": account}).Row()
         if member {
-            res["member_id"] = member["id"]
+            res["account"] = member["account"]
             res["member_name"] = member["member_name"]
             res["image_id"] = member["image_id"]
         } else {
-            if DBFind("@1keys").Where({"ecosystem": ecoId, "id": kid}).Columns("id").Row() {
-                res["member_id"] = Str(kid)
-                res["member_name"] = IdToAddress(kid)
+            if DBFind("@1keys").Where({"ecosystem": ecoId, "account": account, "deleted": 0}).Row() {
+                res["account"] = account
+                res["member_name"] = account
                 res["image_id"] = "0"
             }
         }
@@ -47,7 +47,7 @@ contract NotificationsSend {
         if $Sender == 1 && $senderMember {
             // send from member
             sender["type"] = $Sender
-            sender["member_id"] = $senderMember["member_id"]
+            sender["account"] = $senderMember["account"]
             sender["member_name"] = $senderMember["member_name"]
             sender["image_id"] = $senderMember["image_id"]
         } else {
@@ -83,13 +83,12 @@ contract NotificationsSend {
         if $EcosystemId == 0 {
             $EcosystemId = $ecosystem_id
         }
-        $MemberId = Int($MemberId)
         if Size($Icon) < 1 {
             $Icon = "icon-envelope"
         }
-        if $MemberId != 0 {
-            if !DBFind("@1keys").Where({"ecosystem": $EcosystemId, "id": $MemberId}).Row() {
-                warning LangRes("@1key_not_found", "en")
+        if $MemberAccount && $MemberAccount != "0" {
+            if !DBFind("@1keys").Where({"ecosystem": $EcosystemId, "account": $MemberAccount, "deleted": 0}).Row() {
+                warning LangRes("@1account_not_found", "en")
             }
             $notify_type = 1
         } elif $Rid > 0 {
@@ -114,7 +113,7 @@ contract NotificationsSend {
         $senderMember = nil
         $senderRole = nil
         if $Sender == 1 {
-            $senderMember = getMemberInfo($key_id, $ecosystem_id)
+            $senderMember = getMemberInfo($account_id, $ecosystem_id)
         } elif $Sender == 2 {
             if !RoleAccess($CurrentRid) {
                 warning LangRes("@1access_denied", "en")
@@ -129,9 +128,9 @@ contract NotificationsSend {
     }
 
     action {
-        if $MemberId != 0 {
-            sendNotify(getMemberInfo($MemberId, $EcosystemId))
-            UpdateNotifications($EcosystemId, Int($MemberId))
+        if $MemberAccount && $MemberAccount != "0" {
+            sendNotify(getMemberInfo($MemberAccount, $EcosystemId))
+            UpdateNotifications($EcosystemId, $MemberAccount)
         } elif $Rid > 0 {
             if $Closure == 1 {
                 // Single closure: one begins the process - the others do not see
@@ -141,25 +140,25 @@ contract NotificationsSend {
                 // Multiple closure: to each his own notification
                 $notify_type = 1
                 var participants array
-                participants = DBFind("@1roles_participants").Where({"ecosystem": $EcosystemId, "role->id": $Rid, "deleted": 0}).Columns("member->member_id")
+                participants = DBFind("@1roles_participants").Where({"ecosystem": $EcosystemId, "role->id": $Rid, "deleted": 0}).Columns("member->account")
                 var i int
                 while i < Len(participants) {
                     var p map
                     p = participants[i]
-                    sendNotify(getMemberInfo(Int(p["member.member_id"]), $EcosystemId))
-                    UpdateNotifications($EcosystemId, Int(p["member.member_id"]))
+                    sendNotify(getMemberInfo(p["member.account"], $EcosystemId))
+                    UpdateNotifications($EcosystemId, p["member.account"])
                     i = i + 1
                 }
             }
         } elif $GroupId > 0 {
             var participants array
-            participants = DBFind("@1groups_participants").Where({"ecosystem": $EcosystemId, "groups_info->id": $GroupId, "deleted": 0}).Columns("member->member_id")
+            participants = DBFind("@1groups_participants").Where({"ecosystem": $EcosystemId, "groups_info->id": $GroupId, "deleted": 0}).Columns("member->account")
             var i int
             while i < Len(participants) {
                 var p map
                 p = participants[i]
-                sendNotify(getMemberInfo(Int(p["member.member_id"]), $EcosystemId))
-                UpdateNotifications($EcosystemId, Int(p["member.member_id"]))
+                sendNotify(getMemberInfo(p["member.account"], $EcosystemId))
+                UpdateNotifications($EcosystemId, p["member.account"])
                 i = i + 1
             }
         }

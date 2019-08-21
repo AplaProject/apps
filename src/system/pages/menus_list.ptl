@@ -1,46 +1,59 @@
-SetVar(this_page, @1menus_list).(this_table, @1menu)
-Include(@1pager_header)
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_developer_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_admin_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(admin_access)
 
-SetTitle("$@1menu$")
-Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1menu_section$"))
-AddToolButton(Title: $@1create$, Page: editor, Icon: icon-plus, PageParams: "create=menu,appId=0")
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    SetVar(this_page, @1menus_list).(this_table, @1menu)
+    Include(@1pager_header)
 
-If(#search#){
-    SetVar(where, {"ecosystem": #ecosystem_id#, {"$or":[{name: {"$ilike": "#search#"}}]}})
+    SetTitle("$@1menu$")
+    Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1menu_section$"))
+    AddToolButton(Title: $@1create$, Page: editor, Icon: icon-plus, PageParams: "create=menu,appId=0")
+
+    If(#search#){
+        SetVar(where, {"ecosystem": "#ecosystem_id#", "name": {"$ilike": "#search#"}})
+    }.Else{
+        SetVar(where, {"ecosystem": "#ecosystem_id#"})
+    }
+
+    Div(list-group-item ml-lg mr-lg pt-lg){
+        SetVar(search_name, LangRes(@1name))
+        Include(@1search)
+    }
+
+    DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(action){
+        Span(Class: pull-right){
+            LinkPage(Body: Em(Class: fa fa-history), Class: text-primary h4 mh-sm, Page: @1history, PageParams: "id=#id#,type=menu")
+            LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: @1properties_edit, PageParams: "edit_property_id=#id#,type=menu")
+        }
+    }.Custom(_name){
+        LinkPage(Page: editor, Class: text-primary h5, Body: "#name#", PageParams: "open=menu,name=#name#")
+    }.Count(count)
+
+    Div(fullscreen){
+        Div(table-responsive ml-lg mr-lg){
+            Div(list-group-item){
+                If(#count# > 0){
+                    Table(src, "$@1name$=_name,$@1header$=title,$@1conditions$=conditions,=action")
+                }.Else{
+                    Div(Class: text-center h4 text-muted, Body: "$@1menu$ $@1not_founded$")
+                }
+            }.Style(
+                margin-top:-15px;
+                tbody > tr:nth-of-type(odd) {
+                    background-color: #f8f9fc;
+                }
+            )
+        }
+    }
+    Div(mt-sm ml-lg mr-sm mb-sm){
+        Include(@1pager)
+    }
 }.Else{
-    SetVar(where, {"ecosystem": #ecosystem_id#})
-}
-
-Div(list-group-item ml-lg mr-lg pt-lg){
-    SetVar(search_name, LangRes(@1name))
-    Include(@1search)
-}
-
-DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(action){
-    Span(Class: pull-right){
-        LinkPage(Body: Em(Class: fa fa-history), Class: text-primary h4 mh-sm, Page: @1history, PageParams: "id=#id#,type=menu")
-        LinkPage(Body: Em(Class: fa fa-cogs), Class: text-primary h4, Page: @1properties_edit, PageParams: "edit_property_id=#id#,type=menu")
+    SetTitle($@1menu$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
-}.Custom(_name){
-    LinkPage(Page: editor, Class: text-primary h5, Body: "#name#", PageParams: "open=menu,name=#name#")
-}.Count(count)
-
-Div(fullscreen){
-    Div(table-responsive ml-lg mr-lg){
-        Div(list-group-item){
-            If(#count# > 0){
-                Table(src, "$@1name$=_name,$@1header$=title,$@1conditions$=conditions,=action")
-            }.Else{
-                Div(Class: text-center h4 text-muted, Body: "$@1menu$ $@1not_founded$")
-            }
-        }.Style(
-            margin-top:-15px;
-            tbody > tr:nth-of-type(odd) {
-                background-color: #f8f9fc;
-            }
-        )
-    }
-}
-Div(mt-sm ml-lg mr-sm mb-sm){
-    Include(@1pager)
 }

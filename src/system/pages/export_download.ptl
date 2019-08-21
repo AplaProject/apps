@@ -1,35 +1,48 @@
-Div(fullscreen){
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_developer_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_admin_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(admin_access)
+
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    Div(fullscreen){
+        SetTitle($@1export$)
+        Div(breadcrumb){
+            Span(Class: text-muted, Body: $@1payload$)
+        }
+
+        DBFind("@1buffer_data", src_buffer).Columns("value->app_name,value->app_id").Where({"key": "export", "account": "#account_id#", "ecosystem": "#ecosystem_id#"}).Vars(buffer)
+        DBFind("@1binaries", src_binaries).Where({"name": "export", "account": "#account_id#", "ecosystem": "#ecosystem_id#", "app_id": "#buffer_value_app_id#"}).Custom(app_name){
+            Span(#buffer_value_app_name#)
+        }
+
+        Table(Source: src_binaries, "$@1application$=app_name,=data").Style(
+            tbody > tr:nth-of-type(odd) {
+                background-color: #fafbfc;
+            }
+            tbody > tr > td {
+                word-break: break-all;
+                font-weight: 400;
+                font-size: 13px;
+                color: #666;
+                border-top: 1px solid #eee;
+                vertical-align: middle;
+            }
+            tr > *:first-child {
+                padding-left:20px;
+            }
+            tr > *:last-child {
+                padding-right:20px;
+                text-align:right;
+            }
+            thead {
+                background-color: #eee;
+            }
+        )
+    }
+}.Else{
     SetTitle($@1export$)
     Div(breadcrumb){
-        Span(Class: text-muted, Body: $@1payload$)
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
-
-    DBFind(Name: @1buffer_data, Source: src_buffer).Columns("value->app_name,value->app_id").Where({"key": export, "member_id": #key_id#, "ecosystem": #ecosystem_id#}).Vars(buffer)
-    DBFind(@1binaries, src_binaries).Where({"name": export, "member_id": #key_id#, "ecosystem": #ecosystem_id#, "app_id": #buffer_value_app_id#}).Custom(app_name){
-        Span(#buffer_value_app_name#)
-    }
-
-    Table(Source: src_binaries, "$@1application$=app_name,=data").Style(
-        tbody > tr:nth-of-type(odd) {
-            background-color: #fafbfc;
-        }
-        tbody > tr > td {
-            word-break: break-all;
-            font-weight: 400;
-            font-size: 13px;
-            color: #666;
-            border-top: 1px solid #eee;
-            vertical-align: middle;
-        }
-        tr > *:first-child {
-            padding-left:20px;
-        }
-        tr > *:last-child {
-            padding-right:20px;
-            text-align:right;
-        }
-        thead {
-            background-color: #eee;
-        }
-    )
 }

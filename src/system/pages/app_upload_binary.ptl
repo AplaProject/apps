@@ -1,36 +1,49 @@
-Div(content-wrapper){
-    SetTitle($@1binaries$)
-    Div(breadcrumb){
-        LinkPage($@1binaries$, @1app_binary)
-        Span(/).Style(margin-right: 10px; margin-left: 10px;)
-        If(#id# > 0){
-            Span($@1edit$, text-muted)
-            DBFind(@1binaries).Columns(name).Where({"id": #id#, "ecosystem": #ecosystem_id#}).Vars(binary)
-        }.Else{
-            Span($@1button_upload$, text-muted)
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "System"}).Vars(application)
+SetVar(role_developer_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_developer))
+SetVar(role_admin_id, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: role_admin))
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_developer_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(developer_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#role_admin_id#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(admin_access)
+
+If(Or(#developer_access_id#>0,#admin_access_id#>0)){
+    Div(content-wrapper){
+        SetTitle($@1binaries$)
+        Div(breadcrumb){
+            LinkPage($@1binaries$, @1app_binary)
+            Span(/).Style(margin-right: 10px; margin-left: 10px;)
+            If(#id# > 0){
+                Span($@1edit$, text-muted)
+                DBFind("@1binaries").Where({"id": "#id#", "ecosystem": "#ecosystem_id#"}).Columns(name).Vars(binary)
+            }.Else{
+                Span($@1button_upload$, text-muted)
+            }
+        }
+
+        Form(){
+            Div(form-group){
+                Div(text-left){
+                    Label($@1name$)
+                }
+                If(#id# > 0){
+                    Input(Name: Name, Disabled: disabled, Value: #binary_name#)
+                }.Else{
+                    Input(Name: Name)
+                }
+            }
+            Div(form-group){
+                Div(text-left){
+                    Label($@1file$)
+                }
+                Input(Name: Data, Type: file)
+            }
+            Div(form-group text-right){
+                Input(Name: ApplicationId, Value: #application_id#, Class: hidden)
+                Button(Body: $@1button_upload$, Contract: @1UploadFile, Class: btn btn-primary, Page: @1app_binary)
+            }
         }
     }
-
-    Form(){
-        Div(form-group){
-            Div(text-left){
-                Label($@1name$)
-            }
-            If(#id# > 0){
-                Input(Name: Name, Disabled: disabled, Value: #binary_name#)
-            }.Else{
-                Input(Name: Name)
-            }
-        }
-        Div(form-group){
-            Div(text-left){
-                Label($@1file$)
-            }
-            Input(Name: Data, Type: file)
-        }
-        Div(form-group text-right){
-            Input(Name: ApplicationId, Value: #application_id#, Class: hidden)
-            Button(Body: $@1button_upload$, Contract: @1UploadFile, Class: btn btn-primary, Page: @1app_binary)
-        }
+}.Else{
+    SetTitle($@1binaries$)
+    Div(breadcrumb){
+        Span(Class: text-muted, Body: $@1role_change_no_view_permission$)
     }
 }
