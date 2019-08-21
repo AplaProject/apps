@@ -59,7 +59,7 @@ contract CreditingAdd {
         $check_access = AppParam(Int($app), "crediting_borrower_role", $ecosystem_id)
         var rids array
         rids = JSONDecode("["+$check_access+"]")
-        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->account": $account_id, "deleted": 0}).Row() {
             warning LangRes("@1access_denied", "en")
         }
 
@@ -75,7 +75,7 @@ contract CreditingAdd {
 
         //check borrower
         if Int($Id) > 0 {
-            if AddressToId(borrower) != $key_id {
+            if borrower != $account_id {
                  warning LangRes("@1access_denied", "en")
             }
         }
@@ -95,7 +95,7 @@ contract CreditingAdd {
     action {
         var m map
         if Int($Id) == 0 {
-            m["borrower"] = IdToAddress($key_id)
+            m["borrower"] = $account_id
             m["status"] = 0
             m["deleted"] = 0
             m["date_created"] = $block_time       

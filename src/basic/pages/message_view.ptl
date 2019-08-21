@@ -1,30 +1,30 @@
 If(#notific_id# > 0){
-    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_id,recipient->member_name,notification->body,notification->header,page_params->thread,date_created,closed").Vars(message)
-    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #message_sender_member_id#}).Vars(highlighted)
-    If(#highlighted_id#){
+    DBFind("@1notifications").Where({"ecosystem": "#ecosystem_id#", "id": "#notific_id#"}).Columns("id,sender->account,sender->member_name,sender->image_id,recipient->account,recipient->member_name,notification->body,notification->header,page_params->thread,date_created,closed").Vars(message)
+    DBFind("@1members").Where({"ecosystem": "#ecosystem_id#", "account": "#message_sender_account#"}).Vars(highlighted)
+    If(#highlighted_account#){
         SetVar(message_sender_member_name, #highlighted_member_name#)
         SetVar(message_sender_image_id, #highlighted_image_id#)
     }
 
     If(#message_page_params_thread# > 0){
         SetVar(thread, #message_page_params_thread#)
-        DBFind(@1notifications,src_thread).Where({"ecosystem": #ecosystem_id#, "page_params->thread": #message_page_params_thread#}).Order("id").Count("thread_quantity").Columns("id,sender->member_id,sender->member_name,sender->image_id,notification->body,date_created")
-        DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #message_page_params_thread#}).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_id,notification->body,date_created").Vars(init_message)
+        DBFind("@1notifications",src_thread).Where({"ecosystem": "#ecosystem_id#", "page_params->thread": "#message_page_params_thread#"}).Order("id").Count("thread_quantity").Columns("id,sender->account,sender->member_name,sender->image_id,notification->body,date_created")
+        DBFind("@1notifications").Where({"ecosystem": "#ecosystem_id#", "id": "#message_page_params_thread#"}).Columns("id,sender->account,sender->member_name,sender->image_id,recipient->account,notification->body,date_created").Vars(init_message)
     }.Else{
         SetVar(thread, #message_id#)
-        DBFind(@1notifications,src_thread).Where({"ecosystem": #ecosystem_id#, "page_params->thread": #message_id#}).Order("id").Count("thread_quantity").Columns("id,sender->member_id,sender->member_name,sender->image_id,notification->body,date_created")
-        DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #message_id#}).Columns("id,sender->member_id,sender->member_name,sender->image_id,recipient->member_id,notification->body,date_created").Vars(init_message)
+        DBFind("@1notifications",src_thread).Where({"ecosystem": "#ecosystem_id#", "page_params->thread": "#message_id#"}).Order("id").Count("thread_quantity").Columns("id,sender->account,sender->member_name,sender->image_id,notification->body,date_created")
+        DBFind("@1notifications").Where({"ecosystem": "#ecosystem_id#", "id": "#message_id#"}).Columns("id,sender->account,sender->member_name,sender->image_id,recipient->account,notification->body,date_created").Vars(init_message)
     }
-    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #init_message_sender_member_id#}).Vars(starter)
-    If(#starter_id#){
+    DBFind("@1members").Where({"ecosystem": "#ecosystem_id#", "account": "#init_message_sender_account#"}).Vars(starter)
+    If(#starter_account#){
         SetVar(init_message_sender_member_name, #starter_member_name#)
         SetVar(init_message_sender_image_id, #starter_image_id#)
     }
 
-    If(#init_message_sender_member_id# != #key_id#){
-        SetVar(reply_recipient, #init_message_sender_member_id#)
+    If(#init_message_sender_account# != #account_id#){
+        SetVar(reply_recipient, #init_message_sender_account#)
     }.Else{
-        SetVar(reply_recipient, #init_message_recipient_member_id#)
+        SetVar(reply_recipient, #init_message_recipient_account#)
     }
     If(#message_notification_header# == ""){
         SetVar(thread_name, $@1message_subject_empty$)
@@ -47,7 +47,7 @@ If(#notific_id# > 0){
                 Div(col-lg-6 col-lg-offset-3 col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1){
                     Form(panel panel-primary){
                         Div(text-center pt){
-                            If(#message_sender_member_id# == #key_id#){
+                            If(#message_sender_account# == #account_id#){
                                 Span(Class: h4 text-bold, Body: LangRes(@1message_from_you))
                             }.Else{
                                 Span(Class: h4 text-bold, Body: LangRes(@1message_from) #message_sender_member_name#)
@@ -56,7 +56,7 @@ If(#notific_id# > 0){
                         Div(panel-body pt pb){
                             Div(list-group-item wrapper-block){
                                 Div(avatar-block text-center){
-                                    LinkPage(Page: @1profile_view, PageParams: "v_key_id=#message_sender_member_id#"){
+                                    LinkPage(Page: @1profile_view, PageParams: "v_account=#message_sender_account#"){
                                         If(#message_sender_image_id# > 0){
                                             Image(Src: Binary().ById(#message_sender_image_id#), Class: img-circle avatar)
                                         }.Else{
@@ -75,13 +75,13 @@ If(#notific_id# > 0){
                             Div(row mt-lg){
                                 Div(col-md-12 text-left){
                                     Label(){
-                                        If(#message_sender_member_id# != #key_id#){
+                                        If(#message_sender_account# != #account_id#){
                                             Span(Body: LangRes(@1reply_text))
                                         }.Else{
                                             Span(Body: LangRes(@1message_text))
                                         }
                                     }
-                                    Input(Type: Hidden, Name: MemberId, Value: "#reply_recipient#")
+                                    Input(Type: Hidden, Name: MemberAccount, Value: "#reply_recipient#")
                                     Input(Type: Hidden, Name: EcosystemId, Value: "#ecosystem_id#")
                                     Input(Type: Hidden, Name: Sender, Value: "1")
                                     Input(Type: Hidden, Name: Icon, Value: "icon-speech")
@@ -91,12 +91,12 @@ If(#notific_id# > 0){
                                     Input(Type: textarea, Name: Body, Value: "", Placeholder: $@1message_type_here$).Style(resize: vertical; min-height: 6em;)
                                 }
                             }
-                            If(#message_sender_member_id# == #key_id#){
+                            If(#message_sender_account# == #account_id#){
                                 SetVar(send_button, $@1send$)
                             }.Else{
                                 SetVar(send_button, $@1reply$)
                             }
-                            If(And(#message_closed# == 0, Or(#message_sender_member_id# != #key_id#, #message_recipient_member_id# == #key_id#))){
+                            If(And(#message_closed# == 0, Or(#message_sender_account# != #account_id#, #message_recipient_account# == #account_id#))){
                                 Div(mt text-right){
                                     Button(Body: LangRes(@1mark_read), Class: btn btn-default, Contract: @1NotificationsClose, Params: "NotificId=#notific_id#", Page: @1messages_list)
                                     Button(Body: #send_button#, Class: btn btn-primary, Contract: @1NotificationsSend, Params: "CurrentRid=#role_id#", Page: @1message_view, PageParams: "notific_id=#message_id#").CompositeContract(@1NotificationsClose, [{"NotificId": #notific_id#}])
@@ -118,7 +118,7 @@ If(#notific_id# > 0){
                         }
                         Div(list-group-item wrapper-block){
                             Div(avatar-block text-center){
-                                LinkPage(Page: @1profile_view, PageParams: "v_key_id=#init_message_sender_member_id#"){
+                                LinkPage(Page: @1profile_view, PageParams: "v_account=#init_message_sender_account#"){
                                     If(#init_message_sender_image_id# > 0){
                                         Image(Src: Binary().ById(#init_message_sender_image_id#), Class: img-circle avatar)
                                     }.Else{
@@ -138,12 +138,12 @@ If(#notific_id# > 0){
                         ForList(src_thread){
                             Div(list-group-item wrapper-block){
                                 Div(avatar-block text-center){
-                                    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #sender.member_id#}).Vars(thread_message)
-                                    If(#thread_message_id# == ""){
+                                    DBFind("@1members").Where({"ecosystem": "#ecosystem_id#", "account": "#sender.account#"}).Vars(thread_message)
+                                    If(#thread_message_account# == ""){
                                         SetVar(thread_message_member_name, #sender.member_name#)
                                         SetVar(thread_message_image_id, #sender.image_id#)
                                     }
-                                    LinkPage(Page: @1profile_view, PageParams: "v_key_id=#sender.member_id#"){
+                                    LinkPage(Page: @1profile_view, PageParams: "v_account=#sender.account#"){
                                         If(#thread_message_image_id# > 0){
                                             Image(Src: Binary().ById(#thread_message_image_id#), Class: img-circle avatar)
                                         }.Else{

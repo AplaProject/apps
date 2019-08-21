@@ -1,8 +1,8 @@
 contract TokensTransfer {
     data {
         Amount money
-        SenderId int
-        RecipientId int
+        SenderAccount string
+        RecipientAccount string
         Comment string "optional"
         Ecosystem int "optional"
     }
@@ -29,7 +29,7 @@ contract TokensTransfer {
         while i < Len(array_permissions) {
             var contract_name string
             contract_name = array_permissions[i]
-            if contract_name==prevContract {
+            if contract_name == prevContract {
                 result = 1
             }
             i = i + 1
@@ -42,10 +42,10 @@ contract TokensTransfer {
 
     func checkSender() {
         var sender_map map check_dep money
-        sender_map = DBFind("@1keys").Where({"id": $SenderId, "ecosystem": $e_id}).Row()
+        sender_map = DBFind("@1keys").Where({"ecosystem": $e_id, "account": $SenderAccount, "deleted": 0}).Row()
 
         if !sender_map {
-            warning Sprintf(LangRes("@1sender_x_invalid", "en"), $SenderId)
+            warning Sprintf(LangRes("@1sender_x_invalid", "en"), $SenderAccount)
         }
         if Int(sender_map["blocked"]) != 0 {
             warning LangRes("@1sender_blocked", "en")
@@ -64,10 +64,10 @@ contract TokensTransfer {
 
     func checkRecipient() {
         var recipient_map map
-        recipient_map = DBFind("@1keys").Where({"id": $RecipientId, "ecosystem": $e_id}).Row()
+        recipient_map = DBFind("@1keys").Where({"ecosystem": $e_id, "account": $RecipientAccount, "deleted": 0}).Row()
 
         if !recipient_map {
-            warning Sprintf(LangRes("@1recipient_x_invalid", "en"), $RecipientId)
+            warning Sprintf(LangRes("@1recipient_x_invalid", "en"), $RecipientAccount)
         }
         if Int(recipient_map["blocked"]) != 0 {
             warning LangRes("@1recipient_blocked", "en")
@@ -93,12 +93,12 @@ contract TokensTransfer {
     }
 
     action {
-        DBUpdateExt("@1keys", {"id": $SenderId, "ecosystem": $e_id}, {"-amount": $Amount})
-        DBUpdateExt("@1keys", {"id": $RecipientId, "ecosystem": $e_id}, {"+amount": $Amount})
+        DBUpdateExt("@1keys", {"ecosystem": $e_id, "account": $SenderAccount, "deleted": 0}, {"-amount": $Amount})
+        DBUpdateExt("@1keys", {"ecosystem": $e_id, "account": $RecipientAccount, "deleted": 0}, {"+amount": $Amount})
 
         var m map
-        m["sender_id"] = $SenderId
-        m["recipient_id"] = $RecipientId
+        m["sender_id"] = AddressToId($SenderAccount)
+        m["recipient_id"] = AddressToId($RecipientAccount)
         m["amount"] = $Amount
         m["comment"] = $Comment
         m["block_id"] = $block

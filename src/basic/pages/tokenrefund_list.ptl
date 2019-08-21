@@ -2,10 +2,10 @@ SetVar(this_page, @1tokenrefund_list).(this_table, @1tokens_refund)
 Include(@1pager_header)
 
 SetTitle("$@1tokens_refunds_list$")
-DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
+DBFind("@1applications").Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
 SetVar(tid, AppParam(App: #application_id#, Name: voting_template_tokenrefund, Ecosystem: 1))
 If(#tid# > 0){
-    DBFind(@1voting_templates).Where({"ecosystem": #ecosystem_id#, "id": #tid#}).Columns("subject->voters").Vars(template)
+    DBFind("@1voting_templates").Where({"ecosystem": "#ecosystem_id#", "id": "#tid#"}).Columns("subject->voters").Vars(template)
 }
 If(And(#template_subject_voters#>0,#template_subject_voters#==#role_id#)){
     Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: $@1tokens_refunds_list_desc$))
@@ -19,9 +19,10 @@ If(And(#template_subject_voters#>0,#template_subject_voters#==#role_id#)){
 }
 
 If(#search#){
-    SetVar(w_search, {"note": {"$ilike": "#search#"}})
+    SetVar(where, {"note": {"$ilike": "#search#"}})
+}.Else{
+    SetVar(where, {})
 }
-SetVar(where, {#w_search#})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, LangRes(@1description))
@@ -43,8 +44,8 @@ DBFind(#this_table#, src_refunds_list).Where(#where#).Order({"id": 1}).Limit(#pa
 }.Custom(_closed){
     DateTime(Format: YYYY-MM-DD HH:MI:SS, DateTime: #closed_at#)
 }.Custom(_accounts){
-    Div(){$@1tokens_refund_victim$: Address(#victim_key_id#)}
-    Div(){$@1tokens_refund_attacker$: Address(#attacker_key_id#)}
+    Div(){$@1tokens_refund_victim$: #victim_account#}
+    Div(){$@1tokens_refund_attacker$: #attacker_account#}
 }.Custom(_amount){
     Money(#amount#)
 }.Count(count)
@@ -53,7 +54,7 @@ Div(fullscreen){
     Div(table-responsive ml-lg mr-lg){
         Div(list-group-item){
             If(#count# > 0){
-                Table(src_refunds_list, "$@1accounts$=_accounts,$@1description$=note,$@1validator_id$=validator_id,$@1blocked_at$=_blocked,$@1closed$=_closed,$@1result$=_result,$@1amount$=_amount,$@1status$=_status")
+                Table(src_refunds_list, "$@1accounts$=_accounts,$@1description$=note,$@1consortium_member$=consortium_member_account,$@1blocked_at$=_blocked,$@1closed$=_closed,$@1result$=_result,$@1amount$=_amount,$@1status$=_status")
             }.Else{
                 Div(Class: text-center h4 text-muted, Body: "$@1tokens_refunds$ $@1not_founded$")
             }

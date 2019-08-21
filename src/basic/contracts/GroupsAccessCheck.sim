@@ -5,18 +5,18 @@ contract GroupsAccessCheck {
 
     conditions {
         var group map
-        group = DBFind("@1groups").Where({"ecosystem": $ecosystem_id, "id": $GroupId}).Columns("id,group_name,deleted,group_access,creator->member_id").Row()
+        group = DBFind("@1groups").Where({"ecosystem": $ecosystem_id, "id": $GroupId}).Columns("id,group_name,deleted,group_access,creator->account").Row()
         if !group {
             warning Sprintf("%v: " + "group not found", $this_contract)
         }
 
-        if group["creator.member_id"] == $key_id {
+        if group["creator.account"] == $account_id {
             return
         }
 
         var gr_ids array
         gr_ids = JSONDecode(group["group_access"])
-        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": gr_ids}, "member->member_id":$key_id, "deleted": 0}).Row() {
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": gr_ids}, "member->account": $account_id, "deleted": 0}).Row() {
             warning Sprintf(LangRes("@1group_change_no_permission", "en"), group["group_name"])
         }
     }

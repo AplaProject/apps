@@ -6,22 +6,23 @@ Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1ecosys
 AddToolButton(Title: $@1update_metrics$, Page: @1ecosystems_metrics_update, Icon: icon-refresh).Popup(Header: $@1update_metrics$, Width: "30")
 
 If(#search#){
-    SetVar(w_search, {"name": {"$ilike": "#search#"}})
+    SetVar(where, {"name": {"$ilike": "#search#"}})
+}.Else{
+    SetVar(where, {})
 }
-SetVar(where, {#w_search#})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, LangRes(@1ecosystem_name))
     Include(@1search)
 }
 
-DBFind(@1buffer_data).Where({"ecosystem": #ecosystem_id#, "member_id": #key_id#, "key": "metrics"}).Vars(m)
+DBFind("@1buffer_data").Where({"ecosystem": "#ecosystem_id#", "account": "#account_id#", "key": "metrics"}).Vars(m)
 JsonToSource(src_metrics,#m_value#)
 
-DBFind(@1applications).Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
+DBFind("@1applications").Where({"ecosystem": 1, "name": "Basic"}).Columns("name,id").Vars(application)
 SetVar(template_id, AppParam(Ecosystem:1, App:#application_id#, Name: voting_template_ves))
 If(#template_id# > 0){
-    DBFind(@1voting_templates).Where({"ecosystem": #ecosystem_id#, "id": #template_id#}).Columns("subject->voters").Vars(template)
+    DBFind("@1voting_templates").Where({"ecosystem": "#ecosystem_id#", "id": "#template_id#"}).Columns("subject->voters").Vars(template)
 }
 
 DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Custom(_id){
@@ -30,16 +31,16 @@ DBFind(#this_table#, src).Where(#where#).Order({"id": 1}).Limit(#pager_limit#).O
     Span(#name#)
 }.Custom(_metrics){
     If(#m_id#>0){
-        SetVar(eco_id,#id#)
+        SetVar(eco_id, #id#)
         ForList(src_metrics){
-            If(#key#==#eco_id#){
-                LinkPage(Body: `#value#`, Page: @1sysparams_metrics, PageParams:"Id=#key#")
+            If(#key# == #eco_id#){
+                LinkPage(Body: #value#, Page: @1sysparams_metrics, PageParams: "Id=#key#")
             }
         }
     }
 }.Custom(valued){
     If(#is_valued# == 0){
-        If(And(#template_subject_voters#>0,#template_subject_voters#==#role_id#)){
+        If(And(#template_subject_voters# > 0, #template_subject_voters# == #role_id#)){
             Button(Body: $@1start_voting_ves$, Class: btn-xs btn-link, Page: @1voting_list, Contract: @1VotingRunVes, Params: "EcosystemId=#id#")
         }.Else{
             If(#template_id# > 0){

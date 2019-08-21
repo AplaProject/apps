@@ -1,0 +1,46 @@
+contract VotingRunRemoveConsortiumMember {
+    data {
+        Index int
+    }
+
+    conditions {
+        $app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Basic"}).One("id"))
+        $templateId = Int(DBFind("@1app_params").Where({"app_id": $app_id, "name": "voting_template_consortium_member", "ecosystem": $ecosystem_id}).One("value"))
+        if $templateId == 0 {
+            warning LangRes("@1template_id_not_found", "en")
+        }
+
+        var nodesJson string
+        nodesJson = SysParamString("full_nodes")
+
+        if Size(nodesJson) < 100 {
+            warning LangRes("@1invalid_full_nodes", "en")
+        }
+
+        $nodes = JSONDecode(nodesJson)
+        if Len($nodes) <= 3 {
+            warning LangRes("@1removing_node_impossible", "en")
+        }
+    }
+
+    action {
+        var nodesNew array i int node map
+        while i < Len($nodes){
+            node = $nodes[i]
+            if i != $Index {
+                nodesNew = Append(nodesNew, node)
+            } else {
+                $KeyId = Str(node["key_id"]) 
+            }
+            i = i + 1
+        }
+
+        var pars map
+        pars["Name"] = "full_nodes"
+        pars["Value"] = JSONEncode(nodesNew)
+        pars["ConsortiumMemberId"] = Str($KeyId)
+        pars["flag"] = "remove"
+
+        @1VotingTemplateRun("TemplateId,Duration,ContractAcceptParams", $templateId, 14, JSONEncode(pars))
+    }
+}

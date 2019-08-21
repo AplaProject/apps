@@ -14,13 +14,12 @@ contract CreditingStatusUpdate {
             offer_date = offers["date_created"]
             DBUpdate("crediting_requests", request_id, {"creditor": creditor, "rate": rate, "offer_id": offer_id, "offer_date": offer_date})
 
-            var memberId int
-            var header body string params map 
-            memberId = AddressToId(request["borrower"])
+            var header body memberAccount string params map 
+            memberAccount = request["borrower"]
             header = "Signature for auction №" + Str(request_id)
             body = "Your signature is required!"
             params["crediting_id"] = request_id
-            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-edit", header, body, "crediting_view", params)
+            @1NotificationsSend("MemberAccount,Sender,Icon,Header,Body,Page,Params", memberAccount, 1, "fa-edit", header, body, "crediting_view", params)
         }
         return offer_id
     }
@@ -28,18 +27,18 @@ contract CreditingStatusUpdate {
     func sendNotesAuctionStarted(request map) {
         var request_id i int subs_arr array
         request_id = Int(request["id"])
-        subs_arr = DBFind("crediting_subs").Columns("creditor").Limit(10000).Where({"request_id": request_id, "deleted": 0})
+        subs_arr = DBFind("crediting_subs").Where({"request_id": request_id, "deleted": 0}).Columns("creditor").Limit(10000)
         while i < Len(subs_arr) {
-            var sub_map memberId int
+            var sub_map int memberAccount string
             sub_map = subs_arr[i]
-            memberId = AddressToId(sub_map["creditor"])
+            memberAccount = sub_map["creditor"]
 
             var header body string params map 
             header = "Auction №" + Str(request_id) + " started"
             body = "You can bid now!"
             params["crediting_id"] = request_id
             params["optional"] = 1
-            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-check", header, body, "crediting_view", params)
+            @1NotificationsSend("MemberAccount,Sender,Icon,Header,Body,Page,Params", memberAccount, 1, "fa-check", header, body, "crediting_view", params)
             i = i + 1
         }
     }
@@ -47,18 +46,18 @@ contract CreditingStatusUpdate {
     func sendNotesAuctionFinished(request map) {
         var request_id i int subs_arr array
         request_id = Int(request["id"])
-        subs_arr = DBFind("crediting_subs").Columns("creditor").Limit(10000).Where({"request_id": request_id, "deleted": 0})
+        subs_arr = DBFind("crediting_subs").Where({"request_id": request_id, "deleted": 0}).Columns("creditor").Limit(10000)
         while i < Len(subs_arr) {
-            var sub_map memberId int
+            var sub_map int memberAccount string
             sub_map = subs_arr[i]
-            memberId = AddressToId(sub_map["creditor"])
+            memberAccount = sub_map["creditor"]
 
             var header body string params map 
             header = "Auction №" + Str(request_id) + " finished"
             body = "You can't bid anymore!"
             params["crediting_id"] = request_id
             params["optional"] = 1
-            @1NotificationsSend("MemberId,Sender,Icon,Header,Body,Page,Params", memberId, 1, "fa-close", header, body, "crediting_view", params)
+            @1NotificationsSend("MemberAccount,Sender,Icon,Header,Body,Page,Params", memberAccount, 1, "fa-close", header, body, "crediting_view", params)
             i = i + 1
         }
     }
@@ -97,7 +96,7 @@ contract CreditingStatusUpdate {
         $check_access = AppParam(Int($app), "crediting_admin_role", $ecosystem_id)
         var rids array
         rids = JSONDecode("["+$check_access+"]")
-        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+        if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->account": $account_id, "deleted": 0}).Row() {
             warning LangRes("@1access_denied", "en")
         }
     }

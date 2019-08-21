@@ -29,22 +29,23 @@ contract PoaTokensSend {
     }
 
     func checkKeys() {
-        $sender_id = AddressToId($Sender)
-        $recipient_id = AddressToId($Recipient)
+        var sender_key, recipient_key int
+        sender_key = AddressToId($Sender)
+        recipient_key = AddressToId($Recipient)
 
         //check the sender key
-        if $sender_id == 0 {
+        if sender_key == 0 {
             warning Sprintf(LangRes("@1sender_x_invalid", "en"), $Sender)
         }
         //check the recipient key
-        if $recipient_id == 0 {
+        if recipient_key == 0 {
             warning Sprintf(LangRes("@1recipient_x_invalid", "en"), $Recipient)
         }
     }
 
     func checkPoa() {
         var poa_map map
-        poa_map = DBFind("@1poa").Where({"contract": "@1PoaTokensSend", "poa_sender->member_id": $sender_id, "poa_recipient->member_id": $key_id, "ecosystem": $ecosystem_id, "deleted": 0}).Columns("id,date_expiration,params->amount_max,params->amount_max_day,params->amount_max_month,params->amount_day,params->amount_month,params->date_day,params->date_month").Row()
+        poa_map = DBFind("@1poa").Where({"contract": "@1PoaTokensSend", "poa_sender->account": $Sender, "poa_recipient->account": $account_id, "ecosystem": $ecosystem_id, "deleted": 0}).Columns("id,date_expiration,params->amount_max,params->amount_max_day,params->amount_max_month,params->amount_day,params->amount_month,params->date_day,params->date_month").Row()
         if !poa_map {
             warning LangRes("@1poa_not_found", "en")
         }
@@ -111,7 +112,7 @@ contract PoaTokensSend {
     }
 
     action {
-        @1TokensTransfer("Amount,SenderId,RecipientId,Comment", $Amount, $sender_id, $recipient_id, $Comment)
+        @1TokensTransfer("Amount,SenderAccount,RecipientAccount,Comment", $Amount, $Sender, $Recipient, $Comment)
         updateParams()
     }
 }

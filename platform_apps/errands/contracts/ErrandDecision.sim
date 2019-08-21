@@ -9,7 +9,7 @@ contract ErrandDecision {
         if $AnswerRecipient == "" {
             info LangRes("@1empty_answer", "en")
         }
-        $errand_map = DBFind("@1notifications").Where({"id": $ErrandId}).Columns("id,processing_info,processing_info->member_id,page_params,page_params->name,page_params->text,page_params->type,page_params->date_end,closed,recipient->role_id,recipient->member_id,page_params->recipient_type,sender->role_id").Row()
+        $errand_map = DBFind("@1notifications").Where({"id": $ErrandId}).Columns("id,processing_info,processing_info->account,page_params,page_params->name,page_params->text,page_params->type,page_params->date_end,closed,recipient->role_id,recipient->account,page_params->recipient_type,sender->role_id").Row()
         if Int($errand_map["page_params.recipient_type"]) == 0 { //role errand
             if !RoleAccess(Int($errand_map["recipient.role_id"])) {
                 warning LangRes("@1access_denied", "en")
@@ -17,11 +17,11 @@ contract ErrandDecision {
             if $errand_map["processing_info"] == "" {
                 info LangRes("@1start_process_errand", "en")
             }
-            if Int($errand_map["processing_info.member_id"]) != $key_id {
+            if $errand_map["processing_info.account"] != $account_id {
                 info LangRes("@1another_start_process_errand", "en")
             }
         } else { //member errand
-            if Int($errand_map["recipient.member_id"]) != $key_id {
+            if $errand_map["recipient.account"] != $account_id {
                 warning LangRes("@1access_denied", "en")
             }
         }

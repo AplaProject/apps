@@ -3,7 +3,7 @@ contract ErrandCreate {
         ErrandType int
         RecRoleId int "optional"
         SendRoleId int
-        MemberId string "optional"
+        MemberAccount string "optional"
         ErrandName string
         ErrandText string
         RoleTypeErrand int "optional"
@@ -54,7 +54,7 @@ contract ErrandCreate {
         if $check_access {
             var rids array
             rids = JSONDecode("["+$check_access+"]")
-            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->account": $account_id, "deleted": 0}).Row() {
                 warning LangRes("@1access_denied", "en")
             }
         } else {
@@ -62,7 +62,7 @@ contract ErrandCreate {
             admin_ids = AppParam(Int($app), "errands_admin_role", $ecosystem_id)
             var rids array
             rids = JSONDecode("["+admin_ids+"]")
-            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->member_id": $key_id, "deleted": 0}).Row() {
+            if !DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": {"$in": rids}, "member->account": $account_id, "deleted": 0}).Row() {
                 warning LangRes("@1access_denied", "en")
             }
         }
@@ -73,13 +73,12 @@ contract ErrandCreate {
             }
         }
         if $ErrandType == 1 {
-            if $MemberId == "" {
+            if $MemberAccount == "" {
                 info LangRes("@1empty_wallet", "en")
             }
-            $MemberId = AddressToId($MemberId)
-            $check_member = DBFind("@1members").Where({"id": $MemberId, "ecosystem": $ecosystem_id}).One("id")
+            $check_member = DBFind("@1members").Where({"account": $MemberAccount, "ecosystem": $ecosystem_id}).One("id")
             if (Int($check_member) == 0){
-                if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": $MemberId}).Columns("id").Row() {
+                if !DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "account": $MemberAccount, "deleted": 0}).Row() {
                     warning LangRes("@1member_not_found", "en")
                 }
             }
@@ -120,24 +119,23 @@ contract ErrandCreate {
 
         if $ErrandType == 0 {
             if $RoleTypeErrand == 2 {
-                var errands array i lenErrands member_r_id int v map
-                errands = DBFind("@1roles_participants").Columns("id,role->id,member->member_id,ecosystem,deleted").Where({"role->id": $RecRoleId, "deleted": 0, "ecosystem": $ecosystem_id})
+                var errands array i lenErrands int v map
+                errands = DBFind("@1roles_participants").Where({"role->id": $RecRoleId, "deleted": 0, "ecosystem": $ecosystem_id}).Columns("id,role->id,member->account,ecosystem,deleted")
                 lenErrands = Len(errands)
                 if lenErrands == 0 {
                     info LangRes("@1recipient_role_no_members", "en")
                 }
                 while i < lenErrands{
                     v = errands[i]
-                    member_r_id = Int(v["member.member_id"])
-                    @1NotificationsSend("CurrentRid,MemberId,Sender,Icon,Header,Body,Page,Params,Rid,Closure,EcosystemId",$SendRoleId,member_r_id, 2, "icon icon-envelope-open", LangRes("@1new_errand", "en"), LangRes("@1details_view", "en"), "@1errand_view", info_errand, 0, 0,$ecosystem_id)
+                    @1NotificationsSend("CurrentRid,MemberAccount,Sender,Icon,Header,Body,Page,Params,Rid,Closure,EcosystemId", $SendRoleId, v["member.account"], 2, "icon icon-envelope-open", LangRes("@1new_errand", "en"), LangRes("@1details_view", "en"), "@1errand_view", info_errand, 0, 0, $ecosystem_id)
                     i = i + 1
                 }
             } else { 
-                @1NotificationsSend("CurrentRid,Rid,Sender,Icon,Header,Body,Page,Params,Closure,EcosystemId",$SendRoleId,$RecRoleId, 2, "icon icon-envelope-open", LangRes("@1new_errand", "en"), LangRes("@1details_view", "en"), "@1errand_view",info_errand,1,$ecosystem_id)
+                @1NotificationsSend("CurrentRid,Rid,Sender,Icon,Header,Body,Page,Params,Closure,EcosystemId", $SendRoleId, $RecRoleId, 2, "icon icon-envelope-open", LangRes("@1new_errand", "en"), LangRes("@1details_view", "en"), "@1errand_view", info_errand, 1, $ecosystem_id)
             }
         }
         if $ErrandType == 1 {
-            @1NotificationsSend("CurrentRid,MemberId,Sender,Icon,Header,Body,Page,Params,Rid,Closure,EcosystemId",$SendRoleId,Int($MemberId), 2, "icon icon-envelope-open", LangRes("@1new_errand", "en"), LangRes("@1details_view", "en"), "@1errand_view", info_errand, 0, 0,$ecosystem_id)
+            @1NotificationsSend("CurrentRid,MemberAccount,Sender,Icon,Header,Body,Page,Params,Rid,Closure,EcosystemId", $SendRoleId, $MemberAccount, 2, "icon icon-envelope-open", LangRes("@1new_errand", "en"), LangRes("@1details_view", "en"), "@1errand_view", info_errand, 0, 0, $ecosystem_id)
         }
     }
 }

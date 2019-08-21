@@ -1,7 +1,7 @@
 contract NodeRemoveByKey {
     data {}
 
-    func nodesRemove(keyId int) array {
+    func nodesRemove(key int) array {
         var nodesJSON string nodes res array
         nodesJSON = SysParamString("full_nodes")
         if !HasPrefix(nodesJSON, "[") {
@@ -13,7 +13,7 @@ contract NodeRemoveByKey {
         while i < Len(nodes) {
             var node map
             node = nodes[i]
-            if node["key_id"] != keyId {
+            if node["key_id"] != key {
                 res = Append(res, node)
             }
             i = i + 1
@@ -22,14 +22,14 @@ contract NodeRemoveByKey {
     }
 
     conditions {
-        if $original_contract != "ValidatorResign" {
+        if $original_contract != "ConsortiumMemberResign" {
             warning LangRes("@1contract_chain_distorted", "en")
         }
     }
 
     action {
         var nodes array fullNodes string
-        nodes = nodesRemove($key_id)
+        nodes = nodesRemove(Int(AddressToId($account_id)))
         fullNodes = JSONEncode(nodes)
         DBUpdateSysParam("full_nodes", fullNodes, "")
     }

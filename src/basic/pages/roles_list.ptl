@@ -6,17 +6,18 @@ Span(Class: text-muted h5 m0 mb ml-lg, Body: Span(Class: ml-sm, Body: "$@1roles_
 AddToolButton(Page: @1roles_create, Icon: icon-plus, Title: $@1create$).Popup(50, $@1new_role$)
 
 If(#search#){
-    SetVar(w_search, {"role_name": {"$ilike": "#search#"}})
+    SetVar(where, {"ecosystem": "#ecosystem_id#", "role_name": {"$ilike": "#search#"}})
+}.Else{
+    SetVar(where, {"ecosystem": "#ecosystem_id#"})
 }
-SetVar(where, {"ecosystem": #ecosystem_id#, {#w_search#}})
 
 Div(list-group-item ml-lg mr-lg pt-lg){
     SetVar(search_name, LangRes(@1role))
     Include(@1search)
 }
 
-DBFind(#this_table#).Where({"ecosystem": #ecosystem_id#}).Count(all_roles_count)
-DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,role_name,role_type,image_id,creator->member_id,creator->member_name,date_created,date_deleted,deleted,roles_access").Custom(_id){
+DBFind(#this_table#).Where({"ecosystem": "#ecosystem_id#"}).Count(all_roles_count)
+DBFind(#this_table#, src_roles).Where(#where#).Order({"deleted": 1, "id": 1}).Limit(#pager_limit#).Offset(#pager_offset#).Columns("id,role_name,role_type,image_id,creator->account,creator->member_name,date_created,date_deleted,deleted,roles_access").Custom(_id){
     If(#deleted# == 0){
         SetVar(style_text,"text-normal").(style_link, "text-primary")
     }.Else{
@@ -25,7 +26,7 @@ DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limi
     Span(Class: #style_text#, Body: #id#)
 }.Custom(_creator){
     If(And(#creator.member_name#!=NULL,#creator.member_name#!="")){
-        LinkPage(Class: #style_link# text-bold, Page: @1profile_view, PageParams: "v_key_id=#creator.member_id#"){
+        LinkPage(Class: #style_link# text-bold, Page: @1profile_view, PageParams: "v_account=#creator.account#"){
             #creator.member_name#
         }
     }
@@ -58,7 +59,7 @@ DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limi
         }
     }
 }.Custom(_type){
-    DBFind(@1applications).Where({"name": "Basic", "ecosystem": 1}).Columns("name,id").Vars(application)
+    DBFind("@1applications").Where({"name": "Basic", "ecosystem": 1}).Columns("name,id").Vars(application)
     Span(Class: #style_text#, Body: AppParam(Ecosystem: 1, App: #application_id#, Name: roles_types, Index: #role_type#))
 }.Custom(_status){
     Span(Class:#style_text#){
@@ -69,13 +70,13 @@ DBFind(#this_table#, src_roles).Where(#where#).Order({deleted:"1", id:"1"}).Limi
         }
     }
 }.Custom(_access){
-    If(#creator.member_id#==#key_id#){
+    If(#creator.account# == #account_id#){
         SetVar(access,done)
     }.Else{
         SetVar(access,)
     }
     If(And(#roles_access#!="NULL",#roles_access#!="",#roles_access#!="[]")){
-        DBFind(@1roles,src_access_list).Where({"id": {"$in": #roles_access#}}).Columns("id,role_name").Count(access_count).Order(role_name)
+        DBFind("@1roles", src_access_list).Where({"id": {"$in": #roles_access#}}).Columns("id,role_name").Count(access_count).Order("role_name")
         Div(#style_text# breaker){
             ForList(src_access_list){
                 If(And(#role_id#==#id#)){

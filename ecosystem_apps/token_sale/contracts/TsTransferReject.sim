@@ -50,26 +50,26 @@ contract TsTransferReject {
             @1NotificationsProcess("NotificId", $NotificId)
         }
         @1NotificationsClose("NotificId", $NotificId)
-        var sale params map title body string prevKeyId int
+        var sale params map title body string prevAccount string
         title = Sprintf("Sale %v rejected", $saleId)
         body = $Comment
         params["sale_id"] = $saleId
         sale["status"] = $REJECTED
         if $RoleParam == "ts_role_sale_manager" {
-            sale["key_id_sale_apl_manager"] = $key_id
+            sale["sale_apl_manager"] = $account_id
             sale["manager_reject_comment"] = $Comment
             sale["manager_rejected_at"] = $time
-            prevKeyId = Int($sale["key_id_sale_apl_admin"])
+            prevAccount = $sale["sale_apl_admin"]
 
         } elif $RoleParam == "ts_role_sale_seller" {
-            sale["key_id_seller"] = $key_id
+            sale["seller_account"] = $account_id
             sale["seller_reject_comment"] = $Comment
             sale["seller_rejected_at"] = $time
-            prevKeyId = Int($sale["key_id_sale_apl_manager"])
+            prevAccount = $sale["sale_apl_manager"]
         }
 
         DBUpdate("ts_sales", $saleId, sale)
-        @1NotificationsSend("MemberId,Sender,Header,Body,Page,Params,Closure", prevKeyId, 1, title, body, "ts_notification", params, 1)
+        @1NotificationsSend("MemberAccount,Sender,Header,Body,Page,Params,Closure", prevAccount, 1, title, body, "ts_notification", params, 1)
 
     }
 }

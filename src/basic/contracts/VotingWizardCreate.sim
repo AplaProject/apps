@@ -37,9 +37,9 @@ contract VotingWizardCreate {
             current_participant = Int(participants_list[i])
             var participants_count int
             if type == "role" {
-                participants_count = Len(DBFind("@1roles_participants").Where({ecosystem: $ecosystem_id, "role->id": current_participant, deleted: 0}))
+                participants_count = Len(DBFind("@1roles_participants").Where({"ecosystem": $ecosystem_id, "role->id": current_participant, "deleted": 0}))
             } elif type == "group" {
-                participants_count = Len(DBFind("@1groups_participants").Where({ecosystem: $ecosystem_id, "groups_info->id": current_participant, deleted: 0}))
+                participants_count = Len(DBFind("@1groups_participants").Where({"ecosystem": $ecosystem_id, "groups_info->id": current_participant, "deleted": 0}))
             }
             
             if type == "member" || participants_count != 0  {
@@ -86,7 +86,7 @@ contract VotingWizardCreate {
 
         if $TypeDecision == 1 && $Apply == 1 {
             m["VotingId"] = voting_id
-            m["MemberId"] = 0
+            m["MemberAccount"] = 0
             CallContract("@1VotingSubjectCandidates", m)
             subject_map["RoleId"] = Int($RoleId)
             subject_map["Vacancies"] = Int($Vacancies)
@@ -97,7 +97,7 @@ contract VotingWizardCreate {
             i = 0
             while i < Len(candidates_list) {
                 m["VotingId"] = voting_id
-                m["MemberId"] = Int(candidates_list[i])
+                m["MemberAccount"] = candidates_list[i]
                 CallContract("@1VotingSubjectCandidates", m)
                 i = i + 1
             }
@@ -118,6 +118,6 @@ contract VotingWizardCreate {
         } elif Str($GroupParticipants) != "0" {
             sendInvites(voting_id, $GroupParticipants, "group")
         }
-        DBUpdateExt("@1buffer_data", {"key": "voting_wizard_buffer", "member_id": $key_id, "ecosystem": $ecosystem_id}, {"value": "{}"})
+        DBUpdateExt("@1buffer_data", {"key": "voting_wizard_buffer", "account": $account_id, "ecosystem": $ecosystem_id}, {"value": "{}"})
     }
 }

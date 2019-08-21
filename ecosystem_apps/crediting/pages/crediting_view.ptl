@@ -1,17 +1,17 @@
-DBFind(@1applications).Where({"ecosystem": #ecosystem_id#, "name": "Crediting"}).Columns("name,id").Vars(application)
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "Crediting"}).Columns("name,id").Vars(application)
 SetVar(creditor_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crediting_creditor_role))
-DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "$and": ["role->id": {"$in": [#creditor_role#]}, "role->id": #role_id#], "member->member_id": #key_id#, "deleted": 0}).Vars(creditor_access)
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#creditor_role#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(creditor_access)
 
 If(#notific_id#>0){
-    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Columns("page_params->crediting_id,page_params->optional").Vars(notific)
+    DBFind("@1notifications").Where({"ecosystem": "#ecosystem_id#", "id": "#notific_id#"}).Columns("page_params->crediting_id,page_params->optional").Vars(notific)
     SetVar(Id, #notific_page_params_crediting_id#)
     SetVar(notific_optional, #notific_page_params_optional#)
 }
 
 If(#Id#>0){
-    DBFind(crediting_requests).Where({"id": #Id#}).Vars(request)
-    SetVar(borrower_id, AddressToId(#request_borrower#))
-    SetVar(creditor_id, AddressToId(#request_creditor#))
+    DBFind("crediting_requests").Where({"id": "#Id#"}).Vars(request)
+    SetVar(borrower_account, #request_borrower#)
+    SetVar(creditor_account, #request_creditor#)
 }
 
 Div(content-wrapper){
@@ -34,10 +34,10 @@ Div(content-wrapper){
                                 LangRes(crediting_borrower)
                             }
                             Div(col-md-6 text-left){
-                                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #borrower_id#}).Columns("member_info->information").Vars(borrower)
-                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#borrower_id#"){
+                                DBFind("@1members").Where({"ecosystem": "#ecosystem_id#", "account": "#borrower_account#"}).Columns("member_info->information").Vars(borrower)
+                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#borrower_account#"){
                                     Div(){
-                                        Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                                        Span(Em(Class: fa icon-user fa-2x)).Style(margin-right: 10px;)
                                         Span(){
                                             P(Class: h5 m0 text-bold, Body: #request_borrower#)
                                             P(Class: h6 m0, Body: #borrower_member_info_information#)
@@ -52,7 +52,7 @@ Div(content-wrapper){
                             }
                             Div(col-md-6 text-left){
                                 SetVar(rating_amount, 0)
-                                DBFind(@1r_ratings, r).Where({"ecosystem": #ecosystem_id#, "member": #request_borrower#}).Vars(rating)
+                                DBFind("@1r_ratings", r).Where({"ecosystem": "#ecosystem_id#", "member": "#request_borrower#"}).Vars(rating)
                                 Span(#rating_amount#)
                             }
                         }
@@ -120,12 +120,11 @@ Div(content-wrapper){
                         }
                     }
                     If(#request_status# == 1){
-                        DBFind(crediting_offers, offers).Where({"request_id": #Id#}).Order({"rate": 1, "date_created": 1}).Custom(custom_creditor){
-                            SetVar(creditor_id, AddressToId(#creditor#))
-                            DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #creditor_id#}).Columns("member_info->information").Vars(c)
-                            LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#c_id#"){
+                        DBFind("crediting_offers", offers).Where({"request_id": "#Id#"}).Order({"rate": 1, "date_created": 1}).Custom(custom_creditor){
+                            DBFind("@1members").Where({"ecosystem": "#ecosystem_id#", "account": "#creditor#"}).Columns("member_info->information").Vars(c)
+                            LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#c_account#"){
                                 Div(){
-                                    Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                                    Span(Em(Class: fa icon-user fa-2x)).Style(margin-right: 10px;)
                                     Span(){
                                         P(Class: h5 m0 text-bold, Body: #creditor#)
                                         P(Class: h6 m0, Body: #c_member_info_information#)
@@ -167,7 +166,7 @@ Div(content-wrapper){
                         }
                     }
                     If(Or(#request_status#==2,#request_status#==4)){
-                        If(Or(And(#creditor_id#==#key_id#,#request_sign_borrower#>0,#request_sign_creditor#==0),And(#borrower_id#==#key_id#,#request_sign_borrower#==0,#request_sign_creditor#==0))){
+                        If(Or(And(#creditor_account#==#account_id#,#request_sign_borrower#>0,#request_sign_creditor#==0),And(#borrower_account#==#account_id#,#request_sign_borrower#==0,#request_sign_creditor#==0))){
                             SetVar(hh, 210)
                         }.Else{
                              SetVar(hh, 160)  
@@ -203,10 +202,10 @@ Div(content-wrapper){
                                     Div(list-group-item text-center mb-lg ml-lg){
                                         Div(row mb mt-sm t6){
                                             Div(col-sm-8 col-sm-offset-4 text-left){
-                                                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #borrower_id#}).Columns("member_info->information").Vars(borrower)
-                                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#borrower_id#"){
+                                                DBFind("@1members").Where({"ecosystem": "#ecosystem_id#", "account": "#borrower_account#"}).Columns("member_info->information").Vars(borrower)
+                                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#borrower_account#"){
                                                     Div(){
-                                                        Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                                                        Span(Em(Class: fa icon-user fa-2x)).Style(margin-right: 10px;)
                                                         Span(){
                                                             P(Class: h5 m0 text-bold, Body: #request_borrower#)
                                                             P(Class: h6 m0, Body: #borrower_member_info_information#)
@@ -237,7 +236,7 @@ Div(content-wrapper){
                                             }
                                         }
                                         If(#request_status#==2){
-                                            If(And(#borrower_id#==#key_id#,#request_sign_borrower#==0,#request_sign_creditor#==0)){
+                                            If(And(#borrower_account#==#account_id#,#request_sign_borrower#==0,#request_sign_creditor#==0)){
                                                 Div(row mt-lg){
                                                     Div(col-sm-12){
                                                         Button(Body: LangRes(@1reject), Class: btn btn-danger pull-left, Contract: CreditingSignReject, Params: "Id=#Id#", Page: crediting_view, PageParams: "Id=#Id#")
@@ -255,10 +254,10 @@ Div(content-wrapper){
                                     Div(list-group-item text-center mb-lg ml-lg){
                                         Div(row mb mt-sm t6){
                                             Div(col-sm-8 col-sm-offset-4 text-left){
-                                                DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #creditor_id#}).Columns("member_info->information").Vars(creditor)
-                                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#creditor_id#"){
+                                                DBFind("@1members").Where({"ecosystem": "#ecosystem_id#", "account": "#creditor_account#"}).Columns("member_info->information").Vars(creditor)
+                                                LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#creditor_account#"){
                                                     Div(){
-                                                        Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                                                        Span(Em(Class: fa icon-user fa-2x)).Style(margin-right: 10px;)
                                                         Span(){
                                                             P(Class: h5 m0 text-bold, Body: #request_creditor#)
                                                             P(Class: h6 m0, Body: #creditor_member_info_information#)
@@ -288,7 +287,7 @@ Div(content-wrapper){
                                             }
                                         }
                                         If(#request_status#==2){
-                                            If(And(#creditor_id#==#key_id#,#request_sign_borrower#>0,#request_sign_creditor#==0)){
+                                            If(And(#creditor_account#==#account_id#,#request_sign_borrower#>0,#request_sign_creditor#==0)){
                                                 Div(row mt-lg){
                                                     Div(col-sm-12){
                                                         Button(Body: LangRes(@1reject), Class: btn btn-danger pull-left, Contract: CreditingSignReject, Params: "Id=#Id#", Page: crediting_view, PageParams: "Id=#Id#")
@@ -316,8 +315,7 @@ Div(content-wrapper){
                             }
                         }
                         If(#creditor_access_id# > 0){
-                            SetVar(current_address, Address(#key_id#))
-                            DBFind("crediting_subs", fsdf).Where({"request_id": #Id#, "creditor": #current_address#, "deleted": 0}).Vars(sub)
+                            DBFind("crediting_subs").Where({"request_id": "#Id#", "creditor": "#account_id#", "deleted": 0}).Vars(sub)
                             If(#sub_id#>0){
                                 Button(Class: btn bg-gray-lighter ml-sm buttons pull-right, Page: crediting_view, PageParams: "Id=#Id#", Contract: CreditingSubscribe, Params: "Id=#Id#"){
                                     Span(Em(Class: fa fa-close fa-1x)

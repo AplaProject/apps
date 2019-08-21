@@ -5,22 +5,21 @@
 
 contract AdminCondition {
     conditions {
-        if EcosysParam("founder_account") == $key_id {
+        // check for Founder
+        if EcosysParam("founder_account") == AddressToId($account_id) {
             return
         }
 
-        $system_app_id = DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id")
-        var role_id_param string
-        role_id_param = AppParam(Int($system_app_id), "role_admin", $ecosystem_id)
-        if Size(role_id_param) == 0 {
-            warning "Sorry, you do not have access to this action"
+        // check for Admin role
+        var app_id int role_id string
+        app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id"))
+        role_id = AppParam(app_id, "role_admin", $ecosystem_id)
+
+        if Size(role_id) == 0 {
+            warning "AdminCondition: Sorry, you do not have access to this action"
         }
-
-        var role_id int
-        role_id = Int(role_id_param)
-
-        if !RoleAccess(role_id) {
-            warning "Sorry, you do not have access to this action"
+        if !RoleAccess(Int(role_id)) {
+            warning "AdminCondition: Sorry, you do not have access to this action"
         }
     }
 }

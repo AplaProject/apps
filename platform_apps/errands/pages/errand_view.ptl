@@ -1,6 +1,6 @@
 Div(content-wrapper){
     If(#notific_id#>0){
-        DBFind(@1notifications).WhereId(#notific_id#).Columns("id,page_params->decision_errand_id,page_params->type,processing_info,closed").Vars(check_decisions)
+        DBFind("@1notifications").WhereId(#notific_id#).Columns("id,page_params->decision_errand_id,page_params->type,processing_info,closed").Vars(check_decisions)
         If(And(#check_decisions_page_params_type# == task_decision,#check_decisions_page_params_decision_errand_id# != "")){
             SetVar(errand_id,#check_decisions_page_params_decision_errand_id#)
         }.Else{
@@ -10,7 +10,7 @@ Div(content-wrapper){
         SetVar(errand_id,#errand_id#)
     }
 
-    DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #errand_id#}).Columns("id,page_params->name,sender->role_id,sender->role_name,sender->image_id,recipient->role_id,recipient->role_name,recipient->image_id,recipient->member_id,recipient->member_name,page_params->status,page_params->date_end,date_created,page_params->text,page_params->answer,processing_info,processing_info->member_id,processing_info->member_name,processing_info->image_id,closed").Vars(prefix)
+    DBFind("@1notifications").Where({"ecosystem": "#ecosystem_id#", "id": "#errand_id#"}).Columns("id,page_params->name,sender->role_id,sender->role_name,sender->image_id,recipient->role_id,recipient->role_name,recipient->image_id,recipient->account,recipient->member_name,page_params->status,page_params->date_end,date_created,page_params->text,page_params->answer,processing_info,processing_info->account,processing_info->member_name,processing_info->image_id,closed").Vars(prefix)
 
     Form(row){
         Div(col-md-6 col-md-offset-3){
@@ -46,8 +46,8 @@ Div(content-wrapper){
                                     }.Style(display:flex; align-items:center;)
                                 }
                             }
-                        }.ElseIf(#prefix_recipient_member_id# != 0){
-                            Button(Class: btn-link text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#prefix_recipient_member_id#"){
+                        }.ElseIf(#prefix_recipient_account# != 0){
+                            Button(Class: btn-link text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#prefix_recipient_account#"){
                                 If(#prefix_recipient_image_id#>0){
                                     Image(Src: Binary().ById(#prefix_recipient_image_id#), Class: img-circle).Style(height: 30px;width: 30px; border: 1px solid #5A5D63; margin-right: 10px;)
                                     Span(#prefix_recipient_member_name#)
@@ -101,7 +101,7 @@ Div(content-wrapper){
                         }
                         Div(col-md-2 mt-sm text-center)
                         Div(col-md-5 mt-sm text-left){
-                            LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#prefix_processing_info_member_id#"){
+                            LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#prefix_processing_info_account#"){
                                 Span(#prefix_processing_info_member_name#)
                             }
                         }
@@ -117,7 +117,7 @@ Div(content-wrapper){
                         }
                     }
                 }
-                If(Or(#prefix_recipient_member_id# == #key_id#,#prefix_processing_info_member_id# == #key_id#)){
+                If(Or(#prefix_recipient_account# == #account_id#, #prefix_processing_info_account# == #account_id#)){
                     Div(row){
                         Div(col-md-12){
                             Span(Class: h5 text-bold, Body: $@1answer$)
@@ -144,9 +144,9 @@ Div(content-wrapper){
                 }
             }
             Div(list-group-item text-right){
-                If(Or(#prefix_recipient_role_id# == #role_id#, #prefix_recipient_member_id# == #key_id#)){
+                If(Or(#prefix_recipient_role_id# == #role_id#, #prefix_recipient_account# == #account_id#)){
                     If(#prefix_page_params_status# == 0){
-                        If(Or(#prefix_recipient_member_id# == #key_id#, #prefix_processing_info_member_id# == #key_id#)){
+                        If(Or(#prefix_recipient_account# == #account_id#, #prefix_processing_info_account# == #account_id#)){
                             Button($@1denial$, Class: btn btn-danger pull-left, Page: @1errand_list, PageParams: "type=#type#", Contract: @1ErrandDecision, Params: "ErrandId=#errand_id#,ErrandDecision=-1")
                             Button($@1done$, Class: btn btn-success, Page: @1errand_list, PageParams: "type=#type#", Contract: @1ErrandDecision, Params: "ErrandId=#errand_id#,ErrandDecision=1")
                         }.ElseIf(And(#prefix_recipient_role_id# > 0, #prefix_processing_info# == "")){
@@ -159,7 +159,7 @@ Div(content-wrapper){
                         }
                     }.ElseIf(#errand_id# > 0){
                         If(#notific_id# > 0){
-                            DBFind(@1notifications).Where({"ecosystem": #ecosystem_id#, "id": #notific_id#}).Vars(cl)
+                            DBFind("@1notifications").Where({"ecosystem": "#ecosystem_id#", "id": "#notific_id#"}).Vars(cl)
                         }
                         If(#cl_closed# == 0){
                             If(#cl_processing_info# == ""){

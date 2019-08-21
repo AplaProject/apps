@@ -1,5 +1,7 @@
-DBFind("@1startups").WhereId(#stid#).Columns("id,collected_percent,date_created,collected_amount,informations,informations->name,informations->description,informations->link,date_started,date_ended,required_amount,min_investment,share_capital,ecosystem,deleted,creator,creator->member_address,creator->member_name,creator->member_id,status").Vars(view)
-DBFind("@1roles").Columns("id,role_name,deleted,ecosystem").Where({"role_name":"Investor","deleted":0,"ecosystem":#ecosystem_id#}).Vars(check_role_invest)
+DBFind("@1startups").WhereId(#stid#).Columns("id,collected_percent,date_created,collected_amount,informations,informations->name,informations->description,informations->link,date_started,date_ended,required_amount,min_investment,share_capital,ecosystem,deleted,creator,creator->member_name,creator->account,status").Vars(view)
+DBFind("@1applications").Where({"ecosystem": "#ecosystem_id#", "name": "Crowdfunding"}).Vars(application)
+SetVar(investor_role, AppParam(Ecosystem: #ecosystem_id#, App: #application_id#, Name: crowdfunding_investor_role))
+DBFind("@1roles_participants").Where({"ecosystem": "#ecosystem_id#", "$and": [{"role->id": {"$in": [#investor_role#]}}, {"role->id": "#role_id#"}], "member->account": "#account_id#", "deleted": 0}).Vars(investor_access)
 
 Div(content-wrapper){
     Div(row){
@@ -20,13 +22,13 @@ Div(content-wrapper){
                             LangRes($@1creator$)
                         }
                         Div(col-md-6 text-left){
-                            LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#view_creator_member_id#"){
+                            LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#view_creator_account#"){
                                 Div(){
                                     Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
-                                    If(#view_creator_member_name# == ""){
-                                        Span(Class: h5 m0, Body: #view_creator_member_address#)
-                                    }.Else{
+                                    If(#view_creator_member_name#){
                                         Span(Class: h5 m0, Body: #view_creator_member_name#)
+                                    }.Else{
+                                        Span(Class: h5 m0, Body: #view_creator_account#)
                                     }
                                 }.Style(display:flex; align-items:center;)
                             } 
@@ -115,7 +117,7 @@ Div(content-wrapper){
                         }
                     }
                 }
-                If(And(#check_role_invest_id# == #role_id#,#view_status# == 1)){
+                If(And(#investor_access_id# > 0, #view_status# == 1)){
                     Div(list-group-item){
                         Div(row){
                             Div(col-lg-8 col-lg-offset-2 text-center){
@@ -136,16 +138,16 @@ Div(content-wrapper){
                         }.Style(padding-bottom:10px;)
                     }
                 }
-                DBFind("@1investment_participants",src_investment).Where({"startup_id": #stid#}).Custom(_investor){
-                    DBFind(@1members).Where({"ecosystem": #ecosystem_id#, "id": #member_id#}).Vars(c)
-                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_key_id=#c_id#"){
+                DBFind("@1investment_participants", src_investment).Where({"startup_id": "#stid#"}).Custom(_investor){
+                    DBFind("@1members").Where({"ecosystem": "#ecosystem_id#", "account": "#account#"}).Vars(c)
+                    LinkPage(Class: text-primary h5 text-bold, Page: @1profile_view, PageParams: "v_account=#c_account#"){
                         Div(){
-                            Span(Em(Class: fa icon-user fa-2x)).Style(margin-right:10px;)
+                            Span(Em(Class: fa icon-user fa-2x)).Style(margin-right: 10px;)
                             Span(){
-                                If(#c_member_name# == ""){
-                                    Address(#member_id#)
-                                }.Else{
+                                If(#c_member_name#){
                                     P(Class: h6 m0, Body: #c_member_name#)
+                                }.Else{
+                                    #account#
                                 }
                             }
                         }.Style(display:flex; align-items:center;)
