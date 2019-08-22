@@ -75,12 +75,6 @@
             "Type": "app_params"
         },
         {
-            "Name": "role_consortium_member_candidate",
-            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
-            "Value": "0",
-            "Type": "app_params"
-        },
-        {
             "Name": "role_creates_roles",
             "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
             "Value": "0",
@@ -635,12 +629,6 @@
             "Name": "NewUser",
             "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
             "Value": "contract NewUser {\n    data {\n        NewPubkey string \"optional\"\n        Account string \"optional\"\n    }\n\n    conditions {\n        $newId = PubToID($NewPubkey)\n        \n        if $newId == 0 {\n            warning LangRes(\"@1wrong_pub\", \"en\")\n        }\n        if DBFind(\"@1keys\").Where({\"id\": $newId, \"ecosystem\": $ecosystem_id}).One(\"id\") != nil {\n            warning Sprintf(LangRes(\"@1template_user_exists\", \"en\"), IdToAddress($newId))\n        }\n\n        if Size($NewPubkey) == 0 {\n            warning \"You did not enter the public key\"\n        }\n\n        $pub = HexToPub($NewPubkey)\n        $amount = Money(1000) * Money(1000000000000000000)\n\n        if Size($Account) > 0 {\n            $k_id = DBFind(\"@1keys\").Where({\"account\": $Account, \"ecosystem\": $ecosystem_id, \"deleted\": 0}).One(\"id\") \n            if $k_id == nil {\n                warning \"Account not found\"\n            }\n        }\n    }\n\n    action {\n        if Size($Account) > 0 {\n            $account = $Account\n            DBInsert(\"keys\", {\"id\": $newId, \"account\": $account, \"pub\": $pub, \"amount\": $amount, \"ecosystem\": 1})\n            $result = $account\n\n            DBUpdate(\"@1keys\", Int($k_id), {\"deleted\": 1})\n        } else {\n            $account = IdToAddress($newId)\n            DBInsert(\"keys\", {\"id\": $newId, \"account\": $account, \"pub\": $pub, \"amount\": $amount, \"ecosystem\": 1})\n            $result = $account\n        }\n    }\n}",
-            "Type": "contracts"
-        },
-        {
-            "Name": "NodeOwnerCondition",
-            "Conditions": "ContractConditions(\"@1DeveloperCondition\")",
-            "Value": "contract NodeOwnerCondition {\n    conditions {\n        $raw_full_nodes = SysParamString(\"full_nodes\")\n        if Size($raw_full_nodes) == 0 {\n            ContractConditions(\"MainCondition\")\n        } else {\n            $full_nodes = JSONDecode($raw_full_nodes)\n            var i int\n            while i < Len($full_nodes) {\n                $fn = $full_nodes[i]\n                if $fn[\"key_id\"] == AddressToId($account_id) {\n                    return true\n                }\n                i = i + 1\n            }\n            warning \"Sorry, you do not have access to this action.\"\n        }\n    }\n}",
             "Type": "contracts"
         },
         {
