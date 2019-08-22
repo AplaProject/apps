@@ -1,6 +1,6 @@
-contract VotingRunNewConsortiumMember {
+contract VotingRunNewCNConnection {
     data {
-        ConsortiumMemberId int
+        RequestId int
     }
 
     func warn(name, detail string) {
@@ -65,14 +65,6 @@ contract VotingRunNewConsortiumMember {
         }
     }
 
-    func checkKeyId(key int) {
-        var existed map
-        existed = DBFind("@1keys").Where({"ecosystem": $ecosystem_id, "id": key}).Row()
-        if !existed {
-            warning LangRes("@1account_not_found", "en")
-        }
-    }
-
     func getNodesJSON() string {
         var nodes string
         nodes = SysParamString("full_nodes")
@@ -91,7 +83,6 @@ contract VotingRunNewConsortiumMember {
         firstNode = JSONDecode(first)
         checkTcpAddress(firstNode["tcp_address"])
         checkApiAddress(firstNode["api_address"])
-        checkKeyId(Int(firstNode["key_id"]))
         checkPub(firstNode["public_key"])
         nodes = Append(nodes, firstNode)
         return nodes
@@ -99,22 +90,20 @@ contract VotingRunNewConsortiumMember {
 
     conditions {
         $app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Basic"}).One("id"))
-        $templateId = Int(DBFind("@1app_params").Where({"app_id": $app_id, "name": "voting_template_consortium_member", "ecosystem": $ecosystem_id}).One("value"))
+        $templateId = Int(DBFind("@1app_params").Where({"app_id": $app_id, "name": "voting_template_cn_connection", "ecosystem": $ecosystem_id}).One("value"))
         if $templateId == 0 {
             warning LangRes("@1template_id_not_found", "en")
         }
 
-        $ConsortiumMember = DBFind("@1consortium_member_requests").Where({"id": $ConsortiumMemberId, "deleted": 0}).Row()
-        if !$ConsortiumMember {
-            warning LangRes("@1candidate_not_found", "en")
+        $CNConnectionRequest = DBFind("@1cn_connection_requests").Where({"id": $RequestId, "deleted": 0}).Row()
+        if !$CNConnectionRequest {
+            warning LangRes("@1request_not_found", "en")
         }
 
-        $TcpAddress = $ConsortiumMember["tcp_address"]
-        $ApiAddress = $ConsortiumMember["api_address"]
-        $KeyId = AddressToId($ConsortiumMember["candidate_account"])
-        $PubKey = $ConsortiumMember["pub_key"]
+        $TcpAddress = $CNConnectionRequest["tcp_address"]
+        $ApiAddress = $CNConnectionRequest["api_address"]
+        $PubKey = $CNConnectionRequest["pub_key"]
 
-        checkKeyId(Int($KeyId))
         checkPub($PubKey)
         checkApiAddress($ApiAddress)
         checkTcpAddress($TcpAddress)
@@ -124,7 +113,6 @@ contract VotingRunNewConsortiumMember {
         var nodes array new_node map
         new_node["tcp_address"] = $TcpAddress
         new_node["api_address"] = $ApiAddress
-        new_node["key_id"] = Str($KeyId)
         new_node["public_key"] = $PubKey
         nodes = JSONDecode(getNodesJSON())
         if Len(nodes) == 0 {
@@ -137,7 +125,6 @@ contract VotingRunNewConsortiumMember {
         var pars map
         pars["Name"] = "full_nodes"
         pars["Value"] = JSONEncode(nodes)
-        pars["ConsortiumMemberId"] = Str($KeyId)
         pars["flag"] = "add"
 
         @1VotingTemplateRun("TemplateId,Duration,ContractAcceptParams", $templateId, 14, JSONEncode(pars))

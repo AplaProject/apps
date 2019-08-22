@@ -1,11 +1,11 @@
-contract VotingRunRemoveConsortiumMember {
+contract VotingRunRemoveCNConnection {
     data {
         Index int
     }
 
     conditions {
         $app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Basic"}).One("id"))
-        $templateId = Int(DBFind("@1app_params").Where({"app_id": $app_id, "name": "voting_template_consortium_member", "ecosystem": $ecosystem_id}).One("value"))
+        $templateId = Int(DBFind("@1app_params").Where({"app_id": $app_id, "name": "voting_template_cn_connection", "ecosystem": $ecosystem_id}).One("value"))
         if $templateId == 0 {
             warning LangRes("@1template_id_not_found", "en")
         }
@@ -29,8 +29,6 @@ contract VotingRunRemoveConsortiumMember {
             node = $nodes[i]
             if i != $Index {
                 nodesNew = Append(nodesNew, node)
-            } else {
-                $KeyId = Str(node["key_id"]) 
             }
             i = i + 1
         }
@@ -38,7 +36,6 @@ contract VotingRunRemoveConsortiumMember {
         var pars map
         pars["Name"] = "full_nodes"
         pars["Value"] = JSONEncode(nodesNew)
-        pars["ConsortiumMemberId"] = Str($KeyId)
         pars["flag"] = "remove"
 
         @1VotingTemplateRun("TemplateId,Duration,ContractAcceptParams", $templateId, 14, JSONEncode(pars))
