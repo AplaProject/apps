@@ -4,6 +4,8 @@ contract CallDelayedContract {
     }
 
     conditions {
+        FullNodeCondition()
+
         var rows array
         rows = DBFind("@1delayed_contracts").Where({"id": $Id, "deleted": 0})
 
@@ -13,12 +15,6 @@ contract CallDelayedContract {
         $cur = rows[0]
         $limit = Int($cur["limit"])
         $counter = Int($cur["counter"])
-        var account_key int
-        account_key = AddressToId($account_id)
-        
-        if account_key != Int($cur["key_id"]) {
-            warning LangRes("@1access_denied", "en")
-        }
 
         if $block < Int($cur["block_id"]) {
             warning Sprintf(LangRes("@1template_delayed_contract_error", "en"), $Id, $cur["block_id"], $block)
