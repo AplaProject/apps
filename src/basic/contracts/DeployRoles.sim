@@ -1,0 +1,100 @@
+contract DeployRoles {
+
+    func updateAppParam(name string, value int, appId int) {
+        var app_param map
+        app_param = DBFind("@1app_params").Where({"ecosystem": $ecosystem_id, "app_id": appId, "name": name}).Row()
+        if app_param {
+            var params map
+            params["Id"] = Int(app_param["id"])
+            params["Value"] = value
+            params["Conditions"] = "ContractConditions(\"@1AdminCondition\")"
+            CallContract("@1EditAppParam", params)
+        } else {
+            var params map
+            params["ApplicationId"] = appId
+            params["Name"] = name
+            params["Value"] = value
+            params["Conditions"] = "ContractConditions(\"@1AdminCondition\")"
+            CallContract("@1NewAppParam", params)
+        }
+    }
+
+    func addRole(name string, managerId int, roleType int) int{
+        var m map id int
+        m["role_name"] = name
+        m["role_type"] = roleType
+        m["ecosystem"] = $ecosystem_id
+        id = DBFind("@1roles").Where(m).One("id")
+        if id == nil {
+            m["default_page"] = ""
+            m["deleted"] = 0
+            m["creator->image_id"] = 0
+            m["creator->member_name"] = "founder"
+            m["creator->account"] = $account_id
+            m["date_created"] = $block_time
+            if managerId > 0 {
+                m["roles_access"] = Sprintf("[%v]", managerId)
+            } else {
+                m["roles_access"] = "[]"
+            }
+            id = DBInsert("@1roles", m)
+        }
+        return Int(id)
+    }
+
+    func addParticipant(roleId int){
+        var m map
+        m = DBFind("@1roles").Where({"id": roleId}).Columns("role_name,role_type").Row()
+        if m != nil {
+            var participant map
+            participant["role->id"] = roleId
+            participant["member->account"] = $account_id
+            participant["ecosystem"] = $ecosystem_id
+            participant["deleted"] = 0
+
+            if !DBFind("@1roles_participants").Where(participant).One("id") {
+                participant["member->member_name"] = "founder"
+                participant["member->image_id"] = 0
+                participant["role->type"] = m["role_type"]
+                participant["role->name"] = m["role_name"]
+                participant["role->image_id"] = 0
+                participant["date_created"] = $block_time
+                DBInsert("@1roles_participants", participant)
+            }
+        }
+    }
+
+    conditions {
+        MainCondition()
+        $app_system_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id"))
+    }
+
+    action {
+        var roleId managerId int
+        managerId = addRole("Admin", 0, 3)
+        @1RolesAccessManager("Action,Rid,ManagerRid", "add", managerId, managerId)
+        addParticipant(managerId)
+        updateAppParam("role_admin", managerId, $app_system_id)
+        updateAppParam("role_creates_roles", managerId, $app_system_id)
+
+        roleId = addRole("Developer", managerId, 3)
+        addParticipant(roleId)
+        updateAppParam("role_developer", roleId, $app_system_id)
+
+        if $ecosystem_id == 1 {
+            roleId = addRole("Consortium Member", managerId, 3)
+            addParticipant(roleId)
+            updateAppParam("role_consortium_member", roleId, $app_system_id)
+
+            roleId = addRole("Sidechain Node", managerId, 3)
+            addParticipant(roleId)
+            updateAppParam("role_sidechain_node", roleId, $app_system_id)
+
+            roleId = addRole("Investor with Voting Rights", managerId, 3)
+            updateAppParam("role_investor_with_voting_rights", roleId, $app_system_id)
+
+            roleId = addRole("Delegate", managerId, 3)
+            updateAppParam("role_delegate", roleId, $app_system_id)
+        }
+    }
+}
